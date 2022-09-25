@@ -22,14 +22,14 @@ jobs:
         uses: docker/metadata-action@69f6fc9d46f2f8bf0d5491e4aabe0bb8c6a4678a # tag=v4
         with:
           images: |
-            ghcr.io/${GITHUB_REPOSITORY}
+            ghcr.io/${{ github.repository }}
 
       - name: Container meta for migrations image
         id: container_migrations_meta
         uses: docker/metadata-action@69f6fc9d46f2f8bf0d5491e4aabe0bb8c6a4678a # tag=v4
         with:
           images: |
-            ghcr.io/${GITHUB_REPOSITORY}-migrations
+            ghcr.io/${{ github.repository }}-migrations
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@8b122486cedac8393e77aa9734c3528886e4a1a8 # tag=v2
