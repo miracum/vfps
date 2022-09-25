@@ -1,4 +1,4 @@
-name: ci
+name: benchmarks
 on:
   push:
     tags:
@@ -18,12 +18,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0
 
       - name: Install .NET
         uses: actions/setup-dotnet@c0d4ad69d8bd405d234f1c9166d383b7a4f69ed8 # tag=v2
         with:
           dotnet-version: "7.0.x"
+          include-prerelease: true
 
       - name: Run benchmark
         run: dotnet run -c Release --project=src/Vfps.Benchmarks
@@ -32,12 +34,12 @@ jobs:
         uses: rhysd/github-action-benchmark@v1
         with:
           name: Benchmark.Net Benchmark
-          tool: 'benchmarkdotnet'
+          tool: "benchmarkdotnet"
           output-file-path: BenchmarkDotNet.Artifacts/results/Benchmarks-report-full-compressed.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
           auto-push: ${{github.event_name != 'pull_request'}}
           # Show alert with commit comment on detecting possible performance regression
-          alert-threshold: '200%'
+          alert-threshold: "200%"
           comment-on-alert: true
           fail-on-alert: true
-          alert-comment-cc-users: '@chgl'
+          alert-comment-cc-users: "@chgl"
