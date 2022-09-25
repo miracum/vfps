@@ -1,0 +1,9 @@
+﻿version: v1
+lint:
+  use:
+    - DEFAULT
+breaking:
+  use:
+    - FILE
+    - PACKAGE
+    - WIRE_JSON

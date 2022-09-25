@@ -1,0 +1,48 @@
+services:
+  postgresql:
+    image: docker.io/library/postgres:14.5@sha256:b0ee049a2e347f5ec8c64ad225c7edbc88510a9e34450f23c4079a489ce16268
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 1g
+    ipc: private
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: vfps
+    ports:
+      - "35432:5432"
+
+  vfps:
+    image: ghcr.io/chgl/vfps:latest
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1"
+        reservations:
+          memory: 512m
+          cpus: "1"
+    ipc: none
+    cap_drop:
+      - ALL
+    read_only: true
+    privileged: false
+    security_opt:
+      - "no-new-privileges:true"
+    profiles:
+      - test
+    environment:
+      COMPlus_EnableDiagnostics: "0"
+      ForceRunDatabaseMigrations: "true"
+      ConnectionStrings__PostgreSQL: "Host=postgresql:5432;Database=vfps;Timeout=60;Max Auto Prepare=5;Application Name=vfps"
+      PGUSER: postgres
+      PGPASSWORD: postgres
+    ports:
+      - "127.0.0.1:8080:8080"

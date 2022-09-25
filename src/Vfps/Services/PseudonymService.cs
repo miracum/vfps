@@ -1,0 +1,161 @@
+using EntityFramework.Exceptions.Common;
+using Google.Protobuf.WellKnownTypes;
+using Grpc.Core;
+using Microsoft.EntityFrameworkCore;
+using Vfps.Data;
+using Vfps.Protos;
+using Vfps.PseudonymGenerators;
+
+namespace Vfps.Services;
+
+/// <inheritdoc/>
+public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
+{
+    private readonly string InsertCommand =
+    @"
+        WITH
+            cte AS (
+            INSERT INTO
+                ""Pseudonyms"" (""NamespaceName"", ""OriginalValue"", ""PseudonymValue"", ""CreatedAt"", ""LastUpdatedAt"")
+            VALUES
+                ({0}, {1}, {2}, NOW(), NOW()) ON CONFLICT (""NamespaceName"", ""OriginalValue"")
+            DO NOTHING RETURNING *
+            )
+        SELECT *
+        FROM cte
+        UNION
+        SELECT *
+        FROM ""Pseudonyms""
+        WHERE ""NamespaceName""={0} AND ""OriginalValue""={1}
+    ";
+
+    /// <inheritdoc/>
+    public PseudonymService(PseudonymContext context, PseudonymizationMethodsLookup lookup)
+    {
+        Context = context;
+        Lookup = lookup;
+    }
+    private PseudonymContext Context { get; }
+    private PseudonymizationMethodsLookup Lookup { get; }
+
+    /// <inheritdoc/>
+    public override async Task<PseudonymServiceCreateResponse> Create(PseudonymServiceCreateRequest request, ServerCallContext context)
+    {
+        var now = DateTimeOffset.UtcNow;
+
+        // TODO: this should be cacheable since namespaces are immutable.
+        // Although deletion handling may be an issue. Adds around 5ms per request.
+        var @namespace = await Context.Namespaces.FindAsync(request.Namespace);
+        if (@namespace is null)
+        {
+            var metadata = new Grpc.Core.Metadata
+                {
+                    { "Namespace", request.Namespace }
+                };
+
+            throw new RpcException(new Status(StatusCode.NotFound, "The requested pseudonym namespace does not exist."), metadata);
+        }
+
+        var generator = Lookup[@namespace.PseudonymGenerationMethod];
+
+        var pseudonymValue = generator.GeneratePseudonym(request.OriginalValue, @namespace.PseudonymLength);
+
+        pseudonymValue = $"{@namespace.PseudonymPrefix}{pseudonymValue}{@namespace.PseudonymSuffix}";
+
+        var pseudonym = new Data.Models.Pseudonym()
+        {
+            CreatedAt = now,
+            LastUpdatedAt = now,
+            NamespaceName = @namespace.Name,
+            OriginalValue = request.OriginalValue,
+            PseudonymValue = pseudonymValue,
+        };
+
+        try
+        {
+            Data.Models.Pseudonym? upsertedPseudonym = null;
+            var retryCount = 3;
+            while (upsertedPseudonym is null && retryCount > 0)
+            {
+                var pseudonyms = await Context.Pseudonyms
+                    .FromSqlRaw(InsertCommand, pseudonym.NamespaceName, pseudonym.OriginalValue, pseudonym.PseudonymValue)
+                    .AsNoTracking()
+                    .ToListAsync();
+
+                upsertedPseudonym = pseudonyms.FirstOrDefault();
+                retryCount--;
+            }
+
+            if (upsertedPseudonym is null)
+            {
+                var metadata = new Metadata
+                    {
+                        { "Namespace", request.Namespace },
+                    };
+
+                throw new RpcException(new Status(StatusCode.Internal, "Failed to upsert the pseudonym after several retries."));
+            }
+
+            return new PseudonymServiceCreateResponse
+            {
+                Pseudonym = new Pseudonym
+                {
+                    Namespace = upsertedPseudonym.NamespaceName,
+                    OriginalValue = upsertedPseudonym.OriginalValue,
+                    PseudonymValue = upsertedPseudonym.PseudonymValue,
+                    Meta = new Meta
+                    {
+                        CreatedAt = Timestamp.FromDateTimeOffset(upsertedPseudonym.CreatedAt),
+                        LastUpdatedAt = Timestamp.FromDateTimeOffset(upsertedPseudonym.LastUpdatedAt),
+                    },
+                }
+            };
+        }
+        catch (UniqueConstraintException)
+        {
+            var metadata = new Metadata
+                {
+                    { "Namespace", request.Namespace },
+                };
+
+            throw new RpcException(
+                new Status(
+                    StatusCode.AlreadyExists,
+                    "A pseudonym for the given original value already exists in the namespace."),
+                metadata);
+        }
+    }
+
+    /// <inheritdoc/>
+    public override async Task<PseudonymServiceGetResponse> Get(PseudonymServiceGetRequest request, ServerCallContext context)
+    {
+        var pseudonym = await Context.Pseudonyms
+            .Where(p => p.NamespaceName == request.Namespace && p.PseudonymValue == request.PseudonymValue)
+            .FirstOrDefaultAsync();
+        if (pseudonym is null)
+        {
+            var metadata = new Metadata
+                {
+                    { "Namespace", request.Namespace },
+                    { "Pseudonym", request.PseudonymValue }
+                };
+
+            throw new RpcException(new Status(StatusCode.NotFound, "The requested pseudonym does not exist in the namespace."), metadata);
+        }
+
+        return new PseudonymServiceGetResponse
+        {
+            Pseudonym = new Pseudonym
+            {
+                Namespace = pseudonym.NamespaceName,
+                OriginalValue = pseudonym.OriginalValue,
+                PseudonymValue = pseudonym.PseudonymValue,
+                Meta = new Meta
+                {
+                    CreatedAt = Timestamp.FromDateTimeOffset(pseudonym.CreatedAt),
+                    LastUpdatedAt = Timestamp.FromDateTimeOffset(pseudonym.LastUpdatedAt),
+                },
+            }
+        };
+    }
+}

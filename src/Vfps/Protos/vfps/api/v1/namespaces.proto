@@ -1,0 +1,125 @@
+syntax = "proto3";
+
+package vfps.api.v1;
+
+import "Protos/vfps/api/v1/meta.proto";
+import "google/api/annotations.proto";
+
+option csharp_namespace = "Vfps.Protos";
+
+// service for managing pseudonym namespaces
+service NamespaceService {
+  // create a new namespace for pseudonyms
+  rpc Create(NamespaceServiceCreateRequest) returns (NamespaceServiceCreateResponse) {
+    option (google.api.http) = {
+      post: "/v1/namespaces"
+      body: "*"
+    };
+  }
+
+  // get information about a namespace
+  rpc Get(NamespaceServiceGetRequest) returns (NamespaceServiceGetResponse) {
+    option (google.api.http) = {
+      get: "/v1/namespaces/{name}"
+    };
+  }
+
+  // list all namespaces
+  rpc GetAll(NamespaceServiceGetAllRequest) returns (NamespaceServiceGetAllResponse) {
+    option (google.api.http) = {
+      get: "/v1/namespaces"
+    };
+  }
+
+  // delete a namespace and all pseudonyms it contains
+  rpc Delete(NamespaceServiceDeleteRequest) returns (NamespaceServiceDeleteResponse) {
+    option (google.api.http) = {
+      delete: "/v1/namespaces/{name}"
+    };
+  }
+}
+
+// describes a pseudonym namespace
+message Namespace {
+  // metadata about this entity
+  Meta meta = 1;
+  // the name of the namespace
+  string name = 2;
+  // a description for the namespace
+  string description = 3;
+  // the method to use when generating pseudonyms in the namespace
+  PseudonymGenerationMethod pseudonym_generation_method = 4;
+  // the length of the pseudonym. Note that the total length depends on the generation method and excludes the prefix and suffix.
+  uint32 pseudonym_length = 5;
+  // a prefix to prepend to each generated pseudonym
+  optional string pseudonym_prefix = 6;
+  // a suffix to append to each generated pseudonym
+  optional string pseudonym_suffix = 7;
+}
+
+// method used to generate the pseudonyms in the namespace
+enum PseudonymGenerationMethod {
+  // unspecified defaults to PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED
+  PSEUDONYM_GENERATION_METHOD_UNSPECIFIED = 0;
+  // generate pseudonyms in the following format: base64url(<hashed machine name bytes><ms ticks since system start bytes><cryptographically-secure random bytes of length pseudonym_length>)
+  // where:
+  // <hashed machine name bytes>: the first 4 bytes of the SHA256-hashed machine name (host name).
+  // <ms ticks since system start bytes>: the 4 least significant bytes of the 64-bit millisecond tick count since the system started.
+  // <cryptographically-secure random bytes of length pseudonym_length>: pseudonym_length random bytes.
+  // all bytes are concatenated and encoded using URL-safe BASE64.
+  PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED = 1;
+  // SHA256-encodes the original value and uses the hex-encoded hash as the pseudonym.
+  PSEUDONYM_GENERATION_METHOD_SHA256_HEX_ENCODED = 2;
+}
+
+// request to create a new namespace
+message NamespaceServiceCreateRequest {
+  // the name of the namespace to create. If a namespace with the same name alreay exists, an error is thrown
+  string name = 1;
+  // method to use when generating pseudonyms in this namespace
+  PseudonymGenerationMethod pseudonym_generation_method = 2;
+  // the length of the pseudonym. Note that the total length depends on the generation method and excludes the prefix and suffix.
+  uint32 pseudonym_length = 3;
+  // a prefix to prepend to each generated pseudonym
+  optional string pseudonym_prefix = 4;
+  // a suffix to append to each generated pseudonym
+  optional string pseudonym_suffix = 5;
+  // a description for the namespace
+  string description = 6;
+}
+
+// reponse for creating a namespace entity
+message NamespaceServiceCreateResponse {
+  // the created namespace
+  Namespace namespace = 1;
+}
+
+// request to get information about a namespace
+message NamespaceServiceGetRequest {
+  // the name of the namespace
+  string name = 1;
+}
+
+// response for getting a namespace entity
+message NamespaceServiceGetResponse {
+  // the found namespace
+  Namespace namespace = 1;
+}
+
+// request to delete a namespace and all pseudonyms it contains
+message NamespaceServiceDeleteRequest {
+  // the name of the namespace to delete
+  string name = 1;
+}
+
+// response after deleting the namespace
+message NamespaceServiceDeleteResponse {}
+
+// request to list all namespaces
+message NamespaceServiceGetAllRequest {}
+
+// response to list all namespaces
+message NamespaceServiceGetAllResponse {
+  // the list of all namespaces
+  repeated Namespace results = 1;
+}
