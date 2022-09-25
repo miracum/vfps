@@ -4,7 +4,6 @@ using Vfps.PseudonymGenerators;
 namespace Vfps.Benchmarks;
 
 [MemoryDiagnoser]
-[JsonExporterAttribute.Full]
 [JsonExporterAttribute.FullCompressed]
 public class PseudonymGeneratorBenchmarks
 {
