@@ -7,9 +7,10 @@ Horizontal service replication is possible for highly-available deployments.
 ## Run it
 
 > **Warning**
-> This is not a production-ready deployment but merely used to get started and testing quickly.
-> This sets strict and low resource limits, uses the `latest` tag, runs database migrations as part
-> of the startup, and uses the default password for an unoptimized PostgreSQL deployment.
+> Using the provided docker-compose.yaml is not a production-ready deployment but merely
+> used to get started and testing quickly.
+> It sets strict and low resource limits, uses the `latest` tag, runs database migrations as part
+> of the startup, and uses the default password for an included, unoptimized PostgreSQL deployment.
 
 ```sh
 docker compose -f docker-compose.yaml --profile=test up
