@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664148844098,
+  "lastUpdate": 1664207677207,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -72,6 +72,42 @@ window.BENCHMARK_DATA = {
             "value": 1526.8360054202196,
             "unit": "ns",
             "range": "± 54.926338466222894"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "be56daef8ea5ead143eff375503ddd5128dad24d",
+          "message": "test(unit): added unit tests and megalinter\n\n* test(unit): added unit tests\r\n\r\n* chore: added renovate config\r\n\r\n* style: added megalinter",
+          "timestamp": "2022-09-26T17:53:05+02:00",
+          "tree_id": "8c3c8543964a39fa70fd0616698fa18a452e573c",
+          "url": "https://github.com/chgl/vfps/commit/be56daef8ea5ead143eff375503ddd5128dad24d"
+        },
+        "date": 1664207676579,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1794.3494906792273,
+            "unit": "ns",
+            "range": "± 5.5714993070370795"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1355.5879913330077,
+            "unit": "ns",
+            "range": "± 3.180593825614131"
           }
         ]
       }
