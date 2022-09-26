@@ -81,7 +81,8 @@ if (app.Environment.IsDevelopment())
     app.MapGrpcReflectionService();
 }
 
-var shouldRunDatabaseMigrations = app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("ForceRunDatabaseMigrations");
+var shouldRunDatabaseMigrations = app.Environment.IsDevelopment() ||
+    app.Configuration.GetValue<bool>("ForceRunDatabaseMigrations");
 if (shouldRunDatabaseMigrations)
 {
     // only ran in a development setup or when forced.
@@ -92,3 +93,5 @@ if (shouldRunDatabaseMigrations)
 }
 
 app.Run();
+
+public partial class Program { }

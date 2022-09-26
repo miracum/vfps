@@ -11,6 +11,8 @@ Project("{FB0508B1-3E31-4ABA-BC1D-C0294175FFC7}") = "Vfps.Tests", "src\Vfps.Test
 EndProject
 Project("{B5178F32-98B7-4C35-BB79-B02F6F738E3E}") = "Vfps.LoadTests", "src\Vfps.LoadTests\Vfps.LoadTests.csproj", "{65FD706F-E20C-4579-A46A-30F726216E32}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vfps.IntegrationTests", "src\Vfps.IntegrationTests\Vfps.IntegrationTests.csproj", "{9D0AE609-74D8-42BD-99D0-5C0AFC270C47}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{65FD706F-E20C-4579-A46A-30F726216E32}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{65FD706F-E20C-4579-A46A-30F726216E32}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{65FD706F-E20C-4579-A46A-30F726216E32}.Release|Any CPU.Build.0 = Release|Any CPU
+		{9D0AE609-74D8-42BD-99D0-5C0AFC270C47}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{9D0AE609-74D8-42BD-99D0-5C0AFC270C47}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{9D0AE609-74D8-42BD-99D0-5C0AFC270C47}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{9D0AE609-74D8-42BD-99D0-5C0AFC270C47}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

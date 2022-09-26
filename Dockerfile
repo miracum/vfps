@@ -25,7 +25,8 @@ RUN <<EOF
 dotnet test \
     --no-restore \
     --no-build \
-    --configuration=Release
+    --configuration=Release \
+    -l "console;verbosity=detailed"
 EOF
 
 # TODO: using mcr.microsoft.com/dotnet/nightly/sdk:7.0-jammy as a base image causes same framework version conflicts.
