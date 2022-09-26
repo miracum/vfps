@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664208929197,
+  "lastUpdate": 1664208953455,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -180,6 +180,42 @@ window.BENCHMARK_DATA = {
             "value": 1378.757518181434,
             "unit": "ns",
             "range": "± 2.485699160342389"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9e5dbfa89d3c53400db135d56efd4553e1a20390",
+          "message": "fix: don't push the unit test image as the main image (#2)",
+          "timestamp": "2022-09-26T18:14:00+02:00",
+          "tree_id": "27299ffa8f585287713b9edf62f194f157244d49",
+          "url": "https://github.com/chgl/vfps/commit/9e5dbfa89d3c53400db135d56efd4553e1a20390"
+        },
+        "date": 1664208952692,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1782.7051146371025,
+            "unit": "ns",
+            "range": "± 12.349566279588233"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1368.5447515340952,
+            "unit": "ns",
+            "range": "± 0.7547873436588036"
           }
         ]
       }
