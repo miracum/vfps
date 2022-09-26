@@ -29,7 +29,13 @@ See <https://github.com/chgl/charts/tree/master/charts/vfps> for a production-gr
 The service exports metrics in Prometheus format on `/metrics`.
 Health-, readiness-, and liveness-probes are exposed at `/healthz`, `/readyz`, and `/livez` respectively.
 
-## Benchmark
+## Benchmarks
+
+### Micro benchmarks
+
+The pseudonym generation methods are continuously benchmarked. Results are viewable at <https://chgl.github.io/vfps/dev/bench/>.
+
+### E2E load testing
 
 Create a pseudonym namespace used for benchmarking:
 
@@ -104,7 +110,7 @@ Status code distribution:
 Docker CLI 20.10.17: <https://www.docker.com/>
 Docker Compose: <https://docs.docker.com/compose/install/>
 
-### Build & Run
+### Build & run
 
 Start an empty PostgreSQL database for development (optionally add `-d` to run in the background):
 
