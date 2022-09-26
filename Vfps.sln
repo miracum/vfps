@@ -7,6 +7,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Vfps", "src\Vfps\Vfps.cspro
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Vfps.Benchmarks", "src\Vfps.Benchmarks\Vfps.Benchmarks.csproj", "{5901671D-4C77-4749-9E3F-4FC6248696EA}"
 EndProject
+Project("{FB0508B1-3E31-4ABA-BC1D-C0294175FFC7}") = "Vfps.Tests", "src\Vfps.Tests\Vfps.Tests.csproj", "{26CCE8B4-7B90-4D5D-9674-69546F26DE8D}"
+EndProject
+Project("{B5178F32-98B7-4C35-BB79-B02F6F738E3E}") = "Vfps.LoadTests", "src\Vfps.LoadTests\Vfps.LoadTests.csproj", "{65FD706F-E20C-4579-A46A-30F726216E32}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{5901671D-4C77-4749-9E3F-4FC6248696EA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5901671D-4C77-4749-9E3F-4FC6248696EA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5901671D-4C77-4749-9E3F-4FC6248696EA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{26CCE8B4-7B90-4D5D-9674-69546F26DE8D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{26CCE8B4-7B90-4D5D-9674-69546F26DE8D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{26CCE8B4-7B90-4D5D-9674-69546F26DE8D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{26CCE8B4-7B90-4D5D-9674-69546F26DE8D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{65FD706F-E20C-4579-A46A-30F726216E32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{65FD706F-E20C-4579-A46A-30F726216E32}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{65FD706F-E20C-4579-A46A-30F726216E32}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{65FD706F-E20C-4579-A46A-30F726216E32}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

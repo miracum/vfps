@@ -49,7 +49,8 @@ message Namespace {
   string description = 3;
   // the method to use when generating pseudonyms in the namespace
   PseudonymGenerationMethod pseudonym_generation_method = 4;
-  // the length of the pseudonym. Note that the total length depends on the generation method and excludes the prefix and suffix.
+  // the length of the pseudonym. Note that the total length depends on the generation
+  // method and excludes the prefix and suffix.
   uint32 pseudonym_length = 5;
   // a prefix to prepend to each generated pseudonym
   optional string pseudonym_prefix = 6;
@@ -61,11 +62,13 @@ message Namespace {
 enum PseudonymGenerationMethod {
   // unspecified defaults to PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED
   PSEUDONYM_GENERATION_METHOD_UNSPECIFIED = 0;
-  // generate pseudonyms in the following format: base64url(<hashed machine name bytes><ms ticks since system start bytes><cryptographically-secure random bytes of length pseudonym_length>)
+  // generate pseudonyms in the following format:
+  // <hashed machine name><ms ticks since system start><cryptographically-secure pseudonym_length random bytes>
   // where:
-  // <hashed machine name bytes>: the first 4 bytes of the SHA256-hashed machine name (host name).
-  // <ms ticks since system start bytes>: the 4 least significant bytes of the 64-bit millisecond tick count since the system started.
-  // <cryptographically-secure random bytes of length pseudonym_length>: pseudonym_length random bytes.
+  // <hashed machine name>: the first 4 bytes of the SHA256-hashed machine name (host name).
+  // <ms ticks since system start>: the 4 least significant bytes of the 64-bit millisecond tick
+  //                                count since the system started.
+  // <cryptographically-secure pseudonym_length random bytes>: pseudonym_length random bytes.
   // all bytes are concatenated and encoded using URL-safe BASE64.
   PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED = 1;
   // SHA256-encodes the original value and uses the hex-encoded hash as the pseudonym.
@@ -78,7 +81,8 @@ message NamespaceServiceCreateRequest {
   string name = 1;
   // method to use when generating pseudonyms in this namespace
   PseudonymGenerationMethod pseudonym_generation_method = 2;
-  // the length of the pseudonym. Note that the total length depends on the generation method and excludes the prefix and suffix.
+  // the length of the pseudonym.
+  // Note that the total length depends on the generation method and excludes the prefix and suffix.
   uint32 pseudonym_length = 3;
   // a prefix to prepend to each generated pseudonym
   optional string pseudonym_prefix = 4;
@@ -88,7 +92,7 @@ message NamespaceServiceCreateRequest {
   string description = 6;
 }
 
-// reponse for creating a namespace entity
+// response for creating a namespace entity
 message NamespaceServiceCreateResponse {
   // the created namespace
   Namespace namespace = 1;

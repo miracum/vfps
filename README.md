@@ -20,9 +20,9 @@ Visit <https://localhost:8080/> to view the OpenAPI specification of the Vfps AP
 
 ![Screenshot of the OpenAPI specification](docs/img/openapi.png)
 
-## Production-grade deployment
+<!-- ## Production-grade deployment
 
-See <https://github.com/chgl/charts/tree/master/charts/vfps> for a production-grade deployment on Kubernetes using Helm.
+See <https://github.com/chgl/charts/tree/master/charts/vfps> for a production-grade deployment on Kubernetes using Helm. -->
 
 ## Observability
 

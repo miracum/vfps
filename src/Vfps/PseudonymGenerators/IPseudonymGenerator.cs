@@ -1,7 +1,6 @@
-namespace Vfps.PseudonymGenerators
+namespace Vfps.PseudonymGenerators;
+
+public interface IPseudonymGenerator
 {
-    public interface IPseudonymGenerator
-    {
-        string GeneratePseudonym(string originalValue, uint pseudonymLength = 32);
-    }
+    string GeneratePseudonym(string originalValue, uint pseudonymLength = 32);
 }

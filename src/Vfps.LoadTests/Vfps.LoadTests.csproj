@@ -5,15 +5,11 @@
     <TargetFramework>net7.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.13.2" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\Vfps\Vfps.csproj" />
+    <PackageReference Include="NBomber" Version="3.2.1" />
+    <PackageReference Include="NBomber.Http" Version="3.0.2" />
   </ItemGroup>
 
 </Project>

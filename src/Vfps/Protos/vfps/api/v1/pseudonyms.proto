@@ -33,7 +33,7 @@ message PseudonymServiceGetRequest {
   string pseudonym_value = 2;
 }
 
-// reponse for getting a pseudonym entity
+// response for getting a pseudonym entity
 message PseudonymServiceGetResponse {
   // the found pseudonym
   Pseudonym pseudonym = 1;
@@ -47,7 +47,7 @@ message PseudonymServiceCreateRequest {
   string original_value = 2;
 }
 
-// reponse for creating a pseudonym entity
+// response for creating a pseudonym entity
 message PseudonymServiceCreateResponse {
   // the created pseudonym
   Pseudonym pseudonym = 1;

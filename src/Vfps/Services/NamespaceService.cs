@@ -45,7 +45,7 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
 
         try
         {
-            await Context.SaveChangesAsync();
+            await Context.SaveChangesAsync(context.CancellationToken);
         }
         catch (UniqueConstraintException)
         {
@@ -83,7 +83,7 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
     /// <inheritdoc/>
     public override async Task<NamespaceServiceGetResponse> Get(NamespaceServiceGetRequest request, ServerCallContext context)
     {
-        var @namespace = await Context.Namespaces.FindAsync(request.Name);
+        var @namespace = await Context.Namespaces.FindAsync(request.Name, context.CancellationToken);
         if (@namespace is null)
         {
             var metadata = new Metadata
@@ -116,7 +116,7 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
     /// <inheritdoc/>
     public override async Task<NamespaceServiceDeleteResponse> Delete(NamespaceServiceDeleteRequest request, ServerCallContext context)
     {
-        var @namespace = await Context.Namespaces.FindAsync(request.Name);
+        var @namespace = await Context.Namespaces.FindAsync(request.Name, context.CancellationToken);
         if (@namespace is null)
         {
             var metadata = new Metadata
@@ -128,32 +128,35 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
         }
 
         Context.Namespaces.Remove(@namespace);
-        Context.SaveChanges();
+        await Context.SaveChangesAsync(context.CancellationToken);
 
         return new NamespaceServiceDeleteResponse();
     }
 
+    /// <inheritdoc/>
     public override async Task<NamespaceServiceGetAllResponse> GetAll(NamespaceServiceGetAllRequest request, ServerCallContext context)
     {
-        var namespaces = await Context.Namespaces.ToListAsync();
+        var namespaces = await Context.Namespaces
+            .AsNoTracking()
+            .Select(n => new Namespace
+            {
+                Description = n.Description,
+                Name = n.Name,
+                PseudonymGenerationMethod = n.PseudonymGenerationMethod,
+                PseudonymLength = n.PseudonymLength,
+                PseudonymPrefix = n.PseudonymPrefix,
+                PseudonymSuffix = n.PseudonymSuffix,
+                Meta = new Meta
+                {
+                    CreatedAt = Timestamp.FromDateTimeOffset(n.CreatedAt),
+                    LastUpdatedAt = Timestamp.FromDateTimeOffset(n.LastUpdatedAt)
+                }
+            }).ToListAsync(context.CancellationToken);
 
         var response = new NamespaceServiceGetAllResponse();
 
         // TODO: should really use auto-mapper or some other even a custom Namespace.FromDto() method.
-        response.Results.AddRange(namespaces.Select(n => new Namespace
-        {
-            Description = n.Description,
-            Name = n.Name,
-            PseudonymGenerationMethod = n.PseudonymGenerationMethod,
-            PseudonymLength = n.PseudonymLength,
-            PseudonymPrefix = n.PseudonymPrefix,
-            PseudonymSuffix = n.PseudonymSuffix,
-            Meta = new Meta
-            {
-                CreatedAt = Timestamp.FromDateTimeOffset(n.CreatedAt),
-                LastUpdatedAt = Timestamp.FromDateTimeOffset(n.LastUpdatedAt)
-            }
-        }));
+        response.Results.AddRange(namespaces);
 
         return response;
     }
