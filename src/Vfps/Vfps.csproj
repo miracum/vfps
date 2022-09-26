@@ -1,34 +1,30 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web">
-
-	<PropertyGroup>
-		<TargetFramework>net7.0</TargetFramework>
-		<Nullable>enable</Nullable>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<GenerateDocumentationFile>true</GenerateDocumentationFile>
-	</PropertyGroup>
-
-	<ItemGroup>
-		<PackageReference Include="EntityFrameworkCore.Exceptions.PostgreSQL" Version="6.0.3" />
-		<PackageReference Include="Grpc.AspNetCore" Version="2.49.0-pre1" />
-		<PackageReference Include="Grpc.AspNetCore.HealthChecks" Version="2.49.0-pre1" />
-		<PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.49.0-pre1" />
-		<PackageReference Include="Microsoft.AspNetCore.Grpc.JsonTranscoding" Version="7.0.0-rc.1.22427.2" />
-		<PackageReference Include="Microsoft.AspNetCore.Grpc.Swagger" Version="0.3.0-rc.1.22427.2" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.0-rc.1.22426.7" />
-		<PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.0-rc.1.22426.7">
-			<PrivateAssets>all</PrivateAssets>
-			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-		</PackageReference>
-		<PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="7.0.0-rc.1.22427.2" />
-		<PackageReference Include="Npgsql" Version="7.0.0-rc.1" />
-		<PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.0-rc.1" />
-		<PackageReference Include="prometheus-net.AspNetCore" Version="7.0.0-pre-000276-9e65611" />
-		<PackageReference Include="prometheus-net.AspNetCore.Grpc" Version="7.0.0-pre-000276-9e65611" />
-		<PackageReference Include="prometheus-net.AspNetCore.HealthChecks" Version="7.0.0-pre-000276-9e65611" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Protobuf Include="Protos\vfps\api\v1\*.proto" GrpcServices="Server" />
-	</ItemGroup>
-
+<Project Sdk="Microsoft.NET.Sdk.Web">
+    <PropertyGroup>
+        <TargetFramework>net7.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="EntityFrameworkCore.Exceptions.PostgreSQL" Version="6.0.3" />
+        <PackageReference Include="Grpc.AspNetCore" Version="2.49.0-pre1" />
+        <PackageReference Include="Grpc.AspNetCore.HealthChecks" Version="2.49.0-pre1" />
+        <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.49.0-pre1" />
+        <PackageReference Include="Microsoft.AspNetCore.Grpc.JsonTranscoding" Version="7.0.0-rc.1.22427.2" />
+        <PackageReference Include="Microsoft.AspNetCore.Grpc.Swagger" Version="0.3.0-rc.1.22427.2" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.0-rc.1.22426.7" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.0-rc.1.22426.7">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
+        <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="7.0.0-rc.1.22427.2" />
+        <PackageReference Include="Npgsql" Version="7.0.0-rc.1" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.0-rc.1" />
+        <PackageReference Include="prometheus-net.AspNetCore" Version="7.0.0-pre-000276-9e65611" />
+        <PackageReference Include="prometheus-net.AspNetCore.Grpc" Version="7.0.0-pre-000276-9e65611" />
+        <PackageReference Include="prometheus-net.AspNetCore.HealthChecks" Version="7.0.0-pre-000276-9e65611" />
+    </ItemGroup>
+    <ItemGroup>
+        <Protobuf Include="Protos\vfps\api\v1\*.proto" GrpcServices="Server" />
+    </ItemGroup>
 </Project>

@@ -33,10 +33,10 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
     @"
         INSERT INTO ""Pseudonyms"" (""NamespaceName"", ""OriginalValue"", ""PseudonymValue"", ""CreatedAt"", ""LastUpdatedAt"")
         VALUES ({0}, {1}, {2}, time('now'), time('now'))
-        ON CONFLICT (""NamespaceName"", ""OriginalValue"") 
+        ON CONFLICT (""NamespaceName"", ""OriginalValue"")
         DO UPDATE SET ""OriginalValue""=excluded.""OriginalValue""
         WHERE ""OriginalValue"" IS excluded.""OriginalValue""
-        RETURNING *; 
+        RETURNING *;
     ";
 
     private readonly string UpsertCommand;

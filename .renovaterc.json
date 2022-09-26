@@ -1,11 +1,11 @@
 {
-    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-    "extends": [
-      "config:base",
-      ":disableDependencyDashboard",
-      "helpers:pinGitHubActionDigests",
-      "docker:pinDigests",
-      "schedule:monthly"
-    ],
-    "bumpVersion": "patch"
-  }
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "config:base",
+    ":disableDependencyDashboard",
+    "helpers:pinGitHubActionDigests",
+    "docker:pinDigests",
+    "schedule:monthly"
+  ],
+  "bumpVersion": "patch"
+}

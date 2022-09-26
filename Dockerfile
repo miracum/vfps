@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.4
 FROM mcr.microsoft.com/dotnet/nightly/sdk:7.0-jammy@sha256:aaeeb2fb035e61d0c62f52aac5059d6be2c3f971e2f364152cdc9734bfb533dd AS build
-WORKDIR "/build"
+WORKDIR /build
 
 COPY src/Vfps/Vfps.csproj src/Vfps/Vfps.csproj
 
@@ -20,10 +20,18 @@ dotnet publish src/Vfps/Vfps.csproj \
     -o /build/publish
 EOF
 
+FROM build AS unit-test
+RUN <<EOF
+dotnet test \
+    --no-restore \
+    --no-build \
+    --configuration=Release
+EOF
+
 # TODO: using mcr.microsoft.com/dotnet/nightly/sdk:7.0-jammy as a base image causes same framework version conflicts.
 #       should update this to run "ef migrations bundle" in the build layer once .NET 7 is here.
 FROM mcr.microsoft.com/dotnet/sdk:7.0.100-rc.1-jammy@sha256:5f968241760ea2469f029d769aec5c5f03ef55c608c63cfd74c7509757a3813a AS build-migrations
-WORKDIR "/build"
+WORKDIR /build
 ENV PATH="/root/.dotnet/tools:${PATH}"
 
 # TODO: remove "prerelease" once .NET 7 is officially released
@@ -54,7 +62,7 @@ COPY --from=build-migrations /build/efbundle .
 ENTRYPOINT ["/opt/vfps-database-migrations/efbundle"]
 
 FROM mcr.microsoft.com/dotnet/nightly/aspnet:7.0-jammy-chiseled@sha256:019d6e9b6e923d6909a917a25a71989f58efe7bba09e4a8e4af58fab5b45dd2c
-WORKDIR "/opt/vfps"
+WORKDIR /opt/vfps
 ENV DOTNET_ENVIRONMENT="Production" \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1
 EXPOSE 8080/tcp
