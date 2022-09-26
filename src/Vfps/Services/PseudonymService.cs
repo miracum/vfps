@@ -11,7 +11,7 @@ namespace Vfps.Services;
 /// <inheritdoc/>
 public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
 {
-    private readonly string InsertCommand =
+    private readonly string PostgreSQLInsertCommand =
     @"
         WITH
             cte AS (
@@ -29,12 +29,34 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
         WHERE ""NamespaceName""={0} AND ""OriginalValue""={1}
     ";
 
+    private readonly string SqliteInsertCommand =
+    @"
+        INSERT INTO ""Pseudonyms"" (""NamespaceName"", ""OriginalValue"", ""PseudonymValue"", ""CreatedAt"", ""LastUpdatedAt"")
+        VALUES ({0}, {1}, {2}, time('now'), time('now'))
+        ON CONFLICT (""NamespaceName"", ""OriginalValue"") 
+        DO UPDATE SET ""OriginalValue""=excluded.""OriginalValue""
+        WHERE ""OriginalValue"" IS excluded.""OriginalValue""
+        RETURNING *; 
+    ";
+
+    private readonly string UpsertCommand;
+
     /// <inheritdoc/>
     public PseudonymService(PseudonymContext context, PseudonymizationMethodsLookup lookup)
     {
         Context = context;
         Lookup = lookup;
+
+        if (Context.Database.IsNpgsql())
+        {
+            UpsertCommand = PostgreSQLInsertCommand;
+        }
+        else
+        {
+            UpsertCommand = SqliteInsertCommand;
+        }
     }
+
     private PseudonymContext Context { get; }
     private PseudonymizationMethodsLookup Lookup { get; }
 
@@ -48,7 +70,7 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
         var @namespace = await Context.Namespaces.FindAsync(request.Namespace);
         if (@namespace is null)
         {
-            var metadata = new Grpc.Core.Metadata
+            var metadata = new Metadata
                 {
                     { "Namespace", request.Namespace }
                 };
@@ -78,7 +100,7 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
             while (upsertedPseudonym is null && retryCount > 0)
             {
                 var pseudonyms = await Context.Pseudonyms
-                    .FromSqlRaw(InsertCommand, pseudonym.NamespaceName, pseudonym.OriginalValue, pseudonym.PseudonymValue)
+                    .FromSqlRaw(UpsertCommand, pseudonym.NamespaceName, pseudonym.OriginalValue, pseudonym.PseudonymValue)
                     .AsNoTracking()
                     .ToListAsync();
 
