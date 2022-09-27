@@ -13,11 +13,13 @@ jobs:
     name: Build
     runs-on: ubuntu-22.04
     permissions:
-      id-token: write
-      security-events: write
       packages: write
       contents: read
       pull-requests: write
+    outputs:
+      api-image-tags: ${{ steps.container_meta.outputs.tags }}
+      api-image-version: ${{ steps.container_meta.outputs.version }}
+      migrations-image-tags: ${{ steps.container_migrations_meta.outputs.tags }}
     steps:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
@@ -67,6 +69,7 @@ jobs:
           labels: ${{ steps.container_meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/api-image.tar
 
       - name: Run unit tests
         uses: docker/build-push-action@c84f38281176d4c9cdb1626ffafcd6b3911b5d94 # tag=v3
@@ -88,6 +91,7 @@ jobs:
           target: migrations
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          outputs: type=docker,dest=/tmp/migrations-image.tar
 
       - name: Copy unit test coverage reports from container
         env:
@@ -116,15 +120,118 @@ jobs:
           recreate: true
           path: code-coverage-results.md
 
+      - name: Upload container images
+        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # tag=v3.1.0
+        with:
+          name: container-image-artifacts
+          path: |
+            /tmp/migrations-image.tar
+            /tmp/api-image.tar
+
+  test-api-container:
+    name: test api container
+    runs-on: ubuntu-22.04
+    needs:
+      - build
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@dc7b9719a96d48369863986a06765841d7ea23f6 # tag=v2
+
+      - name: Download container images
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741 # tag=v3.0.0
+        with:
+          name: container-image-artifacts
+          path: /tmp
+
+      - name: Load images
+        run: |
+          ls -lar /tmp
+          docker load --input /tmp/migrations-image.tar
+          docker load --input /tmp/api-image.tar
+          docker image ls -a
+
+      - name: Install grpcurl
+        working-directory: /tmp
+        env:
+          GRPCURL_URL: https://github.com/fullstorydev/grpcurl/releases/download/v1.8.7/grpcurl_1.8.7_linux_x86_64.tar.gz
+        run: |
+          curl -LSs "$GRPCURL_URL" | tar xz && \
+          mv ./grpcurl /usr/local/bin/grpcurl && \
+          chmod +x /usr/local/bin/grpcurl && \
+          grpcurl --version
+
+      - name: Install ghz
+        working-directory: /tmp
+        env:
+          GHZ_URL: https://github.com/bojand/ghz/releases/download/v0.110.0/ghz-linux-x86_64.tar.gz
+        run: |
+          curl -LSs "$GHZ_URL" | tar xz && \
+          mv ./ghz /usr/local/bin/ghz && \
+          chmod +x /usr/local/bin/ghz && \
+          ghz --version
+
+      - name: Start compose deployment
+        env:
+          VFPS_IMAGE_TAG: ${{ needs.build.outputs.api-image-version }}
+        run: |
+          echo "Using VFPS image tag ${VFPS_IMAGE_TAG}"
+          docker compose -f docker-compose.yaml --profile=test up -d
+
+      - name: Wait for the healthz endpoint to be ready
+        run: |
+          curl --fail --retry 5 --retry-all-errors --connect-timeout 30 --max-time 60 --retry-delay 10 http://127.0.0.1:8080/healthz
+
+      - name: Create a namespace for testing
+        run: |
+          grpcurl \
+            -plaintext \
+            -import-path src/Vfps/ \
+            -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
+            -d '{"name": "test", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}' \
+            127.0.0.1:8081 \
+            vfps.api.v1.NamespaceService/Create
+
+      - name: Create pseudonyms from random inputs
+        run: |
+          ghz -n 5000 \
+            --cpus 1 \
+            --insecure \
+            --import-paths src/Vfps/ \
+            --proto src/Vfps/Protos/vfps/api/v1/pseudonyms.proto \
+            --call vfps.api.v1.PseudonymService/Create \
+            -d '{"originalValue": "{{randomString 32}}", "namespace": "test"}' \
+            127.0.0.1:8081
+
+      - name: Print compose logs
+        if: always()
+        run: |
+          docker compose --profile=test -f docker-compose.yaml logs
+          docker compose --profile=test down --volumes --remove-orphans
+
+  sign-images:
+    name: sign images
+    runs-on: ubuntu-22.04
+    if: ${{ github.event_name != 'pull_request' }}
+    needs:
+      - build
+      - test-api-container
+    permissions:
+      id-token: write
+      security-events: write
+      packages: write
+    steps:
       - name: Install Cosign
-        if: ${{ github.event_name != 'pull_request' }}
         uses: sigstore/cosign-installer@f3c664df7af409cb4873aa5068053ba9d61a57b6 # tag=v2.6.0
 
-      - name: Sign images
-        if: ${{ github.event_name != 'pull_request' }}
+      - name: Sign main image
         env:
           COSIGN_EXPERIMENTAL: "true"
-          IMAGES: ${{ steps.container_meta.outputs.tags }}
+          IMAGES: ${{ needs.build.outputs.api-image-tags }}
         run: |
           while read -r image; do
             if [[ $image = quay.io/* ]]; then
@@ -135,11 +242,10 @@ jobs:
             cosign sign "$image"
           done <<< "$IMAGES"
 
-      - name: Sign migration images
-        if: ${{ github.event_name != 'pull_request' }}
+      - name: Sign migrations image
         env:
           COSIGN_EXPERIMENTAL: "true"
-          IMAGES: ${{ steps.container_migrations_meta.outputs.tags }}
+          IMAGES: ${{ needs.build.outputs.migrations-image-tags }}
         run: |
           while read -r image; do
             if [[ $image = quay.io/* ]]; then
