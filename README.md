@@ -70,7 +70,7 @@ Start an empty PostgreSQL database for development (optionally add `-d` to run i
 docker compose -f docker-compose.yaml up
 ```
 
-Restore dependencies and run in Debug mode with the [HTTPS profile](src/Vfps/Properties/launchSettings.json):
+Restore dependencies and run in Debug mode:
 
 ```sh
 dotnet restore
@@ -80,7 +80,7 @@ dotnet run -c Debug --project=src/Vfps
 Open <https://localhost:8080/> to see the OpenAPI UI for the JSON-transcoded gRPC services.
 You can also use [grpcurl](https://github.com/fullstorydev/grpcurl) to interact with the API:
 
-> **Information**
+> **Info**
 > In development mode gRPC reflection is enabled and used by grpcurl by default.
 
 ```sh
