@@ -61,15 +61,16 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push main image
+      # can't use `load` and `push` at the same time, so differentiate by whether its a PR or not
+      - name: Build and push api image
         uses: docker/build-push-action@c84f38281176d4c9cdb1626ffafcd6b3911b5d94 # tag=v3
         with:
+          load: ${{ github.event_name == 'pull_request' }}
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.container_meta.outputs.tags }}
           labels: ${{ steps.container_meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          outputs: type=docker,dest=/tmp/api-image.tar
 
       - name: Run unit tests
         uses: docker/build-push-action@c84f38281176d4c9cdb1626ffafcd6b3911b5d94 # tag=v3
@@ -86,12 +87,12 @@ jobs:
         uses: docker/build-push-action@c84f38281176d4c9cdb1626ffafcd6b3911b5d94 # tag=v3
         with:
           push: ${{ github.event_name != 'pull_request' }}
+          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.container_migrations_meta.outputs.tags }}
           labels: ${{ steps.container_migrations_meta.outputs.labels }}
           target: migrations
           cache-from: type=gha
           cache-to: type=gha,mode=max
-          outputs: type=docker,dest=/tmp/migrations-image.tar
 
       - name: Copy unit test coverage reports from container
         env:
@@ -120,6 +121,14 @@ jobs:
           recreate: true
           path: code-coverage-results.md
 
+      - name: Save container images as tar archives
+        env:
+          API_IMAGE: ${{ fromJson(steps.container_meta.outputs.json).tags[0] }}
+          MIGRATIONS_IMAGE: ${{ fromJson(steps.container_migrations_meta.outputs.json).tags[0] }}
+        run: |
+          docker save "$API_IMAGE" -o /tmp/api-image.tar
+          docker save "$MIGRATIONS_IMAGE" -o /tmp/migrations-image.tar
+
       - name: Upload container images
         uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # tag=v3.1.0
         with:
@@ -131,6 +140,7 @@ jobs:
   test-api-container:
     name: test api container
     runs-on: ubuntu-22.04
+    if: ${{ github.event_name == 'pull_request' }}
     needs:
       - build
     permissions:
