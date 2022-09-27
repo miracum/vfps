@@ -19,15 +19,15 @@ services:
       - "35432:5432"
 
   vfps:
-    image: ghcr.io/chgl/vfps:latest
+    image: ghcr.io/chgl/vfps:${VFPS_IMAGE_TAG:-latest}
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 512m
+          memory: 128m
           cpus: "1"
         reservations:
-          memory: 512m
+          memory: 128m
           cpus: "1"
     ipc: none
     cap_drop:
@@ -41,8 +41,11 @@ services:
     environment:
       COMPlus_EnableDiagnostics: "0"
       ForceRunDatabaseMigrations: "true"
-      ConnectionStrings__PostgreSQL: "Host=postgresql:5432;Database=vfps;Timeout=60;Max Auto Prepare=5;Application Name=vfps"
+      ConnectionStrings__PostgreSQL: "Host=postgresql:5432;Database=vfps;Timeout=60;Max Auto Prepare=5;Application Name=vfps;Maximum Pool Size=50;"
       PGUSER: postgres
       PGPASSWORD: postgres
     ports:
+      # Http1, Http2, Http3
       - "127.0.0.1:8080:8080"
+      # Http2-only for plaintext gRPC
+      - "127.0.0.1:8081:8081"

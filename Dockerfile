@@ -69,8 +69,9 @@ FROM mcr.microsoft.com/dotnet/nightly/aspnet:7.0-jammy-chiseled@sha256:019d6e9b6
 WORKDIR /opt/vfps
 ENV DOTNET_ENVIRONMENT="Production" \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
-    DOTNET_CLI_TELEMETRY_OPTOUT=1
-EXPOSE 8080/tcp
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    ASPNETCORE_URLS=http://+:8080,http://+:8081
+EXPOSE 8080/tcp 8081/tcp
 USER 65532:65532
 
 COPY --from=build /build/publish .

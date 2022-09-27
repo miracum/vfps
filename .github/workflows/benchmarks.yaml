@@ -8,6 +8,8 @@ on:
       - src/**
   pull_request:
     branches: [master]
+    paths:
+      - src/**
 
 jobs:
   benchmark:
