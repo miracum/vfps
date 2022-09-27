@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664298046612,
+  "lastUpdate": 1664311985582,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -288,6 +288,42 @@ window.BENCHMARK_DATA = {
             "value": 1438.5030015798716,
             "unit": "ns",
             "range": "± 1.7254594568291513"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1ee3f1054566c677fc6080b8d3ca4bdcacaa1873",
+          "message": "fix: split http1/2 and grpc endpoint for easier grpc usage (#6)",
+          "timestamp": "2022-09-27T22:51:42+02:00",
+          "tree_id": "3fed5dbc79571891cdd525a645e8e0e8d9dcec1e",
+          "url": "https://github.com/chgl/vfps/commit/1ee3f1054566c677fc6080b8d3ca4bdcacaa1873"
+        },
+        "date": 1664311985223,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1976.3838176727295,
+            "unit": "ns",
+            "range": "± 53.15765170668459"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1522.8498889287314,
+            "unit": "ns",
+            "range": "± 23.102982291855152"
           }
         ]
       }
