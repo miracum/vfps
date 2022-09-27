@@ -4,9 +4,8 @@ on:
     tags:
       - "v*"
     branches: [master]
-    paths-ignore:
-      - "docs/**"
-      - "README.md"
+    paths:
+      - src/**
   pull_request:
     branches: [master]
 

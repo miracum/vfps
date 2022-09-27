@@ -17,6 +17,7 @@ jobs:
       security-events: write
       packages: write
       contents: read
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
@@ -36,6 +37,13 @@ jobs:
         with:
           images: |
             ghcr.io/${{ github.repository }}-migrations
+
+      - name: Container meta for the unit test image
+        id: container_tests_meta
+        uses: docker/metadata-action@69f6fc9d46f2f8bf0d5491e4aabe0bb8c6a4678a # tag=v4
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}-tests
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@8b122486cedac8393e77aa9734c3528886e4a1a8 # tag=v2
@@ -64,6 +72,9 @@ jobs:
         uses: docker/build-push-action@c84f38281176d4c9cdb1626ffafcd6b3911b5d94 # tag=v3
         with:
           push: false
+          load: true
+          tags: ${{ steps.container_tests_meta.outputs.tags }}
+          labels: ${{ steps.container_tests_meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
           target: unit-test
@@ -77,6 +88,33 @@ jobs:
           target: migrations
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Copy unit test coverage reports from container
+        env:
+          UNIT_TEST_IMAGE: ${{ fromJson(steps.container_tests_meta.outputs.json).tags[0] }}
+        run: |
+          docker create --name=unit-test-container "${UNIT_TEST_IMAGE}"
+          docker cp unit-test-container:/build/src/Vfps.Tests/coverage ./coverage
+
+      - name: Code Coverage Report
+        uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # tag=v1.3.0
+        with:
+          filename: coverage/**/coverage.cobertura.xml
+          badge: true
+          fail_below_min: true
+          format: markdown
+          hide_branch_rate: false
+          hide_complexity: true
+          indicators: true
+          output: both
+          thresholds: "60 80"
+
+      - name: Add Coverage PR Comment
+        uses: marocchino/sticky-pull-request-comment@39c5b5dc7717447d0cba270cd115037d32d28443 # tag=v2.2.0
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          recreate: true
+          path: code-coverage-results.md
 
       - name: Install Cosign
         if: ${{ github.event_name != 'pull_request' }}

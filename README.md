@@ -106,9 +106,9 @@ Status code distribution:
 
 ### Prerequisites
 
-.NET 7.0: <https://dotnet.microsoft.com/en-us/download/dotnet>
-Docker CLI 20.10.17: <https://www.docker.com/>
-Docker Compose: <https://docs.docker.com/compose/install/>
+- .NET 7.0: <https://dotnet.microsoft.com/en-us/download/dotnet>
+- Docker CLI 20.10.17: <https://www.docker.com/>
+- Docker Compose: <https://docs.docker.com/compose/install/>
 
 ### Build & run
 
@@ -127,6 +127,32 @@ dotnet run -c Debug --launch-profile=https --project=src/Vfps
 
 Open <https://localhost:7078/> or <http://localhost:5119/> to see the OpenAPI UI for the JSON-transcoded gRPC services.
 You can also use [grpcurl](https://github.com/fullstorydev/grpcurl) to interact with the API.
+
+#### Run unit tests
+
+```sh
+dotnet test src/Vfps.Tests \
+  --configuration=Release \
+  --collect:"XPlat Code Coverage" \
+  --results-directory=./coverage \
+  -l "console;verbosity=detailed" \
+  --settings=src/Vfps.Tests/runsettings.xml
+```
+
+#### Generate Code coverage report
+
+If not installed, install the report generation too:
+
+```sh
+dotnet tool install -g dotnet-reportgenerator-globaltool
+```
+
+```sh
+reportgenerator -reports:"./coverage/*/coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:Html
+# remove the coverage directory so successive runs won't cause issues with their random GUID.
+# See <https://github.com/microsoft/vstest/issues/2378>
+rm -rf coverage/
+```
 
 ### Build container images
 

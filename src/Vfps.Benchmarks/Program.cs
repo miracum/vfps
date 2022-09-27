@@ -1,3 +1,5 @@
 using BenchmarkDotNet.Running;
 
-var _ = BenchmarkRunner.Run(typeof(Program).Assembly);
+var _ = BenchmarkRunner.Run(typeof(Benchmarks).Assembly);
+
+class Benchmarks { }
