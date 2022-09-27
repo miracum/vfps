@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664227798956,
+  "lastUpdate": 1664298046612,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -252,6 +252,42 @@ window.BENCHMARK_DATA = {
             "value": 1551.3300128936767,
             "unit": "ns",
             "range": "± 27.846721231764423"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2ecf85db9a8f92f3972c3b0bd40877d8316ca12c",
+          "message": "ci: include code coverage reports (#5)",
+          "timestamp": "2022-09-27T18:59:12+02:00",
+          "tree_id": "9a95631f3cdc7e66249ade28fc8e87b2d58c9e29",
+          "url": "https://github.com/chgl/vfps/commit/2ecf85db9a8f92f3972c3b0bd40877d8316ca12c"
+        },
+        "date": 1664298046258,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1857.6667985916138,
+            "unit": "ns",
+            "range": "± 9.25400469918982"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1438.5030015798716,
+            "unit": "ns",
+            "range": "± 1.7254594568291513"
           }
         ]
       }
