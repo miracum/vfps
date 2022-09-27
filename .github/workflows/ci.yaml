@@ -55,11 +55,23 @@ jobs:
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@49ed152c8eca782a232dede0303416e8f356c37b # tag=v2
-        if: github.event_name != 'pull_request'
+        if: ${{ github.event_name != 'pull_request' }}
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ran first to avoid pushing failing images when running on master.
+      - name: Run unit tests
+        uses: docker/build-push-action@c84f38281176d4c9cdb1626ffafcd6b3911b5d94 # tag=v3
+        with:
+          push: false
+          load: true
+          tags: ${{ steps.container_tests_meta.outputs.tags }}
+          labels: ${{ steps.container_tests_meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          target: unit-test
 
       # can't use `load` and `push` at the same time, so differentiate by whether its a PR or not
       - name: Build and push api image
@@ -72,17 +84,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Run unit tests
-        uses: docker/build-push-action@c84f38281176d4c9cdb1626ffafcd6b3911b5d94 # tag=v3
-        with:
-          push: false
-          load: true
-          tags: ${{ steps.container_tests_meta.outputs.tags }}
-          labels: ${{ steps.container_tests_meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          target: unit-test
-
       - name: Build and push migrations image
         uses: docker/build-push-action@c84f38281176d4c9cdb1626ffafcd6b3911b5d94 # tag=v3
         with:
@@ -90,9 +91,9 @@ jobs:
           load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.container_migrations_meta.outputs.tags }}
           labels: ${{ steps.container_migrations_meta.outputs.labels }}
-          target: migrations
           cache-from: type=gha
           cache-to: type=gha,mode=max
+          target: migrations
 
       - name: Copy unit test coverage reports from container
         env:
@@ -122,6 +123,7 @@ jobs:
           path: code-coverage-results.md
 
       - name: Save container images as tar archives
+        if: ${{ github.event_name == 'pull_request' }}
         env:
           API_IMAGE: ${{ fromJson(steps.container_meta.outputs.json).tags[0] }}
           MIGRATIONS_IMAGE: ${{ fromJson(steps.container_migrations_meta.outputs.json).tags[0] }}
@@ -130,6 +132,7 @@ jobs:
           docker save "$MIGRATIONS_IMAGE" -o /tmp/migrations-image.tar
 
       - name: Upload container images
+        if: ${{ github.event_name == 'pull_request' }}
         uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # tag=v3.1.0
         with:
           name: container-image-artifacts
