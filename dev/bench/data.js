@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664377063852,
+  "lastUpdate": 1664381589967,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -468,6 +468,42 @@ window.BENCHMARK_DATA = {
             "value": 1485.5759052700466,
             "unit": "ns",
             "range": "± 27.927847364842467"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "81216fe979662762c0361881f3ce6388d290110f",
+          "message": "test: re-added intergation test for the migrations image (#9)\n\nnot yet run as part of ci",
+          "timestamp": "2022-09-28T18:11:41+02:00",
+          "tree_id": "b55898862b84f368b8961ec811b5ae19863994f1",
+          "url": "https://github.com/chgl/vfps/commit/81216fe979662762c0361881f3ce6388d290110f"
+        },
+        "date": 1664381589276,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 2089.7071045466832,
+            "unit": "ns",
+            "range": "± 2.6664741540700456"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1618.3118607997894,
+            "unit": "ns",
+            "range": "± 27.280796267946364"
           }
         ]
       }
