@@ -2,57 +2,105 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
+using Xunit.Abstractions;
 
 namespace Vfps.IntegrationTests;
 
-public class MigrationsTests : IAsyncLifetime
+public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
 {
-    // private readonly TestcontainerDatabase postgresqlContainer = new TestcontainersBuilder<PostgreSqlTestcontainer>()
-    //     .WithDatabase(new PostgreSqlTestcontainerConfiguration("docker.io/bitnami/postgresql:14.5.0-debian-11-r17")
-    //     {
-    //         Database = "vfps",
-    //         Username = "postgres",
-    //         Password = "postgres",
-    //     })
-    //     .WithEnvironment("PGUSER", "postgres")
-    //     .Build();
+    private readonly ITestOutputHelper output;
+
+    private readonly TestcontainerDatabase postgresqlContainer;
+
+    private readonly NetworkFixture networkFixture;
+
+    private readonly string connectionString;
+
+    private readonly string migrationsImage;
+
+    public MigrationsTests(ITestOutputHelper output, NetworkFixture networkFixture)
+    {
+        this.output = output;
+        this.networkFixture = networkFixture;
+
+        postgresqlContainer = new TestcontainersBuilder<PostgreSqlTestcontainer>()
+            .WithDatabase(new PostgreSqlTestcontainerConfiguration("docker.io/bitnami/postgresql:14.5.0-debian-11-r17")
+            {
+                Database = "vfps",
+                Username = "postgres",
+                Password = "postgres",
+            })
+            .WithName("postgres")
+            .WithHostname("postgres")
+            .WithEnvironment("PGUSER", "postgres")
+            .WithNetwork(networkFixture.Network.Id, networkFixture.Network.Name)
+            .Build();
+
+        this.connectionString = "Server=postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;";
+
+        this.migrationsImage = Environment.GetEnvironmentVariable("VFPS_MIGRATIONS_IMAGE") ?? "ghcr.io/chgl/vfps-migrations:latest";
+    }
 
     [Fact]
-    public async Task RunMigrationsContainer()
+    public async Task RunMigrationsContainer_WithCorrectConnectionString_ShouldSucceed()
     {
-        true.Should().BeTrue();
-        // var migrationsImage = Environment.GetEnvironmentVariable("VFPS_MIGRATIONS_IMAGE") ?? "ghcr.io/chgl/vfps-migrations:latest";
+        using var consumer = Consume.RedirectStdoutAndStderrToStream(new MemoryStream(), new MemoryStream());
 
-        // using var consumer = Consume.RedirectStdoutAndStderrToStream(new MemoryStream(), new MemoryStream());
+        var migrationsContainerBuilder = new TestcontainersBuilder<TestcontainersContainer>()
+            .WithImage(migrationsImage)
+            .WithName("migrations")
+            .WithOutputConsumer(consumer)
+            .WithNetwork(networkFixture.Network.Id, networkFixture.Network.Name)
+            .WithCommand("--verbose", $"--connection={connectionString}");
 
-        // var migrationsContainerBuilder = new TestcontainersBuilder<TestcontainersContainer>()
-        //   .WithImage(migrationsImage)
-        //   .WithName("migrations")
-        //   .WithOutputConsumer(consumer)
-        //   .WithCommand($"--verbose --connection={postgresqlContainer.ConnectionString}")
-        //   .WithWaitStrategy(Wait.ForUnixContainer()
-        //       .UntilMessageIsLogged(consumer.Stdout, "Done."));
+        await using var migrationsContainer = migrationsContainerBuilder.Build();
 
-        // await using var migrationsContainer = migrationsContainerBuilder.Build()
+        await migrationsContainer.StartAsync();
 
-        // await migrationsContainer.StartAsync();
+        var exitCode = await migrationsContainer.GetExitCode();
 
-        // consumer.Stdout.Seek(0, SeekOrigin.Begin);
+        consumer.Stdout.Seek(0, SeekOrigin.Begin);
+        using var stdoutReader = new StreamReader(consumer.Stdout);
+        var stdout = stdoutReader.ReadToEnd();
+        output.WriteLine(stdout);
 
-        // using var streamReader = new StreamReader(consumer.Stdout, leaveOpen: true);
-        // var loggedOutput = await streamReader.ReadToEndAsync();
-        // loggedOutput.Should().Contain("Done.");
+        exitCode.Should().Be(0);
+        stdout.Should().Contain("Done.");
+    }
+
+    [Fact]
+    public async Task RunMigrationsContainer_WithWrongConnectionString_ShouldFail()
+    {
+        using var consumer = Consume.RedirectStdoutAndStderrToStream(new MemoryStream(), new MemoryStream());
+
+        var migrationsContainerBuilder = new TestcontainersBuilder<TestcontainersContainer>()
+            .WithImage(migrationsImage)
+            .WithName("migrations")
+            .WithOutputConsumer(consumer)
+            .WithNetwork(networkFixture.Network.Id, networkFixture.Network.Name)
+            .WithCommand("--verbose", $"--connection=Server=not-postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;");
+
+        await using var migrationsContainer = migrationsContainerBuilder.Build();
+
+        await migrationsContainer.StartAsync();
+
+        var exitCode = await migrationsContainer.GetExitCode();
+
+        consumer.Stdout.Seek(0, SeekOrigin.Begin);
+        using var stdoutReader = new StreamReader(consumer.Stdout);
+        var stdout = stdoutReader.ReadToEnd();
+        output.WriteLine(stdout);
+
+        exitCode.Should().Be(1);
     }
 
     public Task InitializeAsync()
     {
-        return Task.FromResult<object>(null);
-        // return postgresqlContainer.StartAsync();
+        return postgresqlContainer.StartAsync();
     }
 
     public Task DisposeAsync()
     {
-        return Task.FromResult<object>(null);
-        // return postgresqlContainer.DisposeAsync().AsTask();
+        return postgresqlContainer.DisposeAsync().AsTask();
     }
 }
