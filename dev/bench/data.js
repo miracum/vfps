@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664318600824,
+  "lastUpdate": 1664375525298,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -396,6 +396,42 @@ window.BENCHMARK_DATA = {
             "value": 1381.371231842041,
             "unit": "ns",
             "range": "± 3.5006368863013955"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "70f2f9c4a5c822606aecc6ffac96e0857c91335a",
+          "message": "feat: namespace caching and refactored pseudonym generator (#8)\n\n* refactor: made crypto pseudonym generation code simpler\r\n\r\n* feat: added option to enable namespace configuration caching\r\n\r\n* chore: updated digests for container base images",
+          "timestamp": "2022-09-28T16:30:39+02:00",
+          "tree_id": "047cf0bfa4346233605833370a70c3b0d72dbd2d",
+          "url": "https://github.com/chgl/vfps/commit/70f2f9c4a5c822606aecc6ffac96e0857c91335a"
+        },
+        "date": 1664375523822,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 2054.3458829243978,
+            "unit": "ns",
+            "range": "± 21.523987053319388"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1530.8640323638915,
+            "unit": "ns",
+            "range": "± 17.66938566415396"
           }
         ]
       }
