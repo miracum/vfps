@@ -80,7 +80,7 @@ dotnet run -c Debug --project=src/Vfps
 Open <https://localhost:8080/> to see the OpenAPI UI for the JSON-transcoded gRPC services.
 You can also use [grpcurl](https://github.com/fullstorydev/grpcurl) to interact with the API:
 
-> **Info**
+> **Note**
 > In development mode gRPC reflection is enabled and used by grpcurl by default.
 
 ```sh
@@ -213,11 +213,66 @@ Status code distribution:
   [OK]   100000 responses
 ```
 
+### Sub-10ms P99-latency
+
+By default, each pseudonym creation requests executes two database queries: one to fetch the namespace configuration
+and a second one to persist the pseudonym if it doesn't already exist. There is an opt-in way to avoid the first
+query by caching the namespaces in a non-distributed in-memory cache. It can be enabled and configured using the following
+environment variables:
+
+| Variable                                                    | Type         | Default      | Description                                |
+| ----------------------------------------------------------- | ------------ | ------------ | ------------------------------------------ |
+| `Pseudonymization__Caching__Namespaces__IsEnabled`          | `bool`       | `false`      | Set to `true` to enable namespace caching. |
+| `Pseudonymization__Caching__Namespaces__SizeLimit`          | `int`        | `32`         | Maximum number of entries in the cache.    |
+| `Pseudonymization__Caching__Namespaces__AbsoluteExpiration` | `D.HH:mm:nn` | `0.01:00:00` | Time after which a cache entry expires.    |
+
+> **Warning**
+> Deleting a namespace does not automatically remove it from the in-memory cache.
+> Pseudonym creation requests against such a stale cached namespace will fail until
+> either the entry expired or the service is restarted.
+
+Using the same setup as above but with namespace caching enabled, we can lower the per-request latencies and increase throughput:
+
+```console
+Summary:
+  Count:        100000
+  Total:        11.70 s
+  Slowest:      27.23 ms
+  Fastest:      1.55 ms
+  Average:      5.47 ms
+  Requests/sec: 8549.22
+
+Response time histogram:
+  1.546  [1]     |
+  4.114  [17418] |∎∎∎∎∎∎∎∎∎∎
+  6.682  [72827] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  9.251  [9382]  |∎∎∎∎∎
+  11.819 [122]   |
+  14.387 [0]     |
+  16.956 [0]     |
+  19.524 [0]     |
+  22.092 [0]     |
+  24.661 [49]    |
+  27.229 [201]   |
+
+Latency distribution:
+  10 % in 4.00 ms
+  25 % in 4.34 ms
+  50 % in 5.81 ms
+  75 % in 6.00 ms
+  90 % in 6.66 ms
+  95 % in 7.00 ms
+  99 % in 8.00 ms
+
+Status code distribution:
+  [OK]   100000 responses
+```
+
 ### Resource efficiency
 
 The sample deployment described in [docker-compose.yaml](docker-compose.yaml) sets strict resource
 limits for both the CPU (1 CPU) and memory (max 128MiB). Even under these constraints > 1k RPS are
-possible, although with significantly decreased P99 latencies:
+possible, although with significantly increased P99 latencies:
 
 ```console
 Summary:

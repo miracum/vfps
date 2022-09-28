@@ -42,10 +42,11 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
     private readonly string UpsertCommand;
 
     /// <inheritdoc/>
-    public PseudonymService(PseudonymContext context, PseudonymizationMethodsLookup lookup)
+    public PseudonymService(PseudonymContext context, PseudonymizationMethodsLookup lookup, INamespaceRepository namespaceRepository)
     {
         Context = context;
         Lookup = lookup;
+        NamespaceRepository = namespaceRepository;
 
         if (Context.Database.IsNpgsql())
         {
@@ -59,15 +60,14 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
 
     private PseudonymContext Context { get; }
     private PseudonymizationMethodsLookup Lookup { get; }
+    private INamespaceRepository NamespaceRepository { get; }
 
     /// <inheritdoc/>
     public override async Task<PseudonymServiceCreateResponse> Create(PseudonymServiceCreateRequest request, ServerCallContext context)
     {
         var now = DateTimeOffset.UtcNow;
 
-        // TODO: this should be cacheable since namespaces are immutable.
-        // Although deletion handling may be an issue. Adds around 5ms per request.
-        var @namespace = await Context.Namespaces.FindAsync(request.Namespace);
+        var @namespace = await NamespaceRepository.FindAsync(request.Namespace);
         if (@namespace is null)
         {
             var metadata = new Metadata

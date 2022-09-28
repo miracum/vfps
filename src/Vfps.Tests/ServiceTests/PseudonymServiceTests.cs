@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Grpc.Core;
+using Vfps.Data;
 using Vfps.Protos;
 
 namespace Vfps.Tests.ServiceTests;
@@ -12,9 +13,9 @@ public class PseudonymServiceTests : ServiceTestBase
     {
         sut = new Services.PseudonymService(
             InMemoryPseudonymContext,
-            new PseudonymGenerators.PseudonymizationMethodsLookup());
+            new PseudonymGenerators.PseudonymizationMethodsLookup(),
+            new NamespaceRepository(InMemoryPseudonymContext));
     }
-
 
     [Fact]
     public async void Get_WithNonExistingPseudonymValue_ShouldThrowNotFoundException()
@@ -64,7 +65,6 @@ public class PseudonymServiceTests : ServiceTestBase
         InMemoryPseudonymContext.Pseudonyms
             .Should()
             .Contain(p => p.OriginalValue == request.OriginalValue && p.NamespaceName == request.Namespace);
-
     }
 
     [Fact]
