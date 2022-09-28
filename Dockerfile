@@ -52,7 +52,7 @@ RUN dotnet ef migrations bundle \
     -o /build/efbundle
 
 # ideally, we should use the same base image as vfps itself to better leverage layer caching when deploying
-FROM mcr.microsoft.com/dotnet/nightly/runtime:7.0-jammy-chiseled@sha256:9b56398c837741a0ed21e3a6feef2f99fe8bf61e8c35536f7e71577a067d6378 AS migrations
+FROM mcr.microsoft.com/dotnet/nightly/runtime:7.0-jammy-chiseled@sha256:2bef5588ea2590c8be710a74e4f3f2f50539ad1adad1465d69d04985d98a2ab1 AS migrations
 WORKDIR /opt/vfps-database-migrations
 ENV DOTNET_ENVIRONMENT="Production" \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
@@ -65,7 +65,7 @@ COPY --from=build-migrations /build/efbundle .
 
 ENTRYPOINT ["/opt/vfps-database-migrations/efbundle"]
 
-FROM mcr.microsoft.com/dotnet/nightly/aspnet:7.0-jammy-chiseled@sha256:019d6e9b6e923d6909a917a25a71989f58efe7bba09e4a8e4af58fab5b45dd2c
+FROM mcr.microsoft.com/dotnet/nightly/aspnet:7.0-jammy-chiseled@sha256:601b023775e3dc0ba433381257b2b2160e3f59307ff213235f2c864d793d4e95
 WORKDIR /opt/vfps
 ENV DOTNET_ENVIRONMENT="Production" \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \

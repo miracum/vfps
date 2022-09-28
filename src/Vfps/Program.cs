@@ -5,6 +5,9 @@ using Microsoft.EntityFrameworkCore;
 using Vfps.PseudonymGenerators;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Prometheus;
+using Vfps.Config;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -48,6 +51,28 @@ builder.Services.AddDbContext<PseudonymContext>((isp, options) =>
 });
 
 builder.Services.AddSingleton<PseudonymizationMethodsLookup>();
+
+var namespaceCacheConfig = new CacheConfig();
+builder.Configuration.GetSection("Pseudonymization:Caching:Namespaces").Bind(namespaceCacheConfig);
+if (namespaceCacheConfig.IsEnabled)
+{
+    builder.Services.AddSingleton<IMemoryCache>(isp =>
+    {
+        return new MemoryCache(new MemoryCacheOptions { SizeLimit = namespaceCacheConfig.SizeLimit });
+    });
+
+    builder.Services.AddSingleton<CacheConfig>(isp =>
+    {
+        return namespaceCacheConfig;
+    });
+    Console.WriteLine("USING CACHING: " + namespaceCacheConfig.AbsoluteExpiration);
+    builder.Services.AddScoped<INamespaceRepository, CachingNamespaceRepository>();
+}
+else
+{
+    Console.WriteLine("NOT USING CACHING");
+    builder.Services.AddScoped<INamespaceRepository, NamespaceRepository>();
+}
 
 var app = builder.Build();
 
