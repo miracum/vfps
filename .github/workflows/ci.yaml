@@ -226,6 +226,40 @@ jobs:
           docker compose --profile=test -f docker-compose.yaml logs
           docker compose --profile=test down --volumes --remove-orphans
 
+  test-migrations-container:
+    name: test migrations container
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+    needs:
+      - build
+    steps:
+      - name: Checkout
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
+
+      - name: Download container images
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741 # tag=v3.0.0
+        with:
+          name: container-image-artifacts
+          path: /tmp
+
+      - name: Load migrations image
+        run: |
+          docker load --input /tmp/migrations-image.tar
+          docker image ls -a
+
+      - name: Install .NET
+        uses: actions/setup-dotnet@c0d4ad69d8bd405d234f1c9166d383b7a4f69ed8 # tag=v2
+        with:
+          dotnet-version: "7.0.x"
+          include-prerelease: true
+
+      - name: Run migrations tests
+        env:
+          VFPS_MIGRATIONS_IMAGE: ${{ needs.build.outputs.migrations-image-tags }}
+        run: dotnet test src/Vfps.IntegrationTests
+
   sign-images:
     name: sign images
     runs-on: ubuntu-22.04

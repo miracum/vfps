@@ -1,6 +1,5 @@
 # syntax=docker/dockerfile:1.4
 FROM mcr.microsoft.com/dotnet/nightly/aspnet:7.0-jammy-chiseled@sha256:601b023775e3dc0ba433381257b2b2160e3f59307ff213235f2c864d793d4e95 AS runtime
-WORKDIR /opt/vfps-database-migrations
 ENV DOTNET_ENVIRONMENT="Production" \
     DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
     DOTNET_CLI_TELEMETRY_OPTOUT=1
