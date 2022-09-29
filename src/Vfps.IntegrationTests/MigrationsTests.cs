@@ -39,7 +39,7 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
         this.connectionString = "Server=postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;";
 
         var migrationsImageTag = Environment.GetEnvironmentVariable("VFPS_MIGRATIONS_IMAGE_TAG") ?? "latest";
-        this.migrationsImage = $"ghcr.io/chgl/vfps-migrations:${migrationsImageTag}";
+        this.migrationsImage = $"ghcr.io/chgl/vfps-migrations:{migrationsImageTag}";
     }
 
     [Fact]
