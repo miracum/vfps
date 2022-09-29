@@ -1,5 +1,6 @@
 using FluentAssertions;
 using Grpc.Core;
+using Microsoft.EntityFrameworkCore;
 using Vfps.Protos;
 
 namespace Vfps.Tests.ServiceTests;
@@ -14,7 +15,21 @@ public class NamespaceServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Get_WithExistingPseudonym_ShouldReturnNamespace()
+    public async void Create_WithExistingNamespace_ShouldThrowAlreadyExistsError()
+    {
+        var request = new NamespaceServiceCreateRequest
+        {
+            Name = "existingNamespace",
+            PseudonymLength = 16,
+        };
+
+        await sut.Invoking(async s => await s.Create(request, TestServerCallContext.Create()))
+            .Should()
+            .ThrowAsync<RpcException>().Where(exc => exc.StatusCode == StatusCode.AlreadyExists);
+    }
+
+    [Fact]
+    public async void Get_WithExistingNamespace_ShouldReturnNamespace()
     {
         var request = new NamespaceServiceGetRequest
         {

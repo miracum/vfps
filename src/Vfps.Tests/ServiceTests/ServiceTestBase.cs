@@ -1,3 +1,4 @@
+using EntityFramework.Exceptions.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Vfps.Data;
@@ -14,6 +15,8 @@ public class ServiceTestBase : IDisposable
 
         var _contextOptions = new DbContextOptionsBuilder<PseudonymContext>()
             .UseSqlite(_connection)
+            .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
+            .UseExceptionProcessor()
             .Options;
 
         InMemoryPseudonymContext = new PseudonymContext(_contextOptions);
@@ -55,6 +58,7 @@ public class ServiceTestBase : IDisposable
         InMemoryPseudonymContext.Namespaces.AddRange(existingNamespace, emptyNamespace);
         InMemoryPseudonymContext.Pseudonyms.AddRange(existingPseudonym);
         InMemoryPseudonymContext.SaveChanges();
+        InMemoryPseudonymContext.ChangeTracker.Clear();
     }
     protected PseudonymContext InMemoryPseudonymContext { get; }
 

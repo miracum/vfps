@@ -19,6 +19,5 @@ public class PseudonymizationMethodsLookup
     public IPseudonymGenerator this[PseudonymGenerationMethod method]
     {
         get { return lookup[method]; }
-        set { lookup[method] = value; }
     }
 }
