@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664462559902,
+  "lastUpdate": 1664463396096,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -648,6 +648,42 @@ window.BENCHMARK_DATA = {
             "value": 1650.145344543457,
             "unit": "ns",
             "range": "± 20.53830783064428"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "distinct": true,
+          "id": "9b41839707316bd87ca1dae888d5793cb00694cc",
+          "message": "test: fixed migrations tag in integration test",
+          "timestamp": "2022-09-29T16:54:59+02:00",
+          "tree_id": "6c6b9b7306e0c8d06a4473efec4731b54107d168",
+          "url": "https://github.com/chgl/vfps/commit/9b41839707316bd87ca1dae888d5793cb00694cc"
+        },
+        "date": 1664463395575,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1798.0318366459437,
+            "unit": "ns",
+            "range": "± 3.016503170766218"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1341.9335147312709,
+            "unit": "ns",
+            "range": "± 1.6246455585838715"
           }
         ]
       }
