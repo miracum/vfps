@@ -1,0 +1,30 @@
+name: buf
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
+
+      - uses: bufbuild/buf-setup-action@ebfad693a1cf43c5a8fc187a3f6ffc9d4b5dea8f # tag=v1.8.0
+
+      - name: check formatting
+        working-directory: src/Vfps
+        run: buf format --exit-code
+
+      - uses: bufbuild/buf-lint-action@d35dc843e3e1d4d7ec2d4b6eef89ff040b85cf28 # tag=v1.0.2
+        with:
+          input: src/Vfps
+
+      - uses: bufbuild/buf-breaking-action@1cd949a5f7c5581990772f1e0c8a5270d7e4401b # tag=v1.1.1
+        with:
+          input: src/Vfps
+          against: "https://github.com/${{ github.repository }}.git#branch=master"
