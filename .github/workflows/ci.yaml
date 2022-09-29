@@ -260,7 +260,7 @@ jobs:
       - name: Run migrations tests
         env:
           VFPS_MIGRATIONS_IMAGE: ${{ needs.build.outputs.migrations-image-tags }}
-        run: dotnet test src/Vfps.IntegrationTests
+        run: dotnet test src/Vfps.IntegrationTests --configuration=Release -l "console;verbosity=detailed"
 
   sign-images:
     name: sign images
