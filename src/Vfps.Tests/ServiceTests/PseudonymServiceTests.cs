@@ -1,11 +1,8 @@
-using FluentAssertions;
-using FluentAssertions.Extensions;
 using Grpc.Core;
 using Microsoft.Extensions.Caching.Memory;
 using System.Diagnostics;
 using Vfps.Data;
 using Vfps.Protos;
-using static Google.Rpc.Context.AttributeContext.Types;
 
 namespace Vfps.Tests.ServiceTests;
 
