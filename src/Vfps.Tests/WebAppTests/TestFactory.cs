@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Vfps.Tests.WebAppTests;
 
+[ExcludeFromCodeCoverage]
 public class IntegrationTestFactory<TProgram, TDbContext> : WebApplicationFactory<TProgram>
     where TProgram : class where TDbContext : DbContext
 {

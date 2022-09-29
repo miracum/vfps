@@ -19,9 +19,11 @@
 #endregion
 
 using Grpc.Core;
+using System.Diagnostics.CodeAnalysis;
 
 namespace Vfps.Tests.ServiceTests;
 
+[ExcludeFromCodeCoverage]
 public class TestServerCallContext : ServerCallContext
 {
     private readonly Metadata _requestHeaders;

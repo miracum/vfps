@@ -23,8 +23,12 @@ jobs:
       - uses: bufbuild/buf-lint-action@d35dc843e3e1d4d7ec2d4b6eef89ff040b85cf28 # tag=v1.0.2
         with:
           input: src/Vfps
-
-      - uses: bufbuild/buf-breaking-action@1cd949a5f7c5581990772f1e0c8a5270d7e4401b # tag=v1.1.1
-        with:
-          input: src/Vfps
-          against: "https://github.com/${{ github.repository }}.git#branch=master"
+      # Doesn't currently work due to the weird file setup. Fails with:
+      # Error: Protos/vfps/api/v1/meta.proto: does not exist
+      # Error: Protos/vfps/api/v1/meta.proto: does not exist
+      # Error: google/api/http.proto: does not exist
+      # Error: buf found 3 breaking changes.
+      # - uses: bufbuild/buf-breaking-action@1cd949a5f7c5581990772f1e0c8a5270d7e4401b # tag=v1.1.1
+      #   with:
+      #     input: src/Vfps
+      #     against: "https://github.com/${{ github.repository }}.git#branch=master"
