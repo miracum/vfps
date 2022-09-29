@@ -20,6 +20,7 @@ jobs:
       api-image-tags: ${{ steps.container_meta.outputs.tags }}
       api-image-version: ${{ steps.container_meta.outputs.version }}
       migrations-image-tags: ${{ steps.container_migrations_meta.outputs.tags }}
+      migrations-image-version: ${{ steps.container_migrations_meta.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
@@ -259,7 +260,7 @@ jobs:
 
       - name: Run migrations tests
         env:
-          VFPS_MIGRATIONS_IMAGE: ${{ needs.build.outputs.migrations-image-tags }}
+          VFPS_MIGRATIONS_IMAGE_TAG: ${{ needs.build.outputs.migrations-image-version }}
         run: dotnet test src/Vfps.IntegrationTests --configuration=Release -l "console;verbosity=detailed"
 
   sign-images:
