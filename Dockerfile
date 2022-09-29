@@ -58,16 +58,16 @@ FROM runtime AS migrations
 WORKDIR /opt/vfps-database-migrations
 ENV DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
 
-COPY --from=build-migrations /build/src/Vfps/appsettings.json .
-COPY --from=build-migrations /build/efbundle .
+COPY --chown=65532:65532 --from=build-migrations /build/src/Vfps/appsettings.json .
+COPY --chown=65532:65532 --from=build-migrations /build/efbundle .
 
 ENTRYPOINT ["/opt/vfps-database-migrations/efbundle"]
 
 FROM runtime
 WORKDIR /opt/vfps
-ENV ASPNETCORE_URLS=http://+:8080,http://+:8081
+ENV ASPNETCORE_URLS=""
 EXPOSE 8080/tcp 8081/tcp
 
-COPY --from=build /build/publish .
+COPY --chown=65532:65532 --from=build /build/publish .
 
 ENTRYPOINT ["dotnet", "/opt/vfps/Vfps.dll"]

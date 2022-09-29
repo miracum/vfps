@@ -1,7 +1,11 @@
 ﻿version: v1
 lint:
+  ignore:
+    - google/
   use:
     - DEFAULT
+  except:
+    - PACKAGE_DIRECTORY_MATCH
 breaking:
   use:
     - FILE
