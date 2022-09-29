@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664461519024,
+  "lastUpdate": 1664461981088,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -540,6 +540,42 @@ window.BENCHMARK_DATA = {
             "value": 1285.4619695223296,
             "unit": "ns",
             "range": "± 1.6691353480162567"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5a3e1ab4afe15812a2d274fdb25779ede76a00db",
+          "message": "test: improved unit test coverage and container image layering (#10)\n\n* build: use same base image for vfps and migrations\r\n\r\nreduces migrations image size by 60MiB (uncompressed)\r\n\r\n* test(unit): increased test coverage\r\n\r\n* test: added migrations image integration test to ci\r\n\r\n* ci: when running on master, use the master tag for testing instead of loading image\r\n\r\n* build: improve Dockerfile layering",
+          "timestamp": "2022-09-29T16:23:55+02:00",
+          "tree_id": "56bbd13bc42531936dce9a115549c4baf87bcd8f",
+          "url": "https://github.com/chgl/vfps/commit/5a3e1ab4afe15812a2d274fdb25779ede76a00db"
+        },
+        "date": 1664461980679,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1799.8545018513998,
+            "unit": "ns",
+            "range": "± 7.244300912302523"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1363.079184850057,
+            "unit": "ns",
+            "range": "± 4.794395449828074"
           }
         ]
       }
