@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664463396096,
+  "lastUpdate": 1664479902086,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -684,6 +684,42 @@ window.BENCHMARK_DATA = {
             "value": 1341.9335147312709,
             "unit": "ns",
             "range": "± 1.6246455585838715"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "cf50ef38882c669a0f98bfa2e745383f23168027",
+          "message": "ci: added buf proto linting (#11)\n\n* ci: added buf linting to ci\r\n\r\n* build: set permissions for all copied files\r\n\r\nnot really necessary since everything is read-only anyways\r\n\r\n* test: exclude fixtures from unit-test coverage",
+          "timestamp": "2022-09-29T21:30:19+02:00",
+          "tree_id": "a36666a81180109a91744a9ee85891abe7807822",
+          "url": "https://github.com/chgl/vfps/commit/cf50ef38882c669a0f98bfa2e745383f23168027"
+        },
+        "date": 1664479901750,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1832.935917409261,
+            "unit": "ns",
+            "range": "± 13.78337169917379"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1355.2995042800903,
+            "unit": "ns",
+            "range": "± 7.353412092829412"
           }
         ]
       }
