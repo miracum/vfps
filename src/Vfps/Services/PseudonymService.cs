@@ -93,59 +93,43 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
             PseudonymValue = pseudonymValue,
         };
 
-        try
+        Data.Models.Pseudonym? upsertedPseudonym = null;
+        var retryCount = 3;
+        while (upsertedPseudonym is null && retryCount > 0)
         {
-            Data.Models.Pseudonym? upsertedPseudonym = null;
-            var retryCount = 3;
-            while (upsertedPseudonym is null && retryCount > 0)
-            {
-                var pseudonyms = await Context.Pseudonyms
-                    .FromSqlRaw(UpsertCommand, pseudonym.NamespaceName, pseudonym.OriginalValue, pseudonym.PseudonymValue)
-                    .AsNoTracking()
-                    .ToListAsync();
+            var pseudonyms = await Context.Pseudonyms
+                .FromSqlRaw(UpsertCommand, pseudonym.NamespaceName, pseudonym.OriginalValue, pseudonym.PseudonymValue)
+                .AsNoTracking()
+                .ToListAsync();
 
-                upsertedPseudonym = pseudonyms.FirstOrDefault();
-                retryCount--;
-            }
-
-            if (upsertedPseudonym is null)
-            {
-                var metadata = new Metadata
-                    {
-                        { "Namespace", request.Namespace },
-                    };
-
-                throw new RpcException(new Status(StatusCode.Internal, "Failed to upsert the pseudonym after several retries."));
-            }
-
-            return new PseudonymServiceCreateResponse
-            {
-                Pseudonym = new Pseudonym
-                {
-                    Namespace = upsertedPseudonym.NamespaceName,
-                    OriginalValue = upsertedPseudonym.OriginalValue,
-                    PseudonymValue = upsertedPseudonym.PseudonymValue,
-                    Meta = new Meta
-                    {
-                        CreatedAt = Timestamp.FromDateTimeOffset(upsertedPseudonym.CreatedAt),
-                        LastUpdatedAt = Timestamp.FromDateTimeOffset(upsertedPseudonym.LastUpdatedAt),
-                    },
-                }
-            };
+            upsertedPseudonym = pseudonyms.FirstOrDefault();
+            retryCount--;
         }
-        catch (UniqueConstraintException)
+
+        if (upsertedPseudonym is null)
         {
             var metadata = new Metadata
-                {
-                    { "Namespace", request.Namespace },
-                };
+            {
+                { "Namespace", request.Namespace },
+            };
 
-            throw new RpcException(
-                new Status(
-                    StatusCode.AlreadyExists,
-                    "A pseudonym for the given original value already exists in the namespace."),
-                metadata);
+            throw new RpcException(new Status(StatusCode.Internal, "Failed to upsert the pseudonym after several retries."));
         }
+
+        return new PseudonymServiceCreateResponse
+        {
+            Pseudonym = new Pseudonym
+            {
+                Namespace = upsertedPseudonym.NamespaceName,
+                OriginalValue = upsertedPseudonym.OriginalValue,
+                PseudonymValue = upsertedPseudonym.PseudonymValue,
+                Meta = new Meta
+                {
+                    CreatedAt = Timestamp.FromDateTimeOffset(upsertedPseudonym.CreatedAt),
+                    LastUpdatedAt = Timestamp.FromDateTimeOffset(upsertedPseudonym.LastUpdatedAt),
+                },
+            }
+        };
     }
 
     /// <inheritdoc/>

@@ -26,8 +26,4 @@
     </PackageReference>
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\Vfps\Vfps.csproj" />
-  </ItemGroup>
-
 </Project>

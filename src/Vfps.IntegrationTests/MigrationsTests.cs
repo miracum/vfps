@@ -78,7 +78,7 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
             .WithName("migrations")
             .WithOutputConsumer(consumer)
             .WithNetwork(networkFixture.Network.Id, networkFixture.Network.Name)
-            .WithCommand("--verbose", $"--connection=Server=not-postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;");
+            .WithCommand("--verbose", "--connection=Server=not-postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;");
 
         await using var migrationsContainer = migrationsContainerBuilder.Build();
 

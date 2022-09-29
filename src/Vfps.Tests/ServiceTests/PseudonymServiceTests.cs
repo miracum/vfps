@@ -1,5 +1,6 @@
-using FluentAssertions;
 using Grpc.Core;
+using Microsoft.Extensions.Caching.Memory;
+using System.Diagnostics;
 using Vfps.Data;
 using Vfps.Protos;
 
@@ -68,6 +69,20 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async void Create_WithNonExistingNamespace_ShouldThrowNotFoundError()
+    {
+        var request = new PseudonymServiceCreateRequest
+        {
+            Namespace = "nonExistingNamespace",
+            OriginalValue = nameof(Create_WithNonExistingNamespace_ShouldThrowNotFoundError),
+        };
+
+        await sut.Invoking(async s => await s.Create(request, TestServerCallContext.Create()))
+            .Should()
+            .ThrowAsync<RpcException>().Where(e => e.StatusCode == StatusCode.NotFound);
+    }
+
+    [Fact]
     public async void Create_CalledMultipleTimesWithTheSameOriginalValue_ShouldOnlyStoreOnePseudonym()
     {
         var request = new PseudonymServiceCreateRequest
@@ -87,5 +102,36 @@ public class PseudonymServiceTests : ServiceTestBase
         response = await sut.Create(request, TestServerCallContext.Create());
         response.Pseudonym.PseudonymValue.Should().Be(firstCreatedPseudonym);
         InMemoryPseudonymContext.Pseudonyms.Where(p => p.NamespaceName == request.Namespace).Should().HaveCount(1);
+    }
+
+    [Fact]
+    public async void Create_WithCachingNamespaceRepository_ShouldBeFaster()
+    {
+        var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 32 });
+
+        var cachingSut = new Services.PseudonymService(
+            InMemoryPseudonymContext,
+            new PseudonymGenerators.PseudonymizationMethodsLookup(),
+            new CachingNamespaceRepository(InMemoryPseudonymContext, cache, new Config.CacheConfig()));
+
+        var request = new PseudonymServiceCreateRequest
+        {
+            Namespace = "existingNamespace",
+            OriginalValue = nameof(Create_WithCachingNamespaceRepository_ShouldBeFaster),
+        };
+
+        var stopwatch = new Stopwatch();
+
+        stopwatch.Start();
+        await cachingSut.Create(request, TestServerCallContext.Create());
+        stopwatch.Stop();
+        var firstExecutionTime = stopwatch.Elapsed;
+
+        stopwatch.Restart();
+        await cachingSut.Create(request, TestServerCallContext.Create());
+        stopwatch.Stop();
+        var secondExecutionTime = stopwatch.Elapsed;
+
+        secondExecutionTime.Should().BeLessThan(firstExecutionTime);
     }
 }

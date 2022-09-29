@@ -6,7 +6,6 @@ using Vfps.PseudonymGenerators;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Prometheus;
 using Vfps.Config;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Caching.Memory;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -23,11 +22,22 @@ builder.Services.AddHealthChecks()
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1",
-        new OpenApiInfo { Title = "VFPS gRPC JSON-transcoded API", Version = "v1" });
+        new OpenApiInfo
+        {
+            Title = "VFPS gRPC JSON-transcoded API",
+            Version = "v1",
+            Description = "A very fast and resource-efficient pseudonym service.",
+            License = new OpenApiLicense
+            {
+                Name = "Apache-2.0",
+                Url = new Uri("https://www.apache.org/licenses/LICENSE-2.0")
+            },
+        });
 
     var filePath = Path.Combine(AppContext.BaseDirectory, "Vfps.xml");
     c.IncludeXmlComments(filePath);
     c.IncludeGrpcXmlComments(filePath, includeControllerXmlComments: true);
+    c.UseInlineDefinitionsForEnums();
 });
 
 builder.Services.AddDbContext<PseudonymContext>((isp, options) =>
@@ -56,21 +66,17 @@ var namespaceCacheConfig = new CacheConfig();
 builder.Configuration.GetSection("Pseudonymization:Caching:Namespaces").Bind(namespaceCacheConfig);
 if (namespaceCacheConfig.IsEnabled)
 {
-    builder.Services.AddSingleton<IMemoryCache>(isp =>
-    {
-        return new MemoryCache(new MemoryCacheOptions { SizeLimit = namespaceCacheConfig.SizeLimit });
-    });
-
-    builder.Services.AddSingleton<CacheConfig>(isp =>
-    {
-        return namespaceCacheConfig;
-    });
-    Console.WriteLine("USING CACHING: " + namespaceCacheConfig.AbsoluteExpiration);
+    builder.Services.AddSingleton<IMemoryCache>(_ =>
+        new MemoryCache(
+            new MemoryCacheOptions
+            {
+                SizeLimit = namespaceCacheConfig.SizeLimit
+            }));
+    builder.Services.AddSingleton(_ => namespaceCacheConfig);
     builder.Services.AddScoped<INamespaceRepository, CachingNamespaceRepository>();
 }
 else
 {
-    Console.WriteLine("NOT USING CACHING");
     builder.Services.AddScoped<INamespaceRepository, NamespaceRepository>();
 }
 
