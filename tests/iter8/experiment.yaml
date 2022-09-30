@@ -1,0 +1,188 @@
+---
+# Source: iter8/templates/k8s.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: default-iter8-sa
+---
+# Source: iter8/templates/k8s.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: default
+  annotations:
+    iter8.tools/group: default
+stringData:
+  # TODO: could be put into kustomize
+  experiment.yaml: |
+    spec:
+    # task: determine if Kubernetes Service exists
+    - task: ready
+      with:
+        name: "vfps"
+        version: v1
+        resource: services
+        namespace: default
+        timeout: 120s
+
+    # task: determine if Kubernetes Deployment exists and is Available
+    - task: ready
+      with:
+        name: "vfps"
+        group: apps
+        version: v1
+        resource: deployments
+        condition: Available
+        namespace: default
+        timeout: 120s
+
+    # task: download proto files
+    - run: |
+        mkdir -p google/api
+        curl -o google/api/annotations.proto https://raw.githubusercontent.com/chgl/vfps/master/src/Vfps/google/api/annotations.proto
+        curl -o google/api/http.proto https://raw.githubusercontent.com/chgl/vfps/master/src/Vfps/google/api/http.proto
+
+        mkdir -p Protos/vfps/api/v1
+        curl -o Protos/vfps/api/v1/pseudonyms.proto https://raw.githubusercontent.com/chgl/vfps/master/src/Vfps/Protos/vfps/api/v1/pseudonyms.proto
+        curl -o Protos/vfps/api/v1/meta.proto https://raw.githubusercontent.com/chgl/vfps/master/src/Vfps/Protos/vfps/api/v1/meta.proto
+
+    # task: create a pseudonym namespace for this experiment
+    - run: |
+        curl -X 'POST' \
+          'http://vfps:8080/v1/namespaces' \
+          -H 'accept: application/json' \
+          -H 'Content-Type: application/json' \
+          -d '{
+            "name": "benchmark",
+            "pseudonymGenerationMethod": 1,
+            "pseudonymLength": 32,
+            "description": "namespace for iter8 benchmarking"
+          }' || true
+
+    # task: generate gRPC requests for app
+    # collect Iter8's built-in gRPC latency and error-related metrics
+    - task: grpc
+      with:
+        call: vfps.api.v1.PseudonymService/Create
+        host: vfps:8081
+        proto: Protos/vfps/api/v1/pseudonyms.proto
+        total: 50000
+        insecure: true
+        data:
+          namespace: benchmark
+          originalValue: "{{randomString 32}}"
+
+    # task: validate service level objectives for app using
+    # the metrics collected in an earlier task
+    - task: assess
+      with:
+        SLOs:
+          upper:
+            - metric: grpc/error-rate
+              limit: 0
+            - metric: grpc/latency/mean
+              limit: 50
+            - metric: grpc/latency/p99.0
+              limit: 100
+
+---
+# Source: iter8/templates/k8s.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: default
+  annotations:
+    iter8.tools/group: default
+rules:
+  - apiGroups: [""]
+    resourceNames: ["default"]
+    resources: ["secrets"]
+    verbs: ["get", "update"]
+---
+# Source: iter8/templates/k8s.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: default-ready
+  namespace: default
+  annotations:
+    iter8.tools/group: default
+rules:
+  - apiGroups: [""]
+    resourceNames: ["vfps"]
+    resources: ["services"]
+    verbs: ["get"]
+  - apiGroups: ["apps"]
+    resourceNames: ["vfps"]
+    resources: ["deployments"]
+    verbs: ["get"]
+---
+# Source: iter8/templates/k8s.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: default
+  annotations:
+    iter8.tools/group: default
+subjects:
+  - kind: ServiceAccount
+    name: default-iter8-sa
+    namespace: default
+roleRef:
+  kind: Role
+  name: default
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: iter8/templates/k8s.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: default-ready
+  namespace: default
+  annotations:
+    iter8.tools/group: default
+subjects:
+  - kind: ServiceAccount
+    name: default-iter8-sa
+    namespace: default
+roleRef:
+  kind: Role
+  name: default-ready
+  apiGroup: rbac.authorization.k8s.io
+---
+# Source: iter8/templates/k8s.yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: default-1-job
+  annotations:
+    iter8.tools/group: default
+    iter8.tools/revision: "1"
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        iter8.tools/group: default
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: default-iter8-sa
+      restartPolicy: Never
+      containers:
+        - name: iter8
+          image: docker.io/iter8/iter8:0.11@sha256:bebdd5913787d1ae765a455780329a397542a6a57d60e5a80f0b5449869a3cee
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            seccompProfile:
+              type: RuntimeDefault
+          command:
+            - "/bin/sh"
+            - "-c"
+            - |
+              iter8 k run --namespace default --group default -l debug

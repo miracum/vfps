@@ -263,6 +263,92 @@ jobs:
           VFPS_MIGRATIONS_IMAGE_TAG: ${{ needs.build.outputs.migrations-image-version }}
         run: dotnet test src/Vfps.IntegrationTests --configuration=Release -l "console;verbosity=detailed"
 
+  run-iter8-tests:
+    name: run iter8 tests
+    runs-on: ubuntu-22.04
+    if: ${{ github.event_name == 'pull_request' }}
+    needs:
+      - build
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
+
+      - uses: iter8-tools/iter8@v0.11
+
+      - name: Create KinD cluster
+        uses: helm/kind-action@9e8295d178de23cbfbd8fa16cf844eec1d773a07 # tag=v1.4.0
+        with:
+          cluster_name: kind
+
+      - name: Download container images
+        uses: actions/download-artifact@fb598a63ae348fa914e94cd0ff38f362e927b741 # tag=v3.0.0
+        with:
+          name: container-image-artifacts
+          path: /tmp
+
+      - name: Load images into KinD
+        run: |
+          # vfps api image
+          kind load image-archive /tmp/api-image.tar
+
+          # vfps migrations image
+          kind load image-archive /tmp/migrations-image.tar
+
+      - name: List images in cluster
+        run: docker exec kind-control-plane crictl images
+
+      - name: Install vfps
+        env:
+          IMAGE_TAG: ${{ needs.build.outputs.api-image-version }}
+        run: |
+          helm repo add chgl https://chgl.github.io/charts
+          helm install \
+            --set="image.tag=${IMAGE_TAG}" \
+            --set="migrationsJob.image.tag=${IMAGE_TAG}" \
+            -f tests/iter8/values.yaml \
+            --wait \
+            --timeout=10m \
+            vfps chgl/vfps
+
+      - name: Launch iter8 experiment
+        run: kubectl apply -f tests/iter8/experiment.yaml
+
+      - name: Wait for experiment completion
+        run: iter8 k assert -c completed --timeout 10m
+
+      - name: Assert no failures and SLOs are satisfied
+        run: iter8 k assert -c nofailure,slos
+
+      - name: Create iter8 reports
+        if: always()
+        run: |
+          iter8 k report
+          iter8 k report -o html > iter8-report.html
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # tag=v3.1.0
+        with:
+          name: iter8-report.html
+          path: |
+            iter8-report.html
+
+      - name: Get logs
+        if: always()
+        run: |
+          kubectl cluster-info dump -o yaml | tee kind-cluster-dump.txt
+          iter8 k log -l trace
+
+      - name: Upload cluster dump
+        if: always()
+        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # tag=v3.1.0
+        with:
+          name: kind-cluster-dump.txt
+          path: |
+            kind-cluster-dump.txt
+
   sign-images:
     name: sign images
     runs-on: ubuntu-22.04
