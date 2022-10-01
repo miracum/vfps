@@ -148,6 +148,7 @@ jobs:
       - build
     permissions:
       contents: read
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
@@ -220,7 +221,25 @@ jobs:
             --proto src/Vfps/Protos/vfps/api/v1/pseudonyms.proto \
             --call vfps.api.v1.PseudonymService/Create \
             -d '{"originalValue": "{{randomString 32}}", "namespace": "test"}' \
-            127.0.0.1:8081
+            127.0.0.1:8081 | tee ghz-output.txt
+
+      - name: Enhance ghz output for use as a PR comment
+        run: |
+          GHZ_OUTPUT_TXT=$(cat ghz-output.txt)
+          {
+            echo -e '---';
+            echo -e '## ghz run statistics';
+            echo -e '```console';
+            echo -e "${GHZ_OUTPUT_TXT}";
+            echo -e '```'
+          } >> ghz-output.md
+
+      - name: Append sticky comment with ghz output
+        uses: marocchino/sticky-pull-request-comment@39c5b5dc7717447d0cba270cd115037d32d28443 # tag=v2.2.0
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          append: true
+          path: ghz-output.md
 
       - name: Print compose logs
         if: always()
@@ -271,6 +290,7 @@ jobs:
       - build
     permissions:
       contents: read
+      pull-requests: write
     steps:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
@@ -324,8 +344,26 @@ jobs:
       - name: Create iter8 reports
         if: always()
         run: |
-          iter8 k report
+          iter8 k report | tee iter8-report.txt
           iter8 k report -o html > iter8-report.html
+
+      - name: Enhance iter8 report output for use as a PR comment
+        run: |
+          ITER8_REPORT_TXT=$(cat iter8-report.txt)
+          {
+            echo -e '---';
+            echo -e '## iter8 report';
+            echo -e '```console';
+            echo -e "${ITER8_REPORT_TXT}";
+            echo -e '```'
+          } >> iter8-output.md
+
+      - name: Append sticky comment with iter8 report
+        uses: marocchino/sticky-pull-request-comment@39c5b5dc7717447d0cba270cd115037d32d28443 # tag=v2.2.0
+        if: ${{ github.event_name == 'pull_request' }}
+        with:
+          append: true
+          path: iter8-output.md
 
       - name: Upload report
         if: always()
@@ -335,7 +373,7 @@ jobs:
           path: |
             iter8-report.html
 
-      - name: Get logs
+      - name: Print cluster and iter8 logs
         if: always()
         run: |
           kubectl cluster-info dump -o yaml | tee kind-cluster-dump.txt
