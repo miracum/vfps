@@ -5,7 +5,14 @@
     ":disableDependencyDashboard",
     "helpers:pinGitHubActionDigests",
     "docker:pinDigests",
-    "schedule:monthly"
+    "schedule:monthly",
+    "group:allNonMajor"
   ],
-  "bumpVersion": "patch"
+  "bumpVersion": "patch",
+  "packageRules": [
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "github-actions"
+    }
+  ]
 }
