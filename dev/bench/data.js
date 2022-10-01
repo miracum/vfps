@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664479902086,
+  "lastUpdate": 1664590115219,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -720,6 +720,42 @@ window.BENCHMARK_DATA = {
             "value": 1355.2995042800903,
             "unit": "ns",
             "range": "± 7.353412092829412"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3e3f902cefc0da69484b2153f11b423efed6582c",
+          "message": "chore(deps): update dependency prometheus-net.aspnetcore to v7.0.0-pre-000282-d90ebf3 (#17)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2022-10-01T04:07:09+02:00",
+          "tree_id": "5326cfa4c7a40678b1b2c8feac58e9db28201c4e",
+          "url": "https://github.com/chgl/vfps/commit/3e3f902cefc0da69484b2153f11b423efed6582c"
+        },
+        "date": 1664590114669,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 2099.0648839314777,
+            "unit": "ns",
+            "range": "± 26.80457306206007"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1584.235520553589,
+            "unit": "ns",
+            "range": "± 18.635335021028787"
           }
         ]
       }
