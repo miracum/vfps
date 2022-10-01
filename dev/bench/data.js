@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664590115219,
+  "lastUpdate": 1664637024152,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -756,6 +756,42 @@ window.BENCHMARK_DATA = {
             "value": 1584.235520553589,
             "unit": "ns",
             "range": "± 18.635335021028787"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1bdf077041a86b80b87b0d21448cba918f14f45c",
+          "message": "ci: additional sticky pr comments (#18)\n\n* chore(renovate): group all gh action updates\r\n\r\n* ci: add iter8 report and ghz run output to sticky comment",
+          "timestamp": "2022-10-01T17:03:57+02:00",
+          "tree_id": "51646e5567f761ab4c69a7c1669f301be18eeb1a",
+          "url": "https://github.com/chgl/vfps/commit/1bdf077041a86b80b87b0d21448cba918f14f45c"
+        },
+        "date": 1664637023024,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 2116.3191785176596,
+            "unit": "ns",
+            "range": "± 34.73770885775944"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1601.670258394877,
+            "unit": "ns",
+            "range": "± 18.154537154466905"
           }
         ]
       }
