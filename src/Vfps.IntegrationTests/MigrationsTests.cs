@@ -12,16 +12,15 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
 
     private readonly TestcontainerDatabase postgresqlContainer;
 
-    private readonly NetworkFixture networkFixture;
-
     private readonly string connectionString;
 
     private readonly string migrationsImage;
 
+    private readonly ITestcontainersBuilder<TestcontainersContainer> migrationsContainerBuilder;
+
     public MigrationsTests(ITestOutputHelper output, NetworkFixture networkFixture)
     {
         this.output = output;
-        this.networkFixture = networkFixture;
 
         postgresqlContainer = new TestcontainersBuilder<PostgreSqlTestcontainer>()
             .WithDatabase(new PostgreSqlTestcontainerConfiguration("docker.io/bitnami/postgresql:14.5.0-debian-11-r17")
@@ -38,8 +37,15 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
 
         this.connectionString = "Server=postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;";
 
-        var migrationsImageTag = Environment.GetEnvironmentVariable("VFPS_MIGRATIONS_IMAGE_TAG") ?? "latest";
-        this.migrationsImage = $"ghcr.io/chgl/vfps-migrations:{migrationsImageTag}";
+        var migrationsImageTag = Environment.GetEnvironmentVariable("VFPS_IMAGE_TAG") ?? "latest";
+        this.migrationsImage = $"ghcr.io/chgl/vfps:{migrationsImageTag}";
+
+        migrationsContainerBuilder = new TestcontainersBuilder<TestcontainersContainer>()
+            .WithImage(migrationsImage)
+            .WithName("migrations")
+            .WithNetwork(networkFixture.Network.Id, networkFixture.Network.Name)
+            .WithEntrypoint("/opt/vfps/efbundle")
+            .WithCommand("--verbose", $"--connection={connectionString}");
     }
 
     [Fact]
@@ -47,14 +53,9 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
     {
         using var consumer = Consume.RedirectStdoutAndStderrToStream(new MemoryStream(), new MemoryStream());
 
-        var migrationsContainerBuilder = new TestcontainersBuilder<TestcontainersContainer>()
-            .WithImage(migrationsImage)
-            .WithName("migrations")
+        await using var migrationsContainer = migrationsContainerBuilder
             .WithOutputConsumer(consumer)
-            .WithNetwork(networkFixture.Network.Id, networkFixture.Network.Name)
-            .WithCommand("--verbose", $"--connection={connectionString}");
-
-        await using var migrationsContainer = migrationsContainerBuilder.Build();
+            .Build();
 
         await migrationsContainer.StartAsync();
 
@@ -74,14 +75,10 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
     {
         using var consumer = Consume.RedirectStdoutAndStderrToStream(new MemoryStream(), new MemoryStream());
 
-        var migrationsContainerBuilder = new TestcontainersBuilder<TestcontainersContainer>()
-            .WithImage(migrationsImage)
-            .WithName("migrations")
+        await using var migrationsContainer = migrationsContainerBuilder
             .WithOutputConsumer(consumer)
-            .WithNetwork(networkFixture.Network.Id, networkFixture.Network.Name)
-            .WithCommand("--verbose", "--connection=Server=not-postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;");
-
-        await using var migrationsContainer = migrationsContainerBuilder.Build();
+            .WithCommand("--verbose", "--connection=Server=not-postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;")
+            .Build();
 
         await migrationsContainer.StartAsync();
 

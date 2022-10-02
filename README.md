@@ -121,18 +121,10 @@ reportgenerator -reports:"./coverage/*/coverage.cobertura.xml" -targetdir:"cover
 rm -rf coverage/
 ```
 
-### Build container images
-
-#### Main VFPS service
+### Build container image
 
 ```sh
 docker build -t ghcr.io/chgl/vfps:latest .
-```
-
-#### VFPS database migration container
-
-```sh
-docker build -t ghcr.io/chgl/vfps-migrations:latest --target=migrations .
 ```
 
 ## Benchmarks
