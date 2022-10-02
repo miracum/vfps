@@ -11,56 +11,19 @@ namespace Vfps.Services;
 /// <inheritdoc/>
 public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
 {
-    private readonly string PostgreSQLInsertCommand =
-    @"
-        WITH
-            cte AS (
-            INSERT INTO
-                ""Pseudonyms"" (""NamespaceName"", ""OriginalValue"", ""PseudonymValue"", ""CreatedAt"", ""LastUpdatedAt"")
-            VALUES
-                ({0}, {1}, {2}, NOW(), NOW()) ON CONFLICT (""NamespaceName"", ""OriginalValue"")
-            DO NOTHING RETURNING *
-            )
-        SELECT *
-        FROM cte
-        UNION
-        SELECT *
-        FROM ""Pseudonyms""
-        WHERE ""NamespaceName""={0} AND ""OriginalValue""={1}
-    ";
-
-    private readonly string SqliteInsertCommand =
-    @"
-        INSERT INTO ""Pseudonyms"" (""NamespaceName"", ""OriginalValue"", ""PseudonymValue"", ""CreatedAt"", ""LastUpdatedAt"")
-        VALUES ({0}, {1}, {2}, time('now'), time('now'))
-        ON CONFLICT (""NamespaceName"", ""OriginalValue"")
-        DO UPDATE SET ""OriginalValue""=excluded.""OriginalValue""
-        WHERE ""OriginalValue"" IS excluded.""OriginalValue""
-        RETURNING *;
-    ";
-
-    private readonly string UpsertCommand;
-
     /// <inheritdoc/>
-    public PseudonymService(PseudonymContext context, PseudonymizationMethodsLookup lookup, INamespaceRepository namespaceRepository)
+    public PseudonymService(PseudonymContext context, PseudonymizationMethodsLookup lookup, INamespaceRepository namespaceRepository, IPseudonymRepository pseudonymRepository)
     {
         Context = context;
         Lookup = lookup;
         NamespaceRepository = namespaceRepository;
-
-        if (Context.Database.IsNpgsql())
-        {
-            UpsertCommand = PostgreSQLInsertCommand;
-        }
-        else
-        {
-            UpsertCommand = SqliteInsertCommand;
-        }
+        PseudonymRepository = pseudonymRepository;
     }
 
     private PseudonymContext Context { get; }
     private PseudonymizationMethodsLookup Lookup { get; }
     private INamespaceRepository NamespaceRepository { get; }
+    private IPseudonymRepository PseudonymRepository { get; }
 
     /// <inheritdoc/>
     public override async Task<PseudonymServiceCreateResponse> Create(PseudonymServiceCreateRequest request, ServerCallContext context)
@@ -93,18 +56,7 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
             PseudonymValue = pseudonymValue,
         };
 
-        Data.Models.Pseudonym? upsertedPseudonym = null;
-        var retryCount = 3;
-        while (upsertedPseudonym is null && retryCount > 0)
-        {
-            var pseudonyms = await Context.Pseudonyms
-                .FromSqlRaw(UpsertCommand, pseudonym.NamespaceName, pseudonym.OriginalValue, pseudonym.PseudonymValue)
-                .AsNoTracking()
-                .ToListAsync();
-
-            upsertedPseudonym = pseudonyms.FirstOrDefault();
-            retryCount--;
-        }
+        Data.Models.Pseudonym? upsertedPseudonym = await PseudonymRepository.CreateIfNotExist(pseudonym);
 
         if (upsertedPseudonym is null)
         {

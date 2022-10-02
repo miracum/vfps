@@ -7,6 +7,8 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Prometheus;
 using Vfps.Config;
 using Microsoft.Extensions.Caching.Memory;
+using Google.Api;
+using Vfps.Fhir;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,7 +26,7 @@ builder.Services.AddSwaggerGen(c =>
     c.SwaggerDoc("v1",
         new OpenApiInfo
         {
-            Title = "VFPS gRPC JSON-transcoded API",
+            Title = "VFPS FHIR and gRPC JSON-transcoded API",
             Version = "v1",
             Description = "A very fast and resource-efficient pseudonym service.",
             License = new OpenApiLicense
@@ -80,6 +82,14 @@ else
     builder.Services.AddScoped<INamespaceRepository, NamespaceRepository>();
 }
 
+builder.Services.AddScoped<IPseudonymRepository, PseudonymRepository>();
+
+builder.Services.AddControllers(options =>
+{
+    options.InputFormatters.Insert(0, new FhirInputFormatter());
+    options.OutputFormatters.Insert(0, new FhirOutputFormatter());
+});
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -111,6 +121,8 @@ if (app.Environment.IsDevelopment())
 {
     app.MapGrpcReflectionService();
 }
+
+app.MapControllers();
 
 var shouldRunDatabaseMigrations = app.Environment.IsDevelopment() ||
     app.Configuration.GetValue<bool>("ForceRunDatabaseMigrations");

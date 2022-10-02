@@ -54,6 +54,49 @@ See <https://github.com/chgl/charts/tree/master/charts/vfps> for a production-gr
 The service exports metrics in Prometheus format on `/metrics`.
 Health-, readiness-, and liveness-probes are exposed at `/healthz`, `/readyz`, and `/livez` respectively.
 
+## FHIR operations
+
+The service also exposes a FHIR operations endpoint. Sending a FHIR Parameters resource to `/v1/fhir/$create-pseudonym`
+of the following schema:
+
+```json
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "namespace",
+      "valueString": "test"
+    },
+    {
+      "name": "originalValue",
+      "valueString": "hello world"
+    }
+  ]
+}
+```
+
+will create a pseudonym in the `test` namespace. The expected response looks as follows:
+
+```json
+{
+  "resourceType": "Parameters",
+  "parameter": [
+    {
+      "name": "namespace",
+      "valueString": "test"
+    },
+    {
+      "name": "originalValue",
+      "valueString": "hello world"
+    },
+    {
+      "name": "pseudonymValue",
+      "valueString": "8KWwnm3TXR5R9iUDVVKD-jUezE4DEyeydOeq4v_a_b5ejSLmqOlT8g"
+    }
+  ]
+}
+```
+
 ## Development
 
 ### Prerequisites

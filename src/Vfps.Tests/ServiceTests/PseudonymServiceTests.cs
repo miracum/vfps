@@ -15,7 +15,8 @@ public class PseudonymServiceTests : ServiceTestBase
         sut = new Services.PseudonymService(
             InMemoryPseudonymContext,
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
-            new NamespaceRepository(InMemoryPseudonymContext));
+            new NamespaceRepository(InMemoryPseudonymContext),
+            new PseudonymRepository(InMemoryPseudonymContext));
     }
 
     [Fact]
@@ -112,7 +113,8 @@ public class PseudonymServiceTests : ServiceTestBase
         var cachingSut = new Services.PseudonymService(
             InMemoryPseudonymContext,
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
-            new CachingNamespaceRepository(InMemoryPseudonymContext, cache, new Config.CacheConfig()));
+            new CachingNamespaceRepository(InMemoryPseudonymContext, cache, new Config.CacheConfig()),
+            new PseudonymRepository(InMemoryPseudonymContext));
 
         var request = new PseudonymServiceCreateRequest
         {
