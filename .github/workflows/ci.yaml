@@ -19,8 +19,6 @@ jobs:
     outputs:
       api-image-tags: ${{ steps.container_meta.outputs.tags }}
       api-image-version: ${{ steps.container_meta.outputs.version }}
-      migrations-image-tags: ${{ steps.container_migrations_meta.outputs.tags }}
-      migrations-image-version: ${{ steps.container_migrations_meta.outputs.version }}
     steps:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
@@ -33,13 +31,6 @@ jobs:
         with:
           images: |
             ghcr.io/${{ github.repository }}
-
-      - name: Container meta for migrations image
-        id: container_migrations_meta
-        uses: docker/metadata-action@69f6fc9d46f2f8bf0d5491e4aabe0bb8c6a4678a # tag=v4
-        with:
-          images: |
-            ghcr.io/${{ github.repository }}-migrations
 
       - name: Container meta for the unit test image
         id: container_tests_meta
@@ -85,17 +76,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Build and push migrations image
-        uses: docker/build-push-action@c84f38281176d4c9cdb1626ffafcd6b3911b5d94 # tag=v3
-        with:
-          push: ${{ github.event_name != 'pull_request' }}
-          load: ${{ github.event_name == 'pull_request' }}
-          tags: ${{ steps.container_migrations_meta.outputs.tags }}
-          labels: ${{ steps.container_migrations_meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          target: migrations
-
       - name: Copy unit test coverage reports from container
         env:
           UNIT_TEST_IMAGE: ${{ fromJson(steps.container_tests_meta.outputs.json).tags[0] }}
@@ -127,10 +107,8 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         env:
           API_IMAGE: ${{ fromJson(steps.container_meta.outputs.json).tags[0] }}
-          MIGRATIONS_IMAGE: ${{ fromJson(steps.container_migrations_meta.outputs.json).tags[0] }}
         run: |
           docker save "$API_IMAGE" -o /tmp/api-image.tar
-          docker save "$MIGRATIONS_IMAGE" -o /tmp/migrations-image.tar
 
       - name: Upload container images
         if: ${{ github.event_name == 'pull_request' }}
@@ -138,7 +116,6 @@ jobs:
         with:
           name: container-image-artifacts
           path: |
-            /tmp/migrations-image.tar
             /tmp/api-image.tar
 
   test-api-container:
@@ -167,7 +144,6 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         run: |
           ls -lar /tmp
-          docker load --input /tmp/migrations-image.tar
           docker load --input /tmp/api-image.tar
           docker image ls -a
 
@@ -247,8 +223,8 @@ jobs:
           docker compose --profile=test -f docker-compose.yaml logs
           docker compose --profile=test down --volumes --remove-orphans
 
-  test-migrations-container:
-    name: test migrations container
+  test-migrations:
+    name: test migrations
     runs-on: ubuntu-22.04
     permissions:
       contents: read
@@ -268,7 +244,7 @@ jobs:
       - name: Load migrations image
         if: ${{ github.event_name == 'pull_request' }}
         run: |
-          docker load --input /tmp/migrations-image.tar
+          docker load --input /tmp/api-image.tar
           docker image ls -a
 
       - name: Install .NET
@@ -279,7 +255,7 @@ jobs:
 
       - name: Run migrations tests
         env:
-          VFPS_MIGRATIONS_IMAGE_TAG: ${{ needs.build.outputs.migrations-image-version }}
+          VFPS_IMAGE_TAG: ${{ needs.build.outputs.api-image-version }}
         run: dotnet test src/Vfps.IntegrationTests --configuration=Release -l "console;verbosity=detailed"
 
   run-iter8-tests:
@@ -313,9 +289,6 @@ jobs:
           # vfps api image
           kind load image-archive /tmp/api-image.tar
 
-          # vfps migrations image
-          kind load image-archive /tmp/migrations-image.tar
-
       - name: List images in cluster
         run: docker exec kind-control-plane crictl images
 
@@ -326,7 +299,6 @@ jobs:
           helm repo add chgl https://chgl.github.io/charts
           helm install \
             --set="image.tag=${IMAGE_TAG}" \
-            --set="migrationsJob.image.tag=${IMAGE_TAG}" \
             -f tests/iter8/values.yaml \
             --wait \
             --timeout=10m \
@@ -393,7 +365,7 @@ jobs:
     if: ${{ github.event_name != 'pull_request' }}
     needs:
       - build
-      - test-migrations-container
+      - test-migrations
       - test-api-container
     permissions:
       contents: read
@@ -410,24 +382,10 @@ jobs:
       - name: Install Cosign
         uses: sigstore/cosign-installer@f3c664df7af409cb4873aa5068053ba9d61a57b6 # tag=v2.6.0
 
-      - name: Sign api image
+      - name: Sign vfps image
         env:
           COSIGN_EXPERIMENTAL: "true"
           IMAGES: ${{ needs.build.outputs.api-image-tags }}
-        run: |
-          while read -r image; do
-            if [[ $image = quay.io/* ]]; then
-              echo "Skipping '$image' hosted on quay.io"
-              continue
-            fi
-            echo "Signing '$image' using keyless approach"
-            cosign sign "$image"
-          done <<< "$IMAGES"
-
-      - name: Sign migrations image
-        env:
-          COSIGN_EXPERIMENTAL: "true"
-          IMAGES: ${{ needs.build.outputs.migrations-image-tags }}
         run: |
           while read -r image; do
             if [[ $image = quay.io/* ]]; then
