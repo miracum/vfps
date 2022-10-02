@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664637024152,
+  "lastUpdate": 1664733552357,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -792,6 +792,42 @@ window.BENCHMARK_DATA = {
             "value": 1601.670258394877,
             "unit": "ns",
             "range": "± 18.154537154466905"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "75f13c5dc805cf2c4567c84a8102ce9c0f726149",
+          "message": "feat: added FHIR REST operation and only build a single container image (#19)\n\n* build(migrations): moved migration efbundle in same image as the API\r\n\r\n* feat: added a first FHIR operations endpoint for creating pseudonyms",
+          "timestamp": "2022-10-02T19:57:48+02:00",
+          "tree_id": "0edabab2a8b69ec13d13acf68f0ad3b20cdaca0f",
+          "url": "https://github.com/chgl/vfps/commit/75f13c5dc805cf2c4567c84a8102ce9c0f726149"
+        },
+        "date": 1664733552057,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1811.2034628550211,
+            "unit": "ns",
+            "range": "± 3.7455909225429003"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1382.382150063148,
+            "unit": "ns",
+            "range": "± 0.9202819962990627"
           }
         ]
       }
