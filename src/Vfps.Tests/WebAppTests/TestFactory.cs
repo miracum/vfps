@@ -25,7 +25,7 @@ public class IntegrationTestFactory<TProgram, TDbContext> : WebApplicationFactor
             services.EnsureDbCreated<TDbContext>();
         });
 
-        builder.UseEnvironment("test");
+        builder.UseEnvironment("Test");
     }
 }
 

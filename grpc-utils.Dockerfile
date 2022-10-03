@@ -23,7 +23,6 @@ chmod +x /usr/local/bin/ghz
 ghz --version
 EOF
 
-COPY src/Vfps/google /tmp/protos/google
 COPY src/Vfps/Protos /tmp/protos/Protos
 
 # grpcurl -import-path=/tmp/protos/ -proto=Protos/vfps/api/v1/namespaces.proto describe

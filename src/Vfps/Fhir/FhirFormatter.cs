@@ -16,9 +16,10 @@ public class FhirOutputFormatter : TextOutputFormatter
         SupportedEncodings.Add(Encoding.UTF8);
         SupportedEncodings.Add(Encoding.Unicode);
     }
+
     private JsonSerializerOptions FhirJsonOptions { get; } = new JsonSerializerOptions().ForFhir(typeof(Bundle).Assembly);
 
-    protected override bool CanWriteType(Type type)
+    protected override bool CanWriteType(Type? type)
     {
         return typeof(Resource).IsAssignableFrom(type);
     }
@@ -26,8 +27,6 @@ public class FhirOutputFormatter : TextOutputFormatter
     public override async Task WriteResponseBodyAsync(
         OutputFormatterWriteContext context, Encoding selectedEncoding)
     {
-        //using var _ = Program.ActivitySource.StartActivity("SerializeFHIRToJSON");
-
         var resource = context.Object as Resource;
         var httpContext = context.HttpContext;
 
@@ -62,8 +61,6 @@ public class FhirInputFormatter : TextInputFormatter
     public override async Task<InputFormatterResult> ReadRequestBodyAsync(InputFormatterContext context,
         Encoding encoding)
     {
-        //using var _ = Program.ActivitySource.StartActivity("DeserializeJSONToFHIR");
-
         var httpContext = context.HttpContext;
         using var reader = new StreamReader(httpContext.Request.Body, encoding);
         var json = await reader.ReadToEndAsync();

@@ -7,8 +7,9 @@ using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Prometheus;
 using Vfps.Config;
 using Microsoft.Extensions.Caching.Memory;
-using Google.Api;
 using Vfps.Fhir;
+using Vfps.Tracing;
+using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -90,6 +91,13 @@ builder.Services.AddControllers(options =>
     options.OutputFormatters.Insert(0, new FhirOutputFormatter());
 });
 
+// Tracing
+var isTracingEnabled = builder.Configuration.GetValue("Tracing:IsEnabled", false);
+if (isTracingEnabled)
+{
+    builder.AddTracing();
+}
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -137,4 +145,7 @@ if (shouldRunDatabaseMigrations)
 
 app.Run();
 
-public partial class Program { }
+public partial class Program
+{
+    internal static readonly ActivitySource ActivitySource = new("Vfps");
+}

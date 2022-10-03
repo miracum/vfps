@@ -42,10 +42,15 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
         }
 
         var generator = Lookup[@namespace.PseudonymGenerationMethod];
+        var pseudonymValue = string.Empty;
 
-        var pseudonymValue = generator.GeneratePseudonym(request.OriginalValue, @namespace.PseudonymLength);
+        using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
+        {
+            activity?.SetTag("Method", generator.GetType().Name);
 
-        pseudonymValue = $"{@namespace.PseudonymPrefix}{pseudonymValue}{@namespace.PseudonymSuffix}";
+            pseudonymValue = generator.GeneratePseudonym(request.OriginalValue, @namespace.PseudonymLength);
+            pseudonymValue = $"{@namespace.PseudonymPrefix}{pseudonymValue}{@namespace.PseudonymSuffix}";
+        }
 
         var pseudonym = new Data.Models.Pseudonym()
         {

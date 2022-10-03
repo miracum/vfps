@@ -1,7 +1,7 @@
 ﻿version: v1
 lint:
   ignore:
-    - google/
+    - Protos/google/
   use:
     - DEFAULT
   except:

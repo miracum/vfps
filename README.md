@@ -113,6 +113,13 @@ Start an empty PostgreSQL database for development (optionally add `-d` to run i
 docker compose -f docker-compose.yaml up
 ```
 
+To additionally start an instance of [Jaeger Tracing](https://www.jaegertracing.io/), you can specify the `jaeger`
+profile:
+
+```sh
+docker compose -f docker-compose.yaml --profile=jaeger up
+```
+
 Restore dependencies and run in Debug mode:
 
 ```sh
@@ -168,6 +175,34 @@ rm -rf coverage/
 
 ```sh
 docker build -t ghcr.io/chgl/vfps:latest .
+```
+
+### Run iter8 SLO experiments locally
+
+```sh
+kind create cluster
+
+export IMAGE_TAG="iter8-test"
+
+docker build -t ghcr.io/chgl/vfps:${IMAGE_TAG} .
+
+kind load docker-image ghcr.io/chgl/vfps:${IMAGE_TAG}
+
+helm repo add chgl https://chgl.github.io/charts
+helm repo update
+
+helm install \
+  --set="image.tag=${IMAGE_TAG}" \
+  -f tests/iter8/values.yaml \
+  --wait \
+  --timeout=10m \
+  vfps chgl/vfps
+
+kubectl apply -f tests/iter8/experiment.yaml
+
+iter8 k assert -c completed --timeout 15m
+iter8 k assert -c nofailure,slos
+iter8 k report
 ```
 
 ## Benchmarks

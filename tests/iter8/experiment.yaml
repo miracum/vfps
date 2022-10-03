@@ -39,15 +39,16 @@ stringData:
     # task: download proto files
     - run: |
         mkdir -p google/api
-        curl -o google/api/annotations.proto https://raw.githubusercontent.com/chgl/vfps/master/src/Vfps/google/api/annotations.proto
-        curl -o google/api/http.proto https://raw.githubusercontent.com/chgl/vfps/master/src/Vfps/google/api/http.proto
+        curl -o google/api/annotations.proto https://raw.githubusercontent.com/chgl/vfps/v0.4.0/src/Vfps/google/api/annotations.proto
+        curl -o google/api/http.proto https://raw.githubusercontent.com/chgl/vfps/v0.4.0/src/Vfps/google/api/http.proto
 
         mkdir -p Protos/vfps/api/v1
-        curl -o Protos/vfps/api/v1/pseudonyms.proto https://raw.githubusercontent.com/chgl/vfps/master/src/Vfps/Protos/vfps/api/v1/pseudonyms.proto
-        curl -o Protos/vfps/api/v1/meta.proto https://raw.githubusercontent.com/chgl/vfps/master/src/Vfps/Protos/vfps/api/v1/meta.proto
+        curl -o Protos/vfps/api/v1/pseudonyms.proto https://raw.githubusercontent.com/chgl/vfps/v0.4.0/src/Vfps/Protos/vfps/api/v1/pseudonyms.proto
+        curl -o Protos/vfps/api/v1/meta.proto https://raw.githubusercontent.com/chgl/vfps/v0.4.0/src/Vfps/Protos/vfps/api/v1/meta.proto
 
     # task: create a pseudonym namespace for this experiment
     - run: |
+        # using curl since grpcurl isn't installed by default
         curl -X 'POST' \
           'http://vfps:8080/v1/namespaces' \
           -H 'accept: application/json' \
@@ -64,10 +65,11 @@ stringData:
     - task: grpc
       with:
         call: vfps.api.v1.PseudonymService/Create
-        host: vfps:8081
+        host: dns:///vfps:8081
         proto: Protos/vfps/api/v1/pseudonyms.proto
         total: 50000
         insecure: true
+        lb-strategy: round_robin
         data:
           namespace: benchmark
           originalValue: "{{randomString 32}}"
