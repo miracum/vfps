@@ -83,9 +83,15 @@ public class FhirController : ControllerBase
 
         var generator = Lookup[@namespace.PseudonymGenerationMethod];
 
-        var pseudonymValue = generator.GeneratePseudonym(originalValue, @namespace.PseudonymLength);
+        var pseudonymValue = string.Empty;
 
-        pseudonymValue = $"{@namespace.PseudonymPrefix}{pseudonymValue}{@namespace.PseudonymSuffix}";
+        using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
+        {
+            activity?.SetTag("Method", generator.GetType().Name);
+
+            pseudonymValue = generator.GeneratePseudonym(originalValue, @namespace.PseudonymLength);
+            pseudonymValue = $"{@namespace.PseudonymPrefix}{pseudonymValue}{@namespace.PseudonymSuffix}";
+        }
 
         var now = DateTimeOffset.UtcNow;
         var pseudonym = new Data.Models.Pseudonym()

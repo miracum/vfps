@@ -18,6 +18,27 @@ services:
     ports:
       - "35432:5432"
 
+  jaeger:
+    image: docker.io/jaegertracing/all-in-one:1.38@sha256:dc111a693eb22c38ea11a71b8303430a98efe04826049faab6f73dcf6ee9ad5d
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 1g
+    cap_drop:
+      - ALL
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    profiles:
+      - jaeger
+    ports:
+      - "6831:6831/udp"
+      - "127.0.0.1:16686:16686"
+
   vfps:
     image: ghcr.io/chgl/vfps:${VFPS_IMAGE_TAG:-latest}
     restart: unless-stopped

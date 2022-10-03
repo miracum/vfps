@@ -21,9 +21,14 @@
         <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="7.0.0-rc.1.22427.2" />
         <PackageReference Include="Npgsql" Version="7.0.0-rc.1" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.0-rc.1" />
-        <PackageReference Include="prometheus-net.AspNetCore" Version="7.0.0-pre-000282-d90ebf3" />
-        <PackageReference Include="prometheus-net.AspNetCore.Grpc" Version="7.0.0-pre-000277-6bc5023" />
-        <PackageReference Include="prometheus-net.AspNetCore.HealthChecks" Version="7.0.0-pre-000277-6bc5023" />
+        <PackageReference Include="Npgsql.OpenTelemetry" Version="7.0.0-rc.1" />
+        <PackageReference Include="OpenTelemetry.Exporter.Jaeger" Version="1.4.0-beta.1" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.4.0-beta.1" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.0.0-rc9.7" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.0.0-rc9.7" />
+        <PackageReference Include="prometheus-net.AspNetCore" Version="7.0.0-pre-000288-4688bd3" />
+        <PackageReference Include="prometheus-net.AspNetCore.Grpc" Version="7.0.0-pre-000288-4688bd3" />
+        <PackageReference Include="prometheus-net.AspNetCore.HealthChecks" Version="7.0.0-pre-000288-4688bd3" />
     </ItemGroup>
     <ItemGroup>
         <Protobuf Include="Protos\vfps\api\v1\*.proto" GrpcServices="Server" />
