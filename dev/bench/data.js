@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664733578805,
+  "lastUpdate": 1664805082516,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -864,6 +864,42 @@ window.BENCHMARK_DATA = {
             "value": 1329.9125749043055,
             "unit": "ns",
             "range": "± 1.9427349488729164"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "168deeec10a3fc32194e69edc753e08c5a24f0f1",
+          "message": "feat: added support for OTel-based distributed tracing (#20)\n\n* feat: added support for distributed tracing\r\n\r\n* refactor: moved all .proto in the Protos root folder",
+          "timestamp": "2022-10-03T15:49:56+02:00",
+          "tree_id": "eff9193c277dbb9ed129fad18e9f5f93611d510f",
+          "url": "https://github.com/chgl/vfps/commit/168deeec10a3fc32194e69edc753e08c5a24f0f1"
+        },
+        "date": 1664805082176,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 2116.6567153930664,
+            "unit": "ns",
+            "range": "± 3.368334245887366"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1611.3064199175153,
+            "unit": "ns",
+            "range": "± 4.269891864985066"
           }
         ]
       }
