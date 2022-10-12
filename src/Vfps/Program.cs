@@ -123,6 +123,7 @@ app.MapHealthChecks("/livez", new HealthCheckOptions
     Predicate = _ => false
 });
 
+app.UseGrpcMetrics();
 app.MapMetrics();
 
 if (app.Environment.IsDevelopment())

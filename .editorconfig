@@ -1,4 +1,3 @@
-
 # EditorConfig is awesome: https://EditorConfig.org
 
 # top-most EditorConfig file
@@ -15,6 +14,7 @@ trim_trailing_whitespace = true
 # Code files
 [*.{cs,csx,vb,vbx}]
 indent_size = 4
+dotnet_diagnostic.CS1591.severity = none
 
 # XML project files
 [*.{csproj,vbproj,vcxproj,vcxproj.filters,proj,projitems,shproj}]
