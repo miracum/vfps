@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1664813174672,
+  "lastUpdate": 1665570608154,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -936,6 +936,42 @@ window.BENCHMARK_DATA = {
             "value": 1537.7974206700044,
             "unit": "ns",
             "range": "± 49.4528052526888"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a08d7841ad8b977af01eff2429327b22499d5c1a",
+          "message": "fix: include grpc call metrics in Prometheus export (#21)",
+          "timestamp": "2022-10-12T12:28:24+02:00",
+          "tree_id": "4f99d08b774f938cb70b7b1bb06de84a055fc30e",
+          "url": "https://github.com/chgl/vfps/commit/a08d7841ad8b977af01eff2429327b22499d5c1a"
+        },
+        "date": 1665570607519,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 2132.887969462077,
+            "unit": "ns",
+            "range": "± 37.96757858204524"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1646.7703260694232,
+            "unit": "ns",
+            "range": "± 45.91525969760187"
           }
         ]
       }
