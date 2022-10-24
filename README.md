@@ -1,5 +1,8 @@
 # vfps
 
+[![CodeQL](https://github.com/chgl/vfps/actions/workflows/codeql.yaml/badge.svg)](https://github.com/chgl/vfps/actions/workflows/codeql.yaml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/chgl/vfps/badge)](https://api.securityscorecards.dev/projects/github.com/chgl/vfps)
+
 A [very fast](#e2e-load-testing) and [resource-efficient](#resource-efficiency) pseudonym service.
 
 Supports horizontal service replication for highly-available deployments.
