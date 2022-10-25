@@ -1,13 +1,16 @@
-name: OpenSSF Scorecards
+name: Scorecards supply-chain security
 on:
   # Only the default branch is supported.
   branch_protection_rule:
   schedule:
-    - cron: "24 8 * * 4"
+    # Weekly on Saturdays.
+    - cron: "30 1 * * 6"
   push:
-    branches: ["master"]
+    branches:
+      - master
   pull_request:
-    branches: ["master"]
+    branches:
+      - master
 
 # Declare default permissions as read only.
 permissions: read-all
@@ -19,37 +22,41 @@ jobs:
     permissions:
       # Needed to upload the results to code-scanning dashboard.
       security-events: write
+      # Used to receive a badge.
+      id-token: write
       actions: read
       contents: read
-      # needed for the Scorecard Badge
-      id-token: write
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
+      - name: "Checkout code"
+        uses: actions/checkout@a12a3943b4bdde767164f792f33f40b04645d846 # tag=v3.0.0
         with:
           persist-credentials: false
 
       - name: "Run analysis"
-        uses: ossf/scorecard-action@99c53751e09b9529366343771cc321ec74e9bd3d # tag=v2.0.6
+        uses: ossf/scorecard-action@3e15ea8318eee9b333819ec77a36aca8d39df13e # tag=v1.1.1
         with:
           results_file: results.sarif
           results_format: sarif
-          # Read-only PAT token. To create it,
-          # follow the steps in https://github.com/ossf/scorecard-action#pat-token-creation.
+          # (Optional) Read-only PAT token. Uncomment the `repo_token` line below if:
+          # - you want to enable the Branch-Protection check on a *public* repository, or
+          # - you are installing Scorecards on a *private* repository
+          # To create the PAT, follow the steps in https://github.com/ossf/scorecard-action#authentication-with-pat.
           repo_token: ${{ secrets.SCORECARD_READ_TOKEN }}
-          # Publish the results to enable scorecard badges. For more details, see
+          # Publish the results for public repositories to enable scorecard badges. For more details, see
           # https://github.com/ossf/scorecard-action#publishing-results.
-          # For private repositories, `publish_results` will automatically be set to `false`,
-          # regardless of the value entered here.
-          publish_results: ${{ github.event_name != 'pull_request' }}
+          # For private repositories, `publish_results` will automatically be set to `false`, regardless
+          # of the value entered here.
+          publish_results: true
 
-      # Upload the results as artifacts (optional).
+      # Upload the results as artifacts (optional). Commenting out will disable uploads of run results in SARIF
+      # format to the repository Actions tab.
       - name: "Upload artifact"
-        uses: actions/upload-artifact@3cea5372237819ed00197afe530f5a7ea3e805c8 # tag=v3.1.0
+        uses: actions/upload-artifact@6673cd052c4cd6fcf4b4e6e60ea986c889389535 # tag=v3.0.0
         with:
           name: SARIF file
           path: results.sarif
+          retention-days: 5
 
       # Upload the results to GitHub's code scanning dashboard.
       - name: "Upload to code-scanning"
