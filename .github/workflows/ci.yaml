@@ -79,6 +79,14 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@7b7aa264d83dc58691451798b4d117d53d21edfe # tag=v0.7.1
+        with:
+          image-ref: ${{ fromJson(steps.container_meta.outputs.json).tags[0] }}
+          severity: "CRITICAL,HIGH"
+          exit-code: "1"
+          ignore-unfixed: "true"
+
       - name: Copy unit test coverage reports from container
         env:
           UNIT_TEST_IMAGE: ${{ fromJson(steps.container_tests_meta.outputs.json).tags[0] }}

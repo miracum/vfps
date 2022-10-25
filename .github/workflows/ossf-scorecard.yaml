@@ -4,6 +4,8 @@ on:
   branch_protection_rule:
   schedule:
     - cron: "24 8 * * 4"
+  push:
+    branches: ["master"]
   pull_request:
     branches: ["master"]
 
@@ -19,6 +21,8 @@ jobs:
       security-events: write
       actions: read
       contents: read
+      # needed for the Scorecard Badge
+      id-token: write
 
     steps:
       - name: Checkout repository
@@ -38,7 +42,7 @@ jobs:
           # https://github.com/ossf/scorecard-action#publishing-results.
           # For private repositories, `publish_results` will automatically be set to `false`,
           # regardless of the value entered here.
-          publish_results: true
+          publish_results: ${{ github.event_name != 'pull_request' }}
 
       # Upload the results as artifacts (optional).
       - name: "Upload artifact"
