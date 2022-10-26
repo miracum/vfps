@@ -1,6 +1,6 @@
 services:
   postgresql:
-    image: docker.io/library/postgres:14.5@sha256:b0ee049a2e347f5ec8c64ad225c7edbc88510a9e34450f23c4079a489ce16268
+    image: docker.io/library/postgres:15.0@sha256:bab8d7be6466e029f7fa1e69ff6aa0082704db330572638fd01f2791824774d8
     restart: unless-stopped
     deploy:
       resources:
@@ -42,6 +42,7 @@ services:
   vfps:
     image: ghcr.io/chgl/vfps:${VFPS_IMAGE_TAG:-latest}
     restart: unless-stopped
+    cpus: 2
     deploy:
       resources:
         limits:

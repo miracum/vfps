@@ -10,22 +10,24 @@ public class CachingNamespaceRepository : INamespaceRepository
     {
         MemoryCache = memoryCache;
         CacheConfig = cacheConfig;
-        Context = context;
+        NamespaceRepository = new NamespaceRepository(context);
     }
 
     private IMemoryCache MemoryCache { get; }
     private CacheConfig CacheConfig { get; }
-    private PseudonymContext Context { get; }
+    private NamespaceRepository NamespaceRepository { get; }
 
     /// <inheritdoc/>
     public async Task<Namespace?> FindAsync(string namespaceName)
     {
-        return await MemoryCache.GetOrCreateAsync(namespaceName, async entry =>
+        var cacheKey = $"namespaces.{namespaceName}";
+
+        return await MemoryCache.GetOrCreateAsync(cacheKey, async entry =>
         {
             entry.SetSize(1)
                 .SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration);
 
-            return await Context.Namespaces.FindAsync(namespaceName);
+            return await NamespaceRepository.FindAsync(namespaceName);
         });
     }
 }

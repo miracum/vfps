@@ -38,7 +38,7 @@ public class FhirController : ControllerBase
     [ProducesResponseType(typeof(OperationOutcome), 400)]
     [ProducesResponseType(typeof(OperationOutcome), 404)]
     [ProducesResponseType(typeof(OperationOutcome), 500)]
-    public async Task<ObjectResult> CreatePseudonym([FromBody] Parameters parametersResource)
+    public async Task<ObjectResult> CreatePseudonym([FromBody] Parameters? parametersResource)
     {
         if (parametersResource is null)
         {

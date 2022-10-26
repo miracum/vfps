@@ -1,7 +1,7 @@
 # vfps
 
 [![CodeQL](https://github.com/chgl/vfps/actions/workflows/codeql.yaml/badge.svg)](https://github.com/chgl/vfps/actions/workflows/codeql.yaml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/chgl/vfps/badge)](https://api.securityscorecards.dev/projects/github.com/chgl/vfps)
+<!-- [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/chgl/vfps/badge)](https://api.securityscorecards.dev/projects/github.com/chgl/vfps) -->
 
 A [very fast](#e2e-load-testing) and [resource-efficient](#resource-efficiency) pseudonym service.
 
@@ -51,6 +51,26 @@ grpcurl \
 ## Production-grade deployment
 
 See <https://github.com/chgl/charts/tree/master/charts/vfps> for a production-grade deployment on Kubernetes via Helm.
+
+## Configuration
+
+Available configuration options which can be set as environment variables:
+
+| Variable                                           | Type         | Default             | Description                                                                                                                                                     |
+| -------------------------------------------------- | ------------ | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ConnectionStrings__PostgreSQL`                    | `string`     | `""`                | Connection string to the PostgreSQL database. See <https://www.npgsql.org/doc/connection-string-parameters.html> for options.                                   |
+| `ForceRunDatabaseMigrations`                       | `bool`       | `false`             | Run database migrations as part of the startup. Only recommended when a single replica of the application is used.                                              |
+| `Tracing__IsEnabled`                               | `bool`       | `false`             | Enable distributed tracing support.                                                                                                                             |
+| `Tracing__Exporter`                                | `string`     | `"jaeger"`          | The tracing export format. One of `jaeger`, `otlp`.                                                                                                             |
+| `Tracing__ServiceName`                             | `string`     | `"vfps"`            | Tracing service name.                                                                                                                                           |
+| `Tracing__RootSampler`                             | `string`     | `"AlwaysOnSampler"` | Tracing parent root sampler. One of `AlwaysOnSampler`, `AlwaysOffSampler`, `TraceIdRatioBasedSampler`                                                           |
+| `Tracing__SamplingProbability`                     | `double`     | `0.1`               | Sampling probability to use if `Tracing__RootSampler` is set to `TraceIdRatioBasedSampler`.                                                                     |
+| `Tracing__Jaeger`                                  | `object`     | `{}`                | Jaeger exporter options. See <https://github.com/open-telemetry/opentelemetry-dotnet/blob/main/src/OpenTelemetry.Exporter.Jaeger/README.md#options-properties>. |
+| `Tracing__Otlp__Endpoint`                          | `string`     | `""`                | The OTLP gRPC Endpoint URL.                                                                                                                                     |
+| `Pseudonymization__Caching__Namespaces__IsEnabled` | `bool`       | `false`             | Set to `true` to enable namespace caching.                                                                                                                      |
+| `Pseudonymization__Caching__Pseudonyms__IsEnabled` | `bool`       | `false`             | Set to `true` to enable pseudonym caching.                                                                                                                      |
+| `Pseudonymization__Caching__SizeLimit`             | `int`        | `65534`             | Maximum number of entries in the cache. The cache is shared between the pseudonyms and namespaces.                                                              |
+| `Pseudonymization__Caching__AbsoluteExpiration`    | `D.HH:mm:nn` | `0.01:00:00`        | Time after which a cache entry expires.                                                                                                                         |
 
 ## Observability
 
@@ -293,11 +313,11 @@ and a second one to persist the pseudonym if it doesn't already exist. There is 
 query by caching the namespaces in a non-distributed in-memory cache. It can be enabled and configured using the following
 environment variables:
 
-| Variable                                                    | Type         | Default      | Description                                |
-| ----------------------------------------------------------- | ------------ | ------------ | ------------------------------------------ |
-| `Pseudonymization__Caching__Namespaces__IsEnabled`          | `bool`       | `false`      | Set to `true` to enable namespace caching. |
-| `Pseudonymization__Caching__Namespaces__SizeLimit`          | `int`        | `32`         | Maximum number of entries in the cache.    |
-| `Pseudonymization__Caching__Namespaces__AbsoluteExpiration` | `D.HH:mm:nn` | `0.01:00:00` | Time after which a cache entry expires.    |
+| Variable                                           | Type         | Default      | Description                                |
+| -------------------------------------------------- | ------------ | ------------ | ------------------------------------------ |
+| `Pseudonymization__Caching__Namespaces__IsEnabled` | `bool`       | `false`      | Set to `true` to enable namespace caching. |
+| `Pseudonymization__Caching__SizeLimit`             | `int`        | `32`         | Maximum number of entries in the cache.    |
+| `Pseudonymization__Caching__AbsoluteExpiration`    | `D.HH:mm:nn` | `0.01:00:00` | Time after which a cache entry expires.    |
 
 > **Warning**
 > Deleting a namespace does not automatically remove it from the in-memory cache.
