@@ -1,11 +1,15 @@
 using Microsoft.EntityFrameworkCore;
 using Vfps.Data.Models;
+using Prometheus;
 
 namespace Vfps.Data;
 
 /// <inheritdoc/>
 public class PseudonymRepository : IPseudonymRepository
 {
+    private static readonly Histogram UpsertDuration = Metrics
+        .CreateHistogram("vfps_upsert_duration_seconds", "Histogram of the durations for upserting a pseudonym into the backend database.");
+
     private readonly string PostgreSQLInsertCommand =
     @"
         WITH
@@ -63,12 +67,15 @@ public class PseudonymRepository : IPseudonymRepository
         var retryCount = 3;
         while (upsertedPseudonym is null && retryCount > 0)
         {
-            var pseudonyms = await Context.Pseudonyms
-                .FromSqlRaw(UpsertCommand, pseudonym.NamespaceName, pseudonym.OriginalValue, pseudonym.PseudonymValue)
-                .AsNoTracking()
-                .ToListAsync();
+            using (UpsertDuration.NewTimer())
+            {
+                var pseudonyms = await Context.Pseudonyms
+                    .FromSqlRaw(UpsertCommand, pseudonym.NamespaceName, pseudonym.OriginalValue, pseudonym.PseudonymValue)
+                    .AsNoTracking()
+                    .ToListAsync();
+                upsertedPseudonym = pseudonyms.FirstOrDefault();
+            }
 
-            upsertedPseudonym = pseudonyms.FirstOrDefault();
             retryCount--;
         }
 

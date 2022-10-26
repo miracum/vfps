@@ -13,7 +13,7 @@ namespace Vfps.Tracing
         {
             var assembly = Assembly.GetExecutingAssembly().GetName();
             var assemblyVersion = assembly.Version?.ToString() ?? "unknown";
-            var tracingExporter = builder.Configuration.GetValue("Tracing:Exporter", "jaeger").ToLowerInvariant();
+            var tracingExporter = builder.Configuration.GetValue<string>("Tracing:Exporter")?.ToLowerInvariant() ?? "jaeger";
             var serviceName = builder.Configuration.GetValue("Tracing:ServiceName", assembly.Name);
 
             var rootSamplerType = builder.Configuration.GetValue("Tracing:RootSampler", "AlwaysOnSampler");
@@ -61,7 +61,7 @@ namespace Vfps.Tracing
                         break;
 
                     case "otlp":
-                        var endpoint = builder.Configuration.GetValue("Tracing:Otlp:Endpoint", "");
+                        var endpoint = builder.Configuration.GetValue<string>("Tracing:Otlp:Endpoint") ?? "";
                         options.AddOtlpExporter(otlpOptions => otlpOptions.Endpoint = new Uri(endpoint));
                         break;
                 }

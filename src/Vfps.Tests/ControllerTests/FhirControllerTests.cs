@@ -33,6 +33,17 @@ public class FhirControllerTests : ServiceTestBase
     }
 
     [Fact]
+    public async void CreatePseudonym_WithNull_ShouldReturnErrorOutcome()
+    {
+        var response = await sut.CreatePseudonym(null);
+
+        response.Should().BeOfType<BadRequestObjectResult>()
+            .Which
+            .Value
+            .Should().BeOfType<OperationOutcome>();
+    }
+
+    [Fact]
     public async void CreatePseudonym_WithExistingNamespaceRequested_ShouldSucceed()
     {
         var p = new Parameters

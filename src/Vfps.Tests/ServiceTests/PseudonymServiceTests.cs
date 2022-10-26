@@ -136,4 +136,36 @@ public class PseudonymServiceTests : ServiceTestBase
 
         secondExecutionTime.Should().BeLessThan(firstExecutionTime);
     }
+
+    [Fact]
+    public async void Create_WithCachingNamespaceRepositoryAndCachingPseudonymRepository_ShouldBeFaster()
+    {
+        var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 32 });
+
+        var cachingSut = new Services.PseudonymService(
+            InMemoryPseudonymContext,
+            new PseudonymGenerators.PseudonymizationMethodsLookup(),
+            new CachingNamespaceRepository(InMemoryPseudonymContext, cache, new Config.CacheConfig()),
+            new CachingPseudonymRepository(InMemoryPseudonymContext, cache, new Config.CacheConfig()));
+
+        var request = new PseudonymServiceCreateRequest
+        {
+            Namespace = "existingNamespace",
+            OriginalValue = nameof(Create_WithCachingNamespaceRepositoryAndCachingPseudonymRepository_ShouldBeFaster),
+        };
+
+        var stopwatch = new Stopwatch();
+
+        stopwatch.Start();
+        await cachingSut.Create(request, TestServerCallContext.Create());
+        stopwatch.Stop();
+        var firstExecutionTime = stopwatch.Elapsed;
+
+        stopwatch.Restart();
+        await cachingSut.Create(request, TestServerCallContext.Create());
+        stopwatch.Stop();
+        var secondExecutionTime = stopwatch.Elapsed;
+
+        secondExecutionTime.Should().BeLessThan(firstExecutionTime);
+    }
 }
