@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1665572145379,
+  "lastUpdate": 1666799709748,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -1008,6 +1008,42 @@ window.BENCHMARK_DATA = {
             "value": 1625.903610774449,
             "unit": "ns",
             "range": "± 9.939877969359332"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0383aecdcaf6801a3cacc35358a100aafa843b64",
+          "message": "feat: added caching support for pseudonyms (#24)",
+          "timestamp": "2022-10-26T17:53:40+02:00",
+          "tree_id": "5e2f5378fedd6210731ec552c8a9e78a442acc02",
+          "url": "https://github.com/chgl/vfps/commit/0383aecdcaf6801a3cacc35358a100aafa843b64"
+        },
+        "date": 1666799708935,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 2229.2844075423022,
+            "unit": "ns",
+            "range": "± 25.742096508350986"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1731.2867041996547,
+            "unit": "ns",
+            "range": "± 28.553395268961637"
           }
         ]
       }
