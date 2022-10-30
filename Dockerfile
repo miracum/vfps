@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM mcr.microsoft.com/dotnet/nightly/aspnet:7.0.0-rc.1-jammy-chiseled@sha256:4011e4c1b5781ac8d48a322ee0b80f1742b8b5d1b50b8287e6c38ecaecd5575b AS runtime
+FROM mcr.microsoft.com/dotnet/nightly/aspnet:7.0.0-rc.2-jammy-chiseled@sha256:2af326d877d743f08254d139e6a54cd5d6fde68bfe1903e5070db1f5d1619336 AS runtime
 WORKDIR /opt/vfps
 EXPOSE 8080/tcp 8081/tcp
 USER 65532:65532
@@ -9,7 +9,7 @@ ENV DOTNET_ENVIRONMENT="Production" \
     ASPNETCORE_URLS="" \
     DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
 
-FROM mcr.microsoft.com/dotnet/sdk:7.0.100-rc.1-jammy@sha256:5f968241760ea2469f029d769aec5c5f03ef55c608c63cfd74c7509757a3813a AS build
+FROM mcr.microsoft.com/dotnet/sdk:7.0.100-rc.2-jammy@sha256:62e55c6acc5d2d0f68c3ff13d9e1de7334c0487a3a7c97c8f560677ed1c0b132 AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="/root/.dotnet/tools:${PATH}"
