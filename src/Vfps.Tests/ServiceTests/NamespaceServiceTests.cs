@@ -48,7 +48,7 @@ public class NamespaceServiceTests : ServiceTestBase
 
         var response = await sut.GetAll(request, TestServerCallContext.Create());
 
-        response.Results.Should().HaveSameCount(InMemoryPseudonymContext.Namespaces);
+        response.Namespaces.Should().HaveSameCount(InMemoryPseudonymContext.Namespaces);
     }
 
     [Fact]
