@@ -125,5 +125,5 @@ message NamespaceServiceGetAllRequest {}
 // response to list all namespaces
 message NamespaceServiceGetAllResponse {
   // the list of all namespaces
-  repeated Namespace results = 1;
+  repeated Namespace namespaces = 1;
 }

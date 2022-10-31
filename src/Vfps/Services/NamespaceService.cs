@@ -138,6 +138,7 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
     {
         var namespaces = await Context.Namespaces
             .AsNoTracking()
+            // TODO: should really use auto-mapper or some other even a custom Namespace.FromDto() method.
             .Select(n => new Namespace
             {
                 Description = n.Description,
@@ -155,8 +156,7 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
 
         var response = new NamespaceServiceGetAllResponse();
 
-        // TODO: should really use auto-mapper or some other even a custom Namespace.FromDto() method.
-        response.Results.AddRange(namespaces);
+        response.Namespaces.AddRange(namespaces);
 
         return response;
     }
