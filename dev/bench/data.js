@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1666799709748,
+  "lastUpdate": 1667239020355,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -1044,6 +1044,42 @@ window.BENCHMARK_DATA = {
             "value": 1731.2867041996547,
             "unit": "ns",
             "range": "± 28.553395268961637"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e9cdd8233db5b377de7a04b26701cd6b40b3f178",
+          "message": "feat: add support for listing pseudonyms in namespace (#27)\n\n* fix!: renamed NamespaceServiceGetAllResponse.results to .namespaces for consistency\r\n\r\n* feat: support for listing all pseudonyms in a namespace",
+          "timestamp": "2022-10-31T18:55:37+01:00",
+          "tree_id": "994c74a6fe2ea67f51eedb70ba89a9ed80b4b9a4",
+          "url": "https://github.com/chgl/vfps/commit/e9cdd8233db5b377de7a04b26701cd6b40b3f178"
+        },
+        "date": 1667239019871,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1866.0048219045004,
+            "unit": "ns",
+            "range": "± 4.024615617995894"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1335.9588036170373,
+            "unit": "ns",
+            "range": "± 1.2229231103221516"
           }
         ]
       }
