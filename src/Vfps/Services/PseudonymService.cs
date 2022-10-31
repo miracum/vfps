@@ -1,6 +1,7 @@
-using EntityFramework.Exceptions.Common;
+using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Vfps.Data;
 using Vfps.Protos;
@@ -70,7 +71,7 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
                 { "Namespace", request.Namespace },
             };
 
-            throw new RpcException(new Status(StatusCode.Internal, "Failed to upsert the pseudonym after several retries."));
+            throw new RpcException(new Status(StatusCode.Internal, "Failed to upsert the pseudonym after several retries."), metadata);
         }
 
         return new PseudonymServiceCreateResponse
@@ -120,5 +121,72 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
                 },
             }
         };
+    }
+
+    /// <inheritdoc/>
+    public override async Task<PseudonymServiceListResponse> List(PseudonymServiceListRequest request, ServerCallContext context)
+    {
+        if (!Context.Namespaces.Where(n => n.Name == request.Namespace).Any())
+        {
+            var metadata = new Metadata
+            {
+                { "Namespace", request.Namespace },
+            };
+
+            throw new RpcException(new Status(StatusCode.NotFound, "The requested pseudonym namespace does not exist."), metadata);
+        }
+
+        var requestPaginationToken = new PseudonymListPaginationToken();
+        if (!string.IsNullOrEmpty(request.PageToken))
+        {
+            var decoded = WebEncoders.Base64UrlDecode(request.PageToken);
+            requestPaginationToken.MergeFrom(decoded);
+        }
+
+        var createdOnOrBefore = requestPaginationToken.PseudonymsCreatedOnOrBefore?.ToDateTimeOffset() ?? DateTimeOffset.UtcNow;
+        var pageSize = request.PageSize <= 0 ? 25 : request.PageSize;
+        var offset = requestPaginationToken.Offset;
+
+        var pseudonyms = await Context.Pseudonyms
+            .Where(pseudonym => pseudonym.NamespaceName == request.Namespace)
+            .Where(pseudonym => pseudonym.CreatedAt <= createdOnOrBefore)
+            .OrderByDescending(pseudonym => pseudonym.CreatedAt)
+            .Skip(offset)
+            .Take(pageSize)
+            .Select(pseudonym => new Pseudonym
+            {
+                Namespace = pseudonym.NamespaceName,
+                OriginalValue = pseudonym.OriginalValue,
+                PseudonymValue = pseudonym.PseudonymValue,
+                Meta = new Meta
+                {
+                    CreatedAt = Timestamp.FromDateTimeOffset(pseudonym.CreatedAt),
+                    LastUpdatedAt = Timestamp.FromDateTimeOffset(pseudonym.LastUpdatedAt),
+                },
+            }).ToListAsync();
+
+        var paginationToken = new PseudonymListPaginationToken
+        {
+            Offset = offset + pageSize,
+            PseudonymsCreatedOnOrBefore = Timestamp.FromDateTimeOffset(createdOnOrBefore),
+        };
+        var opaqueToken = WebEncoders.Base64UrlEncode(paginationToken.ToByteArray());
+
+        if (pseudonyms.Count < pageSize)
+        {
+            opaqueToken = string.Empty;
+        }
+
+        var response = new PseudonymServiceListResponse { Namespace = request.Namespace, NextPageToken = opaqueToken };
+        response.Pseudonyms.AddRange(pseudonyms);
+
+        if (request.IncludeTotalSize)
+        {
+            response.TotalSize = await Context.Pseudonyms
+                .Where(n => n.NamespaceName == request.Namespace)
+                .LongCountAsync();
+        }
+
+        return response;
     }
 }

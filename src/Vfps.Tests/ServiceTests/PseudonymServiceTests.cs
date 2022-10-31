@@ -168,4 +168,89 @@ public class PseudonymServiceTests : ServiceTestBase
 
         secondExecutionTime.Should().BeLessThan(firstExecutionTime);
     }
+
+    [Fact]
+    public async void List_WithEmptyNamespace_ShouldReturnEmptyList()
+    {
+        var request = new PseudonymServiceListRequest
+        {
+            Namespace = "emptyNamespace",
+        };
+
+        var response = await sut.List(request, TestServerCallContext.Create());
+
+        response.Namespace.Should().Be(request.Namespace);
+        response.Pseudonyms.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async void List_WithNonExistingNamespace_ShouldThrowNotFoundError()
+    {
+        var request = new PseudonymServiceListRequest
+        {
+            Namespace = "nonExistingNamespace",
+        };
+
+        await sut.Invoking(async s => await s.List(request, TestServerCallContext.Create()))
+            .Should()
+            .ThrowAsync<RpcException>().Where(e => e.StatusCode == StatusCode.NotFound);
+    }
+
+    [Fact]
+    public async void List_WithExistingNonEmptyNamespace_ShouldReturnAllPseudonyms()
+    {
+        var request = new PseudonymServiceListRequest
+        {
+            Namespace = "existingNamespace",
+        };
+
+        var response = await sut.List(request, TestServerCallContext.Create());
+
+        response.Pseudonyms.Should().HaveSameCount(InMemoryPseudonymContext.Pseudonyms);
+    }
+
+    [Fact]
+    public async void List_WithMoreItemsThanPageSize_ShouldReturnAllPseudonymsViaPaging()
+    {
+        var namespaceName = "emptyNamespace";
+        var pseudonymsToCreateCount = 99;
+
+        for (int i = 0; i < pseudonymsToCreateCount; i++)
+        {
+            var createRequest = new PseudonymServiceCreateRequest
+            {
+                Namespace = namespaceName,
+                OriginalValue = nameof(List_WithMoreItemsThanPageSize_ShouldReturnAllPseudonymsViaPaging) + i,
+            };
+
+            await sut.Create(createRequest, TestServerCallContext.Create());
+        }
+
+        var request = new PseudonymServiceListRequest
+        {
+            Namespace = namespaceName,
+            IncludeTotalSize = true,
+            PageSize = 5,
+        };
+
+        var response = await sut.List(request, TestServerCallContext.Create());
+
+        var allPseudonyms = new List<Pseudonym>();
+
+        response.TotalSize.Should().Be(pseudonymsToCreateCount);
+        response.Pseudonyms.Should().HaveCount(request.PageSize);
+
+        allPseudonyms.AddRange(response.Pseudonyms);
+
+        while (!string.IsNullOrEmpty(response.NextPageToken))
+        {
+            request.PageToken = response.NextPageToken;
+
+            response = await sut.List(request, TestServerCallContext.Create());
+
+            allPseudonyms.AddRange(response.Pseudonyms);
+        }
+
+        allPseudonyms.Should().HaveCount(pseudonymsToCreateCount);
+    }
 }

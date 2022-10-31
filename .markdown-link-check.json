@@ -2,6 +2,9 @@
   "ignorePatterns": [
     {
       "pattern": "^https?://localhost"
+    },
+    {
+      "pattern": "^https://github.com/chgl/vfps/compare/"
     }
   ],
   "timeout": "30s",
