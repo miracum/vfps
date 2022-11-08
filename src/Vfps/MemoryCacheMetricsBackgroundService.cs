@@ -13,11 +13,8 @@ public class MemoryCacheMetricsBackgroundService : BackgroundService
     private static readonly Gauge CacheHits = Metrics
         .CreateGauge("vfps_cache_hits_total", "Number of cache hits.");
 
-    private readonly ILogger<MemoryCacheMetricsBackgroundService> logger;
-
-    public MemoryCacheMetricsBackgroundService(ILogger<MemoryCacheMetricsBackgroundService> logger, IMemoryCache memoryCache)
+    public MemoryCacheMetricsBackgroundService(IMemoryCache memoryCache)
     {
-        this.logger = logger;
         MemoryCache = memoryCache;
     }
 
@@ -35,7 +32,7 @@ public class MemoryCacheMetricsBackgroundService : BackgroundService
                 CacheHits.Set(stats.TotalHits);
             }
 
-            await Task.Delay(TimeSpan.FromSeconds(60));
+            await Task.Delay(TimeSpan.FromSeconds(60), stoppingToken);
         }
     }
 }
