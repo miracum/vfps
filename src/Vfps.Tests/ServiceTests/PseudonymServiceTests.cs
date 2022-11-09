@@ -10,7 +10,7 @@ public class PseudonymServiceTests : ServiceTestBase
 {
     private readonly Services.PseudonymService sut;
 
-    public PseudonymServiceTests() : base()
+    public PseudonymServiceTests()
     {
         sut = new Services.PseudonymService(
             InMemoryPseudonymContext,

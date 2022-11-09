@@ -127,6 +127,8 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
             throw new RpcException(new Status(StatusCode.NotFound, "The requested pseudonym namespace does not exist."), metadata);
         }
 
+        // the onDelete-behavior for the Namespace-Pseudonym relationship is set to cascade, so
+        // deleting the namespace will automatically delete all pseudonyms contained within.
         Context.Namespaces.Remove(@namespace);
         await Context.SaveChangesAsync(context.CancellationToken);
 

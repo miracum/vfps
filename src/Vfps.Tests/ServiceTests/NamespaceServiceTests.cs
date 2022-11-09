@@ -1,6 +1,7 @@
 using FluentAssertions;
 using Grpc.Core;
 using Microsoft.EntityFrameworkCore;
+using Vfps.Data;
 using Vfps.Protos;
 
 namespace Vfps.Tests.ServiceTests;
@@ -9,7 +10,7 @@ public class NamespaceServiceTests : ServiceTestBase
 {
     private readonly Services.NamespaceService sut;
 
-    public NamespaceServiceTests() : base()
+    public NamespaceServiceTests()
     {
         sut = new Services.NamespaceService(InMemoryPseudonymContext);
     }
@@ -115,6 +116,63 @@ public class NamespaceServiceTests : ServiceTestBase
         await sut.Delete(deleteRequest, TestServerCallContext.Create());
 
         InMemoryPseudonymContext.Namespaces.Should().NotContain(n => n.Name == deleteRequest.Name);
+    }
+
+    [Fact]
+    public async void Delete_WithNamespaceContainingPseudonyms_ShouldDeleteNamespaceAndAllPseudonyms()
+    {
+        var createRequest = new NamespaceServiceCreateRequest
+        {
+            Name = nameof(Delete_WithNamespaceContainingPseudonyms_ShouldDeleteNamespaceAndAllPseudonyms),
+            PseudonymLength = 16,
+        };
+
+        await sut.Create(createRequest, TestServerCallContext.Create());
+
+        var pseudonymService = new Services.PseudonymService(
+            InMemoryPseudonymContext,
+            new PseudonymGenerators.PseudonymizationMethodsLookup(),
+            new NamespaceRepository(InMemoryPseudonymContext),
+            new PseudonymRepository(InMemoryPseudonymContext));
+
+        var pseudonymsToCreateCount = 100;
+        for (int i = 0; i < pseudonymsToCreateCount; i++)
+        {
+            var createPseudonymRequest = new PseudonymServiceCreateRequest
+            {
+                Namespace = createRequest.Name,
+                OriginalValue = nameof(Delete_WithNamespaceContainingPseudonyms_ShouldDeleteNamespaceAndAllPseudonyms) + i,
+            };
+
+            await pseudonymService.Create(createPseudonymRequest, TestServerCallContext.Create());
+        }
+
+        var pseudonymCount = await InMemoryPseudonymContext.Pseudonyms
+            .AsNoTracking()
+            .Where(p => p.NamespaceName == createRequest.Name)
+            .CountAsync();
+
+        pseudonymCount.Should().Be(pseudonymsToCreateCount);
+
+        var deleteRequest = new NamespaceServiceDeleteRequest
+        {
+            Name = createRequest.Name,
+        };
+
+        await sut.Delete(deleteRequest, TestServerCallContext.Create());
+
+        InMemoryPseudonymContext.Namespaces
+            .AsNoTracking()
+            .Where(n => n.Name == deleteRequest.Name)
+            .Should()
+            .BeEmpty();
+
+        pseudonymCount = await InMemoryPseudonymContext.Pseudonyms
+            .AsNoTracking()
+            .Where(p => p.NamespaceName == createRequest.Name)
+            .CountAsync();
+
+        pseudonymCount.Should().Be(0);
     }
 
     [Fact]
