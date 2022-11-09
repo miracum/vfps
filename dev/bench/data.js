@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667987987088,
+  "lastUpdate": 1668013045532,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -1188,6 +1188,42 @@ window.BENCHMARK_DATA = {
             "value": 1466.1783203397479,
             "unit": "ns",
             "range": "± 0.9608537643217698"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "3c9725f850a2cd5644218db33bad81f499479827",
+          "message": "test: added test to ensure all pseudonyms are deleted when a namespace is deleted (#32)",
+          "timestamp": "2022-11-09T17:55:50+01:00",
+          "tree_id": "9af7facac0d4de2e5a5d807c1802949d5495b468",
+          "url": "https://github.com/chgl/vfps/commit/3c9725f850a2cd5644218db33bad81f499479827"
+        },
+        "date": 1668013045149,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1899.5598515101842,
+            "unit": "ns",
+            "range": "± 4.568607235548481"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1337.1488882211538,
+            "unit": "ns",
+            "range": "± 1.1310800698986785"
           }
         ]
       }
