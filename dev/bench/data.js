@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1667239599097,
+  "lastUpdate": 1667987090605,
   "repoUrl": "https://github.com/chgl/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -1116,6 +1116,42 @@ window.BENCHMARK_DATA = {
             "value": 1594.8719804128011,
             "unit": "ns",
             "range": "± 9.850400943608355"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "69a80aecec13fd1d389cf48a741827cd8f79809b",
+          "message": "feat!: updated to stable .NET 7 (#30)\n\n* chore: updated to non-rc versions of .NET 7\r\n\r\n* ci: added more commit types to changelog\r\n\r\n* refactor: applied some code quality suggestions",
+          "timestamp": "2022-11-09T10:43:17+01:00",
+          "tree_id": "4dc803617abb158e3478f88d25c2aec7ff9423e5",
+          "url": "https://github.com/chgl/vfps/commit/69a80aecec13fd1d389cf48a741827cd8f79809b"
+        },
+        "date": 1667987090229,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1820.9222413471766,
+            "unit": "ns",
+            "range": "± 8.424322670449063"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1341.9728893866907,
+            "unit": "ns",
+            "range": "± 0.8822454819916363"
           }
         ]
       }
