@@ -24,23 +24,18 @@ using System.Diagnostics.CodeAnalysis;
 namespace Vfps.Tests.ServiceTests;
 
 [ExcludeFromCodeCoverage]
-public class TestServerCallContext : ServerCallContext
+public sealed class TestServerCallContext : ServerCallContext
 {
-    private readonly Metadata _requestHeaders;
-    private readonly CancellationToken _cancellationToken;
-    private readonly Metadata _responseTrailers;
-    private readonly AuthContext _authContext;
     private readonly Dictionary<object, object> _userState;
-    private WriteOptions? _writeOptions;
 
     public Metadata? ResponseHeaders { get; private set; }
 
     private TestServerCallContext(Metadata requestHeaders, CancellationToken cancellationToken)
     {
-        _requestHeaders = requestHeaders;
-        _cancellationToken = cancellationToken;
-        _responseTrailers = new Metadata();
-        _authContext = new AuthContext(string.Empty, new Dictionary<string, List<AuthProperty>>());
+        RequestHeadersCore = requestHeaders;
+        CancellationTokenCore = cancellationToken;
+        ResponseTrailersCore = new Metadata();
+        AuthContextCore = new AuthContext(string.Empty, new Dictionary<string, List<AuthProperty>>());
         _userState = new Dictionary<object, object>();
     }
 
@@ -48,12 +43,12 @@ public class TestServerCallContext : ServerCallContext
     protected override string HostCore => "HostName";
     protected override string PeerCore => "PeerName";
     protected override DateTime DeadlineCore { get; }
-    protected override Metadata RequestHeadersCore => _requestHeaders;
-    protected override CancellationToken CancellationTokenCore => _cancellationToken;
-    protected override Metadata ResponseTrailersCore => _responseTrailers;
+    protected override Metadata RequestHeadersCore { get; }
+    protected override CancellationToken CancellationTokenCore { get; }
+    protected override Metadata ResponseTrailersCore { get; }
     protected override Status StatusCore { get; set; }
-    protected override WriteOptions? WriteOptionsCore { get => _writeOptions; set { _writeOptions = value; } }
-    protected override AuthContext AuthContextCore => _authContext;
+    protected override WriteOptions? WriteOptionsCore { get; set; }
+    protected override AuthContext AuthContextCore { get; }
 
     protected override ContextPropagationToken CreatePropagationTokenCore(ContextPropagationOptions? options)
     {

@@ -112,7 +112,7 @@ public class FhirController : ControllerBase
             {
                 Severity = OperationOutcome.IssueSeverity.Error,
                 Code = OperationOutcome.IssueType.Processing,
-                Diagnostics = $"failed to store the pseudonym after several retries"
+                Diagnostics = "failed to store the pseudonym after several retries"
             });
             return StatusCode(500, outcome);
         }

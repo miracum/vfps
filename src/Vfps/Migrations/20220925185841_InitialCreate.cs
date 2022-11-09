@@ -24,10 +24,7 @@ namespace Vfps.Migrations
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     LastUpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false)
                 },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_Namespaces", x => x.Name);
-                });
+                constraints: table => table.PrimaryKey("PK_Namespaces", x => x.Name));
 
             migrationBuilder.CreateTable(
                 name: "Pseudonyms",

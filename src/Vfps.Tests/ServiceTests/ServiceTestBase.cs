@@ -65,5 +65,6 @@ public class ServiceTestBase : IDisposable
     public void Dispose()
     {
         InMemoryPseudonymContext.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

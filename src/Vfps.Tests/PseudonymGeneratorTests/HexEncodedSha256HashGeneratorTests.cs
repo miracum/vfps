@@ -4,7 +4,7 @@ namespace Vfps.Tests.PseudonymGeneratorTests;
 
 public class HexEncodedSha256HashGeneratorTests
 {
-    private readonly HexEncodedSha256HashGenerator sut = new HexEncodedSha256HashGenerator();
+    private readonly HexEncodedSha256HashGenerator sut = new();
 
     [Theory]
     [InlineData("test", "9F86D081884C7D659A2FEAA0C55AD015A3BF4F1B2B0B822CD15D6C15B0F00A08")]
