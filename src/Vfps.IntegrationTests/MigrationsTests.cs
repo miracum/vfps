@@ -38,7 +38,7 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
         this.connectionString = "Server=postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;";
 
         var migrationsImageTag = Environment.GetEnvironmentVariable("VFPS_IMAGE_TAG") ?? "latest";
-        this.migrationsImage = $"ghcr.io/chgl/vfps:{migrationsImageTag}";
+        this.migrationsImage = $"ghcr.io/miracum/vfps:{migrationsImageTag}";
 
         migrationsContainerBuilder = new TestcontainersBuilder<TestcontainersContainer>()
             .WithImage(migrationsImage)

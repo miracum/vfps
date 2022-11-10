@@ -307,13 +307,13 @@ jobs:
         env:
           IMAGE_TAG: ${{ needs.build.outputs.api-image-version }}
         run: |
-          helm repo add chgl https://chgl.github.io/charts
+          helm repo add miracum https://miracum.github.io/charts
           helm install \
             --set="image.tag=${IMAGE_TAG}" \
             -f tests/iter8/values.yaml \
             --wait \
             --timeout=10m \
-            vfps chgl/vfps
+            vfps miracum/vfps
 
       - name: Launch iter8 experiment
         run: kubectl apply -f tests/iter8/experiment.yaml

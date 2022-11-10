@@ -1,7 +1,7 @@
 # vfps
 
-[![CodeQL](https://github.com/chgl/vfps/actions/workflows/codeql.yaml/badge.svg)](https://github.com/chgl/vfps/actions/workflows/codeql.yaml)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/chgl/vfps/badge)](https://api.securityscorecards.dev/projects/github.com/chgl/vfps)
+[![CodeQL](https://github.com/miracum/vfps/actions/workflows/codeql.yaml/badge.svg)](https://github.com/miracum/vfps/actions/workflows/codeql.yaml)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/miracum/vfps/badge)](https://api.securityscorecards.dev/projects/github.com/miracum/vfps)
 
 A [very fast](#e2e-load-testing) and [resource-efficient](#resource-efficiency) pseudonym service.
 
@@ -50,7 +50,7 @@ grpcurl \
 
 ## Production-grade deployment
 
-See <https://github.com/chgl/charts/tree/master/charts/vfps> for a production-grade deployment on Kubernetes via Helm.
+See <https://github.com/miracum/charts/tree/master/charts/vfps> for a production-grade deployment on Kubernetes via Helm.
 
 ## Configuration
 
@@ -197,7 +197,7 @@ rm -rf coverage/
 ### Build container image
 
 ```sh
-docker build -t ghcr.io/chgl/vfps:latest .
+docker build -t ghcr.io/miracum/vfps:latest .
 ```
 
 ### Run iter8 SLO experiments locally
@@ -207,11 +207,11 @@ kind create cluster
 
 export IMAGE_TAG="iter8-test"
 
-docker build -t ghcr.io/chgl/vfps:${IMAGE_TAG} .
+docker build -t ghcr.io/miracum/vfps:${IMAGE_TAG} .
 
-kind load docker-image ghcr.io/chgl/vfps:${IMAGE_TAG}
+kind load docker-image ghcr.io/miracum/vfps:${IMAGE_TAG}
 
-helm repo add chgl https://chgl.github.io/charts
+helm repo add miracum https://miracum.github.io/charts
 helm repo update
 
 helm install \
@@ -219,7 +219,7 @@ helm install \
   -f tests/iter8/values.yaml \
   --wait \
   --timeout=10m \
-  vfps chgl/vfps
+  vfps miracum/vfps
 
 kubectl apply -f tests/iter8/experiment.yaml
 
@@ -232,7 +232,7 @@ iter8 k report
 
 ### Micro benchmarks
 
-The pseudonym generation methods are continuously benchmarked. Results are viewable at <https://chgl.github.io/vfps/dev/bench/>.
+The pseudonym generation methods are continuously benchmarked. Results are viewable at <https://miracum.github.io/vfps/dev/bench/>.
 
 ### E2E load testing
 

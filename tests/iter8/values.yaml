@@ -1,6 +1,4 @@
-# ghz and client-side load-balancing doesn't quite seem to work
-# so just run with one replica for now.
-replicaCount: 1
+replicaCount: 2
 
 resources:
   limits:
