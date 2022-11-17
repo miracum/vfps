@@ -1,6 +1,6 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1668013045532,
-  "repoUrl": "https://github.com/chgl/vfps",
+  "lastUpdate": 1668727022853,
+  "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
       {
@@ -1224,6 +1224,42 @@ window.BENCHMARK_DATA = {
             "value": 1337.1488882211538,
             "unit": "ns",
             "range": "± 1.1310800698986785"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "514dba8907412eba54437a38bf157efa6966f5d8",
+          "message": "feat: expose metrics on a dedicated port to improve security posture (#35)",
+          "timestamp": "2022-11-18T00:15:08+01:00",
+          "tree_id": "5974fb78f7f66bcec5da1e08576e93709e8d9bcc",
+          "url": "https://github.com/miracum/vfps/commit/514dba8907412eba54437a38bf157efa6966f5d8"
+        },
+        "date": 1668727021960,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 2357.1857449667796,
+            "unit": "ns",
+            "range": "± 31.712783206475127"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1722.0808202028275,
+            "unit": "ns",
+            "range": "± 32.30328334571521"
           }
         ]
       }
