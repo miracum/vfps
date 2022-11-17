@@ -20,7 +20,6 @@ public class HttpEndpointTests : IClassFixture<IntegrationTestFactory<Program, P
     [InlineData("/readyz")]
     [InlineData("/livez")]
     [InlineData("/healthz")]
-    [InlineData("/metrics")]
     [InlineData("/")]
     public async Task HealthMetricsAndRootEndpoints_ShouldReturnSuccess(string endpoint)
     {

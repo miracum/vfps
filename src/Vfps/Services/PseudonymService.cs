@@ -50,7 +50,7 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
             activity?.SetTag("Method", generator.GetType().Name);
 
             pseudonymValue = generator.GeneratePseudonym(request.OriginalValue, @namespace.PseudonymLength);
-            pseudonymValue = $"{@namespace.PseudonymPrefix}{pseudonymValue}{@namespace.PseudonymSuffix}";
+            pseudonymValue = @namespace.PseudonymPrefix + pseudonymValue + @namespace.PseudonymSuffix;
         }
 
         var pseudonym = new Data.Models.Pseudonym()
@@ -177,7 +177,12 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
             opaqueToken = string.Empty;
         }
 
-        var response = new PseudonymServiceListResponse { Namespace = request.Namespace, NextPageToken = opaqueToken };
+        var response = new PseudonymServiceListResponse
+        {
+            Namespace = request.Namespace,
+            NextPageToken = opaqueToken,
+        };
+
         response.Pseudonyms.AddRange(pseudonyms);
 
         if (request.IncludeTotalSize)

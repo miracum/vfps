@@ -10,7 +10,7 @@ public class ServiceTestBase : IDisposable
 {
     public ServiceTestBase()
     {
-        var _connection = new SqliteConnection("Filename=:memory:");
+        var _connection = new SqliteConnection("Filename=:memory:;Cache=Private");
         _connection.Open();
 
         var _contextOptions = new DbContextOptionsBuilder<PseudonymContext>()

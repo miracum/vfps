@@ -74,8 +74,8 @@ Available configuration options which can be set as environment variables:
 
 ## Observability
 
-The service exports metrics in Prometheus format on `/metrics`.
-Health-, readiness-, and liveness-probes are exposed at `/healthz`, `/readyz`, and `/livez` respectively.
+The service exports metrics in Prometheus format on `:8082/metrics`.
+Health-, readiness-, and liveness-probes are exposed at `:8080/healthz`, `:8080/readyz`, and `:8080/livez` respectively.
 
 ## FHIR operations
 
