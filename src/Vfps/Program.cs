@@ -24,6 +24,8 @@ builder.Services.AddHealthChecks()
     .AddDbContextCheck<PseudonymContext>()
     .ForwardToPrometheus();
 
+builder.Services.AddMetricServer(options => options.Port = builder.Configuration.GetValue<ushort>("MetricsPort", 8082));
+
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1",
@@ -151,7 +153,6 @@ app.MapHealthChecks("/livez", new HealthCheckOptions
 });
 
 app.UseGrpcMetrics();
-app.MapMetrics();
 
 if (app.Environment.IsDevelopment())
 {
