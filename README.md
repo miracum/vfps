@@ -218,7 +218,8 @@ helm install \
   --set="image.tag=${IMAGE_TAG}" \
   -f tests/iter8/values.yaml \
   --wait \
-  --timeout=10m \
+  --timeout=15m \
+  --version=^1.0.0 \
   vfps miracum/vfps
 
 kubectl apply -f tests/iter8/experiment.yaml
