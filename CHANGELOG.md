@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.1.0](https://github.com/miracum/vfps/compare/v1.0.0...v1.1.0) (2022-11-18)
+
+
+### Features
+
+* expose metrics on a dedicated port to improve security posture ([#35](https://github.com/miracum/vfps/issues/35)) ([514dba8](https://github.com/miracum/vfps/commit/514dba8907412eba54437a38bf157efa6966f5d8))
+
+
+### Miscellaneous Chores
+
+* **deps:** bumped jaeger tracing version to re-trigger master ci ([c5cd38e](https://github.com/miracum/vfps/commit/c5cd38e10577c07563b48f1e921444989bef3812))
+* replace references to former repo ([#33](https://github.com/miracum/vfps/issues/33)) ([af25cbf](https://github.com/miracum/vfps/commit/af25cbf15b84c36c89952a91431f519e807cf2ff))
+
+
+### CI/CD
+
+* fixed iter8 tests ([#36](https://github.com/miracum/vfps/issues/36)) ([eebbd70](https://github.com/miracum/vfps/commit/eebbd702aa734323796a5592f0581294ef5322da))
+
 ## [1.0.0](https://github.com/miracum/vfps/compare/v0.6.0...v1.0.0) (2022-11-09)
 
 
