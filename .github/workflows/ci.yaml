@@ -308,11 +308,13 @@ jobs:
           IMAGE_TAG: ${{ needs.build.outputs.api-image-version }}
         run: |
           helm repo add miracum https://miracum.github.io/charts
+          helm repo update
           helm install \
             --set="image.tag=${IMAGE_TAG}" \
             -f tests/iter8/values.yaml \
             --wait \
-            --timeout=10m \
+            --timeout=15m \
+            --version=^1.0.0 \
             vfps miracum/vfps
 
       - name: Launch iter8 experiment
