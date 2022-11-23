@@ -14,9 +14,10 @@ WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="/root/.dotnet/tools:${PATH}"
 
-RUN dotnet tool install --global dotnet-ef
+RUN dotnet tool install --global dotnet-ef --version=7.0.0
 
-COPY src/Vfps/Vfps.csproj src/Vfps/Vfps.csproj
+COPY src/Directory.Build.props src/
+COPY src/Vfps/Vfps.csproj src/Vfps/
 
 RUN dotnet restore --runtime=linux-x64 src/Vfps/Vfps.csproj
 
@@ -37,7 +38,6 @@ dotnet ef migrations bundle \
     --project=src/Vfps/Vfps.csproj \
     --startup-project=src/Vfps/Vfps.csproj \
     --configuration=Release \
-    --target-runtime=linux-x64 \
     --verbose \
     -o /build/efbundle
 EOF
@@ -50,6 +50,31 @@ RUN dotnet test \
     --results-directory=./coverage \
     -l "console;verbosity=detailed" \
     --settings=runsettings.xml
+
+FROM build AS build-stress-test
+WORKDIR /build/src/Vfps.LoadTests
+RUN <<EOF
+dotnet build \
+    --configuration=Release
+
+dotnet publish \
+    --no-restore \
+    --no-build \
+    --configuration=Release \
+    -o /build/publish
+EOF
+
+# re-use the runtime base-image even though we technically don't need a full aspnet image for simplicity
+FROM runtime AS stress-test
+WORKDIR /opt/vfps-stress
+
+# https://github.com/hadolint/hadolint/pull/815 isn't yet in mega-linter
+# hadolint ignore=DL3022
+COPY --from=docker.io/bitnami/kubectl:1.24.8@sha256:539065b76186a6091e814296a98965c65bc16eed9b6edd647628979d2a1eece5 /opt/bitnami/kubectl/bin/kubectl /usr/bin/kubectl
+
+COPY --chown=65532:65532 tests/chaos/chaos.yaml /tmp/
+COPY --chown=65532:65532 --from=build-stress-test /build/publish .
+ENTRYPOINT ["dotnet", "/opt/vfps-stress/Vfps.LoadTests.dll"]
 
 FROM runtime
 COPY --chown=65532:65532 --from=build /build/publish .

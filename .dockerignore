@@ -2,5 +2,7 @@
 !src
 !.editorconfig
 !*.sln
+!Directory.Build.props
+!tests/chaos
 src/**/bin
 src/**/obj

@@ -405,3 +405,6 @@ coverage/
 coveragereport/
 
 megalinter-reports/
+
+# used by NBomber
+reports/

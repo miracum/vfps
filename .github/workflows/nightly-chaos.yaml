@@ -1,0 +1,80 @@
+name: nightly chaos testing
+
+on:
+  schedule:
+    # daily at 04:07.
+    - cron: "07 04 * * *"
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  chaos-testing:
+    name: chaos testing
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
+        with:
+          fetch-depth: 0
+
+      - name: Build stress testing image
+        id: build-image
+        uses: docker/build-push-action@c84f38281176d4c9cdb1626ffafcd6b3911b5d94 # tag=v3
+        with:
+          push: false
+          load: true
+          tags: ghcr.io/miracum/vfps/stress-test:v1
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          target: stress-test
+
+      - name: Create KinD cluster
+        uses: helm/kind-action@9e8295d178de23cbfbd8fa16cf844eec1d773a07 # tag=v1.4.0
+        with:
+          cluster_name: kind
+
+      - name: Load stress-test image into KinD
+        run: |
+          kind load docker-image ghcr.io/miracum/vfps/stress-test:v1
+
+      - name: Install prerequisites
+        working-directory: tests/chaos
+        run: |
+          curl -sL -o - https://github.com/argoproj/argo-workflows/releases/download/v3.4.3/argo-linux-amd64.gz | gunzip > argo
+
+          kubectl create ns vfps
+
+          helm repo add chaos-mesh https://charts.chaos-mesh.org
+          helm upgrade --install chaos-mesh chaos-mesh/chaos-mesh \
+              --create-namespace \
+              --wait \
+              -n chaos-mesh \
+              --set chaosDaemon.runtime=containerd \
+              --set chaosDaemon.socketPath='/run/containerd/containerd.sock' \
+              --version 2.4.3
+
+          kubectl apply -f chaos-mesh-rbac.yaml
+
+          helm repo add argo https://argoproj.github.io/argo-helm
+          helm upgrade --install argo-workflows argo/argo-workflows \
+              --create-namespace \
+              --wait \
+              -n argo-workflows \
+              -f argo-workflows-values.yaml
+
+      - name: Install vfps
+        working-directory: tests/chaos
+        run: |
+          helm repo add miracum https://miracum.github.io/charts
+          helm upgrade --install \
+            -n vfps \
+            -f vfps-values.yaml \
+            --wait \
+            --version=^1.0.0 \
+            vfps miracum/vfps
+
+      - name: Run chaos testing workflow
+        working-directory: tests/chaos
+        run: |
+          ./argo submit tests/chaos/argo-workflow.yaml -n vfps --wait
