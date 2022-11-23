@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1668777630947,
+  "lastUpdate": 1669238579774,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -1296,6 +1296,42 @@ window.BENCHMARK_DATA = {
             "value": 1349.4393965857369,
             "unit": "ns",
             "range": "± 2.5662905208935523"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a97cffe7086c3ab44c4e2df463b383446b52c631",
+          "message": "ci: added nightly-running chaos test supported by NBomber stress-test (#37)\n\n* chore(deps): updated all deps\r\n\r\n* refactor: move common properties to shared Directory.Build.props\r\n\r\n* ci: added nightly-running chaos test supported by NBomber stress-test",
+          "timestamp": "2022-11-23T22:21:40+01:00",
+          "tree_id": "d02193a65058b0ff68015a534e68ad00b537331c",
+          "url": "https://github.com/miracum/vfps/commit/a97cffe7086c3ab44c4e2df463b383446b52c631"
+        },
+        "date": 1669238579193,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1923.0737549463909,
+            "unit": "ns",
+            "range": "± 1.4624730411397457"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1348.194248335702,
+            "unit": "ns",
+            "range": "± 2.707793974753625"
           }
         ]
       }
