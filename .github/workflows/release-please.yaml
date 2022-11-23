@@ -19,7 +19,8 @@ jobs:
         with:
           token: ${{ secrets.RELEASE_PLEASE_GITHUB_TOKEN }}
           release-type: simple
-          package-name: release-please-action
+          extra-files: |
+            src/Directory.Build.props
           changelog-types: |
             [
               { "type": "feat", "section": "Features" },

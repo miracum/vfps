@@ -1,54 +1,96 @@
+using System.Diagnostics;
+using Grpc.Core;
+using Grpc.Net.Client;
+using Grpc.Net.Client.Configuration;
+using NBomber.Contracts;
 using NBomber.CSharp;
-using NBomber.Plugins.Http.CSharp;
 using NBomber.Plugins.Network.Ping;
-using System.Net.Http.Json;
+using Vfps.Protos;
 
-var baseUrl = "https://localhost:7078/v1";
+var grpcAddress = new Uri(Environment.GetEnvironmentVariable("VFPS_GRPC_ADDRESS") ?? "http://localhost:8081");
 
-var httpFactory = HttpClientFactory.Create();
+var defaultMethodConfig = new MethodConfig
+{
+    Names = { MethodName.Default },
+    RetryPolicy = new RetryPolicy
+    {
+        MaxAttempts = 3,
+        InitialBackoff = TimeSpan.FromSeconds(5),
+        MaxBackoff = TimeSpan.FromSeconds(30),
+        BackoffMultiplier = 2,
+        RetryableStatusCodes = { StatusCode.Unavailable, StatusCode.Internal }
+    }
+};
 
-var createNamespace = Step.Create("create_namespace",
-                clientFactory: httpFactory,
-                execute: context =>
-                {
-                    var request = Http.CreateRequest("POST", baseUrl + "/namespaces")
-                        .WithHeader("Accept", "application/json")
-                        .WithBody(JsonContent.Create(new
-                        {
-                            Name = "load-test",
-                            PseudonymLength = 32,
-                            PseudonymGenerationMethod = 1,
-                        }));
+using var channel = GrpcChannel.ForAddress(grpcAddress, new GrpcChannelOptions()
+{
+    ServiceConfig = new ServiceConfig()
+    {
+        MethodConfigs = { defaultMethodConfig }
+    },
+    Credentials = ChannelCredentials.Insecure,
+    UnsafeUseInsecureChannelCallCredentials = true,
+});
 
-                    return Http.Send(request, context);
-                });
+var namespaceClient = new NamespaceService.NamespaceServiceClient(channel);
+var pseudonymClient = new PseudonymService.PseudonymServiceClient(channel);
+
+var namespaceRequest = new NamespaceServiceCreateRequest()
+{
+    Name = "stress-test",
+    PseudonymGenerationMethod = PseudonymGenerationMethod.SecureRandomBase64UrlEncoded,
+    PseudonymLength = 16,
+    PseudonymPrefix = "stress-",
+};
 
 var createPseudonyms = Step.Create("create_pseudonyms",
-                clientFactory: httpFactory,
-                execute: context =>
+                execute: async context =>
                 {
-                    var request = Http.CreateRequest("POST", baseUrl + "/namespaces/load-test/pseudonyms")
-                        .WithHeader("Accept", "application/json")
-                        .WithBody(JsonContent.Create(new
-                        {
-                            OriginalValue = Guid.NewGuid().ToString(),
-                        }));
+                    var request = new PseudonymServiceCreateRequest()
+                    {
+                        Namespace = namespaceRequest.Name,
+                        OriginalValue = Guid.NewGuid().ToString(),
+                    };
 
-                    return Http.Send(request, context);
+                    try
+                    {
+                        var response = await pseudonymClient.CreateAsync(request);
+                        return Response.Ok(statusCode: 200, sizeBytes: request.CalculateSize() + response.CalculateSize());
+                    }
+                    catch (RpcException exc)
+                    {
+                        context.Logger.Error(exc, "Pseudonym creation failed");
+                        return Response.Fail();
+                    }
                 });
 
 var scenario = ScenarioBuilder
-    .CreateScenario("create_namespace_and_pseudonyms", createNamespace, createPseudonyms)
+    .CreateScenario("stress_pseudonym_creation", createPseudonyms)
+    .WithInit(async context =>
+    {
+        try
+        {
+            var response = await namespaceClient.CreateAsync(namespaceRequest);
+        }
+        catch (RpcException exc) when (exc.StatusCode == StatusCode.AlreadyExists)
+        {
+            context.Logger.Warning($"Namespace {namespaceRequest.Name} already exists. Continuing anyway.");
+        }
+    })
     .WithWarmUpDuration(TimeSpan.FromSeconds(5))
     .WithLoadSimulations(
-        Simulation.InjectPerSec(rate: 100, during: TimeSpan.FromSeconds(30))
+        Simulation.RampConstant(copies: 10, during: TimeSpan.FromMinutes(4)),
+        Simulation.KeepConstant(copies: 100, during: TimeSpan.FromMinutes(4)),
+        Simulation.InjectPerSecRandom(minRate: 10, maxRate: 50, during: TimeSpan.FromMinutes(4))
     );
 
 // creates ping plugin that brings additional reporting data
-var pingPluginConfig = PingPluginConfig.CreateDefault(new[] { "127.0.0.1" });
+var pingPluginConfig = PingPluginConfig.CreateDefault(new[] { grpcAddress.Host });
 var pingPlugin = new PingPlugin(pingPluginConfig);
 
-NBomberRunner
+var stats = NBomberRunner
     .RegisterScenarios(scenario)
     .WithWorkerPlugins(pingPlugin)
     .Run();
+
+Debug.Assert(stats.FailCount < 100);

@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/argoproj/argo-workflows/v3.4.3/api/jsonschema/schema.json
+apiVersion: argoproj.io/v1alpha1
+kind: Workflow
+metadata:
+  generateName: vfps-chaos-workflow-
+spec:
+  entrypoint: run-chaos-and-test
+  serviceAccountName: chaos-mesh-cluster-manager
+  templates:
+    - name: test
+      container:
+        image: ghcr.io/miracum/vfps/stress-test:v1
+        imagePullPolicy: IfNotPresent
+        command:
+          - dotnet
+        args:
+          - /opt/vfps-stress/Vfps.LoadTests.dll
+        env:
+          - name: VFPS_GRPC_ADDRESS
+            value: dns:///vfps-headless:8081
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          privileged: false
+          runAsNonRoot: true
+
+    - name: install-chaos
+      container:
+        image: ghcr.io/miracum/vfps/stress-test:v1
+        imagePullPolicy: IfNotPresent
+        command:
+          - kubectl
+        args:
+          - apply
+          - -f
+          - /tmp/chaos.yaml
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          privileged: false
+          runAsNonRoot: true
+
+    - name: delete-chaos
+      container:
+        image: ghcr.io/miracum/vfps/stress-test:v1
+        imagePullPolicy: IfNotPresent
+        command:
+          - kubectl
+        args:
+          - delete
+          - -f
+          - /tmp/chaos.yaml
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+          privileged: false
+          runAsNonRoot: true
+
+    - name: run-chaos-and-test
+      dag:
+        tasks:
+          - name: test
+            template: test
+          - name: install-chaos
+            template: install-chaos
+          - name: delete-chaos
+            depends: "install-chaos && (test.Succeeded || test.Failed)"
+            template: delete-chaos

@@ -1,0 +1,21 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  namespace: vfps
+  name: fail-one-of-the-vfps-pods
+spec:
+  schedule: "@every 1m"
+  concurrencyPolicy: Forbid
+  historyLimit: 1
+  type: PodChaos
+  podChaos:
+    selector:
+      namespaces:
+        - vfps
+      labelSelectors:
+        app.kubernetes.io/name: vfps
+        app.kubernetes.io/instance: vfps
+    mode: one
+    action: pod-failure
+    duration: 30s
+# TODO: could add database/cnpg chaos if deployed HA.

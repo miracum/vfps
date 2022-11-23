@@ -4,14 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="NBomber" Version="3.3.0" />
-    <PackageReference Include="NBomber.Http" Version="3.0.3" />
-    <PackageReference Include="Google.Protobuf" Version="3.21.9" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.50.0" />
-    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.50.0" />
-    <PackageReference Include="Grpc.Tools" Version="2.50.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
