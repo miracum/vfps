@@ -1,8 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
     <PropertyGroup>
-        <TargetFramework>net7.0</TargetFramework>
-        <Nullable>enable</Nullable>
-        <ImplicitUsings>enable</ImplicitUsings>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
     <ItemGroup>
@@ -32,6 +29,6 @@
         <PackageReference Include="prometheus-net.AspNetCore.HealthChecks" Version="7.0.0" />
     </ItemGroup>
     <ItemGroup>
-        <Protobuf Include="Protos\vfps\api\v1\*.proto" GrpcServices="Server" />
+        <Protobuf Include="Protos\vfps\api\v1\*.proto" />
     </ItemGroup>
 </Project>
