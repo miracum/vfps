@@ -46,6 +46,8 @@ jobs:
         working-directory: tests/chaos
         run: |
           curl -sL -o - https://github.com/argoproj/argo-workflows/releases/download/v3.4.3/argo-linux-amd64.gz | gunzip > argo
+          chmod +x ./argo
+          ./argo version
 
           kubectl create ns vfps
 
