@@ -37,7 +37,9 @@ builder.Services.AddSwaggerGen(c =>
             License = new OpenApiLicense
             {
                 Name = "Apache-2.0",
+#pragma warning disable S1075 // URIs should not be hardcoded
                 Url = new Uri("https://www.apache.org/licenses/LICENSE-2.0")
+#pragma warning restore S1075 // URIs should not be hardcoded
             },
         });
 
@@ -177,4 +179,6 @@ app.Run();
 public partial class Program
 {
     internal static readonly ActivitySource ActivitySource = new("Vfps");
+
+    protected Program() { }
 }

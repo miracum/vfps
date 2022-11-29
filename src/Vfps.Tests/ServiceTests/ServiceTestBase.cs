@@ -1,13 +1,13 @@
 using EntityFramework.Exceptions.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Vfps.Data;
-using Vfps.Protos;
 
 namespace Vfps.Tests.ServiceTests;
 
 public class ServiceTestBase : IDisposable
 {
+    private bool disposedValue;
+
     public ServiceTestBase()
     {
         var _connection = new SqliteConnection("Filename=:memory:;Cache=Private");
@@ -62,9 +62,23 @@ public class ServiceTestBase : IDisposable
     }
     protected PseudonymContext InMemoryPseudonymContext { get; }
 
+    protected virtual void Dispose(bool disposing)
+    {
+        if (!disposedValue)
+        {
+            if (disposing)
+            {
+                InMemoryPseudonymContext.Dispose();
+            }
+
+            disposedValue = true;
+        }
+    }
+
     public void Dispose()
     {
-        InMemoryPseudonymContext.Dispose();
+        // Do not change this code. Put cleanup code in 'Dispose(bool disposing)' method
+        Dispose(disposing: true);
         GC.SuppressFinalize(this);
     }
 }

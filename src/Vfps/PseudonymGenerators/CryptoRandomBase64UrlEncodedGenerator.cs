@@ -12,7 +12,7 @@ public class CryptoRandomBase64UrlEncodedGenerator : IPseudonymGenerator
     {
     }
 
-    public string GeneratePseudonym(string originalValue, uint pseudonymLength)
+    public string GeneratePseudonym(string originalValue, uint pseudonymLength = 32)
     {
         var hashedMachineName = hashedMachineNameBytes.AsSpan(0, 4);
 

@@ -5,7 +5,7 @@ namespace Vfps.PseudonymGenerators;
 
 public class HexEncodedSha256HashGenerator : IPseudonymGenerator
 {
-    public string GeneratePseudonym(string originalValue, uint pseudonymLength)
+    public string GeneratePseudonym(string originalValue, uint pseudonymLength = 32)
     {
         if (pseudonymLength != 64)
         {

@@ -1,8 +1,6 @@
 using Grpc.Core;
 using Microsoft.Extensions.Caching.Memory;
 using System.Diagnostics;
-using Vfps.Data;
-using Vfps.Protos;
 
 namespace Vfps.Tests.ServiceTests;
 
@@ -20,7 +18,7 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Get_WithNonExistingPseudonymValue_ShouldThrowNotFoundException()
+    public async Task Get_WithNonExistingPseudonymValue_ShouldThrowNotFoundException()
     {
         var request = new PseudonymServiceGetRequest
         {
@@ -35,7 +33,7 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Get_WithExistingPseudonymValue_ShouldReturnIt()
+    public async Task Get_WithExistingPseudonymValue_ShouldReturnIt()
     {
         var request = new PseudonymServiceGetRequest
         {
@@ -50,7 +48,7 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Create_ShouldSaveNewPseudonym()
+    public async Task Create_ShouldSaveNewPseudonym()
     {
         var request = new PseudonymServiceCreateRequest
         {
@@ -70,7 +68,7 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Create_WithNonExistingNamespace_ShouldThrowNotFoundError()
+    public async Task Create_WithNonExistingNamespace_ShouldThrowNotFoundError()
     {
         var request = new PseudonymServiceCreateRequest
         {
@@ -84,7 +82,7 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Create_CalledMultipleTimesWithTheSameOriginalValue_ShouldOnlyStoreOnePseudonym()
+    public async Task Create_CalledMultipleTimesWithTheSameOriginalValue_ShouldOnlyStoreOnePseudonym()
     {
         var request = new PseudonymServiceCreateRequest
         {
@@ -106,7 +104,7 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Create_WithCachingNamespaceRepository_ShouldBeFaster()
+    public async Task Create_WithCachingNamespaceRepository_ShouldBeFaster()
     {
         var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 32 });
 
@@ -138,7 +136,7 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Create_WithCachingNamespaceRepositoryAndCachingPseudonymRepository_ShouldBeFaster()
+    public async Task Create_WithCachingNamespaceRepositoryAndCachingPseudonymRepository_ShouldBeFaster()
     {
         var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 32 });
 
@@ -170,7 +168,7 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void List_WithEmptyNamespace_ShouldReturnEmptyList()
+    public async Task List_WithEmptyNamespace_ShouldReturnEmptyList()
     {
         var request = new PseudonymServiceListRequest
         {
@@ -184,7 +182,7 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void List_WithNonExistingNamespace_ShouldThrowNotFoundError()
+    public async Task List_WithNonExistingNamespace_ShouldThrowNotFoundError()
     {
         var request = new PseudonymServiceListRequest
         {
@@ -197,7 +195,7 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void List_WithExistingNonEmptyNamespace_ShouldReturnAllPseudonyms()
+    public async Task List_WithExistingNonEmptyNamespace_ShouldReturnAllPseudonyms()
     {
         var request = new PseudonymServiceListRequest
         {
@@ -210,7 +208,7 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact(Skip = "there's an issue with timezones in SQLite vs. DateTimeOffset.UtcNow. This causes L152 in PseudonymService.cs to never find any value.")]
-    public async void List_WithMoreItemsThanPageSize_ShouldReturnAllPseudonymsViaPaging()
+    public async Task List_WithMoreItemsThanPageSize_ShouldReturnAllPseudonymsViaPaging()
     {
         var namespaceName = "emptyNamespace";
         var pseudonymsToCreateCount = 99;
