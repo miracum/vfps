@@ -14,7 +14,7 @@ namespace Vfps.Tracing
             var assembly = Assembly.GetExecutingAssembly().GetName();
             var assemblyVersion = assembly.Version?.ToString() ?? "unknown";
             var tracingExporter = builder.Configuration.GetValue<string>("Tracing:Exporter")?.ToLowerInvariant() ?? "jaeger";
-            var serviceName = builder.Configuration.GetValue("Tracing:ServiceName", assembly.Name);
+            var serviceName = builder.Configuration.GetValue("Tracing:ServiceName", assembly.Name) ?? "vfps";
 
             var rootSamplerType = builder.Configuration.GetValue("Tracing:RootSampler", "AlwaysOnSampler");
             var samplingRatio = builder.Configuration.GetValue("Tracing:SamplingProbability", 0.1d);

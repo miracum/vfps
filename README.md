@@ -12,8 +12,8 @@ Supports horizontal service replication for highly-available deployments.
 > **Warning**
 > Using the provided docker-compose.yaml is not a production-ready deployment but merely
 > used to get started and testing quickly.
-> It sets strict and low resource limits, uses the `latest` tag, runs database migrations as part
-> of the startup, and uses the default password for an included, unoptimized PostgreSQL deployment.
+> It sets very restrictive resource limits uses the default password for an included,
+> unoptimized PostgreSQL deployment.
 
 ```sh
 docker compose -f docker-compose.yaml --profile=test up
