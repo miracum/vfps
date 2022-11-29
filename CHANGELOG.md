@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.1.1](https://github.com/miracum/vfps/compare/v1.1.0...v1.1.1) (2022-11-29)
+
+
+### Bug Fixes
+
+* possible null value exception ([ba9fb86](https://github.com/miracum/vfps/commit/ba9fb86edf8fc26503b42553c15f6436b0e229dd))
+
+
+### Miscellaneous Chores
+
+* added vscode run files ([ba9fb86](https://github.com/miracum/vfps/commit/ba9fb86edf8fc26503b42553c15f6436b0e229dd))
+* updated image tag in docker-compose via release-please ([ba9fb86](https://github.com/miracum/vfps/commit/ba9fb86edf8fc26503b42553c15f6436b0e229dd))
+* use common config for renovate ([ba9fb86](https://github.com/miracum/vfps/commit/ba9fb86edf8fc26503b42553c15f6436b0e229dd))
+
+
+### CI/CD
+
+* added +x to argo cli ([73384f1](https://github.com/miracum/vfps/commit/73384f157496c0c72ce2dca1900a203e4058ea43))
+* added buildx setup to allow gha caching ([7cd115b](https://github.com/miracum/vfps/commit/7cd115bf26b49fb14aa0efe81751fc30eec7b598))
+* added nightly-running chaos test supported by NBomber stress-test ([#37](https://github.com/miracum/vfps/issues/37)) ([a97cffe](https://github.com/miracum/vfps/commit/a97cffe7086c3ab44c4e2df463b383446b52c631))
+* fix chaos testing workflow ([faa7cf6](https://github.com/miracum/vfps/commit/faa7cf615a6fdc2c46b82d39b9a1d75f83116f0d))
+* log chaos workflow output ([70ea46a](https://github.com/miracum/vfps/commit/70ea46a86024730c4ff33ef7134f8b1436ecad77))
+* set read permissions for lint-pr-title job ([318f55b](https://github.com/miracum/vfps/commit/318f55b54b7675668a12a7ae468cc11e27b4fc50))
+* set read permissions for lint-pr-title job ([#41](https://github.com/miracum/vfps/issues/41)) ([318f55b](https://github.com/miracum/vfps/commit/318f55b54b7675668a12a7ae468cc11e27b4fc50))
+* use miracum-bot token for release please ([#39](https://github.com/miracum/vfps/issues/39)) ([45b21e4](https://github.com/miracum/vfps/commit/45b21e4b133aeafbdb2ddfd7dd4258e9737860d6))
+
 ## [1.1.0](https://github.com/miracum/vfps/compare/v1.0.0...v1.1.0) (2022-11-18)
 
 
