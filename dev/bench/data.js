@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1669730780386,
+  "lastUpdate": 1669733820191,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -1368,6 +1368,42 @@ window.BENCHMARK_DATA = {
             "value": 1343.1639680226644,
             "unit": "ns",
             "range": "± 4.338610291067679"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "318f55b54b7675668a12a7ae468cc11e27b4fc50",
+          "message": "ci: set read permissions for lint-pr-title job (#41)\n\nci: set read permissions for lint-pr-title job\r\n\r\nrefactor: fixed some sonarlint complaints",
+          "timestamp": "2022-11-29T15:55:19+01:00",
+          "tree_id": "72d94df66313f77f61684b451d0036c6dd429155",
+          "url": "https://github.com/miracum/vfps/commit/318f55b54b7675668a12a7ae468cc11e27b4fc50"
+        },
+        "date": 1669733819748,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 2463.7414033072337,
+            "unit": "ns",
+            "range": "± 29.975647833634"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1735.6353825887045,
+            "unit": "ns",
+            "range": "± 23.776494935023162"
           }
         ]
       }
