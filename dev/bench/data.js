@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1669238579774,
+  "lastUpdate": 1669730780386,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -1332,6 +1332,42 @@ window.BENCHMARK_DATA = {
             "value": 1348.194248335702,
             "unit": "ns",
             "range": "± 2.707793974753625"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ba9fb86edf8fc26503b42553c15f6436b0e229dd",
+          "message": "test(stress): run stress tests as xunit tests (#40)\n\nchore: added vscode run files\r\n\r\nfix: possible null value exception\r\n\r\ntest(stress): moved stress tests to xunit-based project\r\n\r\nchore: use common config for renovate\r\n\r\nchore: updated image tag in docker-compose via release-please",
+          "timestamp": "2022-11-29T15:04:47+01:00",
+          "tree_id": "6711242183d98849e473e984c7d985543da2859b",
+          "url": "https://github.com/miracum/vfps/commit/ba9fb86edf8fc26503b42553c15f6436b0e229dd"
+        },
+        "date": 1669730779465,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1791.454451424735,
+            "unit": "ns",
+            "range": "± 5.240277801060524"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1343.1639680226644,
+            "unit": "ns",
+            "range": "± 4.338610291067679"
           }
         ]
       }
