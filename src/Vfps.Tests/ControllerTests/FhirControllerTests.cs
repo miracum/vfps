@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using Vfps.Data;
 using Vfps.Fhir;
 using Vfps.Tests.ServiceTests;
+using Task = System.Threading.Tasks.Task;
 
 namespace Vfps.Tests.ControllerTests;
 
@@ -20,7 +21,7 @@ public class FhirControllerTests : ServiceTestBase
     }
 
     [Fact]
-    public async void CreatePseudonym_WithEmptyBody_ShouldReturnErrorOutcome()
+    public async Task CreatePseudonym_WithEmptyBody_ShouldReturnErrorOutcome()
     {
         var p = new Parameters();
 
@@ -33,7 +34,7 @@ public class FhirControllerTests : ServiceTestBase
     }
 
     [Fact]
-    public async void CreatePseudonym_WithNull_ShouldReturnErrorOutcome()
+    public async Task CreatePseudonym_WithNull_ShouldReturnErrorOutcome()
     {
         var response = await sut.CreatePseudonym(null);
 
@@ -44,7 +45,7 @@ public class FhirControllerTests : ServiceTestBase
     }
 
     [Fact]
-    public async void CreatePseudonym_WithExistingNamespaceRequested_ShouldSucceed()
+    public async Task CreatePseudonym_WithExistingNamespaceRequested_ShouldSucceed()
     {
         var p = new Parameters
         {

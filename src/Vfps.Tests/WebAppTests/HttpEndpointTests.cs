@@ -27,6 +27,8 @@ public class HttpEndpointTests : IClassFixture<IntegrationTestFactory<Program, P
 
         var response = await client.GetAsync(endpoint);
         response.EnsureSuccessStatusCode();
+
+        response.Content.Should().NotBeNull();
     }
 
     [Fact]

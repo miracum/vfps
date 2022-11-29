@@ -2,8 +2,8 @@ namespace Vfps.StressTests;
 
 public class StressTests
 {
-    private NamespaceService.NamespaceServiceClient namespaceService;
-    private PseudonymService.PseudonymServiceClient pseudonymService;
+    private readonly NamespaceService.NamespaceServiceClient namespaceService;
+    private readonly PseudonymService.PseudonymServiceClient pseudonymService;
 
     public StressTests()
     {
@@ -77,7 +77,7 @@ public class StressTests
             {
                 try
                 {
-                    var response = await namespaceService.CreateAsync(namespaceRequest);
+                    await namespaceService.CreateAsync(namespaceRequest);
                 }
                 catch (RpcException exc) when (exc.StatusCode == StatusCode.AlreadyExists)
                 {

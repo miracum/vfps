@@ -1,8 +1,5 @@
-using FluentAssertions;
 using Grpc.Core;
 using Microsoft.EntityFrameworkCore;
-using Vfps.Data;
-using Vfps.Protos;
 
 namespace Vfps.Tests.ServiceTests;
 
@@ -16,7 +13,7 @@ public class NamespaceServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Create_WithExistingNamespace_ShouldThrowAlreadyExistsError()
+    public async Task Create_WithExistingNamespace_ShouldThrowAlreadyExistsError()
     {
         var request = new NamespaceServiceCreateRequest
         {
@@ -30,7 +27,7 @@ public class NamespaceServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Get_WithExistingNamespace_ShouldReturnNamespace()
+    public async Task Get_WithExistingNamespace_ShouldReturnNamespace()
     {
         var request = new NamespaceServiceGetRequest
         {
@@ -43,7 +40,7 @@ public class NamespaceServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void GetAll_ShouldReturnAllNamespace()
+    public async Task GetAll_ShouldReturnAllNamespace()
     {
         var request = new NamespaceServiceGetAllRequest();
 
@@ -53,7 +50,7 @@ public class NamespaceServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Get_WithNonExistingNamespace_ShouldThrowNotFoundException()
+    public async Task Get_WithNonExistingNamespace_ShouldThrowNotFoundException()
     {
         var request = new NamespaceServiceGetRequest
         {
@@ -67,7 +64,7 @@ public class NamespaceServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Create_ShouldSaveNewNamespace()
+    public async Task Create_ShouldSaveNewNamespace()
     {
         var request = new NamespaceServiceCreateRequest
         {
@@ -83,7 +80,7 @@ public class NamespaceServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Create_WithPseudonymLengthZero_ShouldFail()
+    public async Task Create_WithPseudonymLengthZero_ShouldFail()
     {
         var request = new NamespaceServiceCreateRequest
         {
@@ -98,7 +95,7 @@ public class NamespaceServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Delete_WithExistingNamespace_ShouldDeleteNamespace()
+    public async Task Delete_WithExistingNamespace_ShouldDeleteNamespace()
     {
         var createRequest = new NamespaceServiceCreateRequest
         {
@@ -119,7 +116,7 @@ public class NamespaceServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Delete_WithNamespaceContainingPseudonyms_ShouldDeleteNamespaceAndAllPseudonyms()
+    public async Task Delete_WithNamespaceContainingPseudonyms_ShouldDeleteNamespaceAndAllPseudonyms()
     {
         var createRequest = new NamespaceServiceCreateRequest
         {
@@ -176,7 +173,7 @@ public class NamespaceServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async void Delete_WithNonExistingNamespace_ShouldThrowNotFoundException()
+    public async Task Delete_WithNonExistingNamespace_ShouldThrowNotFoundException()
     {
         var request = new NamespaceServiceDeleteRequest
         {
