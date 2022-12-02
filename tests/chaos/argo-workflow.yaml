@@ -14,7 +14,8 @@ spec:
         command:
           - dotnet
         args:
-          - /opt/vfps-stress/Vfps.LoadTests.dll
+          - test
+          - /opt/vfps-stress/Vfps.StressTests.dll
         env:
           - name: VFPS_GRPC_ADDRESS
             value: dns:///vfps-headless:8081
