@@ -1,9 +1,12 @@
+using NBomber.Contracts.Stats;
+
 namespace Vfps.StressTests;
 
 public class StressTests
 {
     private readonly NamespaceService.NamespaceServiceClient namespaceService;
     private readonly PseudonymService.PseudonymServiceClient pseudonymService;
+    private readonly string reportFolder;
 
     public StressTests()
     {
@@ -14,7 +17,7 @@ public class StressTests
             Names = { MethodName.Default },
             RetryPolicy = new RetryPolicy
             {
-                MaxAttempts = 3,
+                MaxAttempts = 5,
                 InitialBackoff = TimeSpan.FromSeconds(5),
                 MaxBackoff = TimeSpan.FromSeconds(30),
                 BackoffMultiplier = 2,
@@ -34,6 +37,9 @@ public class StressTests
 
         namespaceService = new NamespaceService.NamespaceServiceClient(channel);
         pseudonymService = new PseudonymService.PseudonymServiceClient(channel);
+
+        _ = bool.TryParse(Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"), out bool isRunningInContainer);
+        reportFolder = isRunningInContainer ? Path.Combine(Path.GetTempPath(), "reports") : "./nbomber-reports";
     }
 
     private IStep CreatePseudonymStep(string namespaceName)
@@ -93,9 +99,11 @@ public class StressTests
 
         var stats = NBomberRunner
             .RegisterScenarios(scenario)
+            .WithReportFolder(reportFolder)
+            .WithReportFormats(ReportFormat.Txt, ReportFormat.Csv, ReportFormat.Html, ReportFormat.Md)
             .Run();
 
-        var failPercentage = (stats.FailCount / (double)stats.RequestCount) * 100.0;
+        var failPercentage = stats.FailCount / (double)stats.RequestCount * 100.0;
         failPercentage.Should().BeLessThan(0.1);
     }
 }

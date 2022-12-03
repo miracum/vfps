@@ -16,6 +16,8 @@ spec:
         args:
           - test
           - /opt/vfps-stress/Vfps.StressTests.dll
+          - -l
+          - console;verbosity=detailed
         env:
           - name: VFPS_GRPC_ADDRESS
             value: dns:///vfps-headless:8081
