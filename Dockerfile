@@ -74,9 +74,10 @@ COPY --from=docker.io/bitnami/kubectl:1.24.8@sha256:539065b76186a6091e814296a989
 COPY tests/chaos/chaos.yaml /tmp/
 COPY --from=build-stress-test /build/publish .
 USER 65534:65534
-ENTRYPOINT ["dotnet", "test", "/opt/vfps-stress/Vfps.StressTests.dll"]
+ENTRYPOINT ["dotnet"]
+CMD ["test", "/opt/vfps-stress/Vfps.StressTests.dll", "-l", "console;verbosity=detailed"]
 
 FROM runtime
 COPY --chown=65534:65534 --from=build /build/publish .
 COPY --chown=65534:65534 --from=build /build/efbundle .
-ENTRYPOINT ["dotnet", "/opt/vfps/Vfps.dll"]
+CMD ["/opt/vfps/Vfps.dll"]

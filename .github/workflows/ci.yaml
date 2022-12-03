@@ -11,6 +11,9 @@ on:
 # Declare default permissions as read only.
 permissions: read-all
 
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+
 jobs:
   build:
     name: build
@@ -22,6 +25,8 @@ jobs:
     outputs:
       api-image-tags: ${{ steps.container_meta.outputs.tags }}
       api-image-version: ${{ steps.container_meta.outputs.version }}
+      api-image-digest: ${{ steps.build.outputs.digest }}
+      api-image-name: ${{ env.IMAGE_NAME }}
     steps:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
@@ -33,7 +38,7 @@ jobs:
         uses: docker/metadata-action@69f6fc9d46f2f8bf0d5491e4aabe0bb8c6a4678a # tag=v4
         with:
           images: |
-            ghcr.io/${{ github.repository }}
+            ${{ env.IMAGE_NAME }}
 
       - name: Container meta for the unit test image
         id: container_tests_meta
@@ -71,6 +76,7 @@ jobs:
       # can't use `load` and `push` at the same time, so differentiate by whether its a PR or not
       - name: Build and push api image
         uses: docker/build-push-action@c84f38281176d4c9cdb1626ffafcd6b3911b5d94 # tag=v3
+        id: build
         with:
           load: ${{ github.event_name == 'pull_request' }}
           push: ${{ github.event_name != 'pull_request' }}
@@ -401,10 +407,26 @@ jobs:
           IMAGES: ${{ needs.build.outputs.api-image-tags }}
         run: |
           while read -r image; do
-            if [[ $image = quay.io/* ]]; then
-              echo "Skipping '$image' hosted on quay.io"
-              continue
-            fi
             echo "Signing '$image' using keyless approach"
             cosign sign "$image"
           done <<< "$IMAGES"
+
+  container-provenance:
+    if: ${{ startsWith(github.ref, 'refs/tags/') }}
+    needs:
+      - build
+      - test-migrations
+      - test-api-container
+    permissions:
+      actions: read # for detecting the Github Actions environment.
+      id-token: write # for creating OIDC tokens for signing.
+      packages: write # for uploading attestations.
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v1.4.0
+    with:
+      image: ${{ needs.build.outputs.api-image-name }}
+      digest: ${{ needs.build.outputs.api-image-digest }}
+      registry-username: ${{ github.actor }}
+      # TODO(https://github.com/slsa-framework/slsa-github-generator/issues/492): Remove after GA release.
+      compile-generator: true
+    secrets:
+      registry-password: ${{ secrets.GITHUB_TOKEN }}
