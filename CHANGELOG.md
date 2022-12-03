@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.2](https://github.com/miracum/vfps/compare/v1.1.1...v1.1.2) (2022-12-03)
+
+
+### CI/CD
+
+* fixed chaos workflow and digest-pinned iter8 action ([#42](https://github.com/miracum/vfps/issues/42)) ([89f2f7e](https://github.com/miracum/vfps/commit/89f2f7e7cc457d4ae6db6780eb29664093cecb6e))
+* stress test refactor and slsa3 compliance ([#44](https://github.com/miracum/vfps/issues/44)) ([d1ba420](https://github.com/miracum/vfps/commit/d1ba4208ed79bb53567433d2bf070986b08d4216))
+
 ## [1.1.1](https://github.com/miracum/vfps/compare/v1.1.0...v1.1.1) (2022-11-29)
 
 
