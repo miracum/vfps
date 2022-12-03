@@ -23,6 +23,7 @@ jobs:
           extra-files: |
             src/Directory.Build.props
             docker-compose.yaml
+            README.md
           changelog-types: |
             [
               { "type": "feat", "section": "Features" },

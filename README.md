@@ -1,7 +1,9 @@
 # vfps
 
-[![CodeQL](https://github.com/miracum/vfps/actions/workflows/codeql.yaml/badge.svg)](https://github.com/miracum/vfps/actions/workflows/codeql.yaml)
+![Latest Version](https://img.shields.io/github/v/release/miracum/vfps)
+![License](https://img.shields.io/github/license/miracum/vfps)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/miracum/vfps/badge)](https://api.securityscorecards.dev/projects/github.com/miracum/vfps)
+[![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
 
 A [very fast](#e2e-load-testing) and [resource-efficient](#resource-efficiency) pseudonym service.
 
@@ -402,3 +404,36 @@ Latency distribution:
 Status code distribution:
   [OK]   100000 responses
 ```
+
+## Image signature and provenance verification
+
+Prerequisites:
+
+- [cosign](https://github.com/sigstore/cosign/releases)
+- [slsa-verifier](https://github.com/slsa-framework/slsa-verifier/releases)
+- [crane](https://github.com/google/go-containerregistry/releases)
+
+First, determine the digest of the container image to verify. This digest is also visible on
+the packages page on GitHub: <https://github.com/miracum/vfps/pkgs/container/vfps>.
+
+<!-- x-release-please-start-version -->
+
+```sh
+IMAGE_DIGEST=$(crane digest ghcr.io/miracum/vfps:v1.1.1)
+```
+
+<!-- x-release-please-end -->
+
+Verify the container signature:
+
+```sh
+COSIGN_EXPERIMENTAL=1 cosign verify "ghcr.io/miracum/vfps@${IMAGE_DIGEST}"
+```
+
+Verify the container SLSA level 3 provenance attestation:
+
+```sh
+slsa-verifier verify-image "ghcr.io/miracum/vfps@${IMAGE_DIGEST}" --source-uri github.com/miracum/vfps
+```
+
+See also <https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/container#verification> for details on verifying the image integrity using automated policy controllers.
