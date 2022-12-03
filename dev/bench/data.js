@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1669734573130,
+  "lastUpdate": 1670072551281,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -1476,6 +1476,42 @@ window.BENCHMARK_DATA = {
             "value": 1336.2748620351156,
             "unit": "ns",
             "range": "± 1.366070263051112"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d1ba4208ed79bb53567433d2bf070986b08d4216",
+          "message": "ci: stress test refactor and slsa3 compliance (#44)\n\n* ci: fixed chaos workflow report dir not writable\r\n\r\n* ci: added container image provenance to achieve SLSA 3",
+          "timestamp": "2022-12-03T14:00:59+01:00",
+          "tree_id": "a6e1dd72ccee701e55ddd20231ffed08826d3ca4",
+          "url": "https://github.com/miracum/vfps/commit/d1ba4208ed79bb53567433d2bf070986b08d4216"
+        },
+        "date": 1670072550450,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1829.6138822237651,
+            "unit": "ns",
+            "range": "± 2.8605059388712286"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1357.4418618338448,
+            "unit": "ns",
+            "range": "± 0.8530897881521735"
           }
         ]
       }
