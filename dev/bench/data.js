@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670073091218,
+  "lastUpdate": 1670436383140,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -1584,6 +1584,42 @@ window.BENCHMARK_DATA = {
             "value": 1321.7339134216309,
             "unit": "ns",
             "range": "± 1.4864592733627446"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ee05d41b0688d805b4275cdc1bf8dc17df6b0b80",
+          "message": "refactor: use snake_case conventions for naming database tables and columns (#46)",
+          "timestamp": "2022-12-07T19:04:45+01:00",
+          "tree_id": "9d9d97d7ae8811769857ea9cdc185b4e9a905215",
+          "url": "https://github.com/miracum/vfps/commit/ee05d41b0688d805b4275cdc1bf8dc17df6b0b80"
+        },
+        "date": 1670436382736,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1876.926367539626,
+            "unit": "ns",
+            "range": "± 4.850609482546527"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1310.17126758282,
+            "unit": "ns",
+            "range": "± 0.8752357826109335"
           }
         ]
       }
