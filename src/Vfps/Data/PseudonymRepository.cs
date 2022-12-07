@@ -10,31 +10,33 @@ public class PseudonymRepository : IPseudonymRepository
     private static readonly Histogram UpsertDuration = Metrics
         .CreateHistogram("vfps_upsert_duration_seconds", "Histogram of the durations for upserting a pseudonym into the backend database.");
 
+    // we can't yet use FlexLabs.Upsert and avoid manual SQL due to
+    // support for returning the upserted entity missing: https://github.com/artiomchi/FlexLabs.Upsert/issues/29
     private readonly string PostgreSQLInsertCommand =
     @"
         WITH
             cte AS (
             INSERT INTO
-                ""Pseudonyms"" (""NamespaceName"", ""OriginalValue"", ""PseudonymValue"", ""CreatedAt"", ""LastUpdatedAt"")
+                pseudonyms (namespace_name, original_value, pseudonym_value, created_at, last_updated_at)
             VALUES
-                ({0}, {1}, {2}, NOW(), NOW()) ON CONFLICT (""NamespaceName"", ""OriginalValue"")
+                ({0}, {1}, {2}, NOW(), NOW()) ON CONFLICT (namespace_name, original_value)
             DO NOTHING RETURNING *
             )
         SELECT *
         FROM cte
         UNION
         SELECT *
-        FROM ""Pseudonyms""
-        WHERE ""NamespaceName""={0} AND ""OriginalValue""={1}
+        FROM pseudonyms
+        WHERE namespace_name={0} AND original_value={1}
     ";
 
     private readonly string SqliteInsertCommand =
     @"
-        INSERT INTO ""Pseudonyms"" (""NamespaceName"", ""OriginalValue"", ""PseudonymValue"", ""CreatedAt"", ""LastUpdatedAt"")
+        INSERT INTO pseudonyms (namespace_name, original_value, pseudonym_value, created_at, last_updated_at)
         VALUES ({0}, {1}, {2}, time('now'), time('now'))
-        ON CONFLICT (""NamespaceName"", ""OriginalValue"")
-        DO UPDATE SET ""OriginalValue""=excluded.""OriginalValue""
-        WHERE ""OriginalValue"" IS excluded.""OriginalValue""
+        ON CONFLICT (namespace_name, original_value)
+        DO UPDATE SET original_value=excluded.original_value
+        WHERE original_value IS excluded.original_value
         RETURNING *;
     ";
 
