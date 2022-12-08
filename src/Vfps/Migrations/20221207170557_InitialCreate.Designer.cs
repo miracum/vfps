@@ -12,7 +12,7 @@ using Vfps.Data;
 namespace Vfps.Migrations
 {
     [DbContext(typeof(PseudonymContext))]
-    [Migration("20220925185841_InitialCreate")]
+    [Migration("20221207170557_InitialCreate")]
     partial class InitialCreate
     {
         /// <inheritdoc />
@@ -20,7 +20,7 @@ namespace Vfps.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.0-rc.1.22426.7")
+                .HasAnnotation("ProductVersion", "7.0.0")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -28,55 +28,70 @@ namespace Vfps.Migrations
             modelBuilder.Entity("Vfps.Data.Models.Namespace", b =>
                 {
                     b.Property<string>("Name")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("name");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<string>("Description")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("description");
 
                     b.Property<DateTimeOffset>("LastUpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_updated_at");
 
                     b.Property<int>("PseudonymGenerationMethod")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("pseudonym_generation_method");
 
                     b.Property<long>("PseudonymLength")
-                        .HasColumnType("bigint");
+                        .HasColumnType("bigint")
+                        .HasColumnName("pseudonym_length");
 
                     b.Property<string>("PseudonymPrefix")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("pseudonym_prefix");
 
                     b.Property<string>("PseudonymSuffix")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("pseudonym_suffix");
 
-                    b.HasKey("Name");
+                    b.HasKey("Name")
+                        .HasName("pk_namespaces");
 
-                    b.ToTable("Namespaces");
+                    b.ToTable("namespaces", (string)null);
                 });
 
             modelBuilder.Entity("Vfps.Data.Models.Pseudonym", b =>
                 {
                     b.Property<string>("NamespaceName")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("namespace_name");
 
                     b.Property<string>("OriginalValue")
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("original_value");
 
                     b.Property<DateTimeOffset>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
 
                     b.Property<DateTimeOffset>("LastUpdatedAt")
-                        .HasColumnType("timestamp with time zone");
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_updated_at");
 
                     b.Property<string>("PseudonymValue")
                         .IsRequired()
-                        .HasColumnType("text");
+                        .HasColumnType("text")
+                        .HasColumnName("pseudonym_value");
 
-                    b.HasKey("NamespaceName", "OriginalValue");
+                    b.HasKey("NamespaceName", "OriginalValue")
+                        .HasName("pk_pseudonyms");
 
-                    b.ToTable("Pseudonyms");
+                    b.ToTable("pseudonyms", (string)null);
                 });
 
             modelBuilder.Entity("Vfps.Data.Models.Pseudonym", b =>
@@ -85,7 +100,8 @@ namespace Vfps.Migrations
                         .WithMany("Pseudonyms")
                         .HasForeignKey("NamespaceName")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .IsRequired()
+                        .HasConstraintName("fk_pseudonyms_namespaces_namespace_name");
                 });
 
             modelBuilder.Entity("Vfps.Data.Models.Namespace", b =>
