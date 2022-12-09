@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.3](https://github.com/miracum/vfps/compare/v1.1.2...v1.1.3) (2022-12-07)
+
+
+### Documentation
+
+* added security.md ([ccb7f55](https://github.com/miracum/vfps/commit/ccb7f557a3100bd1e2c8a7ddc53002e8c45191d8))
+
 ## [1.1.2](https://github.com/miracum/vfps/compare/v1.1.1...v1.1.2) (2022-12-03)
 
 
