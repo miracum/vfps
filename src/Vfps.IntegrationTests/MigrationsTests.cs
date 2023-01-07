@@ -1,4 +1,3 @@
-
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
@@ -23,19 +22,24 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
         this.output = output;
 
         postgresqlContainer = new TestcontainersBuilder<PostgreSqlTestcontainer>()
-            .WithDatabase(new PostgreSqlTestcontainerConfiguration("docker.io/bitnami/postgresql:14.5.0-debian-11-r17")
-            {
-                Database = "vfps",
-                Username = "postgres",
-                Password = "postgres",
-            })
+            .WithDatabase(
+                new PostgreSqlTestcontainerConfiguration(
+                    "docker.io/bitnami/postgresql:14.5.0-debian-11-r17"
+                )
+                {
+                    Database = "vfps",
+                    Username = "postgres",
+                    Password = "postgres",
+                }
+            )
             .WithName("postgres")
             .WithHostname("postgres")
             .WithEnvironment("PGUSER", "postgres")
             .WithNetwork(networkFixture.Network.Id, networkFixture.Network.Name)
             .Build();
 
-        this.connectionString = "Server=postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;";
+        this.connectionString =
+            "Server=postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;";
 
         var migrationsImageTag = Environment.GetEnvironmentVariable("VFPS_IMAGE_TAG") ?? "latest";
         this.migrationsImage = $"ghcr.io/miracum/vfps:{migrationsImageTag}";
@@ -51,7 +55,10 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
     [Fact]
     public async Task RunMigrationsContainer_WithCorrectConnectionString_ShouldSucceed()
     {
-        using var consumer = Consume.RedirectStdoutAndStderrToStream(new MemoryStream(), new MemoryStream());
+        using var consumer = Consume.RedirectStdoutAndStderrToStream(
+            new MemoryStream(),
+            new MemoryStream()
+        );
 
         await using var migrationsContainer = migrationsContainerBuilder
             .WithOutputConsumer(consumer)
@@ -73,11 +80,17 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
     [Fact]
     public async Task RunMigrationsContainer_WithWrongConnectionString_ShouldFail()
     {
-        using var consumer = Consume.RedirectStdoutAndStderrToStream(new MemoryStream(), new MemoryStream());
+        using var consumer = Consume.RedirectStdoutAndStderrToStream(
+            new MemoryStream(),
+            new MemoryStream()
+        );
 
         await using var migrationsContainer = migrationsContainerBuilder
             .WithOutputConsumer(consumer)
-            .WithCommand("--verbose", "--connection=Server=not-postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;")
+            .WithCommand(
+                "--verbose",
+                "--connection=Server=not-postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;"
+            )
             .Build();
 
         await migrationsContainer.StartAsync();

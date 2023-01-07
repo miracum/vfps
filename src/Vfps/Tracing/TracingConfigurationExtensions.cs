@@ -13,10 +13,16 @@ namespace Vfps.Tracing
         {
             var assembly = Assembly.GetExecutingAssembly().GetName();
             var assemblyVersion = assembly.Version?.ToString() ?? "unknown";
-            var tracingExporter = builder.Configuration.GetValue<string>("Tracing:Exporter")?.ToLowerInvariant() ?? "jaeger";
-            var serviceName = builder.Configuration.GetValue("Tracing:ServiceName", assembly.Name) ?? "vfps";
+            var tracingExporter =
+                builder.Configuration.GetValue<string>("Tracing:Exporter")?.ToLowerInvariant()
+                ?? "jaeger";
+            var serviceName =
+                builder.Configuration.GetValue("Tracing:ServiceName", assembly.Name) ?? "vfps";
 
-            var rootSamplerType = builder.Configuration.GetValue("Tracing:RootSampler", "AlwaysOnSampler");
+            var rootSamplerType = builder.Configuration.GetValue(
+                "Tracing:RootSampler",
+                "AlwaysOnSampler"
+            );
             var samplingRatio = builder.Configuration.GetValue("Tracing:SamplingProbability", 0.1d);
 
             Sampler rootSampler = rootSamplerType switch
@@ -30,10 +36,14 @@ namespace Vfps.Tracing
             builder.Services.AddOpenTelemetryTracing(options =>
             {
                 options
-                    .ConfigureResource(r => r.AddService(
-                        serviceName: serviceName,
-                        serviceVersion: assemblyVersion,
-                        serviceInstanceId: Environment.MachineName))
+                    .ConfigureResource(
+                        r =>
+                            r.AddService(
+                                serviceName: serviceName,
+                                serviceVersion: assemblyVersion,
+                                serviceInstanceId: Environment.MachineName
+                            )
+                    )
                     .SetSampler(new ParentBasedSampler(rootSampler))
                     .AddNpgsql()
                     .AddSource(Program.ActivitySource.Name)
@@ -41,12 +51,7 @@ namespace Vfps.Tracing
                     {
                         o.Filter = (r) =>
                         {
-                            var ignoredPaths = new[]
-                            {
-                                "/healthz",
-                                "/readyz",
-                                "/livez"
-                            };
+                            var ignoredPaths = new[] { "/healthz", "/readyz", "/livez" };
 
                             var path = r.Request.Path.Value!;
                             return !ignoredPaths.Any(path.Contains);
@@ -57,12 +62,17 @@ namespace Vfps.Tracing
                 {
                     case "jaeger":
                         options.AddJaegerExporter();
-                        builder.Services.Configure<JaegerExporterOptions>(builder.Configuration.GetSection("Tracing:Jaeger"));
+                        builder.Services.Configure<JaegerExporterOptions>(
+                            builder.Configuration.GetSection("Tracing:Jaeger")
+                        );
                         break;
 
                     case "otlp":
-                        var endpoint = builder.Configuration.GetValue<string>("Tracing:Otlp:Endpoint") ?? "";
-                        options.AddOtlpExporter(otlpOptions => otlpOptions.Endpoint = new Uri(endpoint));
+                        var endpoint =
+                            builder.Configuration.GetValue<string>("Tracing:Otlp:Endpoint") ?? "";
+                        options.AddOtlpExporter(
+                            otlpOptions => otlpOptions.Endpoint = new Uri(endpoint)
+                        );
                         break;
                 }
             });

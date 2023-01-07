@@ -9,11 +9,14 @@ public class PseudonymizationMethodsLookup
     public PseudonymizationMethodsLookup()
     {
         lookup = new Dictionary<PseudonymGenerationMethod, IPseudonymGenerator>()
+        {
+            { PseudonymGenerationMethod.Unspecified, new CryptoRandomBase64UrlEncodedGenerator() },
             {
-                {PseudonymGenerationMethod.Unspecified, new CryptoRandomBase64UrlEncodedGenerator() },
-                { PseudonymGenerationMethod.SecureRandomBase64UrlEncoded, new CryptoRandomBase64UrlEncodedGenerator() },
-                { PseudonymGenerationMethod.Sha256HexEncoded, new HexEncodedSha256HashGenerator() },
-            };
+                PseudonymGenerationMethod.SecureRandomBase64UrlEncoded,
+                new CryptoRandomBase64UrlEncodedGenerator()
+            },
+            { PseudonymGenerationMethod.Sha256HexEncoded, new HexEncodedSha256HashGenerator() },
+        };
     }
 
     public IPseudonymGenerator this[PseudonymGenerationMethod method]

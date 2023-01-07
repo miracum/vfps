@@ -6,11 +6,11 @@ namespace Vfps.PseudonymGenerators;
 
 public class CryptoRandomBase64UrlEncodedGenerator : IPseudonymGenerator
 {
-    private static readonly byte[] hashedMachineNameBytes = SHA256.HashData(Encoding.UTF8.GetBytes(Environment.MachineName));
+    private static readonly byte[] hashedMachineNameBytes = SHA256.HashData(
+        Encoding.UTF8.GetBytes(Environment.MachineName)
+    );
 
-    public CryptoRandomBase64UrlEncodedGenerator()
-    {
-    }
+    public CryptoRandomBase64UrlEncodedGenerator() { }
 
     public string GeneratePseudonym(string originalValue, uint pseudonymLength = 32)
     {

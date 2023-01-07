@@ -6,12 +6,18 @@ namespace Vfps;
 
 public class MemoryCacheMetricsBackgroundService : BackgroundService
 {
-    private static readonly Gauge EntriesInCache = Metrics
-        .CreateGauge("vfps_cache_entries", "Number of entries in the cache.");
-    private static readonly Gauge CacheMisses = Metrics
-        .CreateGauge("vfps_cache_misses_total", "Number of cache misses.");
-    private static readonly Gauge CacheHits = Metrics
-        .CreateGauge("vfps_cache_hits_total", "Number of cache hits.");
+    private static readonly Gauge EntriesInCache = Metrics.CreateGauge(
+        "vfps_cache_entries",
+        "Number of entries in the cache."
+    );
+    private static readonly Gauge CacheMisses = Metrics.CreateGauge(
+        "vfps_cache_misses_total",
+        "Number of cache misses."
+    );
+    private static readonly Gauge CacheHits = Metrics.CreateGauge(
+        "vfps_cache_hits_total",
+        "Number of cache hits."
+    );
 
     public MemoryCacheMetricsBackgroundService(IMemoryCache memoryCache)
     {

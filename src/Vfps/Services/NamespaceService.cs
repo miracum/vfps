@@ -20,13 +20,18 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
     private PseudonymContext Context { get; }
 
     /// <inheritdoc/>
-    public override async Task<NamespaceServiceCreateResponse> Create(NamespaceServiceCreateRequest request, ServerCallContext context)
+    public override async Task<NamespaceServiceCreateResponse> Create(
+        NamespaceServiceCreateRequest request,
+        ServerCallContext context
+    )
     {
         var now = DateTimeOffset.UtcNow;
 
         if (request.PseudonymLength <= 0)
         {
-            throw new RpcException(new Status(StatusCode.OutOfRange, "Pseudonym length must be larger than 0."));
+            throw new RpcException(
+                new Status(StatusCode.OutOfRange, "Pseudonym length must be larger than 0.")
+            );
         }
 
         var @namespace = new Data.Models.Namespace()
@@ -49,16 +54,15 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
         }
         catch (UniqueConstraintException)
         {
-            var metadata = new Metadata
-            {
-                { "Namespace", request.Name }
-            };
+            var metadata = new Metadata { { "Namespace", request.Name } };
 
             throw new RpcException(
                 new Status(
                     StatusCode.AlreadyExists,
-                    "A namespace with the same name already exists. Namespaces are immutable, for changes please delete and re-create it."),
-                metadata);
+                    "A namespace with the same name already exists. Namespaces are immutable, for changes please delete and re-create it."
+                ),
+                metadata
+            );
         }
 
         return new NamespaceServiceCreateResponse
@@ -81,17 +85,26 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
     }
 
     /// <inheritdoc/>
-    public override async Task<NamespaceServiceGetResponse> Get(NamespaceServiceGetRequest request, ServerCallContext context)
+    public override async Task<NamespaceServiceGetResponse> Get(
+        NamespaceServiceGetRequest request,
+        ServerCallContext context
+    )
     {
-        var @namespace = await Context.Namespaces.FindAsync(request.Name, context.CancellationToken);
+        var @namespace = await Context.Namespaces.FindAsync(
+            request.Name,
+            context.CancellationToken
+        );
         if (@namespace is null)
         {
-            var metadata = new Metadata
-                {
-                    { "Namespace", request.Name }
-                };
+            var metadata = new Metadata { { "Namespace", request.Name } };
 
-            throw new RpcException(new Status(StatusCode.NotFound, "The requested pseudonym namespace does not exist."), metadata);
+            throw new RpcException(
+                new Status(
+                    StatusCode.NotFound,
+                    "The requested pseudonym namespace does not exist."
+                ),
+                metadata
+            );
         }
 
         return new NamespaceServiceGetResponse
@@ -114,17 +127,26 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
     }
 
     /// <inheritdoc/>
-    public override async Task<NamespaceServiceDeleteResponse> Delete(NamespaceServiceDeleteRequest request, ServerCallContext context)
+    public override async Task<NamespaceServiceDeleteResponse> Delete(
+        NamespaceServiceDeleteRequest request,
+        ServerCallContext context
+    )
     {
-        var @namespace = await Context.Namespaces.FindAsync(request.Name, context.CancellationToken);
+        var @namespace = await Context.Namespaces.FindAsync(
+            request.Name,
+            context.CancellationToken
+        );
         if (@namespace is null)
         {
-            var metadata = new Metadata
-            {
-                { "Namespace", request.Name }
-            };
+            var metadata = new Metadata { { "Namespace", request.Name } };
 
-            throw new RpcException(new Status(StatusCode.NotFound, "The requested pseudonym namespace does not exist."), metadata);
+            throw new RpcException(
+                new Status(
+                    StatusCode.NotFound,
+                    "The requested pseudonym namespace does not exist."
+                ),
+                metadata
+            );
         }
 
         // the onDelete-behavior for the Namespace-Pseudonym relationship is set to cascade, so
@@ -136,25 +158,32 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
     }
 
     /// <inheritdoc/>
-    public override async Task<NamespaceServiceGetAllResponse> GetAll(NamespaceServiceGetAllRequest request, ServerCallContext context)
+    public override async Task<NamespaceServiceGetAllResponse> GetAll(
+        NamespaceServiceGetAllRequest request,
+        ServerCallContext context
+    )
     {
         var namespaces = await Context.Namespaces
             .AsNoTracking()
             // TODO: should really use auto-mapper or some other even a custom Namespace.FromDto() method.
-            .Select(n => new Namespace
-            {
-                Description = n.Description,
-                Name = n.Name,
-                PseudonymGenerationMethod = n.PseudonymGenerationMethod,
-                PseudonymLength = n.PseudonymLength,
-                PseudonymPrefix = n.PseudonymPrefix,
-                PseudonymSuffix = n.PseudonymSuffix,
-                Meta = new Meta
-                {
-                    CreatedAt = Timestamp.FromDateTimeOffset(n.CreatedAt),
-                    LastUpdatedAt = Timestamp.FromDateTimeOffset(n.LastUpdatedAt)
-                }
-            }).ToListAsync(context.CancellationToken);
+            .Select(
+                n =>
+                    new Namespace
+                    {
+                        Description = n.Description,
+                        Name = n.Name,
+                        PseudonymGenerationMethod = n.PseudonymGenerationMethod,
+                        PseudonymLength = n.PseudonymLength,
+                        PseudonymPrefix = n.PseudonymPrefix,
+                        PseudonymSuffix = n.PseudonymSuffix,
+                        Meta = new Meta
+                        {
+                            CreatedAt = Timestamp.FromDateTimeOffset(n.CreatedAt),
+                            LastUpdatedAt = Timestamp.FromDateTimeOffset(n.LastUpdatedAt)
+                        }
+                    }
+            )
+            .ToListAsync(context.CancellationToken);
 
         var response = new NamespaceServiceGetAllResponse();
 

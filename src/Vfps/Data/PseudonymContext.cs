@@ -7,9 +7,7 @@ namespace Vfps.Data;
 
 public class PseudonymContext : DbContext
 {
-    public PseudonymContext(DbContextOptions<PseudonymContext> options) : base(options)
-    {
-    }
+    public PseudonymContext(DbContextOptions<PseudonymContext> options) : base(options) { }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
@@ -19,8 +17,7 @@ public class PseudonymContext : DbContext
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Pseudonym>()
-            .HasKey(c => new { c.NamespaceName, c.OriginalValue });
+        modelBuilder.Entity<Pseudonym>().HasKey(c => new { c.NamespaceName, c.OriginalValue });
 
         // via https://blog.dangl.me/archive/handling-datetimeoffset-in-sqlite-with-entity-framework-core/
         // only really relevant for unit/integration-testing
@@ -34,8 +31,13 @@ public class PseudonymContext : DbContext
             // This only supports millisecond precision, but should be sufficient for most use cases.
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
-                var properties = entityType.ClrType.GetProperties().Where(p => p.PropertyType == typeof(DateTimeOffset)
-                                                                            || p.PropertyType == typeof(DateTimeOffset?));
+                var properties = entityType.ClrType
+                    .GetProperties()
+                    .Where(
+                        p =>
+                            p.PropertyType == typeof(DateTimeOffset)
+                            || p.PropertyType == typeof(DateTimeOffset?)
+                    );
                 foreach (var property in properties)
                 {
                     modelBuilder

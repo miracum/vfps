@@ -55,7 +55,11 @@ public class HttpEndpointTests : IClassFixture<IntegrationTestFactory<Program, P
         var client = factory.CreateClient();
 
         var fhirUri = new Uri(client.BaseAddress!, "/v1/fhir");
-        var fhirClient = new FhirClient(fhirUri, client, new() { PreferredFormat = ResourceFormat.Json });
+        var fhirClient = new FhirClient(
+            fhirUri,
+            client,
+            new() { PreferredFormat = ResourceFormat.Json }
+        );
 
         var p = new Parameters
         {

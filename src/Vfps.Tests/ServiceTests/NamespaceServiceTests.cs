@@ -23,16 +23,14 @@ public class NamespaceServiceTests : ServiceTestBase
 
         await sut.Invoking(async s => await s.Create(request, TestServerCallContext.Create()))
             .Should()
-            .ThrowAsync<RpcException>().Where(exc => exc.StatusCode == StatusCode.AlreadyExists);
+            .ThrowAsync<RpcException>()
+            .Where(exc => exc.StatusCode == StatusCode.AlreadyExists);
     }
 
     [Fact]
     public async Task Get_WithExistingNamespace_ShouldReturnNamespace()
     {
-        var request = new NamespaceServiceGetRequest
-        {
-            Name = "existingNamespace",
-        };
+        var request = new NamespaceServiceGetRequest { Name = "existingNamespace", };
 
         var response = await sut.Get(request, TestServerCallContext.Create());
 
@@ -52,10 +50,7 @@ public class NamespaceServiceTests : ServiceTestBase
     [Fact]
     public async Task Get_WithNonExistingNamespace_ShouldThrowNotFoundException()
     {
-        var request = new NamespaceServiceGetRequest
-        {
-            Name = "notExisting",
-        };
+        var request = new NamespaceServiceGetRequest { Name = "notExisting", };
 
         var act = () => sut.Get(request, TestServerCallContext.Create());
 
@@ -105,10 +100,7 @@ public class NamespaceServiceTests : ServiceTestBase
 
         await sut.Create(createRequest, TestServerCallContext.Create());
 
-        var deleteRequest = new NamespaceServiceDeleteRequest
-        {
-            Name = "toBeDeleted",
-        };
+        var deleteRequest = new NamespaceServiceDeleteRequest { Name = "toBeDeleted", };
 
         await sut.Delete(deleteRequest, TestServerCallContext.Create());
 
@@ -120,7 +112,9 @@ public class NamespaceServiceTests : ServiceTestBase
     {
         var createRequest = new NamespaceServiceCreateRequest
         {
-            Name = nameof(Delete_WithNamespaceContainingPseudonyms_ShouldDeleteNamespaceAndAllPseudonyms),
+            Name = nameof(
+                Delete_WithNamespaceContainingPseudonyms_ShouldDeleteNamespaceAndAllPseudonyms
+            ),
             PseudonymLength = 16,
         };
 
@@ -130,7 +124,8 @@ public class NamespaceServiceTests : ServiceTestBase
             InMemoryPseudonymContext,
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
             new NamespaceRepository(InMemoryPseudonymContext),
-            new PseudonymRepository(InMemoryPseudonymContext));
+            new PseudonymRepository(InMemoryPseudonymContext)
+        );
 
         var pseudonymsToCreateCount = 100;
         for (int i = 0; i < pseudonymsToCreateCount; i++)
@@ -138,7 +133,10 @@ public class NamespaceServiceTests : ServiceTestBase
             var createPseudonymRequest = new PseudonymServiceCreateRequest
             {
                 Namespace = createRequest.Name,
-                OriginalValue = nameof(Delete_WithNamespaceContainingPseudonyms_ShouldDeleteNamespaceAndAllPseudonyms) + i,
+                OriginalValue =
+                    nameof(
+                        Delete_WithNamespaceContainingPseudonyms_ShouldDeleteNamespaceAndAllPseudonyms
+                    ) + i,
             };
 
             await pseudonymService.Create(createPseudonymRequest, TestServerCallContext.Create());
@@ -151,10 +149,7 @@ public class NamespaceServiceTests : ServiceTestBase
 
         pseudonymCount.Should().Be(pseudonymsToCreateCount);
 
-        var deleteRequest = new NamespaceServiceDeleteRequest
-        {
-            Name = createRequest.Name,
-        };
+        var deleteRequest = new NamespaceServiceDeleteRequest { Name = createRequest.Name, };
 
         await sut.Delete(deleteRequest, TestServerCallContext.Create());
 
@@ -175,10 +170,7 @@ public class NamespaceServiceTests : ServiceTestBase
     [Fact]
     public async Task Delete_WithNonExistingNamespace_ShouldThrowNotFoundException()
     {
-        var request = new NamespaceServiceDeleteRequest
-        {
-            Name = "notExisting",
-        };
+        var request = new NamespaceServiceDeleteRequest { Name = "notExisting", };
 
         var act = () => sut.Delete(request, TestServerCallContext.Create());
 
