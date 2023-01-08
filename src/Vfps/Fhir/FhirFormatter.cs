@@ -17,7 +17,8 @@ public class FhirOutputFormatter : TextOutputFormatter
         SupportedEncodings.Add(Encoding.Unicode);
     }
 
-    private JsonSerializerOptions FhirJsonOptions { get; } = new JsonSerializerOptions().ForFhir(typeof(Bundle).Assembly);
+    private JsonSerializerOptions FhirJsonOptions { get; } =
+        new JsonSerializerOptions().ForFhir(typeof(Bundle).Assembly);
 
     protected override bool CanWriteType(Type? type)
     {
@@ -25,7 +26,9 @@ public class FhirOutputFormatter : TextOutputFormatter
     }
 
     public override async Task WriteResponseBodyAsync(
-        OutputFormatterWriteContext context, Encoding selectedEncoding)
+        OutputFormatterWriteContext context,
+        Encoding selectedEncoding
+    )
     {
         var resource = context.Object as Resource;
         var httpContext = context.HttpContext;
@@ -56,10 +59,13 @@ public class FhirInputFormatter : TextInputFormatter
         SupportedEncodings.Add(Encoding.Unicode);
     }
 
-    private JsonSerializerOptions FhirJsonOptions { get; } = new JsonSerializerOptions().ForFhir(typeof(Bundle).Assembly);
+    private JsonSerializerOptions FhirJsonOptions { get; } =
+        new JsonSerializerOptions().ForFhir(typeof(Bundle).Assembly);
 
-    public override async Task<InputFormatterResult> ReadRequestBodyAsync(InputFormatterContext context,
-        Encoding encoding)
+    public override async Task<InputFormatterResult> ReadRequestBodyAsync(
+        InputFormatterContext context,
+        Encoding encoding
+    )
     {
         var httpContext = context.HttpContext;
         using var reader = new StreamReader(httpContext.Request.Body, encoding);

@@ -14,7 +14,8 @@ public class PseudonymServiceTests : ServiceTestBase
             InMemoryPseudonymContext,
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
             new NamespaceRepository(InMemoryPseudonymContext),
-            new PseudonymRepository(InMemoryPseudonymContext));
+            new PseudonymRepository(InMemoryPseudonymContext)
+        );
     }
 
     [Fact]
@@ -64,7 +65,10 @@ public class PseudonymServiceTests : ServiceTestBase
 
         InMemoryPseudonymContext.Pseudonyms
             .Should()
-            .Contain(p => p.OriginalValue == request.OriginalValue && p.NamespaceName == request.Namespace);
+            .Contain(
+                p =>
+                    p.OriginalValue == request.OriginalValue && p.NamespaceName == request.Namespace
+            );
     }
 
     [Fact]
@@ -78,7 +82,8 @@ public class PseudonymServiceTests : ServiceTestBase
 
         await sut.Invoking(async s => await s.Create(request, TestServerCallContext.Create()))
             .Should()
-            .ThrowAsync<RpcException>().Where(e => e.StatusCode == StatusCode.NotFound);
+            .ThrowAsync<RpcException>()
+            .Where(e => e.StatusCode == StatusCode.NotFound);
     }
 
     [Fact]
@@ -87,20 +92,31 @@ public class PseudonymServiceTests : ServiceTestBase
         var request = new PseudonymServiceCreateRequest
         {
             Namespace = "emptyNamespace",
-            OriginalValue = nameof(Create_CalledMultipleTimesWithTheSameOriginalValue_ShouldOnlyStoreOnePseudonym),
+            OriginalValue = nameof(
+                Create_CalledMultipleTimesWithTheSameOriginalValue_ShouldOnlyStoreOnePseudonym
+            ),
         };
 
         var response = await sut.Create(request, TestServerCallContext.Create());
         var firstCreatedPseudonym = response.Pseudonym.PseudonymValue;
-        InMemoryPseudonymContext.Pseudonyms.Where(p => p.NamespaceName == request.Namespace).Should().HaveCount(1);
+        InMemoryPseudonymContext.Pseudonyms
+            .Where(p => p.NamespaceName == request.Namespace)
+            .Should()
+            .HaveCount(1);
 
         response = await sut.Create(request, TestServerCallContext.Create());
         response.Pseudonym.PseudonymValue.Should().Be(firstCreatedPseudonym);
-        InMemoryPseudonymContext.Pseudonyms.Where(p => p.NamespaceName == request.Namespace).Should().HaveCount(1);
+        InMemoryPseudonymContext.Pseudonyms
+            .Where(p => p.NamespaceName == request.Namespace)
+            .Should()
+            .HaveCount(1);
 
         response = await sut.Create(request, TestServerCallContext.Create());
         response.Pseudonym.PseudonymValue.Should().Be(firstCreatedPseudonym);
-        InMemoryPseudonymContext.Pseudonyms.Where(p => p.NamespaceName == request.Namespace).Should().HaveCount(1);
+        InMemoryPseudonymContext.Pseudonyms
+            .Where(p => p.NamespaceName == request.Namespace)
+            .Should()
+            .HaveCount(1);
     }
 
     [Fact]
@@ -111,8 +127,13 @@ public class PseudonymServiceTests : ServiceTestBase
         var cachingSut = new Services.PseudonymService(
             InMemoryPseudonymContext,
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
-            new CachingNamespaceRepository(InMemoryPseudonymContext, cache, new Config.CacheConfig()),
-            new PseudonymRepository(InMemoryPseudonymContext));
+            new CachingNamespaceRepository(
+                InMemoryPseudonymContext,
+                cache,
+                new Config.CacheConfig()
+            ),
+            new PseudonymRepository(InMemoryPseudonymContext)
+        );
 
         var request = new PseudonymServiceCreateRequest
         {
@@ -143,13 +164,24 @@ public class PseudonymServiceTests : ServiceTestBase
         var cachingSut = new Services.PseudonymService(
             InMemoryPseudonymContext,
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
-            new CachingNamespaceRepository(InMemoryPseudonymContext, cache, new Config.CacheConfig()),
-            new CachingPseudonymRepository(InMemoryPseudonymContext, cache, new Config.CacheConfig()));
+            new CachingNamespaceRepository(
+                InMemoryPseudonymContext,
+                cache,
+                new Config.CacheConfig()
+            ),
+            new CachingPseudonymRepository(
+                InMemoryPseudonymContext,
+                cache,
+                new Config.CacheConfig()
+            )
+        );
 
         var request = new PseudonymServiceCreateRequest
         {
             Namespace = "existingNamespace",
-            OriginalValue = nameof(Create_WithCachingNamespaceRepositoryAndCachingPseudonymRepository_ShouldBeFaster),
+            OriginalValue = nameof(
+                Create_WithCachingNamespaceRepositoryAndCachingPseudonymRepository_ShouldBeFaster
+            ),
         };
 
         var stopwatch = new Stopwatch();
@@ -170,10 +202,7 @@ public class PseudonymServiceTests : ServiceTestBase
     [Fact]
     public async Task List_WithEmptyNamespace_ShouldReturnEmptyList()
     {
-        var request = new PseudonymServiceListRequest
-        {
-            Namespace = "emptyNamespace",
-        };
+        var request = new PseudonymServiceListRequest { Namespace = "emptyNamespace", };
 
         var response = await sut.List(request, TestServerCallContext.Create());
 
@@ -184,30 +213,27 @@ public class PseudonymServiceTests : ServiceTestBase
     [Fact]
     public async Task List_WithNonExistingNamespace_ShouldThrowNotFoundError()
     {
-        var request = new PseudonymServiceListRequest
-        {
-            Namespace = "nonExistingNamespace",
-        };
+        var request = new PseudonymServiceListRequest { Namespace = "nonExistingNamespace", };
 
         await sut.Invoking(async s => await s.List(request, TestServerCallContext.Create()))
             .Should()
-            .ThrowAsync<RpcException>().Where(e => e.StatusCode == StatusCode.NotFound);
+            .ThrowAsync<RpcException>()
+            .Where(e => e.StatusCode == StatusCode.NotFound);
     }
 
     [Fact]
     public async Task List_WithExistingNonEmptyNamespace_ShouldReturnAllPseudonyms()
     {
-        var request = new PseudonymServiceListRequest
-        {
-            Namespace = "existingNamespace",
-        };
+        var request = new PseudonymServiceListRequest { Namespace = "existingNamespace", };
 
         var response = await sut.List(request, TestServerCallContext.Create());
 
         response.Pseudonyms.Should().HaveSameCount(InMemoryPseudonymContext.Pseudonyms);
     }
 
-    [Fact(Skip = "there's an issue with timezones in SQLite vs. DateTimeOffset.UtcNow. This causes L152 in PseudonymService.cs to never find any value.")]
+    [Fact(
+        Skip = "there's an issue with timezones in SQLite vs. DateTimeOffset.UtcNow. This causes L152 in PseudonymService.cs to never find any value."
+    )]
     public async Task List_WithMoreItemsThanPageSize_ShouldReturnAllPseudonymsViaPaging()
     {
         var namespaceName = "emptyNamespace";
@@ -218,7 +244,8 @@ public class PseudonymServiceTests : ServiceTestBase
             var createRequest = new PseudonymServiceCreateRequest
             {
                 Namespace = namespaceName,
-                OriginalValue = nameof(List_WithMoreItemsThanPageSize_ShouldReturnAllPseudonymsViaPaging) + i,
+                OriginalValue =
+                    nameof(List_WithMoreItemsThanPageSize_ShouldReturnAllPseudonymsViaPaging) + i,
             };
 
             await sut.Create(createRequest, TestServerCallContext.Create());
@@ -227,7 +254,8 @@ public class PseudonymServiceTests : ServiceTestBase
         InMemoryPseudonymContext.Pseudonyms
             .Where(p => p.NamespaceName == namespaceName)
             .Count()
-            .Should().Be(pseudonymsToCreateCount);
+            .Should()
+            .Be(pseudonymsToCreateCount);
 
         var request = new PseudonymServiceListRequest
         {

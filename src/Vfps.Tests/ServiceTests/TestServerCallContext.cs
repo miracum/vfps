@@ -35,7 +35,10 @@ public sealed class TestServerCallContext : ServerCallContext
         RequestHeadersCore = requestHeaders;
         CancellationTokenCore = cancellationToken;
         ResponseTrailersCore = new Metadata();
-        AuthContextCore = new AuthContext(string.Empty, new Dictionary<string, List<AuthProperty>>());
+        AuthContextCore = new AuthContext(
+            string.Empty,
+            new Dictionary<string, List<AuthProperty>>()
+        );
         _userState = new Dictionary<object, object>();
     }
 
@@ -50,7 +53,9 @@ public sealed class TestServerCallContext : ServerCallContext
     protected override WriteOptions? WriteOptionsCore { get; set; }
     protected override AuthContext AuthContextCore { get; }
 
-    protected override ContextPropagationToken CreatePropagationTokenCore(ContextPropagationOptions? options)
+    protected override ContextPropagationToken CreatePropagationTokenCore(
+        ContextPropagationOptions? options
+    )
     {
         throw new NotImplementedException();
     }
@@ -68,7 +73,10 @@ public sealed class TestServerCallContext : ServerCallContext
 
     protected override IDictionary<object, object> UserStateCore => _userState;
 
-    public static TestServerCallContext Create(Metadata? requestHeaders = null, CancellationToken cancellationToken = default)
+    public static TestServerCallContext Create(
+        Metadata? requestHeaders = null,
+        CancellationToken cancellationToken = default
+    )
     {
         return new TestServerCallContext(requestHeaders ?? new Metadata(), cancellationToken);
     }

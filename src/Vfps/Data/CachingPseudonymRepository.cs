@@ -6,7 +6,11 @@ namespace Vfps.Data;
 
 public class CachingPseudonymRepository : IPseudonymRepository
 {
-    public CachingPseudonymRepository(PseudonymContext context, IMemoryCache memoryCache, CacheConfig cacheConfig)
+    public CachingPseudonymRepository(
+        PseudonymContext context,
+        IMemoryCache memoryCache,
+        CacheConfig cacheConfig
+    )
     {
         MemoryCache = memoryCache;
         CacheConfig = cacheConfig;
@@ -24,12 +28,14 @@ public class CachingPseudonymRepository : IPseudonymRepository
     {
         var cacheKey = $"pseudonyms.{pseudonym.OriginalValue}@{pseudonym.NamespaceName}";
 
-        return await MemoryCache.GetOrCreateAsync(cacheKey, async entry =>
-        {
-            entry.SetSize(1)
-                .SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration);
+        return await MemoryCache.GetOrCreateAsync(
+            cacheKey,
+            async entry =>
+            {
+                entry.SetSize(1).SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration);
 
-            return await Repository.CreateIfNotExist(pseudonym);
-        });
+                return await Repository.CreateIfNotExist(pseudonym);
+            }
+        );
     }
 }

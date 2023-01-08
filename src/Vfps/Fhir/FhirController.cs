@@ -17,7 +17,11 @@ public class FhirController : ControllerBase
 {
     private readonly ILogger<FhirController> logger;
 
-    public FhirController(ILogger<FhirController> logger, INamespaceRepository namespaceRepository, IPseudonymRepository pseudonymRepository)
+    public FhirController(
+        ILogger<FhirController> logger,
+        INamespaceRepository namespaceRepository,
+        IPseudonymRepository pseudonymRepository
+    )
     {
         this.logger = logger;
         NamespaceRepository = namespaceRepository;
@@ -43,12 +47,14 @@ public class FhirController : ControllerBase
         if (parametersResource is null)
         {
             var outcome = new OperationOutcome();
-            outcome.Issue.Add(new OperationOutcome.IssueComponent
-            {
-                Severity = OperationOutcome.IssueSeverity.Error,
-                Code = OperationOutcome.IssueType.Processing,
-                Diagnostics = "Received malformed or missing resource"
-            });
+            outcome.Issue.Add(
+                new OperationOutcome.IssueComponent
+                {
+                    Severity = OperationOutcome.IssueSeverity.Error,
+                    Code = OperationOutcome.IssueType.Processing,
+                    Diagnostics = "Received malformed or missing resource"
+                }
+            );
             logger.LogError("Bad Request: received request body is empty.");
             return BadRequest(outcome);
         }
@@ -59,12 +65,15 @@ public class FhirController : ControllerBase
         if (namespaceName is null || originalValue is null)
         {
             var outcome = new OperationOutcome();
-            outcome.Issue.Add(new OperationOutcome.IssueComponent
-            {
-                Severity = OperationOutcome.IssueSeverity.Error,
-                Code = OperationOutcome.IssueType.Processing,
-                Diagnostics = "namespace and/or originalValue are missing in the Parameters request object"
-            });
+            outcome.Issue.Add(
+                new OperationOutcome.IssueComponent
+                {
+                    Severity = OperationOutcome.IssueSeverity.Error,
+                    Code = OperationOutcome.IssueType.Processing,
+                    Diagnostics =
+                        "namespace and/or originalValue are missing in the Parameters request object"
+                }
+            );
             return BadRequest(outcome);
         }
 
@@ -72,12 +81,14 @@ public class FhirController : ControllerBase
         if (@namespace is null)
         {
             var outcome = new OperationOutcome();
-            outcome.Issue.Add(new OperationOutcome.IssueComponent
-            {
-                Severity = OperationOutcome.IssueSeverity.Error,
-                Code = OperationOutcome.IssueType.Processing,
-                Diagnostics = $"the namespace '{namespaceName}' could not be found."
-            });
+            outcome.Issue.Add(
+                new OperationOutcome.IssueComponent
+                {
+                    Severity = OperationOutcome.IssueSeverity.Error,
+                    Code = OperationOutcome.IssueType.Processing,
+                    Diagnostics = $"the namespace '{namespaceName}' could not be found."
+                }
+            );
             return NotFound(outcome);
         }
 
@@ -90,7 +101,8 @@ public class FhirController : ControllerBase
             activity?.SetTag("Method", generator.GetType().Name);
 
             pseudonymValue = generator.GeneratePseudonym(originalValue, @namespace.PseudonymLength);
-            pseudonymValue = $"{@namespace.PseudonymPrefix}{pseudonymValue}{@namespace.PseudonymSuffix}";
+            pseudonymValue =
+                $"{@namespace.PseudonymPrefix}{pseudonymValue}{@namespace.PseudonymSuffix}";
         }
 
         var now = DateTimeOffset.UtcNow;
@@ -103,41 +115,47 @@ public class FhirController : ControllerBase
             PseudonymValue = pseudonymValue,
         };
 
-        Data.Models.Pseudonym? upsertedPseudonym = await PseudonymRepository.CreateIfNotExist(pseudonym);
+        Data.Models.Pseudonym? upsertedPseudonym = await PseudonymRepository.CreateIfNotExist(
+            pseudonym
+        );
 
         if (upsertedPseudonym is null)
         {
             var outcome = new OperationOutcome();
-            outcome.Issue.Add(new OperationOutcome.IssueComponent
-            {
-                Severity = OperationOutcome.IssueSeverity.Error,
-                Code = OperationOutcome.IssueType.Processing,
-                Diagnostics = "failed to store the pseudonym after several retries"
-            });
+            outcome.Issue.Add(
+                new OperationOutcome.IssueComponent
+                {
+                    Severity = OperationOutcome.IssueSeverity.Error,
+                    Code = OperationOutcome.IssueType.Processing,
+                    Diagnostics = "failed to store the pseudonym after several retries"
+                }
+            );
             return StatusCode(500, outcome);
         }
 
-        return Ok(new Parameters
-        {
-            Parameter = new List<Parameters.ParameterComponent>
+        return Ok(
+            new Parameters
             {
-                new Parameters.ParameterComponent
+                Parameter = new List<Parameters.ParameterComponent>
                 {
-                    Name = "namespace",
-                    Value = new FhirString(namespaceName),
-                },
-                new Parameters.ParameterComponent
-                {
-                    Name = "originalValue",
-                    Value = new FhirString(originalValue),
-                },
-                new Parameters.ParameterComponent
-                {
-                    Name = "pseudonymValue",
-                    Value = new FhirString(upsertedPseudonym.PseudonymValue),
-                },
+                    new Parameters.ParameterComponent
+                    {
+                        Name = "namespace",
+                        Value = new FhirString(namespaceName),
+                    },
+                    new Parameters.ParameterComponent
+                    {
+                        Name = "originalValue",
+                        Value = new FhirString(originalValue),
+                    },
+                    new Parameters.ParameterComponent
+                    {
+                        Name = "pseudonymValue",
+                        Value = new FhirString(upsertedPseudonym.PseudonymValue),
+                    },
+                }
             }
-        });
+        );
     }
 
     /// <summary>
@@ -153,18 +171,12 @@ public class FhirController : ControllerBase
             Status = PublicationStatus.Active,
             Date = DateTime.UtcNow.ToString("s", CultureInfo.InvariantCulture),
             Kind = CapabilityStatementKind.Instance,
-            Software = new CapabilityStatement.SoftwareComponent
-            {
-                Name = "VFPS FHIR API",
-            },
+            Software = new CapabilityStatement.SoftwareComponent { Name = "VFPS FHIR API", },
             FhirVersion = FHIRVersion.N4_0_1,
             Format = new[] { "application/fhir+json" },
             Rest = new List<CapabilityStatement.RestComponent>
             {
-                new ()
-                {
-                    Mode = CapabilityStatement.RestfulCapabilityMode.Server
-                }
+                new() { Mode = CapabilityStatement.RestfulCapabilityMode.Server }
             },
         };
     }

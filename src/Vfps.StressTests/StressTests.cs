@@ -10,7 +10,9 @@ public class StressTests
 
     public StressTests()
     {
-        var grpcAddress = new Uri(Environment.GetEnvironmentVariable("VFPS_GRPC_ADDRESS") ?? "http://localhost:8081");
+        var grpcAddress = new Uri(
+            Environment.GetEnvironmentVariable("VFPS_GRPC_ADDRESS") ?? "http://localhost:8081"
+        );
 
         var defaultMethodConfig = new MethodConfig
         {
@@ -25,45 +27,55 @@ public class StressTests
             }
         };
 
-        var channel = GrpcChannel.ForAddress(grpcAddress, new GrpcChannelOptions()
-        {
-            ServiceConfig = new ServiceConfig()
+        var channel = GrpcChannel.ForAddress(
+            grpcAddress,
+            new GrpcChannelOptions()
             {
-                MethodConfigs = { defaultMethodConfig }
-            },
-            Credentials = ChannelCredentials.Insecure,
-            UnsafeUseInsecureChannelCallCredentials = true,
-        });
+                ServiceConfig = new ServiceConfig() { MethodConfigs = { defaultMethodConfig } },
+                Credentials = ChannelCredentials.Insecure,
+                UnsafeUseInsecureChannelCallCredentials = true,
+            }
+        );
 
         namespaceService = new NamespaceService.NamespaceServiceClient(channel);
         pseudonymService = new PseudonymService.PseudonymServiceClient(channel);
 
-        _ = bool.TryParse(Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"), out bool isRunningInContainer);
-        reportFolder = isRunningInContainer ? Path.Combine(Path.GetTempPath(), "reports") : "./nbomber-reports";
+        _ = bool.TryParse(
+            Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER"),
+            out bool isRunningInContainer
+        );
+        reportFolder = isRunningInContainer
+            ? Path.Combine(Path.GetTempPath(), "reports")
+            : "./nbomber-reports";
     }
 
     private IStep CreatePseudonymStep(string namespaceName)
     {
-        return Step.Create("create_pseudonyms",
-                execute: async context =>
+        return Step.Create(
+            "create_pseudonyms",
+            execute: async context =>
+            {
+                var request = new PseudonymServiceCreateRequest()
                 {
-                    var request = new PseudonymServiceCreateRequest()
-                    {
-                        Namespace = namespaceName,
-                        OriginalValue = Guid.NewGuid().ToString(),
-                    };
+                    Namespace = namespaceName,
+                    OriginalValue = Guid.NewGuid().ToString(),
+                };
 
-                    try
-                    {
-                        var response = await pseudonymService.CreateAsync(request);
-                        return Response.Ok(statusCode: 200, sizeBytes: request.CalculateSize() + response.CalculateSize());
-                    }
-                    catch (RpcException exc)
-                    {
-                        context.Logger.Error(exc, "Pseudonym creation failed");
-                        return Response.Fail();
-                    }
-                });
+                try
+                {
+                    var response = await pseudonymService.CreateAsync(request);
+                    return Response.Ok(
+                        statusCode: 200,
+                        sizeBytes: request.CalculateSize() + response.CalculateSize()
+                    );
+                }
+                catch (RpcException exc)
+                {
+                    context.Logger.Error(exc, "Pseudonym creation failed");
+                    return Response.Fail();
+                }
+            }
+        );
     }
 
     [Fact]
@@ -87,20 +99,31 @@ public class StressTests
                 }
                 catch (RpcException exc) when (exc.StatusCode == StatusCode.AlreadyExists)
                 {
-                    context.Logger.Warning($"Namespace {namespaceRequest.Name} already exists. Continuing anyway.");
+                    context.Logger.Warning(
+                        $"Namespace {namespaceRequest.Name} already exists. Continuing anyway."
+                    );
                 }
             })
             .WithWarmUpDuration(TimeSpan.FromSeconds(5))
             .WithLoadSimulations(
                 Simulation.RampConstant(copies: 10, during: TimeSpan.FromMinutes(5)),
                 Simulation.KeepConstant(copies: 100, during: TimeSpan.FromMinutes(5)),
-                Simulation.InjectPerSecRandom(minRate: 10, maxRate: 50, during: TimeSpan.FromMinutes(5))
+                Simulation.InjectPerSecRandom(
+                    minRate: 10,
+                    maxRate: 50,
+                    during: TimeSpan.FromMinutes(5)
+                )
             );
 
         var stats = NBomberRunner
             .RegisterScenarios(scenario)
             .WithReportFolder(reportFolder)
-            .WithReportFormats(ReportFormat.Txt, ReportFormat.Csv, ReportFormat.Html, ReportFormat.Md)
+            .WithReportFormats(
+                ReportFormat.Txt,
+                ReportFormat.Csv,
+                ReportFormat.Html,
+                ReportFormat.Md
+            )
             .Run();
 
         var failPercentage = stats.FailCount / (double)stats.RequestCount * 100.0;

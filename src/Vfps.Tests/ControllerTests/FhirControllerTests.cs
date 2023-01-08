@@ -15,9 +15,11 @@ public class FhirControllerTests : ServiceTestBase
 
     public FhirControllerTests()
     {
-        sut = new FhirController(A.Fake<ILogger<FhirController>>(),
+        sut = new FhirController(
+            A.Fake<ILogger<FhirController>>(),
             new NamespaceRepository(InMemoryPseudonymContext),
-            new PseudonymRepository(InMemoryPseudonymContext));
+            new PseudonymRepository(InMemoryPseudonymContext)
+        );
     }
 
     [Fact]
@@ -27,10 +29,11 @@ public class FhirControllerTests : ServiceTestBase
 
         var response = await sut.CreatePseudonym(p);
 
-        response.Should().BeOfType<BadRequestObjectResult>()
-            .Which
-            .Value
-            .Should().BeOfType<OperationOutcome>();
+        response
+            .Should()
+            .BeOfType<BadRequestObjectResult>()
+            .Which.Value.Should()
+            .BeOfType<OperationOutcome>();
     }
 
     [Fact]
@@ -38,10 +41,11 @@ public class FhirControllerTests : ServiceTestBase
     {
         var response = await sut.CreatePseudonym(null);
 
-        response.Should().BeOfType<BadRequestObjectResult>()
-            .Which
-            .Value
-            .Should().BeOfType<OperationOutcome>();
+        response
+            .Should()
+            .BeOfType<BadRequestObjectResult>()
+            .Which.Value.Should()
+            .BeOfType<OperationOutcome>();
     }
 
     [Fact]
@@ -66,10 +70,12 @@ public class FhirControllerTests : ServiceTestBase
 
         var response = await sut.CreatePseudonym(p);
 
-        var parameterResponse = response.Should().BeOfType<OkObjectResult>()
-            .Which
-            .Value
-            .Should().BeOfType<Parameters>().Which;
+        var parameterResponse = response
+            .Should()
+            .BeOfType<OkObjectResult>()
+            .Which.Value.Should()
+            .BeOfType<Parameters>()
+            .Which;
 
         var pseudonymValue = parameterResponse.GetSingleValue<FhirString>("pseudonymValue").Value;
 

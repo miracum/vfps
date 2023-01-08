@@ -20,15 +20,16 @@ builder.Services.AddGrpc().AddJsonTranscoding();
 builder.Services.AddGrpcSwagger();
 builder.Services.AddGrpcHealthChecks();
 builder.Services.AddGrpcReflection();
-builder.Services.AddHealthChecks()
-    .AddDbContextCheck<PseudonymContext>()
-    .ForwardToPrometheus();
+builder.Services.AddHealthChecks().AddDbContextCheck<PseudonymContext>().ForwardToPrometheus();
 
-builder.Services.AddMetricServer(options => options.Port = builder.Configuration.GetValue<ushort>("MetricsPort", 8082));
+builder.Services.AddMetricServer(
+    options => options.Port = builder.Configuration.GetValue<ushort>("MetricsPort", 8082)
+);
 
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1",
+    c.SwaggerDoc(
+        "v1",
         new OpenApiInfo
         {
             Title = "VFPS FHIR and gRPC JSON-transcoded API",
@@ -41,7 +42,8 @@ builder.Services.AddSwaggerGen(c =>
                 Url = new Uri("https://www.apache.org/licenses/LICENSE-2.0")
 #pragma warning restore S1075 // URIs should not be hardcoded
             },
-        });
+        }
+    );
 
     var filePath = Path.Combine(AppContext.BaseDirectory, "Vfps.xml");
     c.IncludeXmlComments(filePath);
@@ -49,41 +51,53 @@ builder.Services.AddSwaggerGen(c =>
     c.UseInlineDefinitionsForEnums();
 });
 
-builder.Services.AddDbContext<PseudonymContext>((isp, options) =>
-{
-    var config = isp.GetService<IConfiguration>()!;
-
-    var backingStore = config.GetValue<string>("Pseudonymization:BackingStore")
-        ?? throw new InvalidOperationException("Failed to get backing store config. Make sure Pseudonymization:BackingStore is set");
-
-    var connString = config.GetConnectionString(backingStore)
-        ?? throw new InvalidOperationException($"Failed to get connection string for '{backingStore}' backing store");
-
-    switch (backingStore.ToLowerInvariant())
+builder.Services.AddDbContext<PseudonymContext>(
+    (isp, options) =>
     {
-        case "postgresql":
-            options.UseNpgsql(connString);
-            break;
-        default:
-            throw new InvalidOperationException($"Unsupported backing store specified: {backingStore}");
+        var config = isp.GetService<IConfiguration>()!;
+
+        var backingStore =
+            config.GetValue<string>("Pseudonymization:BackingStore")
+            ?? throw new InvalidOperationException(
+                "Failed to get backing store config. Make sure Pseudonymization:BackingStore is set"
+            );
+
+        var connString =
+            config.GetConnectionString(backingStore)
+            ?? throw new InvalidOperationException(
+                $"Failed to get connection string for '{backingStore}' backing store"
+            );
+
+        switch (backingStore.ToLowerInvariant())
+        {
+            case "postgresql":
+                options.UseNpgsql(connString);
+                break;
+            default:
+                throw new InvalidOperationException(
+                    $"Unsupported backing store specified: {backingStore}"
+                );
+        }
     }
-});
+);
 
 builder.Services.AddSingleton<PseudonymizationMethodsLookup>();
 
 var cacheConfig = new CacheConfig();
 builder.Configuration.GetSection("Pseudonymization:Caching").Bind(cacheConfig);
 
-var isNamespaceCachingEnabled = builder.Configuration.GetValue("Pseudonymization:Caching:Namespaces:IsEnabled", false);
+var isNamespaceCachingEnabled = builder.Configuration.GetValue(
+    "Pseudonymization:Caching:Namespaces:IsEnabled",
+    false
+);
 if (isNamespaceCachingEnabled)
 {
-    builder.Services.AddSingleton<IMemoryCache>(_ =>
-        new MemoryCache(
-            new MemoryCacheOptions
-            {
-                TrackStatistics = true,
-                SizeLimit = cacheConfig.SizeLimit
-            }));
+    builder.Services.AddSingleton<IMemoryCache>(
+        _ =>
+            new MemoryCache(
+                new MemoryCacheOptions { TrackStatistics = true, SizeLimit = cacheConfig.SizeLimit }
+            )
+    );
     builder.Services.AddSingleton(_ => cacheConfig);
     builder.Services.AddScoped<INamespaceRepository, CachingNamespaceRepository>();
 }
@@ -92,16 +106,18 @@ else
     builder.Services.AddScoped<INamespaceRepository, NamespaceRepository>();
 }
 
-var isPseudonymCachingEnabled = builder.Configuration.GetValue("Pseudonymization:Caching:Pseudonyms:IsEnabled", false);
+var isPseudonymCachingEnabled = builder.Configuration.GetValue(
+    "Pseudonymization:Caching:Pseudonyms:IsEnabled",
+    false
+);
 if (isPseudonymCachingEnabled)
 {
-    builder.Services.TryAddSingleton<IMemoryCache>(_ =>
-        new MemoryCache(
-            new MemoryCacheOptions
-            {
-                TrackStatistics = true,
-                SizeLimit = cacheConfig.SizeLimit
-            }));
+    builder.Services.TryAddSingleton<IMemoryCache>(
+        _ =>
+            new MemoryCache(
+                new MemoryCacheOptions { TrackStatistics = true, SizeLimit = cacheConfig.SizeLimit }
+            )
+    );
     builder.Services.TryAddSingleton(_ => cacheConfig);
     builder.Services.AddScoped<IPseudonymRepository, CachingPseudonymRepository>();
 }
@@ -141,18 +157,18 @@ app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "VFPS API v1
 app.UseHttpMetrics();
 
 app.MapHealthChecks("/healthz");
-app.MapHealthChecks("/readyz", new HealthCheckOptions
-{
-    // there's currently now readiness probes depending on external state,
-    // but in case we ever add one, this prepares the code for it.
-    // see https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/health-checks?view=aspnetcore-7.0#separate-readiness-and-liveness-probes
-    Predicate = healthCheck => healthCheck.Tags.Contains("ready")
-});
+app.MapHealthChecks(
+    "/readyz",
+    new HealthCheckOptions
+    {
+        // there's currently now readiness probes depending on external state,
+        // but in case we ever add one, this prepares the code for it.
+        // see https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/health-checks?view=aspnetcore-7.0#separate-readiness-and-liveness-probes
+        Predicate = healthCheck => healthCheck.Tags.Contains("ready")
+    }
+);
 
-app.MapHealthChecks("/livez", new HealthCheckOptions
-{
-    Predicate = _ => false
-});
+app.MapHealthChecks("/livez", new HealthCheckOptions { Predicate = _ => false });
 
 app.UseGrpcMetrics();
 
@@ -163,8 +179,9 @@ if (app.Environment.IsDevelopment())
 
 app.MapControllers();
 
-var shouldRunDatabaseMigrations = app.Environment.IsDevelopment() ||
-    app.Configuration.GetValue<bool>("ForceRunDatabaseMigrations");
+var shouldRunDatabaseMigrations =
+    app.Environment.IsDevelopment()
+    || app.Configuration.GetValue<bool>("ForceRunDatabaseMigrations");
 if (shouldRunDatabaseMigrations)
 {
     // only ran in a development setup or when forced.

@@ -7,13 +7,15 @@ namespace Vfps.Data;
 /// <inheritdoc/>
 public class PseudonymRepository : IPseudonymRepository
 {
-    private static readonly Histogram UpsertDuration = Metrics
-        .CreateHistogram("vfps_upsert_duration_seconds", "Histogram of the durations for upserting a pseudonym into the backend database.");
+    private static readonly Histogram UpsertDuration = Metrics.CreateHistogram(
+        "vfps_upsert_duration_seconds",
+        "Histogram of the durations for upserting a pseudonym into the backend database."
+    );
 
     // we can't yet use FlexLabs.Upsert and avoid manual SQL due to
     // support for returning the upserted entity missing: https://github.com/artiomchi/FlexLabs.Upsert/issues/29
     private readonly string PostgreSQLInsertCommand =
-    @"
+        @"
         WITH
             cte AS (
             INSERT INTO
@@ -31,7 +33,7 @@ public class PseudonymRepository : IPseudonymRepository
     ";
 
     private readonly string SqliteInsertCommand =
-    @"
+        @"
         INSERT INTO pseudonyms (namespace_name, original_value, pseudonym_value, created_at, last_updated_at)
         VALUES ({0}, {1}, {2}, time('now'), time('now'))
         ON CONFLICT (namespace_name, original_value)
@@ -72,7 +74,12 @@ public class PseudonymRepository : IPseudonymRepository
             using (UpsertDuration.NewTimer())
             {
                 var pseudonyms = await Context.Pseudonyms
-                    .FromSqlRaw(UpsertCommand, pseudonym.NamespaceName, pseudonym.OriginalValue, pseudonym.PseudonymValue)
+                    .FromSqlRaw(
+                        UpsertCommand,
+                        pseudonym.NamespaceName,
+                        pseudonym.OriginalValue,
+                        pseudonym.PseudonymValue
+                    )
                     .AsNoTracking()
                     .ToListAsync();
                 upsertedPseudonym = pseudonyms.FirstOrDefault();

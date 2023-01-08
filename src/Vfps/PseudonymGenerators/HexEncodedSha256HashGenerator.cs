@@ -9,7 +9,10 @@ public class HexEncodedSha256HashGenerator : IPseudonymGenerator
     {
         if (pseudonymLength != 64)
         {
-            throw new ArgumentOutOfRangeException(nameof(pseudonymLength), $"When using the {nameof(HexEncodedSha256HashGenerator)}, the pseudonym length must be set to 64.");
+            throw new ArgumentOutOfRangeException(
+                nameof(pseudonymLength),
+                $"When using the {nameof(HexEncodedSha256HashGenerator)}, the pseudonym length must be set to 64."
+            );
         }
 
         var inputAsBytes = Encoding.UTF8.GetBytes(originalValue);

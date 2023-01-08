@@ -13,7 +13,12 @@ namespace Vfps.Services;
 public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
 {
     /// <inheritdoc/>
-    public PseudonymService(PseudonymContext context, PseudonymizationMethodsLookup lookup, INamespaceRepository namespaceRepository, IPseudonymRepository pseudonymRepository)
+    public PseudonymService(
+        PseudonymContext context,
+        PseudonymizationMethodsLookup lookup,
+        INamespaceRepository namespaceRepository,
+        IPseudonymRepository pseudonymRepository
+    )
     {
         Context = context;
         Lookup = lookup;
@@ -27,19 +32,25 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
     private IPseudonymRepository PseudonymRepository { get; }
 
     /// <inheritdoc/>
-    public override async Task<PseudonymServiceCreateResponse> Create(PseudonymServiceCreateRequest request, ServerCallContext context)
+    public override async Task<PseudonymServiceCreateResponse> Create(
+        PseudonymServiceCreateRequest request,
+        ServerCallContext context
+    )
     {
         var now = DateTimeOffset.UtcNow;
 
         var @namespace = await NamespaceRepository.FindAsync(request.Namespace);
         if (@namespace is null)
         {
-            var metadata = new Metadata
-                {
-                    { "Namespace", request.Namespace }
-                };
+            var metadata = new Metadata { { "Namespace", request.Namespace } };
 
-            throw new RpcException(new Status(StatusCode.NotFound, "The requested pseudonym namespace does not exist."), metadata);
+            throw new RpcException(
+                new Status(
+                    StatusCode.NotFound,
+                    "The requested pseudonym namespace does not exist."
+                ),
+                metadata
+            );
         }
 
         var generator = Lookup[@namespace.PseudonymGenerationMethod];
@@ -49,8 +60,12 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
         {
             activity?.SetTag("Method", generator.GetType().Name);
 
-            pseudonymValue = generator.GeneratePseudonym(request.OriginalValue, @namespace.PseudonymLength);
-            pseudonymValue = @namespace.PseudonymPrefix + pseudonymValue + @namespace.PseudonymSuffix;
+            pseudonymValue = generator.GeneratePseudonym(
+                request.OriginalValue,
+                @namespace.PseudonymLength
+            );
+            pseudonymValue =
+                @namespace.PseudonymPrefix + pseudonymValue + @namespace.PseudonymSuffix;
         }
 
         var pseudonym = new Data.Models.Pseudonym()
@@ -62,16 +77,21 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
             PseudonymValue = pseudonymValue,
         };
 
-        Data.Models.Pseudonym? upsertedPseudonym = await PseudonymRepository.CreateIfNotExist(pseudonym);
+        Data.Models.Pseudonym? upsertedPseudonym = await PseudonymRepository.CreateIfNotExist(
+            pseudonym
+        );
 
         if (upsertedPseudonym is null)
         {
-            var metadata = new Metadata
-            {
-                { "Namespace", request.Namespace },
-            };
+            var metadata = new Metadata { { "Namespace", request.Namespace }, };
 
-            throw new RpcException(new Status(StatusCode.Internal, "Failed to upsert the pseudonym after several retries."), metadata);
+            throw new RpcException(
+                new Status(
+                    StatusCode.Internal,
+                    "Failed to upsert the pseudonym after several retries."
+                ),
+                metadata
+            );
         }
 
         return new PseudonymServiceCreateResponse
@@ -91,20 +111,33 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
     }
 
     /// <inheritdoc/>
-    public override async Task<PseudonymServiceGetResponse> Get(PseudonymServiceGetRequest request, ServerCallContext context)
+    public override async Task<PseudonymServiceGetResponse> Get(
+        PseudonymServiceGetRequest request,
+        ServerCallContext context
+    )
     {
         var pseudonym = await Context.Pseudonyms
-            .Where(p => p.NamespaceName == request.Namespace && p.PseudonymValue == request.PseudonymValue)
+            .Where(
+                p =>
+                    p.NamespaceName == request.Namespace
+                    && p.PseudonymValue == request.PseudonymValue
+            )
             .FirstOrDefaultAsync();
         if (pseudonym is null)
         {
             var metadata = new Metadata
-                {
-                    { "Namespace", request.Namespace },
-                    { "Pseudonym", request.PseudonymValue }
-                };
+            {
+                { "Namespace", request.Namespace },
+                { "Pseudonym", request.PseudonymValue }
+            };
 
-            throw new RpcException(new Status(StatusCode.NotFound, "The requested pseudonym does not exist in the namespace."), metadata);
+            throw new RpcException(
+                new Status(
+                    StatusCode.NotFound,
+                    "The requested pseudonym does not exist in the namespace."
+                ),
+                metadata
+            );
         }
 
         return new PseudonymServiceGetResponse
@@ -124,16 +157,22 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
     }
 
     /// <inheritdoc/>
-    public override async Task<PseudonymServiceListResponse> List(PseudonymServiceListRequest request, ServerCallContext context)
+    public override async Task<PseudonymServiceListResponse> List(
+        PseudonymServiceListRequest request,
+        ServerCallContext context
+    )
     {
         if (!Context.Namespaces.Where(n => n.Name == request.Namespace).Any())
         {
-            var metadata = new Metadata
-            {
-                { "Namespace", request.Namespace },
-            };
+            var metadata = new Metadata { { "Namespace", request.Namespace }, };
 
-            throw new RpcException(new Status(StatusCode.NotFound, "The requested pseudonym namespace does not exist."), metadata);
+            throw new RpcException(
+                new Status(
+                    StatusCode.NotFound,
+                    "The requested pseudonym namespace does not exist."
+                ),
+                metadata
+            );
         }
 
         var requestPaginationToken = new PseudonymListPaginationToken();
@@ -143,7 +182,9 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
             requestPaginationToken.MergeFrom(decoded);
         }
 
-        var createdOnOrBefore = requestPaginationToken.PseudonymsCreatedOnOrBefore?.ToDateTimeOffset() ?? DateTimeOffset.UtcNow;
+        var createdOnOrBefore =
+            requestPaginationToken.PseudonymsCreatedOnOrBefore?.ToDateTimeOffset()
+            ?? DateTimeOffset.UtcNow;
         var pageSize = request.PageSize <= 0 ? 25 : request.PageSize;
         var offset = requestPaginationToken.Offset;
 
@@ -153,17 +194,21 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
             .OrderByDescending(pseudonym => pseudonym.CreatedAt)
             .Skip(offset)
             .Take(pageSize)
-            .Select(pseudonym => new Pseudonym
-            {
-                Namespace = pseudonym.NamespaceName,
-                OriginalValue = pseudonym.OriginalValue,
-                PseudonymValue = pseudonym.PseudonymValue,
-                Meta = new Meta
-                {
-                    CreatedAt = Timestamp.FromDateTimeOffset(pseudonym.CreatedAt),
-                    LastUpdatedAt = Timestamp.FromDateTimeOffset(pseudonym.LastUpdatedAt),
-                },
-            }).ToListAsync();
+            .Select(
+                pseudonym =>
+                    new Pseudonym
+                    {
+                        Namespace = pseudonym.NamespaceName,
+                        OriginalValue = pseudonym.OriginalValue,
+                        PseudonymValue = pseudonym.PseudonymValue,
+                        Meta = new Meta
+                        {
+                            CreatedAt = Timestamp.FromDateTimeOffset(pseudonym.CreatedAt),
+                            LastUpdatedAt = Timestamp.FromDateTimeOffset(pseudonym.LastUpdatedAt),
+                        },
+                    }
+            )
+            .ToListAsync();
 
         var paginationToken = new PseudonymListPaginationToken
         {

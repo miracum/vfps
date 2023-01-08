@@ -6,7 +6,11 @@ namespace Vfps.Data;
 
 public class CachingNamespaceRepository : INamespaceRepository
 {
-    public CachingNamespaceRepository(PseudonymContext context, IMemoryCache memoryCache, CacheConfig cacheConfig)
+    public CachingNamespaceRepository(
+        PseudonymContext context,
+        IMemoryCache memoryCache,
+        CacheConfig cacheConfig
+    )
     {
         MemoryCache = memoryCache;
         CacheConfig = cacheConfig;
@@ -22,12 +26,14 @@ public class CachingNamespaceRepository : INamespaceRepository
     {
         var cacheKey = $"namespaces.{namespaceName}";
 
-        return await MemoryCache.GetOrCreateAsync(cacheKey, async entry =>
-        {
-            entry.SetSize(1)
-                .SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration);
+        return await MemoryCache.GetOrCreateAsync(
+            cacheKey,
+            async entry =>
+            {
+                entry.SetSize(1).SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration);
 
-            return await NamespaceRepository.FindAsync(namespaceName);
-        });
+                return await NamespaceRepository.FindAsync(namespaceName);
+            }
+        );
     }
 }

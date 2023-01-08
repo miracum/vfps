@@ -6,10 +6,11 @@ namespace Vfps.IntegrationTests;
 
 public sealed class NetworkFixture : IAsyncLifetime
 {
-    public IDockerNetwork Network { get; } = new TestcontainersNetworkBuilder()
-        .WithDriver(NetworkDriver.Bridge)
-        .WithName(Guid.NewGuid().ToString("D"))
-        .Build();
+    public IDockerNetwork Network { get; } =
+        new TestcontainersNetworkBuilder()
+            .WithDriver(NetworkDriver.Bridge)
+            .WithName(Guid.NewGuid().ToString("D"))
+            .Build();
 
     public Task InitializeAsync()
     {

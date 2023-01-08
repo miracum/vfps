@@ -60,6 +60,7 @@ public class ServiceTestBase : IDisposable
         InMemoryPseudonymContext.SaveChanges();
         InMemoryPseudonymContext.ChangeTracker.Clear();
     }
+
     protected PseudonymContext InMemoryPseudonymContext { get; }
 
     protected virtual void Dispose(bool disposing)
