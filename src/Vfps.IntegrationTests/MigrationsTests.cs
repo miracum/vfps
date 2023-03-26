@@ -15,13 +15,14 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
 
     private readonly string migrationsImage;
 
-    private readonly ITestcontainersBuilder<TestcontainersContainer> migrationsContainerBuilder;
+    private readonly ContainerBuilder<TestcontainersContainer> migrationsContainerBuilder;
 
     public MigrationsTests(ITestOutputHelper output, NetworkFixture networkFixture)
     {
         this.output = output;
 
-        postgresqlContainer = new TestcontainersBuilder<PostgreSqlTestcontainer>()
+
+        postgresqlContainer = new ContainerBuilder<PostgreSqlTestcontainer>()
             .WithDatabase(
                 new PostgreSqlTestcontainerConfiguration(
                     "docker.io/bitnami/postgresql:14.5.0-debian-11-r17"
