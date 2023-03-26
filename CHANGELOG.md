@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.2.0](https://github.com/miracum/vfps/compare/v1.1.3...v1.2.0) (2023-03-26)
+
+
+### Features
+
+* declaratively create namespaces at startup via config ([#52](https://github.com/miracum/vfps/issues/52)) ([2e684ca](https://github.com/miracum/vfps/commit/2e684cab1621f17c447d8c4827c0531f8ad7bb10))
+
+
+### Miscellaneous Chores
+
+* **deps:** update docker.io/bitnami/kubectl:1.24.8 docker digest to 9c1bd1f ([#48](https://github.com/miracum/vfps/issues/48)) ([778e92e](https://github.com/miracum/vfps/commit/778e92e1186894590a1f748f2f4603a8adc9152c))
+* **deps:** update docker.io/library/postgres:15.1 docker digest to 026a193 ([#49](https://github.com/miracum/vfps/issues/49)) ([c52ab22](https://github.com/miracum/vfps/commit/c52ab2246bd59cec6eb7929be2b9705407e07fd7))
+
 ## [1.1.3](https://github.com/miracum/vfps/compare/v1.1.2...v1.1.3) (2022-12-07)
 
 
