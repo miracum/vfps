@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1670605957570,
+  "lastUpdate": 1679861142810,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -1692,6 +1692,42 @@ window.BENCHMARK_DATA = {
             "value": 1337.6247773851667,
             "unit": "ns",
             "range": "± 1.9834684013337252"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2e684cab1621f17c447d8c4827c0531f8ad7bb10",
+          "message": "feat: declaratively create namespaces at startup via config (#52)\n\n* chore(deps): updated dependencies\r\n\r\n* feat: declaratively create namespaces at startup via config",
+          "timestamp": "2023-03-26T22:04:05+02:00",
+          "tree_id": "fd720a7ea33994ba7fd3bd1136f1ac9ad2d8aa4f",
+          "url": "https://github.com/miracum/vfps/commit/2e684cab1621f17c447d8c4827c0531f8ad7bb10"
+        },
+        "date": 1679861142431,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 2118.664939371745,
+            "unit": "ns",
+            "range": "± 37.599145991616496"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1572.8951945622762,
+            "unit": "ns",
+            "range": "± 19.777048379146205"
           }
         ]
       }
