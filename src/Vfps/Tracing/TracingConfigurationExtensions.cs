@@ -33,49 +33,52 @@ namespace Vfps.Tracing
                 _ => throw new ArgumentException($"Unsupported sampler type '{rootSamplerType}'"),
             };
 
-            builder.Services.AddOpenTelemetryTracing(options =>
-            {
-                options
-                    .ConfigureResource(
-                        r =>
-                            r.AddService(
-                                serviceName: serviceName,
-                                serviceVersion: assemblyVersion,
-                                serviceInstanceId: Environment.MachineName
-                            )
-                    )
-                    .SetSampler(new ParentBasedSampler(rootSampler))
-                    .AddNpgsql()
-                    .AddSource(Program.ActivitySource.Name)
-                    .AddAspNetCoreInstrumentation(o =>
-                    {
-                        o.Filter = (r) =>
-                        {
-                            var ignoredPaths = new[] { "/healthz", "/readyz", "/livez" };
-
-                            var path = r.Request.Path.Value!;
-                            return !ignoredPaths.Any(path.Contains);
-                        };
-                    });
-
-                switch (tracingExporter)
+            builder.Services
+                .AddOpenTelemetry()
+                .ConfigureResource(
+                    r =>
+                        r.AddService(
+                            serviceName: serviceName,
+                            serviceVersion: assemblyVersion,
+                            serviceInstanceId: Environment.MachineName
+                        )
+                )
+                .WithTracing(tracingBuilder =>
                 {
-                    case "jaeger":
-                        options.AddJaegerExporter();
-                        builder.Services.Configure<JaegerExporterOptions>(
-                            builder.Configuration.GetSection("Tracing:Jaeger")
-                        );
-                        break;
+                    tracingBuilder
+                        .SetSampler(new ParentBasedSampler(rootSampler))
+                        .AddNpgsql()
+                        .AddSource(Program.ActivitySource.Name)
+                        .AddAspNetCoreInstrumentation(o =>
+                        {
+                            o.Filter = (r) =>
+                            {
+                                var ignoredPaths = new[] { "/healthz", "/readyz", "/livez" };
 
-                    case "otlp":
-                        var endpoint =
-                            builder.Configuration.GetValue<string>("Tracing:Otlp:Endpoint") ?? "";
-                        options.AddOtlpExporter(
-                            otlpOptions => otlpOptions.Endpoint = new Uri(endpoint)
-                        );
-                        break;
-                }
-            });
+                                var path = r.Request.Path.Value!;
+                                return !ignoredPaths.Any(path.Contains);
+                            };
+                        });
+
+                    switch (tracingExporter)
+                    {
+                        case "jaeger":
+                            tracingBuilder.AddJaegerExporter();
+                            builder.Services.Configure<JaegerExporterOptions>(
+                                builder.Configuration.GetSection("Tracing:Jaeger")
+                            );
+                            break;
+
+                        case "otlp":
+                            var endpoint =
+                                builder.Configuration.GetValue<string>("Tracing:Otlp:Endpoint")
+                                ?? "";
+                            tracingBuilder.AddOtlpExporter(
+                                otlpOptions => otlpOptions.Endpoint = new Uri(endpoint)
+                            );
+                            break;
+                    }
+                });
 
             return builder;
         }

@@ -21,7 +21,6 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
     {
         this.output = output;
 
-
         postgresqlContainer = new ContainerBuilder<PostgreSqlTestcontainer>()
             .WithDatabase(
                 new PostgreSqlTestcontainerConfiguration(

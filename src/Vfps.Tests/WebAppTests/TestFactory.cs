@@ -32,7 +32,8 @@ public class IntegrationTestFactory<TProgram, TDbContext> : WebApplicationFactor
 
 internal static class ServiceCollectionExtensions
 {
-    public static void RemoveDbContext<T>(this IServiceCollection services) where T : DbContext
+    public static void RemoveDbContext<T>(this IServiceCollection services)
+        where T : DbContext
     {
         var descriptor = services.SingleOrDefault(
             d => d.ServiceType == typeof(DbContextOptions<T>)
@@ -41,7 +42,8 @@ internal static class ServiceCollectionExtensions
             services.Remove(descriptor);
     }
 
-    public static void EnsureDbCreated<T>(this IServiceCollection services) where T : DbContext
+    public static void EnsureDbCreated<T>(this IServiceCollection services)
+        where T : DbContext
     {
         var serviceProvider = services.BuildServiceProvider();
 

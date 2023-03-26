@@ -10,8 +10,8 @@ public class Namespace : TracksCreationAndUpdates
     public string? Description { get; set; }
     public PseudonymGenerationMethod PseudonymGenerationMethod { get; set; }
     public uint PseudonymLength { get; set; }
-    public string? PseudonymPrefix { get; set; }
-    public string? PseudonymSuffix { get; set; }
+    public string? PseudonymPrefix { get; set; } = string.Empty;
+    public string? PseudonymSuffix { get; set; } = string.Empty;
 
     public ICollection<Pseudonym> Pseudonyms { get; set; }
 }

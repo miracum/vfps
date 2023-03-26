@@ -2,7 +2,6 @@ using EntityFramework.Exceptions.Common;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection.Metadata.Ecma335;
 using Vfps.Data;
 using Vfps.Protos;
 
@@ -12,11 +11,13 @@ namespace Vfps.Services;
 public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
 {
     /// <inheritdoc/>
-    public NamespaceService(PseudonymContext context)
+    public NamespaceService(PseudonymContext context, INamespaceRepository namespaceRepository)
     {
+        NamespaceRepository = namespaceRepository;
         Context = context;
     }
 
+    private INamespaceRepository NamespaceRepository { get; }
     private PseudonymContext Context { get; }
 
     /// <inheritdoc/>
@@ -46,11 +47,9 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
             LastUpdatedAt = now,
         };
 
-        Context.Add(@namespace);
-
         try
         {
-            await Context.SaveChangesAsync(context.CancellationToken);
+            await NamespaceRepository.CreateAsync(@namespace, context.CancellationToken);
         }
         catch (UniqueConstraintException)
         {
@@ -90,7 +89,7 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
         ServerCallContext context
     )
     {
-        var @namespace = await Context.Namespaces.FindAsync(
+        var @namespace = await NamespaceRepository.FindAsync(
             request.Name,
             context.CancellationToken
         );
