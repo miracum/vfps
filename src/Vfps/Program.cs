@@ -132,6 +132,8 @@ if (isNamespaceCachingEnabled || isPseudonymCachingEnabled)
     builder.Services.AddHostedService<MemoryCacheMetricsBackgroundService>();
 }
 
+builder.Services.AddHostedService<InitNamespacesBackgroundService>();
+
 builder.Services.AddControllers(options =>
 {
     options.InputFormatters.Insert(0, new FhirInputFormatter());
@@ -161,7 +163,7 @@ app.MapHealthChecks(
     "/readyz",
     new HealthCheckOptions
     {
-        // there's currently now readiness probes depending on external state,
+        // there's currently no readiness probes depending on external state,
         // but in case we ever add one, this prepares the code for it.
         // see https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/health-checks?view=aspnetcore-7.0#separate-readiness-and-liveness-probes
         Predicate = healthCheck => healthCheck.Tags.Contains("ready")

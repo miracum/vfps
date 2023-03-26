@@ -12,8 +12,22 @@ public class NamespaceRepository : INamespaceRepository
     private PseudonymContext Context { get; }
 
     /// <inheritdoc/>
-    public async Task<Namespace?> FindAsync(string namespaceName)
+    public async Task<Namespace> CreateAsync(
+        Namespace @namespace,
+        CancellationToken cancellationToken
+    )
     {
-        return await Context.Namespaces.FindAsync(namespaceName);
+        Context.Add(@namespace);
+        await Context.SaveChangesAsync(cancellationToken);
+        return @namespace;
+    }
+
+    /// <inheritdoc/>
+    public async Task<Namespace?> FindAsync(
+        string namespaceName,
+        CancellationToken cancellationToken
+    )
+    {
+        return await Context.Namespaces.FindAsync(namespaceName, cancellationToken);
     }
 }

@@ -36,13 +36,17 @@ public class FhirController : ControllerBase
     /// Create a pseudonym for an original value in the given namespace.
     /// </summary>
     /// <param name="parametersResource">A FHIR Parameters resource</param>
+    /// <param name="cancellationToken">A cancellation token to abort the request</param>
     /// <returns>Either a FHIR Parameters resource containing the created pseudonym or a FHIR OperationOutcome in case of errors.</returns>
     [HttpPost("$create-pseudonym")]
     [ProducesResponseType(typeof(Parameters), 200)]
     [ProducesResponseType(typeof(OperationOutcome), 400)]
     [ProducesResponseType(typeof(OperationOutcome), 404)]
     [ProducesResponseType(typeof(OperationOutcome), 500)]
-    public async Task<ObjectResult> CreatePseudonym([FromBody] Parameters? parametersResource)
+    public async Task<ObjectResult> CreatePseudonym(
+        [FromBody] Parameters? parametersResource,
+        CancellationToken cancellationToken = default
+    )
     {
         if (parametersResource is null)
         {
@@ -77,7 +81,7 @@ public class FhirController : ControllerBase
             return BadRequest(outcome);
         }
 
-        var @namespace = await NamespaceRepository.FindAsync(namespaceName);
+        var @namespace = await NamespaceRepository.FindAsync(namespaceName, cancellationToken);
         if (@namespace is null)
         {
             var outcome = new OperationOutcome();

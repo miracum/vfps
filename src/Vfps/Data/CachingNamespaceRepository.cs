@@ -22,7 +22,19 @@ public class CachingNamespaceRepository : INamespaceRepository
     private NamespaceRepository NamespaceRepository { get; }
 
     /// <inheritdoc/>
-    public async Task<Namespace?> FindAsync(string namespaceName)
+    public async Task<Namespace> CreateAsync(
+        Namespace @namespace,
+        CancellationToken cancellationToken
+    )
+    {
+        return await NamespaceRepository.CreateAsync(@namespace, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Namespace?> FindAsync(
+        string namespaceName,
+        CancellationToken cancellationToken
+    )
     {
         var cacheKey = $"namespaces.{namespaceName}";
 
@@ -32,7 +44,7 @@ public class CachingNamespaceRepository : INamespaceRepository
             {
                 entry.SetSize(1).SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration);
 
-                return await NamespaceRepository.FindAsync(namespaceName);
+                return await NamespaceRepository.FindAsync(namespaceName, cancellationToken);
             }
         );
     }

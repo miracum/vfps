@@ -7,7 +7,8 @@ namespace Vfps.Data;
 
 public class PseudonymContext : DbContext
 {
-    public PseudonymContext(DbContextOptions<PseudonymContext> options) : base(options) { }
+    public PseudonymContext(DbContextOptions<PseudonymContext> options)
+        : base(options) { }
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {

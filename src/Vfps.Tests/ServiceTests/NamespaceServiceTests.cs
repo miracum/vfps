@@ -9,7 +9,8 @@ public class NamespaceServiceTests : ServiceTestBase
 
     public NamespaceServiceTests()
     {
-        sut = new Services.NamespaceService(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        sut = new Services.NamespaceService(InMemoryPseudonymContext, namespaceRepository);
     }
 
     [Fact]

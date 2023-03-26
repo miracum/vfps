@@ -39,7 +39,10 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
     {
         var now = DateTimeOffset.UtcNow;
 
-        var @namespace = await NamespaceRepository.FindAsync(request.Namespace);
+        var @namespace = await NamespaceRepository.FindAsync(
+            request.Namespace,
+            context.CancellationToken
+        );
         if (@namespace is null)
         {
             var metadata = new Metadata { { "Namespace", request.Namespace } };
