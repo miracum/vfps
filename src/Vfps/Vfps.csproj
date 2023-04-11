@@ -9,21 +9,21 @@
         <PackageReference Include="Grpc.AspNetCore.HealthChecks" Version="2.52.0" />
         <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.52.0" />
         <PackageReference Include="Hl7.Fhir.R4" Version="4.3.0" />
-        <PackageReference Include="Microsoft.AspNetCore.Grpc.Swagger" Version="0.3.4" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.4" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.4">
+        <PackageReference Include="Microsoft.AspNetCore.Grpc.Swagger" Version="0.3.5" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="7.0.5" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.5">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="7.0.4" />
+        <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="7.0.5" />
         <PackageReference Include="Npgsql" Version="7.0.2" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="7.0.3" />
         <PackageReference Include="Npgsql.OpenTelemetry" Version="7.0.2" />
-        <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="7.0.4" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.4" />
-        <PackageReference Include="OpenTelemetry.Exporter.Jaeger" Version="1.5.0-alpha.1" />
-        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.5.0-alpha.1" />
-        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.5.0-alpha.1" />
+        <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="7.0.5" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="7.0.5" />
+        <PackageReference Include="OpenTelemetry.Exporter.Jaeger" Version="1.5.0-alpha.2" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.5.0-alpha.2" />
+        <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.5.0-alpha.2" />
         <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.0.0-rc9.14" />
         <PackageReference Include="prometheus-net.AspNetCore" Version="7.0.0" />
         <PackageReference Include="prometheus-net.AspNetCore.Grpc" Version="7.0.0" />
