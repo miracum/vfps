@@ -419,7 +419,7 @@ the packages page on GitHub: <https://github.com/miracum/vfps/pkgs/container/vfp
 <!-- x-release-please-start-version -->
 
 ```sh
-IMAGE_DIGEST=$(crane digest ghcr.io/miracum/vfps:v1.2.0)
+IMAGE_DIGEST=$(crane digest ghcr.io/miracum/vfps:v1.3.0)
 ```
 
 <!-- x-release-please-end -->
