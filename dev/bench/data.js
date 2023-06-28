@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1682927936559,
+  "lastUpdate": 1687983933577,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -1872,6 +1872,42 @@ window.BENCHMARK_DATA = {
             "value": 1297.4528695424399,
             "unit": "ns",
             "range": "± 4.2036618319271595"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d8e9b02f33b4f88fd8d2d2985c71bc522cdd73c1",
+          "message": "chore(deps): update all non-major dependencies (#60)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>\r\nCo-authored-by: chgl <chgl@users.noreply.github.com>",
+          "timestamp": "2023-06-28T22:24:00+02:00",
+          "tree_id": "0e59f24d2eeceff4220a347599657e2e1518cb85",
+          "url": "https://github.com/miracum/vfps/commit/d8e9b02f33b4f88fd8d2d2985c71bc522cdd73c1"
+        },
+        "date": 1687983933133,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1792.5782549931453,
+            "unit": "ns",
+            "range": "± 1.8799755690814333"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1360.4546361287435,
+            "unit": "ns",
+            "range": "± 3.1398986230778183"
           }
         ]
       }
