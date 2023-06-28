@@ -288,10 +288,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
 
-      - uses: iter8-tools/iter8@b29659a9a26aa57486ce607070cc4c9472c9958c # tag=v0.14.10
+      - uses: iter8-tools/iter8@v0.13.18 # v0.13.18
 
       - name: Create KinD cluster
-        uses: helm/kind-action@9e8295d178de23cbfbd8fa16cf844eec1d773a07 # tag=v1.4.0
+        uses: helm/kind-action@9e8295d178de23cbfbd8fa16cf844eec1d773a07 # v1.4.0
         with:
           cluster_name: kind
 
