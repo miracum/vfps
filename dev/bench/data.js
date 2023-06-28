@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1687983933577,
+  "lastUpdate": 1687984483317,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -1908,6 +1908,48 @@ window.BENCHMARK_DATA = {
             "value": 1360.4546361287435,
             "unit": "ns",
             "range": "± 3.1398986230778183"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2f856daab200c78120f7550a9132787fb9a25820",
+          "message": "feat: added uuid4 pseudonym generator (#62)",
+          "timestamp": "2023-06-28T22:32:55+02:00",
+          "tree_id": "ea9346c9921d0f22e4accfcee1dc3eba589cde51",
+          "url": "https://github.com/miracum/vfps/commit/2f856daab200c78120f7550a9132787fb9a25820"
+        },
+        "date": 1687984482929,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 2420.312260945638,
+            "unit": "ns",
+            "range": "± 12.586992457783314"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1682.3419743855795,
+            "unit": "ns",
+            "range": "± 5.665309327526529"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4HashGenerator",
+            "value": 1208.2239622751872,
+            "unit": "ns",
+            "range": "± 6.921158588964847"
           }
         ]
       }
