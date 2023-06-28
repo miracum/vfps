@@ -73,6 +73,8 @@ enum PseudonymGenerationMethod {
   PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED = 1;
   // SHA256-encodes the original value and uses the hex-encoded hash as the pseudonym.
   PSEUDONYM_GENERATION_METHOD_SHA256_HEX_ENCODED = 2;
+  // The method creates a Version 4 Universally Unique Identifier (UUID) as described in RFC 4122, Sec. 4.4.
+  PSEUDONYM_GENERATION_METHOD_UUID4 = 3;
 }
 
 // request to create a new namespace
