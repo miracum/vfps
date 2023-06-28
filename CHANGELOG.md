@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.3.0](https://github.com/miracum/vfps/compare/v1.2.0...v1.3.0) (2023-06-28)
+
+
+### Features
+
+* added uuid4 pseudonym generator ([#62](https://github.com/miracum/vfps/issues/62)) ([2f856da](https://github.com/miracum/vfps/commit/2f856daab200c78120f7550a9132787fb9a25820))
+
+
+### CI/CD
+
+* fixed iter8 action error ([#61](https://github.com/miracum/vfps/issues/61)) ([42d334a](https://github.com/miracum/vfps/commit/42d334a033397d3847895d1027e3de5227be28e2))
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#54](https://github.com/miracum/vfps/issues/54)) ([2e5cbf6](https://github.com/miracum/vfps/commit/2e5cbf6404d4b4d4e95d19a755474c6066f2a729))
+* **deps:** update all non-major dependencies ([#57](https://github.com/miracum/vfps/issues/57)) ([7a2d109](https://github.com/miracum/vfps/commit/7a2d10975fa8c67af2cd7d9d7519fa21072d40ce))
+* **deps:** update all non-major dependencies ([#60](https://github.com/miracum/vfps/issues/60)) ([d8e9b02](https://github.com/miracum/vfps/commit/d8e9b02f33b4f88fd8d2d2985c71bc522cdd73c1))
+* **deps:** update container-images ([#55](https://github.com/miracum/vfps/issues/55)) ([e1052fd](https://github.com/miracum/vfps/commit/e1052fd6a2a0529efd3b1eeba0121f939c13c60a))
+* **deps:** update container-images ([#58](https://github.com/miracum/vfps/issues/58)) ([4ae923d](https://github.com/miracum/vfps/commit/4ae923df885e2676448a57a8c14fbe8654d80bd6))
+* **deps:** update container-images ([#59](https://github.com/miracum/vfps/issues/59)) ([f0426bf](https://github.com/miracum/vfps/commit/f0426bf366bf481677beb8c8a76462a5d288dc19))
+
 ## [1.2.0](https://github.com/miracum/vfps/compare/v1.1.3...v1.2.0) (2023-03-26)
 
 
