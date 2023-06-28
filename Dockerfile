@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1.4
-FROM mcr.microsoft.com/dotnet/nightly/aspnet:7.0-jammy-chiseled@sha256:130398f80260b94f5376b78ecd191cfcd3c1718ad1205d1944c7e83eea6799e3 AS runtime
+FROM mcr.microsoft.com/dotnet/nightly/aspnet:7.0-jammy-chiseled@sha256:829ccddb852634bc80eda51515c3879ce07a243ae8382ceb8b3eae1f2b4dff53 AS runtime
 WORKDIR /opt/vfps
 EXPOSE 8080/tcp 8081/tcp 8082/tcp
 USER 65534:65534
@@ -9,7 +9,7 @@ ENV DOTNET_ENVIRONMENT="Production" \
     ASPNETCORE_URLS="" \
     DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
 
-FROM mcr.microsoft.com/dotnet/sdk:7.0-jammy@sha256:96116865a1e3fbcc3b5af2950acd197f5a3196ae95e65b4f9287c6bab8d47a32 AS build
+FROM mcr.microsoft.com/dotnet/sdk:7.0-jammy@sha256:d689d003f80516786e561298e862217537c073bb3f6207573b5fdb2a8ef840f8 AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="/root/.dotnet/tools:${PATH}"
@@ -69,7 +69,7 @@ WORKDIR /opt/vfps-stress
 ENV DOTNET_CLI_HOME="/tmp/.dotnet"
 # https://github.com/hadolint/hadolint/pull/815 isn't yet in mega-linter
 # hadolint ignore=DL3022
-COPY --from=docker.io/bitnami/kubectl:1.27.1@sha256:2a2562421b39382569844fc86fd3c1d24ef35a33000ea9facf8cfae9d37d51f6 /opt/bitnami/kubectl/bin/kubectl /usr/bin/kubectl
+COPY --from=docker.io/bitnami/kubectl:1.27.3@sha256:ee7ea608b35c09d5995d54c087d1f8ec7e820ad2e5031d60b55dd6cc720483e4 /opt/bitnami/kubectl/bin/kubectl /usr/bin/kubectl
 
 COPY tests/chaos/chaos.yaml /tmp/
 COPY --from=build-stress-test /build/publish .
