@@ -288,7 +288,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
 
-      - uses: iter8-tools/iter8@v0.13.18 # v0.13.18
+      - uses: iter8-tools/iter8@9b867240dcaa77858d2458f52a3845e47ea2c657 # v0.13.17
 
       - name: Create KinD cluster
         uses: helm/kind-action@9e8295d178de23cbfbd8fa16cf844eec1d773a07 # v1.4.0

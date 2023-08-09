@@ -6,6 +6,7 @@ metadata:
 spec:
   entrypoint: run-chaos-and-test
   serviceAccountName: chaos-mesh-cluster-manager
+  onExit: exit-handler
   templates:
     - name: test
       container:
@@ -27,7 +28,7 @@ spec:
             drop:
               - ALL
           privileged: false
-          runAsNonRoot: true
+          runAsNonRoot: false
 
     - name: install-chaos
       container:
@@ -46,6 +47,8 @@ spec:
               - ALL
           privileged: false
           runAsNonRoot: true
+          runAsUser: 65532
+          runAsGroup: 65532
 
     - name: delete-chaos
       container:
@@ -64,14 +67,17 @@ spec:
               - ALL
           privileged: false
           runAsNonRoot: true
+          runAsUser: 65532
+          runAsGroup: 65532
+
+    - name: exit-handler
+      steps:
+        - - name: delete-chaos
+            template: delete-chaos
 
     - name: run-chaos-and-test
-      dag:
-        tasks:
-          - name: test
-            template: test
-          - name: install-chaos
+      steps:
+        - - name: install-chaos
             template: install-chaos
-          - name: delete-chaos
-            depends: "install-chaos && (test.Succeeded || test.Failed)"
-            template: delete-chaos
+        - - name: test
+            template: test
