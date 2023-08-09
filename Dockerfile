@@ -66,14 +66,16 @@ EOF
 
 FROM build AS stress-test
 WORKDIR /opt/vfps-stress
-ENV DOTNET_CLI_HOME="/tmp/.dotnet"
 # https://github.com/hadolint/hadolint/pull/815 isn't yet in mega-linter
 # hadolint ignore=DL3022
 COPY --from=docker.io/bitnami/kubectl:1.27.3@sha256:ee7ea608b35c09d5995d54c087d1f8ec7e820ad2e5031d60b55dd6cc720483e4 /opt/bitnami/kubectl/bin/kubectl /usr/bin/kubectl
 
 COPY tests/chaos/chaos.yaml /tmp/
 COPY --from=build-stress-test /build/publish .
-USER 65534:65534
+# currently running into <https://github.com/dotnet/runtime/issues/80619>
+# when running as non-root.
+# hadolint ignore=DL3002
+USER 0:0
 ENTRYPOINT ["dotnet"]
 CMD ["test", "/opt/vfps-stress/Vfps.StressTests.dll", "-l", "console;verbosity=detailed"]
 
