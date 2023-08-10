@@ -86,7 +86,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@7b7aa264d83dc58691451798b4d117d53d21edfe # tag=v0.7.1
+        uses: aquasecurity/trivy-action@41f05d9ecffa2ed3f1580af306000f734b733e54 # 0.11.2
         with:
           image-ref: ${{ fromJson(steps.container_meta.outputs.json).tags[0] }}
           severity: "CRITICAL,HIGH"
