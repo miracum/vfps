@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693572360452,
+  "lastUpdate": 1693582969466,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -2076,6 +2076,48 @@ window.BENCHMARK_DATA = {
             "value": 1212.187890126155,
             "unit": "ns",
             "range": "± 1.0733284019565732"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5f51f705d5675c6f6b8889ad929d1fbc16fd1e73",
+          "message": "chore(deps): update github-actions (#67)\n\n* chore(deps): update github-actions\r\n\r\n* chore: re-formatted protobuf files\r\n\r\n* ci: re-formatted scorecards.yaml\r\n\r\n* chore: downgrade iter8 manually again\r\n\r\n---------\r\n\r\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>\r\nCo-authored-by: chgl <chgl@users.noreply.github.com>",
+          "timestamp": "2023-09-01T17:41:07+02:00",
+          "tree_id": "b1dbbb1a0c778d2aa2ee3fdb778bafd406df4f68",
+          "url": "https://github.com/miracum/vfps/commit/5f51f705d5675c6f6b8889ad929d1fbc16fd1e73"
+        },
+        "date": 1693582969099,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1996.7188234965006,
+            "unit": "ns",
+            "range": "± 5.540983754118181"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1407.695673429049,
+            "unit": "ns",
+            "range": "± 0.8737707376069049"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4HashGenerator",
+            "value": 1037.1448864570032,
+            "unit": "ns",
+            "range": "± 0.8367577202029305"
           }
         ]
       }
