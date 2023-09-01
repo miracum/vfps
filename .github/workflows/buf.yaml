@@ -15,9 +15,9 @@ jobs:
       contents: read
       pull-requests: write
     steps:
-      - uses: actions/checkout@2541b1294d2704b0964813337f33b291d3f8596b # tag=v3
+      - uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
 
-      - uses: bufbuild/buf-setup-action@ebfad693a1cf43c5a8fc187a3f6ffc9d4b5dea8f # tag=v1.8.0
+      - uses: bufbuild/buf-setup-action@eb60cd0de4f14f1f57cf346916b8cd69a9e7ed0b # v1.26.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -25,7 +25,7 @@ jobs:
         working-directory: src/Vfps
         run: buf format --exit-code
 
-      - uses: bufbuild/buf-lint-action@d35dc843e3e1d4d7ec2d4b6eef89ff040b85cf28 # tag=v1.0.2
+      - uses: bufbuild/buf-lint-action@bd48f53224baaaf0fc55de9a913e7680ca6dbea4 # v1.0.3
         with:
           input: src/Vfps
       # Doesn't currently work due to the weird file setup. Fails with:
