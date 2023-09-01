@@ -19,23 +19,17 @@ service NamespaceService {
 
   // get information about a namespace
   rpc Get(NamespaceServiceGetRequest) returns (NamespaceServiceGetResponse) {
-    option (google.api.http) = {
-      get: "/v1/namespaces/{name}"
-    };
+    option (google.api.http) = {get: "/v1/namespaces/{name}"};
   }
 
   // list all namespaces
   rpc GetAll(NamespaceServiceGetAllRequest) returns (NamespaceServiceGetAllResponse) {
-    option (google.api.http) = {
-      get: "/v1/namespaces"
-    };
+    option (google.api.http) = {get: "/v1/namespaces"};
   }
 
   // delete a namespace and all pseudonyms it contains
   rpc Delete(NamespaceServiceDeleteRequest) returns (NamespaceServiceDeleteResponse) {
-    option (google.api.http) = {
-      delete: "/v1/namespaces/{name}"
-    };
+    option (google.api.http) = {delete: "/v1/namespaces/{name}"};
   }
 }
 

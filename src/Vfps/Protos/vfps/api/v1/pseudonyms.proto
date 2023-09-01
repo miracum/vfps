@@ -20,16 +20,12 @@ service PseudonymService {
 
   // get information about the given pseudonym. Including its original value.
   rpc Get(PseudonymServiceGetRequest) returns (PseudonymServiceGetResponse) {
-    option (google.api.http) = {
-      get: "/v1/namespaces/{namespace}/pseudonyms/{pseudonym_value}"
-    };
+    option (google.api.http) = {get: "/v1/namespaces/{namespace}/pseudonyms/{pseudonym_value}"};
   }
 
   // list all pseudonyms in the given namespace
   rpc List(PseudonymServiceListRequest) returns (PseudonymServiceListResponse) {
-    option (google.api.http) = {
-      get: "/v1/namespaces/{namespace}/pseudonyms"
-    };
+    option (google.api.http) = {get: "/v1/namespaces/{namespace}/pseudonyms"};
   }
 }
 
