@@ -4,15 +4,11 @@
   "tools": {
     "dotnet-outdated-tool": {
       "version": "4.5.3",
-      "commands": [
-        "dotnet-outdated"
-      ]
+      "commands": ["dotnet-outdated"]
     },
     "csharpier": {
       "version": "0.25.0",
-      "commands": [
-        "dotnet-csharpier"
-      ]
+      "commands": ["dotnet-csharpier"]
     }
   }
 }
