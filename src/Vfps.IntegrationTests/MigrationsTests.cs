@@ -1,6 +1,7 @@
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
+using Testcontainers.PostgreSql;
 using Xunit.Abstractions;
 
 namespace Vfps.IntegrationTests;
@@ -9,33 +10,26 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
 {
     private readonly ITestOutputHelper output;
 
-    private readonly TestcontainerDatabase postgresqlContainer;
+    private readonly PostgreSqlContainer postgresqlContainer;
 
     private readonly string connectionString;
 
     private readonly string migrationsImage;
 
-    private readonly ContainerBuilder<TestcontainersContainer> migrationsContainerBuilder;
+    private readonly ContainerBuilder migrationsContainerBuilder;
 
     public MigrationsTests(ITestOutputHelper output, NetworkFixture networkFixture)
     {
         this.output = output;
 
-        postgresqlContainer = new ContainerBuilder<PostgreSqlTestcontainer>()
-            .WithDatabase(
-                new PostgreSqlTestcontainerConfiguration(
-                    "docker.io/bitnami/postgresql:14.5.0-debian-11-r17"
-                )
-                {
-                    Database = "vfps",
-                    Username = "postgres",
-                    Password = "postgres",
-                }
-            )
+        postgresqlContainer = new PostgreSqlBuilder()
+            .WithDatabase("vfps")
+            .WithUsername("postgres")
+            .WithPassword("postgres")
             .WithName("postgres")
             .WithHostname("postgres")
             .WithEnvironment("PGUSER", "postgres")
-            .WithNetwork(networkFixture.Network.Id, networkFixture.Network.Name)
+            .WithNetwork(networkFixture.Network.Name)
             .Build();
 
         this.connectionString =
@@ -44,10 +38,10 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
         var migrationsImageTag = Environment.GetEnvironmentVariable("VFPS_IMAGE_TAG") ?? "latest";
         this.migrationsImage = $"ghcr.io/miracum/vfps:{migrationsImageTag}";
 
-        migrationsContainerBuilder = new TestcontainersBuilder<TestcontainersContainer>()
+        migrationsContainerBuilder = new ContainerBuilder()
             .WithImage(migrationsImage)
             .WithName("migrations")
-            .WithNetwork(networkFixture.Network.Id, networkFixture.Network.Name)
+            .WithNetwork(networkFixture.Network.Name)
             .WithEntrypoint("/opt/vfps/efbundle")
             .WithCommand("--verbose", $"--connection={connectionString}");
     }
@@ -66,7 +60,7 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
 
         await migrationsContainer.StartAsync();
 
-        var exitCode = await migrationsContainer.GetExitCode();
+        var exitCode = await migrationsContainer.GetExitCodeAsync();
 
         consumer.Stdout.Seek(0, SeekOrigin.Begin);
         using var stdoutReader = new StreamReader(consumer.Stdout);
@@ -95,7 +89,7 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
 
         await migrationsContainer.StartAsync();
 
-        var exitCode = await migrationsContainer.GetExitCode();
+        var exitCode = await migrationsContainer.GetExitCodeAsync();
 
         consumer.Stdout.Seek(0, SeekOrigin.Begin);
         using var stdoutReader = new StreamReader(consumer.Stdout);
