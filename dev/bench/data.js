@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1693582969466,
+  "lastUpdate": 1696443193860,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -2118,6 +2118,48 @@ window.BENCHMARK_DATA = {
             "value": 1037.1448864570032,
             "unit": "ns",
             "range": "± 0.8367577202029305"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "865d36dc0443e1d0a9e126193cc55e5afdfae836",
+          "message": "chore(deps): updated all dependencies and fixed megalinter workflow (#74)\n\n* chore(deps): update all non-major dependencies\r\n\r\n* chore(deps): update github-actions\r\n\r\n* chore(deps): update container-images\r\n\r\n* chore: added dotnet-tools manifest with dotnet outdated\r\n\r\n* chore(deps): updated major deps\r\n\r\n* chore(deps): updated megalinter to latest to fix trivy\r\n\r\n* ci: fix iter8 workflow by manually downloading the cli\r\n\r\n---------\r\n\r\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2023-10-04T20:11:36+02:00",
+          "tree_id": "0e8674d166dcc2013d97cfbd27f7737baf7b82bd",
+          "url": "https://github.com/miracum/vfps/commit/865d36dc0443e1d0a9e126193cc55e5afdfae836"
+        },
+        "date": 1696443193168,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 2026.8526700337727,
+            "unit": "ns",
+            "range": "± 12.85440408109774"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1394.8071590151105,
+            "unit": "ns",
+            "range": "± 2.2417412075017102"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4HashGenerator",
+            "value": 1011.5161083221435,
+            "unit": "ns",
+            "range": "± 2.0772795719276584"
           }
         ]
       }
