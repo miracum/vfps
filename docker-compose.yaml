@@ -1,6 +1,6 @@
 services:
   postgresql:
-    image: docker.io/library/postgres:15.4@sha256:a5e89e5f2679863bedef929c4a7ec5d1a2cb3c045f13b47680d86f8701144ed7
+    image: docker.io/library/postgres:16.0@sha256:f1aaf6f8be5552bef66c5580efbd2942c37d7277cd0416ef4939fa34bf0baf31
     restart: unless-stopped
     deploy:
       resources:
@@ -13,13 +13,14 @@ services:
       - "no-new-privileges:true"
     privileged: false
     environment:
+      # kics-scan ignore-line
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: vfps
     ports:
       - "127.0.0.1:35432:5432"
 
   jaeger:
-    image: docker.io/jaegertracing/all-in-one:1.48.0@sha256:667c849ae08d74cde03b1a4b0ba5ab3081f8a43c895325eb62ab5871a1dd764c
+    image: docker.io/jaegertracing/all-in-one:1.49.0@sha256:0edcea978eb4a631a0d9078f435908852f20013cf5d66908521c5ac2815aeb28
     restart: unless-stopped
     deploy:
       resources:
@@ -64,6 +65,7 @@ services:
       ForceRunDatabaseMigrations: "true"
       ConnectionStrings__PostgreSQL: "Host=postgresql:5432;Database=vfps;Timeout=60;Max Auto Prepare=5;Application Name=vfps;Maximum Pool Size=50;"
       PGUSER: postgres
+      # kics-scan ignore-line
       PGPASSWORD: postgres
     ports:
       # Http1, Http2, Http3

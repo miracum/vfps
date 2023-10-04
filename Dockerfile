@@ -1,5 +1,7 @@
 # syntax=docker/dockerfile:1.4
-FROM mcr.microsoft.com/dotnet/nightly/aspnet:7.0.10-jammy-chiseled@sha256:8b0546dca6b23e438af6454a3242ffc4a3344a872e791e738f0a1be5fa4343b3 AS runtime
+# kics false positive "Missing User Instruction": <https://docs.kics.io/latest/queries/dockerfile-queries/fd54f200-402c-4333-a5a4-36ef6709af2f/>
+# kics-scan ignore-line
+FROM mcr.microsoft.com/dotnet/nightly/aspnet:7.0.11-jammy-chiseled@sha256:8b2a9b9a8d3c424a368aa347f333d4653e9ed6eb78c9af70e450b5cc514bf3b8 AS runtime
 WORKDIR /opt/vfps
 EXPOSE 8080/tcp 8081/tcp 8082/tcp
 USER 65534:65534
@@ -9,7 +11,7 @@ ENV DOTNET_ENVIRONMENT="Production" \
     ASPNETCORE_URLS="" \
     DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
 
-FROM mcr.microsoft.com/dotnet/sdk:7.0.400-jammy@sha256:fff616cce9131105bd3a09bd7033e8604ac761490a703c5ece071751c155b218 AS build
+FROM mcr.microsoft.com/dotnet/sdk:7.0.401-jammy@sha256:49f2cb277dc4b089d9d7642f06afae0f2da10224be55ea2a64eb8af798ec4994 AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="/root/.dotnet/tools:${PATH}"
@@ -68,12 +70,13 @@ FROM build AS stress-test
 WORKDIR /opt/vfps-stress
 # https://github.com/hadolint/hadolint/pull/815 isn't yet in mega-linter
 # hadolint ignore=DL3022
-COPY --from=docker.io/bitnami/kubectl:1.27.5@sha256:f8c9112ed8e93374559de09ddb2f4459a8677a3e478206e23efae674dff0dc1f /opt/bitnami/kubectl/bin/kubectl /usr/bin/kubectl
+COPY --from=docker.io/bitnami/kubectl:1.28.2@sha256:52a1c97ff9f4e82bce5f15cca73f9f454b70910afbf241ae0ecb5d60956fec05 /opt/bitnami/kubectl/bin/kubectl /usr/bin/kubectl
 
 COPY tests/chaos/chaos.yaml /tmp/
 COPY --from=build-stress-test /build/publish .
 # currently running into <https://github.com/dotnet/runtime/issues/80619>
 # when running as non-root.
+
 # hadolint ignore=DL3002
 USER 0:0
 ENTRYPOINT ["dotnet"]
