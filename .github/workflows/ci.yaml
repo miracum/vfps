@@ -288,7 +288,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@f43a0e5ff2bd294095638e18286ca9a3d1956744 # v3
 
-      - uses: iter8-tools/iter8@8d70e30c87e365a7c9f61274c865cf1cc26c6cc1 # v0.13.18
+      - name: install iter8 cli
+        env:
+          ITER8_CLI_URL: "https://github.com/iter8-tools/iter8/releases/download/v0.13.18/iter8-linux-amd64.tar.gz"
+        run: |
+          curl -LSs "${ITER8_CLI_URL}" | tar xz
+          mv linux-amd64/iter8 /usr/local/bin/iter8
+          chmod +x /usr/local/bin/iter8
+          iter8 version
 
       - name: Create KinD cluster
         uses: helm/kind-action@dda0770415bac9fc20092cacbc54aa298604d140 # v1.8.0
@@ -313,15 +320,12 @@ jobs:
         env:
           IMAGE_TAG: ${{ needs.build.outputs.api-image-version }}
         run: |
-          helm repo add miracum https://miracum.github.io/charts
-          helm repo update
           helm install \
             --set="image.tag=${IMAGE_TAG}" \
             -f tests/iter8/values.yaml \
             --wait \
             --timeout=15m \
-            --version=^1.0.0 \
-            vfps miracum/vfps
+            vfps oci://ghcr.io/miracum/charts/vfps
 
       - name: Launch iter8 experiment
         run: kubectl apply -f tests/iter8/experiment.yaml
@@ -426,7 +430,5 @@ jobs:
       image: ${{ needs.build.outputs.api-image-name }}
       digest: ${{ needs.build.outputs.api-image-digest }}
       registry-username: ${{ github.actor }}
-      # TODO(https://github.com/slsa-framework/slsa-github-generator/issues/492): Remove after GA release.
-      compile-generator: true
     secrets:
       registry-password: ${{ secrets.GITHUB_TOKEN }}
