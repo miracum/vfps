@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1696443193860,
+  "lastUpdate": 1696445002501,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -2160,6 +2160,48 @@ window.BENCHMARK_DATA = {
             "value": 1011.5161083221435,
             "unit": "ns",
             "range": "± 2.0772795719276584"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "64022198+miracum-bot@users.noreply.github.com",
+            "name": "miracum-bot",
+            "username": "miracum-bot"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5c13d84987ea1ef82ec2abaec7c92623628d2e94",
+          "message": "chore: release 1.3.1 (#69)",
+          "timestamp": "2023-10-04T20:41:22+02:00",
+          "tree_id": "ed2416ecc9b13408a8b6bed60330b497865a7f97",
+          "url": "https://github.com/miracum/vfps/commit/5c13d84987ea1ef82ec2abaec7c92623628d2e94"
+        },
+        "date": 1696445001488,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 2221.9048551983306,
+            "unit": "ns",
+            "range": "± 73.79296332835006"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 1492.0433815717697,
+            "unit": "ns",
+            "range": "± 28.23303903482162"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4HashGenerator",
+            "value": 1114.6449768066407,
+            "unit": "ns",
+            "range": "± 25.705097469788637"
           }
         ]
       }
