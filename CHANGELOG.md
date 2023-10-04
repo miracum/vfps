@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.3.1](https://github.com/miracum/vfps/compare/v1.3.0...v1.3.1) (2023-10-04)
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#65](https://github.com/miracum/vfps/issues/65)) ([9fe24cc](https://github.com/miracum/vfps/commit/9fe24cc876c167ae8fc51f37a11189d5a3d9654f))
+* **deps:** update container-images ([#66](https://github.com/miracum/vfps/issues/66)) ([5107364](https://github.com/miracum/vfps/commit/510736461a4012077f3a7e7e1baa2f0897af782f))
+* **deps:** update dependency coverlet.collector to v6 ([#68](https://github.com/miracum/vfps/issues/68)) ([fb315cf](https://github.com/miracum/vfps/commit/fb315cf16086e32d41b3ab5156fb1d1c4d994e59))
+* **deps:** update github-actions ([#67](https://github.com/miracum/vfps/issues/67)) ([5f51f70](https://github.com/miracum/vfps/commit/5f51f705d5675c6f6b8889ad929d1fbc16fd1e73))
+* **deps:** updated all dependencies and fixed megalinter workflow ([#74](https://github.com/miracum/vfps/issues/74)) ([865d36d](https://github.com/miracum/vfps/commit/865d36dc0443e1d0a9e126193cc55e5afdfae836))
+
+
+### CI/CD
+
+* fix trivy action in ci.yaml ([#64](https://github.com/miracum/vfps/issues/64)) ([ec70bb7](https://github.com/miracum/vfps/commit/ec70bb77ab7df9130be359bdaa009a025dcecd04))
+* fixed nightly chaos workflow ([#63](https://github.com/miracum/vfps/issues/63)) ([bd6543d](https://github.com/miracum/vfps/commit/bd6543da8ca0b7609cfe91c71a4eaf4c04f97dec))
+* update trivy.yaml ([468f602](https://github.com/miracum/vfps/commit/468f6027396fc55b313bf4e815c344cd4df2b71d))
+
 ## [1.3.0](https://github.com/miracum/vfps/compare/v1.2.0...v1.3.0) (2023-06-28)
 
 
