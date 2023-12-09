@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1696445017095,
+  "lastUpdate": 1702141698010,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -2244,6 +2244,48 @@ window.BENCHMARK_DATA = {
             "value": 1186.415376663208,
             "unit": "ns",
             "range": "± 0.3313651037022733"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a95f6be1353436255e1fe1a3e5072fbc28c17963",
+          "message": "chore(deps): updated to .NET 8 LTS and dep maintenance (#82)\n\n* chore(deps): updated to .NET 8 LTS\r\n\r\n* ci: switch to standard build workflow\r\n\r\n* chore(deps): updated all deps and fixed stress test code\r\n\r\n* style: ran csharpier",
+          "timestamp": "2023-12-09T18:06:43+01:00",
+          "tree_id": "3100d335f31844094ba1ba7fab6b3754077c50e0",
+          "url": "https://github.com/miracum/vfps/commit/a95f6be1353436255e1fe1a3e5072fbc28c17963"
+        },
+        "date": 1702141697715,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1426.3072342191424,
+            "unit": "ns",
+            "range": "± 8.99948186445803"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 942.3480388641358,
+            "unit": "ns",
+            "range": "± 6.504101060428489"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4HashGenerator",
+            "value": 687.7700492858887,
+            "unit": "ns",
+            "range": "± 0.9092434694686005"
           }
         ]
       }
