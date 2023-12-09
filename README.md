@@ -432,7 +432,6 @@ cosign verify \
 slsa-verifier verify-image \
     --source-uri github.com/miracum/vfps \
     --source-tag ${IMAGE_TAG} \
-    --source-branch master \
     "${IMAGE_DIGEST_PINNED}"
 ```
 
