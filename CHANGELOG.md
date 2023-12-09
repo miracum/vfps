@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.3.2](https://github.com/miracum/vfps/compare/v1.3.1...v1.3.2) (2023-12-09)
+
+
+### Miscellaneous Chores
+
+* **deps:** pin docker/dockerfile docker tag to 9ba7531 ([#78](https://github.com/miracum/vfps/issues/78)) ([b0eda55](https://github.com/miracum/vfps/commit/b0eda55a4ce8d07fa527a18e575c393589c78420))
+* **deps:** update all non-major dependencies ([#70](https://github.com/miracum/vfps/issues/70)) ([271e9c8](https://github.com/miracum/vfps/commit/271e9c892d95a2a3e9050b269253317232cb75f9))
+* **deps:** update all non-major dependencies ([#76](https://github.com/miracum/vfps/issues/76)) ([4483a87](https://github.com/miracum/vfps/commit/4483a8705a03b3320ca40d54fb905d21603a7f95))
+* **deps:** update docker.io/bitnami/kubectl:1.28.2 docker digest to 0dadb8b ([#79](https://github.com/miracum/vfps/issues/79)) ([bae5e7f](https://github.com/miracum/vfps/commit/bae5e7f182839983a1598fa037f6d3f34af3d46e))
+* **deps:** update docker.io/library/postgres:16.0 docker digest to a80d0c1 ([#80](https://github.com/miracum/vfps/issues/80)) ([c4a9535](https://github.com/miracum/vfps/commit/c4a9535edb1241eee8c2e446d7976fc32732ad20))
+* **deps:** update docker.io/library/ubuntu:22.04 docker digest to 8eab65d ([#81](https://github.com/miracum/vfps/issues/81)) ([cbb05a6](https://github.com/miracum/vfps/commit/cbb05a6645a2b914734ac2dc7b8236519d05dd29))
+* **deps:** update github-actions ([#71](https://github.com/miracum/vfps/issues/71)) ([ba981ad](https://github.com/miracum/vfps/commit/ba981ada94a3ef68c54e2afbddaaa04d709ffd11))
+* **deps:** update github-actions ([#77](https://github.com/miracum/vfps/issues/77)) ([e7bc20c](https://github.com/miracum/vfps/commit/e7bc20c42156a0497b49cbce15c9c5edb096f7a8))
+* **deps:** updated to .NET 8 LTS and dep maintenance ([#82](https://github.com/miracum/vfps/issues/82)) ([a95f6be](https://github.com/miracum/vfps/commit/a95f6be1353436255e1fe1a3e5072fbc28c17963))
+
 ## [1.3.1](https://github.com/miracum/vfps/compare/v1.3.0...v1.3.1) (2023-10-04)
 
 
