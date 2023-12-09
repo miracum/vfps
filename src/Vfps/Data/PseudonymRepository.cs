@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
-using Vfps.Data.Models;
 using Prometheus;
+using Vfps.Data.Models;
 
 namespace Vfps.Data;
 
@@ -73,7 +73,8 @@ public class PseudonymRepository : IPseudonymRepository
         {
             using (UpsertDuration.NewTimer())
             {
-                var pseudonyms = await Context.Pseudonyms
+                var pseudonyms = await Context
+                    .Pseudonyms
                     .FromSqlRaw(
                         UpsertCommand,
                         pseudonym.NamespaceName,

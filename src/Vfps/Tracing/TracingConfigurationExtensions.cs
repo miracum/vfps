@@ -1,9 +1,9 @@
 using System.Reflection;
-using OpenTelemetry.Trace;
+using Npgsql;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
-using Npgsql;
+using OpenTelemetry.Trace;
 
 namespace Vfps.Tracing
 {
@@ -19,10 +19,9 @@ namespace Vfps.Tracing
             var serviceName =
                 builder.Configuration.GetValue("Tracing:ServiceName", assembly.Name) ?? "vfps";
 
-            var rootSamplerType = builder.Configuration.GetValue(
-                "Tracing:RootSampler",
-                "AlwaysOnSampler"
-            );
+            var rootSamplerType = builder
+                .Configuration
+                .GetValue("Tracing:RootSampler", "AlwaysOnSampler");
             var samplingRatio = builder.Configuration.GetValue("Tracing:SamplingProbability", 0.1d);
 
             Sampler rootSampler = rootSamplerType switch
@@ -33,7 +32,8 @@ namespace Vfps.Tracing
                 _ => throw new ArgumentException($"Unsupported sampler type '{rootSamplerType}'"),
             };
 
-            builder.Services
+            builder
+                .Services
                 .AddOpenTelemetry()
                 .ConfigureResource(
                     r =>
@@ -64,9 +64,11 @@ namespace Vfps.Tracing
                     {
                         case "jaeger":
                             tracingBuilder.AddJaegerExporter();
-                            builder.Services.Configure<JaegerExporterOptions>(
-                                builder.Configuration.GetSection("Tracing:Jaeger")
-                            );
+                            builder
+                                .Services
+                                .Configure<JaegerExporterOptions>(
+                                    builder.Configuration.GetSection("Tracing:Jaeger")
+                                );
                             break;
 
                         case "otlp":

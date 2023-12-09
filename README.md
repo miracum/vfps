@@ -213,16 +213,13 @@ docker build -t ghcr.io/miracum/vfps:${IMAGE_TAG} .
 
 kind load docker-image ghcr.io/miracum/vfps:${IMAGE_TAG}
 
-helm repo add miracum https://miracum.github.io/charts
-helm repo update
-
-helm install \
+helm upgrade --install \
   --set="image.tag=${IMAGE_TAG}" \
   -f tests/iter8/values.yaml \
   --wait \
   --timeout=15m \
   --version=^1.0.0 \
-  vfps miracum/vfps
+  vfps oci://ghcr.io/miracum/charts/vfps
 
 kubectl apply -f tests/iter8/experiment.yaml
 
@@ -413,27 +410,30 @@ Prerequisites:
 - [slsa-verifier](https://github.com/slsa-framework/slsa-verifier/releases)
 - [crane](https://github.com/google/go-containerregistry/releases)
 
-First, determine the digest of the container image to verify. This digest is also visible on
-the packages page on GitHub: <https://github.com/miracum/vfps/pkgs/container/vfps>.
+All released container images are signed using [cosign](https://github.com/sigstore/cosign) and SLSA Level 3 provenance is available for verification.
 
 <!-- x-release-please-start-version -->
 
 ```sh
-IMAGE_DIGEST=$(crane digest ghcr.io/miracum/vfps:v1.3.1)
-```
+IMAGE=ghcr.io/miracum/vfps:v1.3.1
+DIGEST=$(crane digest "${IMAGE}")
+IMAGE_DIGEST_PINNED="ghcr.io/miracum/vfps@${DIGEST}"
+IMAGE_TAG="${IMAGE#*:}"
 
-<!-- x-release-please-end -->
+cosign verify \
+   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+   --certificate-identity-regexp="https://github.com/miracum/.github/.github/workflows/standard-build.yaml@.*" \
+   --certificate-github-workflow-name="ci" \
+   --certificate-github-workflow-repository="miracum/vfps" \
+   --certificate-github-workflow-trigger="release" \
+   --certificate-github-workflow-ref="refs/tags/${IMAGE_TAG}" \
+   "${IMAGE_DIGEST_PINNED}"
 
-Verify the container signature:
-
-```sh
-COSIGN_EXPERIMENTAL=1 cosign verify "ghcr.io/miracum/vfps@${IMAGE_DIGEST}"
-```
-
-Verify the container SLSA level 3 provenance attestation:
-
-```sh
-slsa-verifier verify-image "ghcr.io/miracum/vfps@${IMAGE_DIGEST}" --source-uri github.com/miracum/vfps
+slsa-verifier verify-image \
+    --source-uri github.com/miracum/vfps \
+    --source-tag ${IMAGE_TAG} \
+    --source-branch master \
+    "${IMAGE_DIGEST_PINNED}"
 ```
 
 See also <https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/container#verification> for details on verifying the image integrity using automated policy controllers.

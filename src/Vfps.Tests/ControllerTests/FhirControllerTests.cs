@@ -32,7 +32,9 @@ public class FhirControllerTests : ServiceTestBase
         response
             .Should()
             .BeOfType<BadRequestObjectResult>()
-            .Which.Value.Should()
+            .Which
+            .Value
+            .Should()
             .BeOfType<OperationOutcome>();
     }
 
@@ -44,7 +46,9 @@ public class FhirControllerTests : ServiceTestBase
         response
             .Should()
             .BeOfType<BadRequestObjectResult>()
-            .Which.Value.Should()
+            .Which
+            .Value
+            .Should()
             .BeOfType<OperationOutcome>();
     }
 
@@ -73,7 +77,9 @@ public class FhirControllerTests : ServiceTestBase
         var parameterResponse = response
             .Should()
             .BeOfType<OkObjectResult>()
-            .Which.Value.Should()
+            .Which
+            .Value
+            .Should()
             .BeOfType<Parameters>()
             .Which;
 

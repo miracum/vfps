@@ -1,6 +1,6 @@
+using System.Text;
 using Microsoft.Extensions.Caching.Memory;
 using Prometheus;
-using System.Text;
 
 namespace Vfps.Tests.MemoryCacheMetricsBackgroundServiceTests;
 

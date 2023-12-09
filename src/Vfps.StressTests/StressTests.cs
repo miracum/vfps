@@ -49,11 +49,15 @@ public class StressTests
             : "./nbomber-reports";
     }
 
-    private IStep CreatePseudonymStep(string namespaceName)
+    private async Task<Response<object>> RunCreatePseudonyms(
+        IScenarioContext scenarioContext,
+        string namespaceName
+    )
     {
-        return Step.Create(
+        return await Step.Run(
             "create_pseudonyms",
-            execute: async context =>
+            scenarioContext,
+            run: async () =>
             {
                 var request = new PseudonymServiceCreateRequest()
                 {
@@ -65,13 +69,13 @@ public class StressTests
                 {
                     var response = await pseudonymService.CreateAsync(request);
                     return Response.Ok(
-                        statusCode: 200,
+                        statusCode: "200",
                         sizeBytes: request.CalculateSize() + response.CalculateSize()
                     );
                 }
                 catch (RpcException exc)
                 {
-                    context.Logger.Error(exc, "Pseudonym creation failed");
+                    scenarioContext.Logger.Error(exc, "Pseudonym creation failed");
                     return Response.Fail();
                 }
             }
@@ -89,8 +93,14 @@ public class StressTests
             PseudonymPrefix = "stress-",
         };
 
-        var scenario = ScenarioBuilder
-            .CreateScenario(namespaceRequest.Name, CreatePseudonymStep(namespaceRequest.Name))
+        var scenario = Scenario
+            .Create(
+                namespaceRequest.Name,
+                async context =>
+                {
+                    return await RunCreatePseudonyms(context, namespaceRequest.Name);
+                }
+            )
             .WithInit(async context =>
             {
                 try
@@ -99,20 +109,17 @@ public class StressTests
                 }
                 catch (RpcException exc) when (exc.StatusCode == StatusCode.AlreadyExists)
                 {
-                    context.Logger.Warning(
-                        $"Namespace {namespaceRequest.Name} already exists. Continuing anyway."
-                    );
+                    context
+                        .Logger
+                        .Warning(
+                            $"Namespace {namespaceRequest.Name} already exists. Continuing anyway."
+                        );
                 }
             })
             .WithWarmUpDuration(TimeSpan.FromSeconds(5))
             .WithLoadSimulations(
-                Simulation.RampConstant(copies: 10, during: TimeSpan.FromMinutes(5)),
-                Simulation.KeepConstant(copies: 100, during: TimeSpan.FromMinutes(5)),
-                Simulation.InjectPerSecRandom(
-                    minRate: 10,
-                    maxRate: 50,
-                    during: TimeSpan.FromMinutes(5)
-                )
+                Simulation.RampingConstant(copies: 10, during: TimeSpan.FromMinutes(5)),
+                Simulation.KeepConstant(copies: 100, during: TimeSpan.FromMinutes(10))
             );
 
         var stats = NBomberRunner
@@ -126,7 +133,7 @@ public class StressTests
             )
             .Run();
 
-        var failPercentage = stats.FailCount / (double)stats.RequestCount * 100.0;
+        var failPercentage = stats.AllFailCount / (double)stats.AllRequestCount * 100.0;
         failPercentage.Should().BeLessThan(0.1);
     }
 }

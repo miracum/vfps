@@ -3,7 +3,7 @@ name: nightly chaos testing
 on:
   workflow_dispatch: {}
   schedule:
-    # daily at 04:07.
+    # daily at 04:07
     - cron: "07 04 * * *"
 
 # Declare default permissions as read only.
@@ -22,65 +22,24 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@885d1462b80bc1c1c7f0b00334ad271f09369c55 # v2
 
-      - name: Build stress testing image
-        id: build-image
-        uses: docker/build-push-action@1104d471370f9806843c095c1db02b5a90c5f8b6 # v3
+      - name: Install Task
+        uses: arduino/setup-task@e26d8975574116b0097a1161e0fe16ba75d84c1c # v1.0.3
         with:
-          push: false
-          load: true
-          tags: ghcr.io/miracum/vfps/stress-test:v1
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          target: stress-test
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Create KinD cluster
-        uses: helm/kind-action@dda0770415bac9fc20092cacbc54aa298604d140 # v1.8.0
+      - name: Run chaos-test task
+        run: task chaos-test
+
+      - name: Print cluster logs
+        if: always()
+        run: |
+          kubectl cluster-info dump -o yaml | tee kind-cluster-dump.txt
+
+      - name: Upload cluster dump
+        if: always()
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3.1.3
         with:
-          cluster_name: kind
-
-      - name: Load stress-test image into KinD
-        run: |
-          kind load docker-image ghcr.io/miracum/vfps/stress-test:v1
-
-      - name: Install prerequisites
-        working-directory: tests/chaos
-        run: |
-          curl -sL -o - https://github.com/argoproj/argo-workflows/releases/download/v3.4.3/argo-linux-amd64.gz | gunzip > argo
-          chmod +x ./argo
-          ./argo version
-
-          kubectl create ns vfps
-
-          helm repo add chaos-mesh https://charts.chaos-mesh.org
-          helm upgrade --install chaos-mesh chaos-mesh/chaos-mesh \
-              --create-namespace \
-              --wait \
-              -n chaos-mesh \
-              --set chaosDaemon.runtime=containerd \
-              --set chaosDaemon.socketPath='/run/containerd/containerd.sock' \
-              --version 2.4.3
-
-          kubectl apply -f chaos-mesh-rbac.yaml
-
-          helm repo add argo https://argoproj.github.io/argo-helm
-          helm upgrade --install argo-workflows argo/argo-workflows \
-              --create-namespace \
-              --wait \
-              -n argo-workflows \
-              -f argo-workflows-values.yaml
-
-      - name: Install vfps
-        working-directory: tests/chaos
-        run: |
-          helm repo add miracum https://miracum.github.io/charts
-          helm upgrade --install \
-            -n vfps \
-            -f vfps-values.yaml \
-            --wait \
-            --version=^1.0.0 \
-            vfps miracum/vfps
-
-      - name: Run chaos testing workflow
-        working-directory: tests/chaos
-        run: |
-          ./argo submit argo-workflow.yaml -n vfps --wait --log
+          name: kind-cluster-dump.txt
+          path: |
+            kind-cluster-dump.txt

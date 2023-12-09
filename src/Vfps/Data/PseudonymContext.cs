@@ -32,7 +32,8 @@ public class PseudonymContext : DbContext
             // This only supports millisecond precision, but should be sufficient for most use cases.
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
-                var properties = entityType.ClrType
+                var properties = entityType
+                    .ClrType
                     .GetProperties()
                     .Where(
                         p =>
