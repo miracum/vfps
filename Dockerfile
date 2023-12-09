@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.4@sha256:9ba7531bd80fb0a858632727cf7a112fbfd19b17e94c4e84ced81e24ef1a0dbc
 # kics false positive "Missing User Instruction": <https://docs.kics.io/latest/queries/dockerfile-queries/fd54f200-402c-4333-a5a4-36ef6709af2f/>
 # kics-scan ignore-line
-FROM mcr.microsoft.com/dotnet/nightly/aspnet:7.0.11-jammy-chiseled@sha256:8b2a9b9a8d3c424a368aa347f333d4653e9ed6eb78c9af70e450b5cc514bf3b8 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0.0-jammy-chiseled@sha256:2f9b3da0c3de6b0db88a0f53356dd7022ce983609a3255aeefaf617c5ed32fa7 AS runtime
 WORKDIR /opt/vfps
 EXPOSE 8080/tcp 8081/tcp 8082/tcp
 USER 65534:65534
@@ -11,7 +11,7 @@ ENV DOTNET_ENVIRONMENT="Production" \
     ASPNETCORE_URLS="" \
     DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
 
-FROM mcr.microsoft.com/dotnet/sdk:7.0.401-jammy@sha256:49f2cb277dc4b089d9d7642f06afae0f2da10224be55ea2a64eb8af798ec4994 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0.100-jammy@sha256:7aacf0debfa3c612176a76c7d0be817e588b7cb5ca8f74e20484bb66e6ef1f79 AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="/root/.dotnet/tools:${PATH}"
@@ -44,7 +44,7 @@ dotnet ef migrations bundle \
     -o /build/efbundle
 EOF
 
-FROM build AS unit-test
+FROM build AS build-test
 WORKDIR /build/src/Vfps.Tests
 RUN dotnet test \
     --configuration=Release \
@@ -52,6 +52,11 @@ RUN dotnet test \
     --results-directory=./coverage \
     -l "console;verbosity=detailed" \
     --settings=runsettings.xml
+
+FROM scratch AS test
+WORKDIR /build/src/Vfps.Tests/coverage
+COPY --from=build-test /build/src/Vfps.Tests/coverage .
+ENTRYPOINT [ "true" ]
 
 FROM build AS build-stress-test
 WORKDIR /build/src/Vfps.StressTests
