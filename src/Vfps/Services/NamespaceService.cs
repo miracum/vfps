@@ -131,10 +131,9 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
         ServerCallContext context
     )
     {
-        var @namespace = await Context.Namespaces.FindAsync(
-            request.Name,
-            context.CancellationToken
-        );
+        var @namespace = await Context
+            .Namespaces
+            .FindAsync(request.Name, context.CancellationToken);
         if (@namespace is null)
         {
             var metadata = new Metadata { { "Namespace", request.Name } };
@@ -162,7 +161,8 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
         ServerCallContext context
     )
     {
-        var namespaces = await Context.Namespaces
+        var namespaces = await Context
+            .Namespaces
             .AsNoTracking()
             // TODO: should really use auto-mapper or some other even a custom Namespace.FromDto() method.
             .Select(

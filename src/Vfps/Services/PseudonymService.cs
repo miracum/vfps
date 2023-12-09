@@ -119,7 +119,8 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
         ServerCallContext context
     )
     {
-        var pseudonym = await Context.Pseudonyms
+        var pseudonym = await Context
+            .Pseudonyms
             .Where(
                 p =>
                     p.NamespaceName == request.Namespace
@@ -191,7 +192,8 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
         var pageSize = request.PageSize <= 0 ? 25 : request.PageSize;
         var offset = requestPaginationToken.Offset;
 
-        var pseudonyms = await Context.Pseudonyms
+        var pseudonyms = await Context
+            .Pseudonyms
             .Where(pseudonym => pseudonym.NamespaceName == request.Namespace)
             .Where(pseudonym => pseudonym.CreatedAt <= createdOnOrBefore)
             .OrderByDescending(pseudonym => pseudonym.CreatedAt)
@@ -235,7 +237,8 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
 
         if (request.IncludeTotalSize)
         {
-            response.TotalSize = await Context.Pseudonyms
+            response.TotalSize = await Context
+                .Pseudonyms
                 .Where(n => n.NamespaceName == request.Namespace)
                 .LongCountAsync();
         }

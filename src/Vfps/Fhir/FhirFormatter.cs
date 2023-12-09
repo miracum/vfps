@@ -1,10 +1,10 @@
-using Hl7.Fhir.Model;
-using Microsoft.AspNetCore.Mvc.Formatters;
-using System.Text.Json;
 using System.Text;
+using System.Text.Json;
+using Hl7.Fhir.Model;
+using Hl7.Fhir.Serialization;
+using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Net.Http.Headers;
 using Task = System.Threading.Tasks.Task;
-using Hl7.Fhir.Serialization;
 
 namespace Vfps.Fhir;
 

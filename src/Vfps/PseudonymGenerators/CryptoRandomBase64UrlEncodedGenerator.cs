@@ -1,6 +1,6 @@
-using Microsoft.AspNetCore.WebUtilities;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.WebUtilities;
 
 namespace Vfps.PseudonymGenerators;
 

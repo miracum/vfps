@@ -18,8 +18,8 @@
 
 #endregion
 
-using Grpc.Core;
 using System.Diagnostics.CodeAnalysis;
+using Grpc.Core;
 
 namespace Vfps.Tests.ServiceTests;
 

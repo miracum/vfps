@@ -1,6 +1,6 @@
+using System.Diagnostics;
 using Grpc.Core;
 using Microsoft.Extensions.Caching.Memory;
-using System.Diagnostics;
 
 namespace Vfps.Tests.ServiceTests;
 
@@ -63,7 +63,8 @@ public class PseudonymServiceTests : ServiceTestBase
         response.Pseudonym.OriginalValue.Should().Be(request.OriginalValue);
         response.Pseudonym.PseudonymValue.Should().NotBeNull(request.OriginalValue);
 
-        InMemoryPseudonymContext.Pseudonyms
+        InMemoryPseudonymContext
+            .Pseudonyms
             .Should()
             .Contain(
                 p =>
@@ -99,21 +100,24 @@ public class PseudonymServiceTests : ServiceTestBase
 
         var response = await sut.Create(request, TestServerCallContext.Create());
         var firstCreatedPseudonym = response.Pseudonym.PseudonymValue;
-        InMemoryPseudonymContext.Pseudonyms
+        InMemoryPseudonymContext
+            .Pseudonyms
             .Where(p => p.NamespaceName == request.Namespace)
             .Should()
             .HaveCount(1);
 
         response = await sut.Create(request, TestServerCallContext.Create());
         response.Pseudonym.PseudonymValue.Should().Be(firstCreatedPseudonym);
-        InMemoryPseudonymContext.Pseudonyms
+        InMemoryPseudonymContext
+            .Pseudonyms
             .Where(p => p.NamespaceName == request.Namespace)
             .Should()
             .HaveCount(1);
 
         response = await sut.Create(request, TestServerCallContext.Create());
         response.Pseudonym.PseudonymValue.Should().Be(firstCreatedPseudonym);
-        InMemoryPseudonymContext.Pseudonyms
+        InMemoryPseudonymContext
+            .Pseudonyms
             .Where(p => p.NamespaceName == request.Namespace)
             .Should()
             .HaveCount(1);
@@ -251,7 +255,8 @@ public class PseudonymServiceTests : ServiceTestBase
             await sut.Create(createRequest, TestServerCallContext.Create());
         }
 
-        InMemoryPseudonymContext.Pseudonyms
+        InMemoryPseudonymContext
+            .Pseudonyms
             .Where(p => p.NamespaceName == namespaceName)
             .Count()
             .Should()

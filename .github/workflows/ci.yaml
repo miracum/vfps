@@ -52,7 +52,7 @@ jobs:
           UNIT_TEST_IMAGE: ${{ fromJson(needs.build.outputs.test-image-meta-json).tags[0] }}
         run: |
           docker create --name=unit-test-container "${UNIT_TEST_IMAGE}"
-          docker cp unit-test-container:/build/src/FhirPseudonymizer.Tests/coverage ./coverage
+          docker cp unit-test-container:/build/src/Vfps.Tests/coverage ./coverage
 
       - name: Code Coverage Report
         uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # tag=v1.3.0

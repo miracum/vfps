@@ -49,7 +49,10 @@ public class StressTests
             : "./nbomber-reports";
     }
 
-    private async Task<Response<object>> RunCreatePseudonyms(IScenarioContext scenarioContext, string namespaceName)
+    private async Task<Response<object>> RunCreatePseudonyms(
+        IScenarioContext scenarioContext,
+        string namespaceName
+    )
     {
         return await Step.Run(
             "create_pseudonyms",
@@ -106,9 +109,11 @@ public class StressTests
                 }
                 catch (RpcException exc) when (exc.StatusCode == StatusCode.AlreadyExists)
                 {
-                    context.Logger.Warning(
-                        $"Namespace {namespaceRequest.Name} already exists. Continuing anyway."
-                    );
+                    context
+                        .Logger
+                        .Warning(
+                            $"Namespace {namespaceRequest.Name} already exists. Continuing anyway."
+                        );
                 }
             })
             .WithWarmUpDuration(TimeSpan.FromSeconds(5))
