@@ -3,31 +3,31 @@
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
     <ItemGroup>
-        <PackageReference Include="EFCore.NamingConventions" Version="8.0.0-rc.2" />
+        <PackageReference Include="EFCore.NamingConventions" Version="8.0.2" />
         <PackageReference Include="EntityFrameworkCore.Exceptions.PostgreSQL" Version="8.0.0" />
-        <PackageReference Include="Grpc.AspNetCore" Version="2.59.0" />
-        <PackageReference Include="Grpc.AspNetCore.HealthChecks" Version="2.59.0" />
-        <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.59.0" />
-        <PackageReference Include="Hl7.Fhir.R4" Version="5.4.0" />
-        <PackageReference Include="Microsoft.AspNetCore.Grpc.Swagger" Version="0.8.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.0">
+        <PackageReference Include="Grpc.AspNetCore" Version="2.60.0" />
+        <PackageReference Include="Grpc.AspNetCore.HealthChecks" Version="2.60.0" />
+        <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.60.0" />
+        <PackageReference Include="Hl7.Fhir.R4" Version="5.5.0" />
+        <PackageReference Include="Microsoft.AspNetCore.Grpc.Swagger" Version="0.8.1" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.1" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="8.0.1">
             <PrivateAssets>all</PrivateAssets>
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
-        <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="8.0.1" />
         <PackageReference Include="Npgsql" Version="8.0.1" />
         <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="8.0.0" />
         <PackageReference Include="Npgsql.OpenTelemetry" Version="8.0.1" />
-        <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.0" />
-        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Data.Sqlite.Core" Version="8.0.1" />
+        <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="8.0.1" />
         <PackageReference Include="OpenTelemetry.Exporter.Jaeger" Version="1.5.1" />
         <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.7.0" />
         <PackageReference Include="OpenTelemetry.Extensions.Hosting" Version="1.7.0" />
-        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.6.0-rc.1" />
-        <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.0" />
-        <PackageReference Include="prometheus-net.AspNetCore.Grpc" Version="8.2.0" />
-        <PackageReference Include="prometheus-net.AspNetCore.HealthChecks" Version="8.2.0" />
+        <PackageReference Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.7.0" />
+        <PackageReference Include="prometheus-net.AspNetCore" Version="8.2.1" />
+        <PackageReference Include="prometheus-net.AspNetCore.Grpc" Version="8.2.1" />
+        <PackageReference Include="prometheus-net.AspNetCore.HealthChecks" Version="8.2.1" />
     </ItemGroup>
     <ItemGroup>
         <Protobuf Include="Protos\vfps\api\v1\*.proto" />
