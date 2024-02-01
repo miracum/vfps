@@ -1,6 +1,6 @@
 services:
   postgresql:
-    image: docker.io/library/postgres:16.1@sha256:bb4e68544120c654e8b4f7ffd731be76b8d30ed7ac3a53f454290f02cf253b7c
+    image: docker.io/library/postgres:16.1@sha256:00b71c4a32325f5bd64535f43a3254164acb013a54c58f61af11b40e2dea462a
     restart: unless-stopped
     deploy:
       resources:
