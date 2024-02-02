@@ -1,5 +1,35 @@
 # Changelog
 
+## [1.3.3](https://github.com/miracum/vfps/compare/v1.3.2...v1.3.3) (2024-02-02)
+
+
+### Documentation
+
+* remove `--source-branch` flag from slsa-verifier ([d992e66](https://github.com/miracum/vfps/commit/d992e66fef6537f6fafb1bfedb7d0c4bcfcb34b5))
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#84](https://github.com/miracum/vfps/issues/84)) ([4bb7dc0](https://github.com/miracum/vfps/commit/4bb7dc0f3949764dea5390a909b55fd00a605c0f))
+* **deps:** update all non-major dependencies ([#95](https://github.com/miracum/vfps/issues/95)) ([4d6297f](https://github.com/miracum/vfps/commit/4d6297f9c0f8bdd3a103022eac62abe4f84cf1ee))
+* **deps:** update dependency entityframeworkcore.exceptions.postgresql to v8 ([#86](https://github.com/miracum/vfps/issues/86)) ([4772311](https://github.com/miracum/vfps/commit/4772311f2f600e4f44ed3b8f27524827a4a14690))
+* **deps:** update dependency entityframeworkcore.exceptions.sqlite to v8 ([#89](https://github.com/miracum/vfps/issues/89)) ([ac2306c](https://github.com/miracum/vfps/commit/ac2306ce4040b44f07719136a97a78867a91f1a5))
+* **deps:** update docker.io/bitnami/kubectl:1.29.1 docker digest to 364490f ([#101](https://github.com/miracum/vfps/issues/101)) ([3f37d94](https://github.com/miracum/vfps/commit/3f37d94e058d0b6b9f3ddddca29fb3a5be224e5d))
+* **deps:** update docker.io/library/postgres:16.1 docker digest to 00b71c4 ([#93](https://github.com/miracum/vfps/issues/93)) ([6bcf81f](https://github.com/miracum/vfps/commit/6bcf81f80c3e68a0fde58b40dd6aec6f5c6e62ee))
+* **deps:** update docker.io/library/postgres:16.1 docker digest to 4d1b17a ([#99](https://github.com/miracum/vfps/issues/99)) ([11cb273](https://github.com/miracum/vfps/commit/11cb273a37dc7e7ae6efde2d6ac84b6ad3649b8d))
+* **deps:** update docker.io/library/postgres:16.1 docker digest to a7a6f58 ([#98](https://github.com/miracum/vfps/issues/98)) ([94d3120](https://github.com/miracum/vfps/commit/94d3120321bbadff1d1e0e7145896f79e0cd122b))
+* **deps:** update docker.io/library/ubuntu docker tag to v24 ([#90](https://github.com/miracum/vfps/issues/90)) ([50a3a65](https://github.com/miracum/vfps/commit/50a3a657bd66bcb91c313c4828e9f695d3a7e690))
+* **deps:** update docker.io/library/ubuntu:24.04 docker digest to 36fa0c7 ([#100](https://github.com/miracum/vfps/issues/100)) ([fe2c6d1](https://github.com/miracum/vfps/commit/fe2c6d1ec928261c046d6a64bbbe62c98f40ad62))
+* **deps:** update docker.io/library/ubuntu:24.04 docker digest to 50cb325 ([#96](https://github.com/miracum/vfps/issues/96)) ([4a28a06](https://github.com/miracum/vfps/commit/4a28a06d9db24fb822df5d9c1f59e145d9f936f7))
+* **deps:** update github-actions ([#85](https://github.com/miracum/vfps/issues/85)) ([96a70d7](https://github.com/miracum/vfps/commit/96a70d726e98c6bc73fec59e8703a7f35a2aa5dc))
+* **deps:** update mcr.microsoft.com/dotnet/sdk:8.0.101-jammy docker digest to 4f63cff ([#97](https://github.com/miracum/vfps/issues/97)) ([d6b6353](https://github.com/miracum/vfps/commit/d6b6353afe8133bd171e26751f37057270efc4d3))
+* **deps:** update miracum/.github action to v1.5.3 ([#92](https://github.com/miracum/vfps/issues/92)) ([5b332a0](https://github.com/miracum/vfps/commit/5b332a0274fcc10f232a9f2ba5d68dfe851b1f21))
+
+
+### CI/CD
+
+* mixed actions updates ([#102](https://github.com/miracum/vfps/issues/102)) ([e80ab02](https://github.com/miracum/vfps/commit/e80ab02fbc51b08126543ea86dd5f041f83af459))
+
 ## [1.3.2](https://github.com/miracum/vfps/compare/v1.3.1...v1.3.2) (2023-12-09)
 
 
