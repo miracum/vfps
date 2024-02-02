@@ -20,5 +20,5 @@ public class PseudonymGeneratorBenchmarks
         sha256HashGenerator.GeneratePseudonym("test", 64);
 
     [Benchmark]
-    public string Uuid4HashGenerator() => uuid4Generator.GeneratePseudonym("test", 36);
+    public string Uuid4Generator() => uuid4Generator.GeneratePseudonym("test", 36);
 }

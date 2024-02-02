@@ -51,16 +51,14 @@ public class FhirController : ControllerBase
         if (parametersResource is null)
         {
             var outcome = new OperationOutcome();
-            outcome
-                .Issue
-                .Add(
-                    new OperationOutcome.IssueComponent
-                    {
-                        Severity = OperationOutcome.IssueSeverity.Error,
-                        Code = OperationOutcome.IssueType.Processing,
-                        Diagnostics = "Received malformed or missing resource"
-                    }
-                );
+            outcome.Issue.Add(
+                new OperationOutcome.IssueComponent
+                {
+                    Severity = OperationOutcome.IssueSeverity.Error,
+                    Code = OperationOutcome.IssueType.Processing,
+                    Diagnostics = "Received malformed or missing resource"
+                }
+            );
             logger.LogError("Bad Request: received request body is empty.");
             return BadRequest(outcome);
         }
@@ -71,17 +69,15 @@ public class FhirController : ControllerBase
         if (namespaceName is null || originalValue is null)
         {
             var outcome = new OperationOutcome();
-            outcome
-                .Issue
-                .Add(
-                    new OperationOutcome.IssueComponent
-                    {
-                        Severity = OperationOutcome.IssueSeverity.Error,
-                        Code = OperationOutcome.IssueType.Processing,
-                        Diagnostics =
-                            "namespace and/or originalValue are missing in the Parameters request object"
-                    }
-                );
+            outcome.Issue.Add(
+                new OperationOutcome.IssueComponent
+                {
+                    Severity = OperationOutcome.IssueSeverity.Error,
+                    Code = OperationOutcome.IssueType.Processing,
+                    Diagnostics =
+                        "namespace and/or originalValue are missing in the Parameters request object"
+                }
+            );
             return BadRequest(outcome);
         }
 
@@ -89,16 +85,14 @@ public class FhirController : ControllerBase
         if (@namespace is null)
         {
             var outcome = new OperationOutcome();
-            outcome
-                .Issue
-                .Add(
-                    new OperationOutcome.IssueComponent
-                    {
-                        Severity = OperationOutcome.IssueSeverity.Error,
-                        Code = OperationOutcome.IssueType.Processing,
-                        Diagnostics = $"the namespace '{namespaceName}' could not be found."
-                    }
-                );
+            outcome.Issue.Add(
+                new OperationOutcome.IssueComponent
+                {
+                    Severity = OperationOutcome.IssueSeverity.Error,
+                    Code = OperationOutcome.IssueType.Processing,
+                    Diagnostics = $"the namespace '{namespaceName}' could not be found."
+                }
+            );
             return NotFound(outcome);
         }
 
@@ -132,16 +126,14 @@ public class FhirController : ControllerBase
         if (upsertedPseudonym is null)
         {
             var outcome = new OperationOutcome();
-            outcome
-                .Issue
-                .Add(
-                    new OperationOutcome.IssueComponent
-                    {
-                        Severity = OperationOutcome.IssueSeverity.Error,
-                        Code = OperationOutcome.IssueType.Processing,
-                        Diagnostics = "failed to store the pseudonym after several retries"
-                    }
-                );
+            outcome.Issue.Add(
+                new OperationOutcome.IssueComponent
+                {
+                    Severity = OperationOutcome.IssueSeverity.Error,
+                    Code = OperationOutcome.IssueType.Processing,
+                    Diagnostics = "failed to store the pseudonym after several retries"
+                }
+            );
             return StatusCode(500, outcome);
         }
 

@@ -120,11 +120,8 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
     )
     {
         var pseudonym = await Context
-            .Pseudonyms
-            .Where(
-                p =>
-                    p.NamespaceName == request.Namespace
-                    && p.PseudonymValue == request.PseudonymValue
+            .Pseudonyms.Where(p =>
+                p.NamespaceName == request.Namespace && p.PseudonymValue == request.PseudonymValue
             )
             .FirstOrDefaultAsync();
         if (pseudonym is null)
@@ -193,26 +190,22 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
         var offset = requestPaginationToken.Offset;
 
         var pseudonyms = await Context
-            .Pseudonyms
-            .Where(pseudonym => pseudonym.NamespaceName == request.Namespace)
+            .Pseudonyms.Where(pseudonym => pseudonym.NamespaceName == request.Namespace)
             .Where(pseudonym => pseudonym.CreatedAt <= createdOnOrBefore)
             .OrderByDescending(pseudonym => pseudonym.CreatedAt)
             .Skip(offset)
             .Take(pageSize)
-            .Select(
-                pseudonym =>
-                    new Pseudonym
-                    {
-                        Namespace = pseudonym.NamespaceName,
-                        OriginalValue = pseudonym.OriginalValue,
-                        PseudonymValue = pseudonym.PseudonymValue,
-                        Meta = new Meta
-                        {
-                            CreatedAt = Timestamp.FromDateTimeOffset(pseudonym.CreatedAt),
-                            LastUpdatedAt = Timestamp.FromDateTimeOffset(pseudonym.LastUpdatedAt),
-                        },
-                    }
-            )
+            .Select(pseudonym => new Pseudonym
+            {
+                Namespace = pseudonym.NamespaceName,
+                OriginalValue = pseudonym.OriginalValue,
+                PseudonymValue = pseudonym.PseudonymValue,
+                Meta = new Meta
+                {
+                    CreatedAt = Timestamp.FromDateTimeOffset(pseudonym.CreatedAt),
+                    LastUpdatedAt = Timestamp.FromDateTimeOffset(pseudonym.LastUpdatedAt),
+                },
+            })
             .ToListAsync();
 
         var paginationToken = new PseudonymListPaginationToken
@@ -238,8 +231,7 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
         if (request.IncludeTotalSize)
         {
             response.TotalSize = await Context
-                .Pseudonyms
-                .Where(n => n.NamespaceName == request.Namespace)
+                .Pseudonyms.Where(n => n.NamespaceName == request.Namespace)
                 .LongCountAsync();
         }
 

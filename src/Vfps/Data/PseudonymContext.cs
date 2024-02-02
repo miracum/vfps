@@ -33,12 +33,10 @@ public class PseudonymContext : DbContext
             foreach (var entityType in modelBuilder.Model.GetEntityTypes())
             {
                 var properties = entityType
-                    .ClrType
-                    .GetProperties()
-                    .Where(
-                        p =>
-                            p.PropertyType == typeof(DateTimeOffset)
-                            || p.PropertyType == typeof(DateTimeOffset?)
+                    .ClrType.GetProperties()
+                    .Where(p =>
+                        p.PropertyType == typeof(DateTimeOffset)
+                        || p.PropertyType == typeof(DateTimeOffset?)
                     );
                 foreach (var property in properties)
                 {

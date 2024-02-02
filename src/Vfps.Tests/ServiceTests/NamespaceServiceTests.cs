@@ -144,8 +144,7 @@ public class NamespaceServiceTests : ServiceTestBase
         }
 
         var pseudonymCount = await InMemoryPseudonymContext
-            .Pseudonyms
-            .AsNoTracking()
+            .Pseudonyms.AsNoTracking()
             .Where(p => p.NamespaceName == createRequest.Name)
             .CountAsync();
 
@@ -156,15 +155,13 @@ public class NamespaceServiceTests : ServiceTestBase
         await sut.Delete(deleteRequest, TestServerCallContext.Create());
 
         InMemoryPseudonymContext
-            .Namespaces
-            .AsNoTracking()
+            .Namespaces.AsNoTracking()
             .Where(n => n.Name == deleteRequest.Name)
             .Should()
             .BeEmpty();
 
         pseudonymCount = await InMemoryPseudonymContext
-            .Pseudonyms
-            .AsNoTracking()
+            .Pseudonyms.AsNoTracking()
             .Where(p => p.NamespaceName == createRequest.Name)
             .CountAsync();
 

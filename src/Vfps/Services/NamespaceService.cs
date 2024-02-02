@@ -131,9 +131,10 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
         ServerCallContext context
     )
     {
-        var @namespace = await Context
-            .Namespaces
-            .FindAsync(request.Name, context.CancellationToken);
+        var @namespace = await Context.Namespaces.FindAsync(
+            request.Name,
+            context.CancellationToken
+        );
         if (@namespace is null)
         {
             var metadata = new Metadata { { "Namespace", request.Name } };
@@ -162,26 +163,22 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
     )
     {
         var namespaces = await Context
-            .Namespaces
-            .AsNoTracking()
+            .Namespaces.AsNoTracking()
             // TODO: should really use auto-mapper or some other even a custom Namespace.FromDto() method.
-            .Select(
-                n =>
-                    new Namespace
-                    {
-                        Description = n.Description,
-                        Name = n.Name,
-                        PseudonymGenerationMethod = n.PseudonymGenerationMethod,
-                        PseudonymLength = n.PseudonymLength,
-                        PseudonymPrefix = n.PseudonymPrefix,
-                        PseudonymSuffix = n.PseudonymSuffix,
-                        Meta = new Meta
-                        {
-                            CreatedAt = Timestamp.FromDateTimeOffset(n.CreatedAt),
-                            LastUpdatedAt = Timestamp.FromDateTimeOffset(n.LastUpdatedAt)
-                        }
-                    }
-            )
+            .Select(n => new Namespace
+            {
+                Description = n.Description,
+                Name = n.Name,
+                PseudonymGenerationMethod = n.PseudonymGenerationMethod,
+                PseudonymLength = n.PseudonymLength,
+                PseudonymPrefix = n.PseudonymPrefix,
+                PseudonymSuffix = n.PseudonymSuffix,
+                Meta = new Meta
+                {
+                    CreatedAt = Timestamp.FromDateTimeOffset(n.CreatedAt),
+                    LastUpdatedAt = Timestamp.FromDateTimeOffset(n.LastUpdatedAt)
+                }
+            })
             .ToListAsync(context.CancellationToken);
 
         var response = new NamespaceServiceGetAllResponse();

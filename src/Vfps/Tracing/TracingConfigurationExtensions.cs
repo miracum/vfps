@@ -19,9 +19,10 @@ namespace Vfps.Tracing
             var serviceName =
                 builder.Configuration.GetValue("Tracing:ServiceName", assembly.Name) ?? "vfps";
 
-            var rootSamplerType = builder
-                .Configuration
-                .GetValue("Tracing:RootSampler", "AlwaysOnSampler");
+            var rootSamplerType = builder.Configuration.GetValue(
+                "Tracing:RootSampler",
+                "AlwaysOnSampler"
+            );
             var samplingRatio = builder.Configuration.GetValue("Tracing:SamplingProbability", 0.1d);
 
             Sampler rootSampler = rootSamplerType switch
@@ -33,15 +34,13 @@ namespace Vfps.Tracing
             };
 
             builder
-                .Services
-                .AddOpenTelemetry()
-                .ConfigureResource(
-                    r =>
-                        r.AddService(
-                            serviceName: serviceName,
-                            serviceVersion: assemblyVersion,
-                            serviceInstanceId: Environment.MachineName
-                        )
+                .Services.AddOpenTelemetry()
+                .ConfigureResource(r =>
+                    r.AddService(
+                        serviceName: serviceName,
+                        serviceVersion: assemblyVersion,
+                        serviceInstanceId: Environment.MachineName
+                    )
                 )
                 .WithTracing(tracingBuilder =>
                 {
@@ -64,19 +63,17 @@ namespace Vfps.Tracing
                     {
                         case "jaeger":
                             tracingBuilder.AddJaegerExporter();
-                            builder
-                                .Services
-                                .Configure<JaegerExporterOptions>(
-                                    builder.Configuration.GetSection("Tracing:Jaeger")
-                                );
+                            builder.Services.Configure<JaegerExporterOptions>(
+                                builder.Configuration.GetSection("Tracing:Jaeger")
+                            );
                             break;
 
                         case "otlp":
                             var endpoint =
                                 builder.Configuration.GetValue<string>("Tracing:Otlp:Endpoint")
                                 ?? "";
-                            tracingBuilder.AddOtlpExporter(
-                                otlpOptions => otlpOptions.Endpoint = new Uri(endpoint)
+                            tracingBuilder.AddOtlpExporter(otlpOptions =>
+                                otlpOptions.Endpoint = new Uri(endpoint)
                             );
                             break;
                     }

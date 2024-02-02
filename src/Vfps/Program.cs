@@ -22,93 +22,79 @@ builder.Services.AddGrpcHealthChecks();
 builder.Services.AddGrpcReflection();
 builder.Services.AddHealthChecks().AddDbContextCheck<PseudonymContext>().ForwardToPrometheus();
 
-builder
-    .Services
-    .AddMetricServer(
-        options => options.Port = builder.Configuration.GetValue<ushort>("MetricsPort", 8082)
-    );
+builder.Services.AddMetricServer(options =>
+    options.Port = builder.Configuration.GetValue<ushort>("MetricsPort", 8082)
+);
 
-builder
-    .Services
-    .AddSwaggerGen(c =>
-    {
-        c.SwaggerDoc(
-            "v1",
-            new OpenApiInfo
-            {
-                Title = "VFPS FHIR and gRPC JSON-transcoded API",
-                Version = "v1",
-                Description = "A very fast and resource-efficient pseudonym service.",
-                License = new OpenApiLicense
-                {
-                    Name = "Apache-2.0",
-#pragma warning disable S1075 // URIs should not be hardcoded
-                    Url = new Uri("https://www.apache.org/licenses/LICENSE-2.0")
-#pragma warning restore S1075 // URIs should not be hardcoded
-                },
-            }
-        );
-
-        var filePath = Path.Combine(AppContext.BaseDirectory, "Vfps.xml");
-        c.IncludeXmlComments(filePath);
-        c.IncludeGrpcXmlComments(filePath, includeControllerXmlComments: true);
-        c.UseInlineDefinitionsForEnums();
-    });
-
-builder
-    .Services
-    .AddDbContext<PseudonymContext>(
-        (isp, options) =>
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc(
+        "v1",
+        new OpenApiInfo
         {
-            var config = isp.GetService<IConfiguration>()!;
-
-            var backingStore =
-                config.GetValue<string>("Pseudonymization:BackingStore")
-                ?? throw new InvalidOperationException(
-                    "Failed to get backing store config. Make sure Pseudonymization:BackingStore is set"
-                );
-
-            var connString =
-                config.GetConnectionString(backingStore)
-                ?? throw new InvalidOperationException(
-                    $"Failed to get connection string for '{backingStore}' backing store"
-                );
-
-            switch (backingStore.ToLowerInvariant())
+            Title = "VFPS FHIR and gRPC JSON-transcoded API",
+            Version = "v1",
+            Description = "A very fast and resource-efficient pseudonym service.",
+            License = new OpenApiLicense
             {
-                case "postgresql":
-                    options.UseNpgsql(connString);
-                    break;
-                default:
-                    throw new InvalidOperationException(
-                        $"Unsupported backing store specified: {backingStore}"
-                    );
-            }
+                Name = "Apache-2.0",
+#pragma warning disable S1075 // URIs should not be hardcoded
+                Url = new Uri("https://www.apache.org/licenses/LICENSE-2.0")
+#pragma warning restore S1075 // URIs should not be hardcoded
+            },
         }
     );
+
+    var filePath = Path.Combine(AppContext.BaseDirectory, "Vfps.xml");
+    c.IncludeXmlComments(filePath);
+    c.IncludeGrpcXmlComments(filePath, includeControllerXmlComments: true);
+    c.UseInlineDefinitionsForEnums();
+});
+
+builder.Services.AddDbContext<PseudonymContext>(
+    (isp, options) =>
+    {
+        var config = isp.GetService<IConfiguration>()!;
+
+        var backingStore =
+            config.GetValue<string>("Pseudonymization:BackingStore")
+            ?? throw new InvalidOperationException(
+                "Failed to get backing store config. Make sure Pseudonymization:BackingStore is set"
+            );
+
+        var connString =
+            config.GetConnectionString(backingStore)
+            ?? throw new InvalidOperationException(
+                $"Failed to get connection string for '{backingStore}' backing store"
+            );
+
+        switch (backingStore.ToLowerInvariant())
+        {
+            case "postgresql":
+                options.UseNpgsql(connString);
+                break;
+            default:
+                throw new InvalidOperationException(
+                    $"Unsupported backing store specified: {backingStore}"
+                );
+        }
+    }
+);
 
 builder.Services.AddSingleton<PseudonymizationMethodsLookup>();
 
 var cacheConfig = new CacheConfig();
 builder.Configuration.GetSection("Pseudonymization:Caching").Bind(cacheConfig);
 
-var isNamespaceCachingEnabled = builder
-    .Configuration
-    .GetValue("Pseudonymization:Caching:Namespaces:IsEnabled", false);
+var isNamespaceCachingEnabled = builder.Configuration.GetValue(
+    "Pseudonymization:Caching:Namespaces:IsEnabled",
+    false
+);
 if (isNamespaceCachingEnabled)
 {
-    builder
-        .Services
-        .AddSingleton<IMemoryCache>(
-            _ =>
-                new MemoryCache(
-                    new MemoryCacheOptions
-                    {
-                        TrackStatistics = true,
-                        SizeLimit = cacheConfig.SizeLimit
-                    }
-                )
-        );
+    builder.Services.AddSingleton<IMemoryCache>(_ => new MemoryCache(
+        new MemoryCacheOptions { TrackStatistics = true, SizeLimit = cacheConfig.SizeLimit }
+    ));
     builder.Services.AddSingleton(_ => cacheConfig);
     builder.Services.AddScoped<INamespaceRepository, CachingNamespaceRepository>();
 }
@@ -117,23 +103,15 @@ else
     builder.Services.AddScoped<INamespaceRepository, NamespaceRepository>();
 }
 
-var isPseudonymCachingEnabled = builder
-    .Configuration
-    .GetValue("Pseudonymization:Caching:Pseudonyms:IsEnabled", false);
+var isPseudonymCachingEnabled = builder.Configuration.GetValue(
+    "Pseudonymization:Caching:Pseudonyms:IsEnabled",
+    false
+);
 if (isPseudonymCachingEnabled)
 {
-    builder
-        .Services
-        .TryAddSingleton<IMemoryCache>(
-            _ =>
-                new MemoryCache(
-                    new MemoryCacheOptions
-                    {
-                        TrackStatistics = true,
-                        SizeLimit = cacheConfig.SizeLimit
-                    }
-                )
-        );
+    builder.Services.TryAddSingleton<IMemoryCache>(_ => new MemoryCache(
+        new MemoryCacheOptions { TrackStatistics = true, SizeLimit = cacheConfig.SizeLimit }
+    ));
     builder.Services.TryAddSingleton(_ => cacheConfig);
     builder.Services.AddScoped<IPseudonymRepository, CachingPseudonymRepository>();
 }
@@ -150,13 +128,11 @@ if (isNamespaceCachingEnabled || isPseudonymCachingEnabled)
 
 builder.Services.AddHostedService<InitNamespacesBackgroundService>();
 
-builder
-    .Services
-    .AddControllers(options =>
-    {
-        options.InputFormatters.Insert(0, new FhirInputFormatter());
-        options.OutputFormatters.Insert(0, new FhirOutputFormatter());
-    });
+builder.Services.AddControllers(options =>
+{
+    options.InputFormatters.Insert(0, new FhirInputFormatter());
+    options.OutputFormatters.Insert(0, new FhirOutputFormatter());
+});
 
 // Tracing
 var isTracingEnabled = builder.Configuration.GetValue("Tracing:IsEnabled", false);
