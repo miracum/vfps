@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1706823773749,
+  "lastUpdate": 1706894670615,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -2412,6 +2412,48 @@ window.BENCHMARK_DATA = {
             "value": 685.5261126836141,
             "unit": "ns",
             "range": "± 1.7096723484215124"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e80ab02fbc51b08126543ea86dd5f041f83af459",
+          "message": "ci: mixed actions updates (#102)\n\n* chore(deps): update github-actions\r\n\r\n* chore(deps): update github-actions\r\n\r\n* ci: update actions\r\n\r\n* chore: re-formatted\r\n\r\n---------\r\n\r\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2024-02-02T18:23:00+01:00",
+          "tree_id": "52a1e41c674c37d98bb3f372aab690bf2d78538c",
+          "url": "https://github.com/miracum/vfps/commit/e80ab02fbc51b08126543ea86dd5f041f83af459"
+        },
+        "date": 1706894670200,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1423.2937278747559,
+            "unit": "ns",
+            "range": "± 1.4161506599149714"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 943.4268599918911,
+            "unit": "ns",
+            "range": "± 2.675289372326974"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 680.9508627378024,
+            "unit": "ns",
+            "range": "± 0.8813748087480388"
           }
         ]
       }
