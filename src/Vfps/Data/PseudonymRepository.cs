@@ -74,8 +74,7 @@ public class PseudonymRepository : IPseudonymRepository
             using (UpsertDuration.NewTimer())
             {
                 var pseudonyms = await Context
-                    .Pseudonyms
-                    .FromSqlRaw(
+                    .Pseudonyms.FromSqlRaw(
                         UpsertCommand,
                         pseudonym.NamespaceName,
                         pseudonym.OriginalValue,

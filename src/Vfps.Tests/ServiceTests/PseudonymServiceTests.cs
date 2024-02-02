@@ -64,11 +64,9 @@ public class PseudonymServiceTests : ServiceTestBase
         response.Pseudonym.PseudonymValue.Should().NotBeNull(request.OriginalValue);
 
         InMemoryPseudonymContext
-            .Pseudonyms
-            .Should()
-            .Contain(
-                p =>
-                    p.OriginalValue == request.OriginalValue && p.NamespaceName == request.Namespace
+            .Pseudonyms.Should()
+            .Contain(p =>
+                p.OriginalValue == request.OriginalValue && p.NamespaceName == request.Namespace
             );
     }
 
@@ -101,24 +99,21 @@ public class PseudonymServiceTests : ServiceTestBase
         var response = await sut.Create(request, TestServerCallContext.Create());
         var firstCreatedPseudonym = response.Pseudonym.PseudonymValue;
         InMemoryPseudonymContext
-            .Pseudonyms
-            .Where(p => p.NamespaceName == request.Namespace)
+            .Pseudonyms.Where(p => p.NamespaceName == request.Namespace)
             .Should()
             .HaveCount(1);
 
         response = await sut.Create(request, TestServerCallContext.Create());
         response.Pseudonym.PseudonymValue.Should().Be(firstCreatedPseudonym);
         InMemoryPseudonymContext
-            .Pseudonyms
-            .Where(p => p.NamespaceName == request.Namespace)
+            .Pseudonyms.Where(p => p.NamespaceName == request.Namespace)
             .Should()
             .HaveCount(1);
 
         response = await sut.Create(request, TestServerCallContext.Create());
         response.Pseudonym.PseudonymValue.Should().Be(firstCreatedPseudonym);
         InMemoryPseudonymContext
-            .Pseudonyms
-            .Where(p => p.NamespaceName == request.Namespace)
+            .Pseudonyms.Where(p => p.NamespaceName == request.Namespace)
             .Should()
             .HaveCount(1);
     }
@@ -256,8 +251,7 @@ public class PseudonymServiceTests : ServiceTestBase
         }
 
         InMemoryPseudonymContext
-            .Pseudonyms
-            .Where(p => p.NamespaceName == namespaceName)
+            .Pseudonyms.Where(p => p.NamespaceName == namespaceName)
             .Count()
             .Should()
             .Be(pseudonymsToCreateCount);

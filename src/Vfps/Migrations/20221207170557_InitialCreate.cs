@@ -13,42 +13,41 @@ namespace Vfps.Migrations
         {
             migrationBuilder.CreateTable(
                 name: "namespaces",
-                columns: table =>
-                    new
-                    {
-                        name = table.Column<string>(type: "text", nullable: false),
-                        description = table.Column<string>(type: "text", nullable: true),
-                        pseudonymgenerationmethod = table.Column<int>(
-                            name: "pseudonym_generation_method",
-                            type: "integer",
-                            nullable: false
-                        ),
-                        pseudonymlength = table.Column<long>(
-                            name: "pseudonym_length",
-                            type: "bigint",
-                            nullable: false
-                        ),
-                        pseudonymprefix = table.Column<string>(
-                            name: "pseudonym_prefix",
-                            type: "text",
-                            nullable: true
-                        ),
-                        pseudonymsuffix = table.Column<string>(
-                            name: "pseudonym_suffix",
-                            type: "text",
-                            nullable: true
-                        ),
-                        createdat = table.Column<DateTimeOffset>(
-                            name: "created_at",
-                            type: "timestamp with time zone",
-                            nullable: false
-                        ),
-                        lastupdatedat = table.Column<DateTimeOffset>(
-                            name: "last_updated_at",
-                            type: "timestamp with time zone",
-                            nullable: false
-                        )
-                    },
+                columns: table => new
+                {
+                    name = table.Column<string>(type: "text", nullable: false),
+                    description = table.Column<string>(type: "text", nullable: true),
+                    pseudonymgenerationmethod = table.Column<int>(
+                        name: "pseudonym_generation_method",
+                        type: "integer",
+                        nullable: false
+                    ),
+                    pseudonymlength = table.Column<long>(
+                        name: "pseudonym_length",
+                        type: "bigint",
+                        nullable: false
+                    ),
+                    pseudonymprefix = table.Column<string>(
+                        name: "pseudonym_prefix",
+                        type: "text",
+                        nullable: true
+                    ),
+                    pseudonymsuffix = table.Column<string>(
+                        name: "pseudonym_suffix",
+                        type: "text",
+                        nullable: true
+                    ),
+                    createdat = table.Column<DateTimeOffset>(
+                        name: "created_at",
+                        type: "timestamp with time zone",
+                        nullable: false
+                    ),
+                    lastupdatedat = table.Column<DateTimeOffset>(
+                        name: "last_updated_at",
+                        type: "timestamp with time zone",
+                        nullable: false
+                    )
+                },
                 constraints: table =>
                 {
                     table.PrimaryKey("pk_namespaces", x => x.name);
@@ -57,35 +56,34 @@ namespace Vfps.Migrations
 
             migrationBuilder.CreateTable(
                 name: "pseudonyms",
-                columns: table =>
-                    new
-                    {
-                        originalvalue = table.Column<string>(
-                            name: "original_value",
-                            type: "text",
-                            nullable: false
-                        ),
-                        namespacename = table.Column<string>(
-                            name: "namespace_name",
-                            type: "text",
-                            nullable: false
-                        ),
-                        pseudonymvalue = table.Column<string>(
-                            name: "pseudonym_value",
-                            type: "text",
-                            nullable: false
-                        ),
-                        createdat = table.Column<DateTimeOffset>(
-                            name: "created_at",
-                            type: "timestamp with time zone",
-                            nullable: false
-                        ),
-                        lastupdatedat = table.Column<DateTimeOffset>(
-                            name: "last_updated_at",
-                            type: "timestamp with time zone",
-                            nullable: false
-                        )
-                    },
+                columns: table => new
+                {
+                    originalvalue = table.Column<string>(
+                        name: "original_value",
+                        type: "text",
+                        nullable: false
+                    ),
+                    namespacename = table.Column<string>(
+                        name: "namespace_name",
+                        type: "text",
+                        nullable: false
+                    ),
+                    pseudonymvalue = table.Column<string>(
+                        name: "pseudonym_value",
+                        type: "text",
+                        nullable: false
+                    ),
+                    createdat = table.Column<DateTimeOffset>(
+                        name: "created_at",
+                        type: "timestamp with time zone",
+                        nullable: false
+                    ),
+                    lastupdatedat = table.Column<DateTimeOffset>(
+                        name: "last_updated_at",
+                        type: "timestamp with time zone",
+                        nullable: false
+                    )
+                },
                 constraints: table =>
                 {
                     table.PrimaryKey(

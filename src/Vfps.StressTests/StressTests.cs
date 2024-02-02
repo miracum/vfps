@@ -109,11 +109,9 @@ public class StressTests
                 }
                 catch (RpcException exc) when (exc.StatusCode == StatusCode.AlreadyExists)
                 {
-                    context
-                        .Logger
-                        .Warning(
-                            $"Namespace {namespaceRequest.Name} already exists. Continuing anyway."
-                        );
+                    context.Logger.Warning(
+                        $"Namespace {namespaceRequest.Name} already exists. Continuing anyway."
+                    );
                 }
             })
             .WithWarmUpDuration(TimeSpan.FromSeconds(5))
