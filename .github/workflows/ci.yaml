@@ -13,7 +13,7 @@ permissions: read-all
 
 jobs:
   build:
-    uses: miracum/.github/.github/workflows/standard-build.yaml@402d475fc7f49888381ea1090ddc2004ac8a8e59 # v1.5.3
+    uses: miracum/.github/.github/workflows/standard-build.yaml@d312bc78e5a4ab6bafc71979f80962177abc6336 # v1.5.7
     permissions:
       contents: read
       id-token: write
@@ -68,7 +68,7 @@ jobs:
           thresholds: "50 50"
 
       - name: Add Coverage PR Comment
-        uses: marocchino/sticky-pull-request-comment@efaaab3fd41a9c3de579aba759d2552635e590fd # v2.8.0
+        uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31 # v2.9.0
         if: ${{ github.event_name == 'pull_request' }}
         with:
           recreate: true
@@ -164,7 +164,7 @@ jobs:
           } >> ghz-output.md
 
       - name: Append sticky comment with ghz output
-        uses: marocchino/sticky-pull-request-comment@efaaab3fd41a9c3de579aba759d2552635e590fd # v2.8.0
+        uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31 # v2.9.0
         if: ${{ github.event_name == 'pull_request' }}
         with:
           append: true
@@ -291,7 +291,7 @@ jobs:
           } >> iter8-output.md
 
       - name: Append sticky comment with iter8 report
-        uses: marocchino/sticky-pull-request-comment@efaaab3fd41a9c3de579aba759d2552635e590fd # v2.8.0
+        uses: marocchino/sticky-pull-request-comment@331f8f5b4215f0445d3c07b4967662a32a2d3e31 # v2.9.0
         if: ${{ github.event_name == 'pull_request' }}
         with:
           append: true
@@ -320,7 +320,7 @@ jobs:
             kind-cluster-dump.txt
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@402d475fc7f49888381ea1090ddc2004ac8a8e59 # v1.5.3
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@d312bc78e5a4ab6bafc71979f80962177abc6336 # v1.5.7
     permissions:
       contents: read
       pull-requests: write
