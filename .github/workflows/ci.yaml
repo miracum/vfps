@@ -38,7 +38,7 @@ jobs:
       - name: Download test image
         uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
         with:
-          name: test-image
+          name: ${{ needs.build.outputs.image-slug }}-test
           path: /tmp
 
       - name: Load test image
@@ -84,13 +84,13 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Download container image
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
         with:
-          name: container-image
+          name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
 
       - name: Load image
@@ -185,13 +185,13 @@ jobs:
       - build
     steps:
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: Download container image
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
         with:
-          name: container-image
+          name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
 
       - name: Load image
@@ -222,7 +222,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
 
       - name: install iter8 cli
         env:
@@ -242,7 +242,7 @@ jobs:
         if: ${{ github.event_name == 'pull_request' }}
         uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
         with:
-          name: container-image
+          name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
 
       - name: Load image into KinD
