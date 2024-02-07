@@ -36,7 +36,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Download test image
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+        uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
         with:
           name: ${{ needs.build.outputs.image-slug }}-test
           path: /tmp
@@ -88,7 +88,7 @@ jobs:
 
       - name: Download container image
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+        uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
         with:
           name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
@@ -189,7 +189,7 @@ jobs:
 
       - name: Download container image
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+        uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
         with:
           name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
@@ -240,7 +240,7 @@ jobs:
 
       - name: Download container image
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
+        uses: actions/download-artifact@eaceaf801fd36c7dee90939fad912460b18a1ffe # v4.1.2
         with:
           name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
@@ -299,7 +299,7 @@ jobs:
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
         with:
           name: iter8-report.html
           path: |
@@ -313,7 +313,7 @@ jobs:
 
       - name: Upload cluster dump
         if: always()
-        uses: actions/upload-artifact@26f96dfa697d77e81fd5907df203aa23a56210a8 # v4.3.0
+        uses: actions/upload-artifact@5d5d22a31266ced268874388b861e4b58bb5c2f3 # v4.3.1
         with:
           name: kind-cluster-dump.txt
           path: |
