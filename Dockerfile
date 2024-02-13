@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.6@sha256:ac85f380a63b13dfcefa89046420e1781752bab202122f8f50032edf31be0021
 # kics false positive "Missing User Instruction": <https://docs.kics.io/latest/queries/dockerfile-queries/fd54f200-402c-4333-a5a4-36ef6709af2f/>
 # kics-scan ignore-line
-FROM mcr.microsoft.com/dotnet/aspnet:8.0.1-jammy-chiseled@sha256:fd65dd3a9fef62b12873e1f3db1d0cf4bffd3984c1656971a2bfcaab14224b67 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:8.0.2-jammy-chiseled@sha256:cb35170c5c4687e42749a4f3538e6667cd682493466cc1535d8579befc23e077 AS runtime
 WORKDIR /opt/vfps
 EXPOSE 8080/tcp 8081/tcp 8082/tcp
 USER 65534:65534
@@ -11,7 +11,7 @@ ENV DOTNET_ENVIRONMENT="Production" \
     ASPNETCORE_URLS="" \
     DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0.101-jammy@sha256:094a9091ef5901d2a2210edc20080772d07292895a877f32b0c496d1a3a9803c AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0.200-jammy@sha256:3f48c0dbb4a89596348fda991fa5497af5a516829608425e52a4c4e2dbd6b1a5 AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="/root/.dotnet/tools:${PATH}"
