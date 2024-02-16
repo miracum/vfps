@@ -11,7 +11,7 @@ ENV DOTNET_ENVIRONMENT="Production" \
     ASPNETCORE_URLS="" \
     DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0.200-jammy@sha256:3f48c0dbb4a89596348fda991fa5497af5a516829608425e52a4c4e2dbd6b1a5 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0.201-jammy@sha256:dc273e23006f85ef4bf154844a3147325c50adc4b5dac9191238bed4931743ac AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="/root/.dotnet/tools:${PATH}"
@@ -75,7 +75,7 @@ FROM build AS stress-test
 WORKDIR /opt/vfps-stress
 # https://github.com/hadolint/hadolint/pull/815 isn't yet in mega-linter
 # hadolint ignore=DL3022
-COPY --from=docker.io/bitnami/kubectl:1.29.1@sha256:87c0bcb58582b6e938343dd8325a1301067f9aa4d58e31fa7c158e034de01950 /opt/bitnami/kubectl/bin/kubectl /usr/bin/kubectl
+COPY --from=docker.io/bitnami/kubectl:1.29.2@sha256:0fdc1ab053addba12b63c232f7085ea1b3103d3bfea06c6210069e22b10d9555 /opt/bitnami/kubectl/bin/kubectl /usr/bin/kubectl
 
 COPY tests/chaos/chaos.yaml /tmp/
 COPY --from=build-stress-test /build/publish .
