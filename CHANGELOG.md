@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.3.4](https://github.com/miracum/vfps/compare/v1.3.3...v1.3.4) (2024-03-02)
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#104](https://github.com/miracum/vfps/issues/104)) ([5720db0](https://github.com/miracum/vfps/commit/5720db0e9f653d645ef51bb77868bde32788e16b))
+* **deps:** update all non-major dependencies ([#109](https://github.com/miracum/vfps/issues/109)) ([dfcfba7](https://github.com/miracum/vfps/commit/dfcfba76f214540bbfa576b60128706128f16f42))
+* **deps:** update all non-major dependencies ([#113](https://github.com/miracum/vfps/issues/113)) ([3c3196e](https://github.com/miracum/vfps/commit/3c3196e9ee69cb89bde854a91041ee2c3d12776f))
+* **deps:** update all non-major dependencies ([#117](https://github.com/miracum/vfps/issues/117)) ([8c7ba49](https://github.com/miracum/vfps/commit/8c7ba490731384ea2808925996dad1bdf0edff28))
+* **deps:** update all non-major dependencies ([#123](https://github.com/miracum/vfps/issues/123)) ([aa1198c](https://github.com/miracum/vfps/commit/aa1198c3b9273c1b6ee89a8549f638d9aaa1e833))
+* **deps:** update dependency npgsql.entityframeworkcore.postgresql to v8.0.2 ([#121](https://github.com/miracum/vfps/issues/121)) ([36a6efc](https://github.com/miracum/vfps/commit/36a6efcdfb0dba687303ce5a0967bfed82fdc076))
+* **deps:** update docker.io/bitnami/kubectl:1.29.1 docker digest to 3d847b5 ([#110](https://github.com/miracum/vfps/issues/110)) ([6c4c27b](https://github.com/miracum/vfps/commit/6c4c27b769bcadbfec2eb980299c289589db60af))
+* **deps:** update docker.io/bitnami/kubectl:1.29.1 docker digest to 87c0bcb ([#112](https://github.com/miracum/vfps/issues/112)) ([ac2534c](https://github.com/miracum/vfps/commit/ac2534cd3af16aeca1f019c3fa6a8027ec7c415b))
+* **deps:** update docker.io/bitnami/kubectl:1.29.1 docker digest to d4d8de1 ([#105](https://github.com/miracum/vfps/issues/105)) ([fba7ad1](https://github.com/miracum/vfps/commit/fba7ad1d676a23a0190690587cddbc3b381efba9))
+* **deps:** update docker.io/bitnami/kubectl:1.29.2 docker digest to fed3fcb ([#122](https://github.com/miracum/vfps/issues/122)) ([ae090e5](https://github.com/miracum/vfps/commit/ae090e5ab3967c4caf0d2fbf04ca033caee661f7))
+* **deps:** update docker.io/library/postgres:16.1 docker digest to 09f23e0 ([#106](https://github.com/miracum/vfps/issues/106)) ([d4fb0e0](https://github.com/miracum/vfps/commit/d4fb0e03d8ce02dbc45a805213d360b03803f164))
+* **deps:** update docker.io/library/postgres:16.2 docker digest to 1bd17d3 ([#118](https://github.com/miracum/vfps/issues/118)) ([2952a26](https://github.com/miracum/vfps/commit/2952a26ddd72a39ba25716a541bd75c5a05348fe))
+* **deps:** update docker.io/library/postgres:16.2 docker digest to 2e889c2 ([#115](https://github.com/miracum/vfps/issues/115)) ([0d56bf1](https://github.com/miracum/vfps/commit/0d56bf13e5ca311d765ee0565b6ee3ec28caa5fa))
+* **deps:** update docker.io/library/postgres:16.2 docker digest to f58300a ([#124](https://github.com/miracum/vfps/issues/124)) ([49ee9eb](https://github.com/miracum/vfps/commit/49ee9eb926857de631868f53740a2bdec56dacf4))
+* **deps:** update docker.io/library/ubuntu:24.04 docker digest to ff0b513 ([#120](https://github.com/miracum/vfps/issues/120)) ([2468ee2](https://github.com/miracum/vfps/commit/2468ee205734cd88c66744019911c716404c3141))
+* **deps:** update github-actions ([#114](https://github.com/miracum/vfps/issues/114)) ([f3252ea](https://github.com/miracum/vfps/commit/f3252eac15417ec8ebfa7479a931e214aaed9f89))
+* **deps:** update github-actions ([#126](https://github.com/miracum/vfps/issues/126)) ([2d75610](https://github.com/miracum/vfps/commit/2d756105848eeed49e0d407f5f722023f086e1c8))
+* **deps:** update github-actions ([#94](https://github.com/miracum/vfps/issues/94)) ([f63825a](https://github.com/miracum/vfps/commit/f63825ac0841db348820cba7b4e668b4a8ec7cdf))
+* **deps:** update github-actions (major) ([#91](https://github.com/miracum/vfps/issues/91)) ([3ab6a75](https://github.com/miracum/vfps/commit/3ab6a758c3a49d9bb0c7bd15083878733a9f7490))
+* **deps:** update github/codeql-action action to v2.24.3 ([#119](https://github.com/miracum/vfps/issues/119)) ([43868e1](https://github.com/miracum/vfps/commit/43868e11307519df497bedcfe116d1efd5303d19))
+* **deps:** update helm/kind-action action to v1.9.0 ([#111](https://github.com/miracum/vfps/issues/111)) ([a22c741](https://github.com/miracum/vfps/commit/a22c741669195915045ed57703dff7d5d74a9d94))
+* **deps:** update mcr.microsoft.com/dotnet/sdk:8.0.101-jammy docker digest to 094a909 ([#103](https://github.com/miracum/vfps/issues/103)) ([178d7ce](https://github.com/miracum/vfps/commit/178d7ce62021851314e3007958a1f3aa96cd7663))
+* **deps:** update mcr.microsoft.com/dotnet/sdk:8.0.201-jammy docker digest to 9aacef9 ([#125](https://github.com/miracum/vfps/issues/125)) ([749ed97](https://github.com/miracum/vfps/commit/749ed97e69002156ac426b49ae3d5b011d675701))
+
 ## [1.3.3](https://github.com/miracum/vfps/compare/v1.3.2...v1.3.3) (2024-02-02)
 
 
