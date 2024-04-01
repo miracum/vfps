@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.5](https://github.com/miracum/vfps/compare/v1.3.4...v1.3.5) (2024-04-01)
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#131](https://github.com/miracum/vfps/issues/131)) ([69263ec](https://github.com/miracum/vfps/commit/69263ec54837023da150d779b279ab1c4ac0ad56))
+* **deps:** update docker.io/library/postgres:16.2 docker digest to 6b841c8 ([#128](https://github.com/miracum/vfps/issues/128)) ([577f5b8](https://github.com/miracum/vfps/commit/577f5b8b912ab440d125c9e581dc4e693b2937c0))
+* **deps:** update docker.io/library/ubuntu:24.04 docker digest to 723ad80 ([#129](https://github.com/miracum/vfps/issues/129)) ([1b3a051](https://github.com/miracum/vfps/commit/1b3a0518a4597e759a3324b4ea11f10ebe5889e4))
+* **deps:** update github-actions ([#130](https://github.com/miracum/vfps/issues/130)) ([d1dabcb](https://github.com/miracum/vfps/commit/d1dabcb08d07b88c2c2042d1ba057e5b065da499))
+
 ## [1.3.4](https://github.com/miracum/vfps/compare/v1.3.3...v1.3.4) (2024-03-02)
 
 
