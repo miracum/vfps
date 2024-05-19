@@ -1,8 +1,6 @@
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using Microsoft.Extensions.DependencyInjection;
-using Vfps.Data;
-using Vfps.Protos;
 using Task = System.Threading.Tasks.Task;
 
 namespace Vfps.Tests.WebAppTests;
