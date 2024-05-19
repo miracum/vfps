@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1711981810208,
+  "lastUpdate": 1716150404672,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -2916,6 +2916,48 @@ window.BENCHMARK_DATA = {
             "value": 726.9302595138549,
             "unit": "ns",
             "range": "± 2.037097149504991"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "0fb1b40465ee2cecc1dba919b48a0ee99afd4ef0",
+          "message": "chore(deps): aggregated dep updates (#140)\n\n* chore(deps): update docker.io/library/postgres:16.2 docker digest to 4aea012\r\n\r\n* chore(deps): update docker.io/library/ubuntu:24.04 docker digest to 3f85b7c\r\n\r\n* chore(deps): update all non-major dependencies\r\n\r\n* chore(deps): update github-actions\r\n\r\n* rm syntax\r\n\r\n* chore(deps): jammy -> noble\r\n\r\n* fix config\r\n\r\n* increase iter8 limits\r\n\r\n---------\r\n\r\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2024-05-19T22:24:55+02:00",
+          "tree_id": "6e9a8402ec0bf8a99dd2454f4e129d6d62424c45",
+          "url": "https://github.com/miracum/vfps/commit/0fb1b40465ee2cecc1dba919b48a0ee99afd4ef0"
+        },
+        "date": 1716150404024,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1499.915693283081,
+            "unit": "ns",
+            "range": "± 8.946388390095047"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 916.2238552093506,
+            "unit": "ns",
+            "range": "± 4.325608734746188"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 735.7414794286092,
+            "unit": "ns",
+            "range": "± 1.9554958099241666"
           }
         ]
       }
