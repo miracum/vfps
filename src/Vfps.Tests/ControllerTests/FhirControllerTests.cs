@@ -2,7 +2,6 @@ using FakeItEasy;
 using Hl7.Fhir.Model;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
-using Vfps.Data;
 using Vfps.Fhir;
 using Vfps.Tests.ServiceTests;
 using Task = System.Threading.Tasks.Task;
