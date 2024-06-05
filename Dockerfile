@@ -10,7 +10,7 @@ ENV DOTNET_ENVIRONMENT="Production" \
     ASPNETCORE_URLS="" \
     DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0.300-noble@sha256:0f814b92f1cc906de4e35234a8d59f349ca8b902ffa8d22d09dcad3010f5b604 AS build
+FROM mcr.microsoft.com/dotnet/sdk:8.0.300-noble@sha256:0a154ae5a7b9f6cbcb6c8cc1c987f212817b0a81c2f413bed13d3c95089cbe1f AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="/root/.dotnet/tools:${PATH}"
