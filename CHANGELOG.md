@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.3.6](https://github.com/miracum/vfps/compare/v1.3.5...v1.3.6) (2024-06-05)
+
+
+### Miscellaneous Chores
+
+* **deps:** aggregated dep updates ([#140](https://github.com/miracum/vfps/issues/140)) ([0fb1b40](https://github.com/miracum/vfps/commit/0fb1b40465ee2cecc1dba919b48a0ee99afd4ef0))
+* **deps:** update all non-major dependencies ([#139](https://github.com/miracum/vfps/issues/139)) ([a3f90ef](https://github.com/miracum/vfps/commit/a3f90ef7244cf2331e03c08ec75861b0ecbfd5a0))
+* **deps:** update github-actions ([#138](https://github.com/miracum/vfps/issues/138)) ([92e3197](https://github.com/miracum/vfps/commit/92e319735da8763dd5185c5a371e04d80f434da7))
+* **deps:** update mcr.microsoft.com/dotnet/sdk:8.0.300-noble docker digest to 0a154ae ([#142](https://github.com/miracum/vfps/issues/142)) ([c4e36fd](https://github.com/miracum/vfps/commit/c4e36fdb0bd4be9aaeea63fca154de142273066c))
+
 ## [1.3.5](https://github.com/miracum/vfps/compare/v1.3.4...v1.3.5) (2024-04-01)
 
 
