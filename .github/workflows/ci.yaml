@@ -13,7 +13,7 @@ permissions: read-all
 
 jobs:
   build:
-    uses: miracum/.github/.github/workflows/standard-build.yaml@614627d88ea531acb0b0f321f507b2c7c91a721d # v1.9.1
+    uses: miracum/.github/.github/workflows/standard-build.yaml@028aedc2d5806bb362562560f5e871d9364902cd # v1.11.2
     permissions:
       contents: read
       id-token: write
@@ -24,6 +24,9 @@ jobs:
     with:
       enable-build-test-layer: true
       enable-upload-test-image: true
+      platforms: |
+        linux/amd64
+        linux/arm64
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -35,8 +38,20 @@ jobs:
       # for add Coverage PR Comment
       pull-requests: write
     steps:
+      # <https://docs.docker.com/storage/containerd/>
+      # via <https://github.com/docker/setup-buildx-action/issues/257>
+      - name: Set up containerd image store
+        shell: bash
+        run: |
+          jq '. | .+{"features": {"containerd-snapshotter": true}}' /etc/docker/daemon.json > /tmp/docker-daemon-with-containerd.json
+          sudo mv /tmp/docker-daemon-with-containerd.json /etc/docker/daemon.json
+          cat /etc/docker/daemon.json
+          sudo systemctl restart docker
+
+          docker info -f '{{ .DriverStatus }}'
+
       - name: Download test image
-        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: ${{ needs.build.outputs.image-slug }}-test
           path: /tmp
@@ -83,12 +98,24 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      # <https://docs.docker.com/storage/containerd/>
+      # via <https://github.com/docker/setup-buildx-action/issues/257>
+      - name: Set up containerd image store
+        shell: bash
+        run: |
+          jq '. | .+{"features": {"containerd-snapshotter": true}}' /etc/docker/daemon.json > /tmp/docker-daemon-with-containerd.json
+          sudo mv /tmp/docker-daemon-with-containerd.json /etc/docker/daemon.json
+          cat /etc/docker/daemon.json
+          sudo systemctl restart docker
+
+          docker info -f '{{ .DriverStatus }}'
+
       - name: Checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Download container image
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
@@ -184,12 +211,24 @@ jobs:
     needs:
       - build
     steps:
+      # <https://docs.docker.com/storage/containerd/>
+      # via <https://github.com/docker/setup-buildx-action/issues/257>
+      - name: Set up containerd image store
+        shell: bash
+        run: |
+          jq '. | .+{"features": {"containerd-snapshotter": true}}' /etc/docker/daemon.json > /tmp/docker-daemon-with-containerd.json
+          sudo mv /tmp/docker-daemon-with-containerd.json /etc/docker/daemon.json
+          cat /etc/docker/daemon.json
+          sudo systemctl restart docker
+
+          docker info -f '{{ .DriverStatus }}'
+
       - name: Checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: Download container image
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
@@ -202,7 +241,7 @@ jobs:
           docker image ls -a
 
       - name: Install .NET
-        uses: actions/setup-dotnet@4d6c8fcf3c8f7a60068d26b594648e99df24cee3 # tag=v4.0.0
+        uses: actions/setup-dotnet@6bd8b7f7774af54e05809fcc5431931b3eb1ddee # v4.0.1
         with:
           dotnet-version: "8.0.x"
 
@@ -221,8 +260,20 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      # <https://docs.docker.com/storage/containerd/>
+      # via <https://github.com/docker/setup-buildx-action/issues/257>
+      - name: Set up containerd image store
+        shell: bash
+        run: |
+          jq '. | .+{"features": {"containerd-snapshotter": true}}' /etc/docker/daemon.json > /tmp/docker-daemon-with-containerd.json
+          sudo mv /tmp/docker-daemon-with-containerd.json /etc/docker/daemon.json
+          cat /etc/docker/daemon.json
+          sudo systemctl restart docker
+
+          docker info -f '{{ .DriverStatus }}'
+
       - name: Checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29 # v4.1.6
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4.1.7
 
       - name: install iter8 cli
         env:
@@ -240,7 +291,7 @@ jobs:
 
       - name: Download container image
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@65a9edc5881444af0b9093a5e628f2fe47ea3b2e # v4.1.7
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
         with:
           name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
@@ -299,7 +350,7 @@ jobs:
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
         with:
           name: iter8-report.html
           path: |
@@ -313,14 +364,14 @@ jobs:
 
       - name: Upload cluster dump
         if: always()
-        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
         with:
           name: kind-cluster-dump.txt
           path: |
             kind-cluster-dump.txt
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@614627d88ea531acb0b0f321f507b2c7c91a721d # v1.9.1
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@028aedc2d5806bb362562560f5e871d9364902cd # v1.11.2
     permissions:
       contents: read
       pull-requests: write
