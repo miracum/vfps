@@ -41,7 +41,7 @@ services:
       - "127.0.0.1:16686:16686"
 
   vfps:
-    image: ghcr.io/miracum/vfps:${VFPS_IMAGE_TAG:-v1.3.5} # x-release-please-version
+    image: ghcr.io/miracum/vfps:${VFPS_IMAGE_TAG:-v1.3.6} # x-release-please-version
     restart: unless-stopped
     deploy:
       resources:
