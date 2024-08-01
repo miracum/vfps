@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.3.6](https://github.com/miracum/vfps/compare/v1.3.5...v1.3.6) (2024-08-01)
+
+
+### Miscellaneous Chores
+
+* **deps:** aggregated dep updates ([#140](https://github.com/miracum/vfps/issues/140)) ([0fb1b40](https://github.com/miracum/vfps/commit/0fb1b40465ee2cecc1dba919b48a0ee99afd4ef0))
+* **deps:** update all non-major dependencies ([#139](https://github.com/miracum/vfps/issues/139)) ([a3f90ef](https://github.com/miracum/vfps/commit/a3f90ef7244cf2331e03c08ec75861b0ecbfd5a0))
+* **deps:** update all non-major dependencies ([#148](https://github.com/miracum/vfps/issues/148)) ([dc8c9cf](https://github.com/miracum/vfps/commit/dc8c9cf3bdc54d61b57018163b17ddff1d499c03))
+* **deps:** update all non-major dependencies ([#151](https://github.com/miracum/vfps/issues/151)) ([490dfc7](https://github.com/miracum/vfps/commit/490dfc7150a506b117d87f3854042a8e99e13ab3))
+* **deps:** update docker.io/library/postgres:16.3 docker digest to 0aafd2a ([#144](https://github.com/miracum/vfps/issues/144)) ([bf26c7a](https://github.com/miracum/vfps/commit/bf26c7a9932cbe0e0913a1a8af6071c3ac96445f))
+* **deps:** update docker.io/library/postgres:16.3 docker digest to d0f363f ([#149](https://github.com/miracum/vfps/issues/149)) ([ba32aac](https://github.com/miracum/vfps/commit/ba32aac34806f3fd73b52ce0de38c2eac5b3e893))
+* **deps:** update docker.io/library/ubuntu:24.04 docker digest to 2e863c4 ([#145](https://github.com/miracum/vfps/issues/145)) ([8e24401](https://github.com/miracum/vfps/commit/8e2440193af729cc94f24b7d81b238aec240e097))
+* **deps:** update dotnet monorepo ([#146](https://github.com/miracum/vfps/issues/146)) ([d1d81f4](https://github.com/miracum/vfps/commit/d1d81f4efe70d077c0bf00a07ee0ce028f8416b3))
+* **deps:** update github-actions ([#138](https://github.com/miracum/vfps/issues/138)) ([92e3197](https://github.com/miracum/vfps/commit/92e319735da8763dd5185c5a371e04d80f434da7))
+* **deps:** update github-actions ([#147](https://github.com/miracum/vfps/issues/147)) ([0178095](https://github.com/miracum/vfps/commit/017809522a77399da15dbae3bfc0d71a14621786))
+* **deps:** update mcr.microsoft.com/dotnet/sdk:8.0.300-noble docker digest to 0a154ae ([#142](https://github.com/miracum/vfps/issues/142)) ([c4e36fd](https://github.com/miracum/vfps/commit/c4e36fdb0bd4be9aaeea63fca154de142273066c))
+* **deps:** update mcr.microsoft.com/dotnet/sdk:8.0.303-noble docker digest to 0ece4e7 ([#150](https://github.com/miracum/vfps/issues/150)) ([1e99dd5](https://github.com/miracum/vfps/commit/1e99dd5c6940ea049de854177649462a21587937))
+
 ## [1.3.5](https://github.com/miracum/vfps/compare/v1.3.4...v1.3.5) (2024-04-01)
 
 
