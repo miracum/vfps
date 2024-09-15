@@ -15,7 +15,7 @@ jobs:
   build:
     uses: miracum/.github/.github/workflows/standard-build.yaml@b2389048770aa5b9ed439810bf84911fbb07f645 # v1.12.3
     permissions:
-      contents: read
+      contents: write
       id-token: write
       packages: write
       pull-requests: write
