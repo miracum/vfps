@@ -13,7 +13,7 @@ permissions: read-all
 
 jobs:
   build:
-    uses: miracum/.github/.github/workflows/standard-build.yaml@028aedc2d5806bb362562560f5e871d9364902cd # v1.11.2
+    uses: miracum/.github/.github/workflows/standard-build.yaml@b2389048770aa5b9ed439810bf84911fbb07f645 # v1.12.3
     permissions:
       contents: read
       id-token: write
@@ -350,7 +350,7 @@ jobs:
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: iter8-report.html
           path: |
@@ -364,14 +364,14 @@ jobs:
 
       - name: Upload cluster dump
         if: always()
-        uses: actions/upload-artifact@0b2256b8c012f0828dc542b3febcab082c67f72b # v4.3.4
+        uses: actions/upload-artifact@50769540e7f4bd5e21e526ee35c689e35e0d6874 # v4.4.0
         with:
           name: kind-cluster-dump.txt
           path: |
             kind-cluster-dump.txt
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@028aedc2d5806bb362562560f5e871d9364902cd # v1.11.2
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@b2389048770aa5b9ed439810bf84911fbb07f645 # v1.12.3
     permissions:
       contents: read
       pull-requests: write
