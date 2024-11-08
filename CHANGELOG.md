@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.3.6](https://github.com/miracum/vfps/compare/v1.3.5...v1.3.6) (2024-11-08)
+
+
+### Miscellaneous Chores
+
+* **deps:** aggregated dep updates ([#140](https://github.com/miracum/vfps/issues/140)) ([0fb1b40](https://github.com/miracum/vfps/commit/0fb1b40465ee2cecc1dba919b48a0ee99afd4ef0))
+* **deps:** update all non-major dependencies ([#139](https://github.com/miracum/vfps/issues/139)) ([a3f90ef](https://github.com/miracum/vfps/commit/a3f90ef7244cf2331e03c08ec75861b0ecbfd5a0))
+* **deps:** update all non-major dependencies ([#148](https://github.com/miracum/vfps/issues/148)) ([dc8c9cf](https://github.com/miracum/vfps/commit/dc8c9cf3bdc54d61b57018163b17ddff1d499c03))
+* **deps:** update all non-major dependencies ([#151](https://github.com/miracum/vfps/issues/151)) ([490dfc7](https://github.com/miracum/vfps/commit/490dfc7150a506b117d87f3854042a8e99e13ab3))
+* **deps:** update docker.io/bitnami/kubectl:1.30.3 docker digest to fc6e485 ([#153](https://github.com/miracum/vfps/issues/153)) ([f188d2b](https://github.com/miracum/vfps/commit/f188d2bc6d832bfff4354733cafe3b22ff39d3d8))
+* **deps:** update docker.io/library/postgres docker tag to v17 ([#159](https://github.com/miracum/vfps/issues/159)) ([c1b3970](https://github.com/miracum/vfps/commit/c1b39703513a75ca618b27ddc6ee6804bdfeb582))
+* **deps:** update docker.io/library/postgres:16.3 docker digest to 0aafd2a ([#144](https://github.com/miracum/vfps/issues/144)) ([bf26c7a](https://github.com/miracum/vfps/commit/bf26c7a9932cbe0e0913a1a8af6071c3ac96445f))
+* **deps:** update docker.io/library/postgres:16.3 docker digest to d0f363f ([#149](https://github.com/miracum/vfps/issues/149)) ([ba32aac](https://github.com/miracum/vfps/commit/ba32aac34806f3fd73b52ce0de38c2eac5b3e893))
+* **deps:** update docker.io/library/ubuntu:24.04 docker digest to 2e863c4 ([#145](https://github.com/miracum/vfps/issues/145)) ([8e24401](https://github.com/miracum/vfps/commit/8e2440193af729cc94f24b7d81b238aec240e097))
+* **deps:** update docker.io/library/ubuntu:24.04 docker digest to 8a37d68 ([#154](https://github.com/miracum/vfps/issues/154)) ([4fbb832](https://github.com/miracum/vfps/commit/4fbb83292fc8d813f514a45894a2db8ee212a2a5))
+* **deps:** update docker.io/library/ubuntu:24.04 docker digest to b359f10 ([#157](https://github.com/miracum/vfps/issues/157)) ([c8a7dd9](https://github.com/miracum/vfps/commit/c8a7dd97ac3eeaebecfd7d2e0b0158442f6b8f30))
+* **deps:** update dotnet monorepo ([#146](https://github.com/miracum/vfps/issues/146)) ([d1d81f4](https://github.com/miracum/vfps/commit/d1d81f4efe70d077c0bf00a07ee0ce028f8416b3))
+* **deps:** update github-actions ([#138](https://github.com/miracum/vfps/issues/138)) ([92e3197](https://github.com/miracum/vfps/commit/92e319735da8763dd5185c5a371e04d80f434da7))
+* **deps:** update github-actions ([#147](https://github.com/miracum/vfps/issues/147)) ([0178095](https://github.com/miracum/vfps/commit/017809522a77399da15dbae3bfc0d71a14621786))
+* **deps:** update github-actions ([#152](https://github.com/miracum/vfps/issues/152)) ([dac2dc2](https://github.com/miracum/vfps/commit/dac2dc260f7cb72034fd124fb474093a71e69ea5))
+* **deps:** update github-actions ([#158](https://github.com/miracum/vfps/issues/158)) ([f215afd](https://github.com/miracum/vfps/commit/f215afda16e540e3dedd8fed8635ff970bc2938e))
+* **deps:** update github-actions ([#162](https://github.com/miracum/vfps/issues/162)) ([462cdd8](https://github.com/miracum/vfps/commit/462cdd8634d099266672e214cf531ebb3ebb7f01))
+* **deps:** update mcr.microsoft.com/dotnet/sdk:8.0.300-noble docker digest to 0a154ae ([#142](https://github.com/miracum/vfps/issues/142)) ([c4e36fd](https://github.com/miracum/vfps/commit/c4e36fdb0bd4be9aaeea63fca154de142273066c))
+* **deps:** update mcr.microsoft.com/dotnet/sdk:8.0.303-noble docker digest to 0ece4e7 ([#150](https://github.com/miracum/vfps/issues/150)) ([1e99dd5](https://github.com/miracum/vfps/commit/1e99dd5c6940ea049de854177649462a21587937))
+* **deps:** update mcr.microsoft.com/dotnet/sdk:8.0.303-noble docker digest to e1713ba ([#155](https://github.com/miracum/vfps/issues/155)) ([77fc20c](https://github.com/miracum/vfps/commit/77fc20c52918ea36f97546f504c32e37d99a1349))
+
 ## [1.3.5](https://github.com/miracum/vfps/compare/v1.3.4...v1.3.5) (2024-04-01)
 
 

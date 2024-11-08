@@ -7,7 +7,7 @@
         <AnalysisLevel>latest</AnalysisLevel>
         <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 
-        <Version>1.3.5</Version> <!-- x-release-please-version -->
+        <Version>1.3.6</Version> <!-- x-release-please-version -->
         <Company>miracum.org</Company>
         <Description>A very fast and resource-efficient pseudonym service.</Description>
         <Copyright>© miracum.org. All rights reserved.</Copyright>
