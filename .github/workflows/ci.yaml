@@ -13,7 +13,7 @@ permissions: read-all
 
 jobs:
   build:
-    uses: miracum/.github/.github/workflows/standard-build.yaml@0549971ecda7c7415b7e885117576981b4b54ed2 # v1.12.8
+    uses: miracum/.github/.github/workflows/standard-build.yaml@3a6d6e823363d6a7b39daaadc24566130bddef38 # v1.12.10
     permissions:
       contents: write
       id-token: write
@@ -371,7 +371,7 @@ jobs:
             kind-cluster-dump.txt
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@0549971ecda7c7415b7e885117576981b4b54ed2 # v1.12.8
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@3a6d6e823363d6a7b39daaadc24566130bddef38 # v1.12.10
     permissions:
       contents: read
       pull-requests: write
