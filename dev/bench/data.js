@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1722520965073,
+  "lastUpdate": 1732099971389,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -3084,6 +3084,48 @@ window.BENCHMARK_DATA = {
             "value": 720.2682986626259,
             "unit": "ns",
             "range": "± 2.297379375288731"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "36be1edf85a019460876ac543a39dbaae1e0e04a",
+          "message": "chore(deps): update testcontainers-dotnet monorepo to v4 (#168)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2024-11-20T11:50:48+01:00",
+          "tree_id": "2d8ab77a96f8ab2c37263cca97dc166cbdbd2d09",
+          "url": "https://github.com/miracum/vfps/commit/36be1edf85a019460876ac543a39dbaae1e0e04a"
+        },
+        "date": 1732099971137,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1509.188012940543,
+            "unit": "ns",
+            "range": "± 6.6687190626075585"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 906.7573944091797,
+            "unit": "ns",
+            "range": "± 1.122058640631879"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 718.8441580931345,
+            "unit": "ns",
+            "range": "± 1.1815580079307526"
           }
         ]
       }
