@@ -43,6 +43,7 @@ jobs:
       - name: Set up containerd image store
         shell: bash
         run: |
+          [ -f /etc/docker/daemon.json ] || echo "{}" | sudo tee /etc/docker/daemon.json
           jq '. | .+{"features": {"containerd-snapshotter": true}}' /etc/docker/daemon.json > /tmp/docker-daemon-with-containerd.json
           sudo mv /tmp/docker-daemon-with-containerd.json /etc/docker/daemon.json
           cat /etc/docker/daemon.json
@@ -103,6 +104,7 @@ jobs:
       - name: Set up containerd image store
         shell: bash
         run: |
+          [ -f /etc/docker/daemon.json ] || echo "{}" | sudo tee /etc/docker/daemon.json
           jq '. | .+{"features": {"containerd-snapshotter": true}}' /etc/docker/daemon.json > /tmp/docker-daemon-with-containerd.json
           sudo mv /tmp/docker-daemon-with-containerd.json /etc/docker/daemon.json
           cat /etc/docker/daemon.json
@@ -216,6 +218,7 @@ jobs:
       - name: Set up containerd image store
         shell: bash
         run: |
+          [ -f /etc/docker/daemon.json ] || echo "{}" | sudo tee /etc/docker/daemon.json
           jq '. | .+{"features": {"containerd-snapshotter": true}}' /etc/docker/daemon.json > /tmp/docker-daemon-with-containerd.json
           sudo mv /tmp/docker-daemon-with-containerd.json /etc/docker/daemon.json
           cat /etc/docker/daemon.json
@@ -265,6 +268,7 @@ jobs:
       - name: Set up containerd image store
         shell: bash
         run: |
+          [ -f /etc/docker/daemon.json ] || echo "{}" | sudo tee /etc/docker/daemon.json
           jq '. | .+{"features": {"containerd-snapshotter": true}}' /etc/docker/daemon.json > /tmp/docker-daemon-with-containerd.json
           sudo mv /tmp/docker-daemon-with-containerd.json /etc/docker/daemon.json
           cat /etc/docker/daemon.json
