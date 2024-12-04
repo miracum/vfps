@@ -15,7 +15,7 @@ WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="/root/.dotnet/tools:${PATH}"
 
-RUN dotnet tool install --global dotnet-ef --version=7.0.0
+RUN dotnet tool install --global dotnet-ef --version=9.0.0
 
 COPY src/Directory.Build.props src/
 COPY src/Vfps/Vfps.csproj src/Vfps/
