@@ -1,6 +1,6 @@
 # kics false positive "Missing User Instruction": <https://docs.kics.io/latest/queries/dockerfile-queries/fd54f200-402c-4333-a5a4-36ef6709af2f/>
 # kics-scan ignore-line
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:8.0.7-noble-chiseled@sha256:1f6d3352e053938ab1496d30a03b0f2fb6d45a7359aa0979ace5eca71cb3fec4 AS runtime
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:9.0.1-noble-chiseled@sha256:2aae5a49d55c1d7eebabca26f60a5208071142884fdf26cc2f087ac52685c5c2 AS runtime
 WORKDIR /opt/vfps
 EXPOSE 8080/tcp 8081/tcp 8082/tcp
 USER 65534:65534
@@ -10,7 +10,7 @@ ENV DOTNET_ENVIRONMENT="Production" \
     ASPNETCORE_URLS="" \
     DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:8.0.303-noble@sha256:e1713bad94cfeca3a44d837286728a5ed40a1f59cb90be2af8b456ca0050f8a1 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:9.0.102-noble@sha256:67aba0077ce07ea5974bf139a47a4a144bd8f7819a3d91faff02bca4919e9932 AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="/root/.dotnet/tools:${PATH}"
