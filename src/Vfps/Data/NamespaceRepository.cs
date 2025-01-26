@@ -2,23 +2,16 @@ using Vfps.Data.Models;
 
 namespace Vfps.Data;
 
-public class NamespaceRepository : INamespaceRepository
+public class NamespaceRepository(PseudonymContext context) : INamespaceRepository
 {
-    public NamespaceRepository(PseudonymContext context)
-    {
-        Context = context;
-    }
-
-    private PseudonymContext Context { get; }
-
     /// <inheritdoc/>
     public async Task<Namespace> CreateAsync(
         Namespace @namespace,
         CancellationToken cancellationToken
     )
     {
-        Context.Add(@namespace);
-        await Context.SaveChangesAsync(cancellationToken);
+        context.Add(@namespace);
+        await context.SaveChangesAsync(cancellationToken);
         return @namespace;
     }
 
@@ -28,6 +21,6 @@ public class NamespaceRepository : INamespaceRepository
         CancellationToken cancellationToken
     )
     {
-        return await Context.Namespaces.FindAsync(namespaceName, cancellationToken);
+        return await context.Namespaces.FindAsync(namespaceName, cancellationToken);
     }
 }

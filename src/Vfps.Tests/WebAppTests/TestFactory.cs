@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Vfps.Tests.WebAppTests;
@@ -36,7 +37,7 @@ internal static class ServiceCollectionExtensions
         where T : DbContext
     {
         var descriptor = services.SingleOrDefault(d =>
-            d.ServiceType == typeof(DbContextOptions<T>)
+            d.ServiceType == typeof(IDbContextOptionsConfiguration<T>)
         );
         if (descriptor != null)
             services.Remove(descriptor);

@@ -76,7 +76,7 @@ public class FhirControllerTests : ServiceTestBase
             .BeOfType<Parameters>()
             .Which;
 
-        var pseudonymValue = parameterResponse.GetSingleValue<FhirString>("pseudonymValue").Value;
+        var pseudonymValue = parameterResponse.GetSingleValue<FhirString>("pseudonymValue")!.Value;
 
         pseudonymValue.Should().NotBeNull().And.NotBeEquivalentTo("test");
     }

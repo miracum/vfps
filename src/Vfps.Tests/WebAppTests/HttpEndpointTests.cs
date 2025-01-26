@@ -5,15 +5,9 @@ using Task = System.Threading.Tasks.Task;
 
 namespace Vfps.Tests.WebAppTests;
 
-public class HttpEndpointTests : IClassFixture<IntegrationTestFactory<Program, PseudonymContext>>
+public class HttpEndpointTests(IntegrationTestFactory<Program, PseudonymContext> factory)
+    : IClassFixture<IntegrationTestFactory<Program, PseudonymContext>>
 {
-    private readonly IntegrationTestFactory<Program, PseudonymContext> factory;
-
-    public HttpEndpointTests(IntegrationTestFactory<Program, PseudonymContext> factory)
-    {
-        this.factory = factory;
-    }
-
     [Theory]
     [InlineData("/readyz")]
     [InlineData("/livez")]
@@ -80,7 +74,7 @@ public class HttpEndpointTests : IClassFixture<IntegrationTestFactory<Program, P
 
         var parameterResponse = response.Should().BeOfType<Parameters>().Which;
 
-        var pseudonymValue = parameterResponse.GetSingleValue<FhirString>("pseudonymValue").Value;
+        var pseudonymValue = parameterResponse.GetSingleValue<FhirString>("pseudonymValue")!.Value;
 
         pseudonymValue.Should().NotBeNull().And.NotBeEquivalentTo("test");
     }

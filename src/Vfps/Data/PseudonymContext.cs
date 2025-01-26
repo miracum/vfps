@@ -5,11 +5,8 @@ using Vfps.Data.Models;
 
 namespace Vfps.Data;
 
-public class PseudonymContext : DbContext
+public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbContext(options)
 {
-    public PseudonymContext(DbContextOptions<PseudonymContext> options)
-        : base(options) { }
-
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         optionsBuilder.UseExceptionProcessor();

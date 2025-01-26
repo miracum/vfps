@@ -4,25 +4,16 @@ using Vfps.Data.Models;
 
 namespace Vfps.Data;
 
-public class CachingPseudonymRepository : IPseudonymRepository
+public class CachingPseudonymRepository(
+    PseudonymContext context,
+    IMemoryCache memoryCache,
+    CacheConfig cacheConfig
+) : IPseudonymRepository
 {
-    public CachingPseudonymRepository(
-        PseudonymContext context,
-        IMemoryCache memoryCache,
-        CacheConfig cacheConfig
-    )
-    {
-        MemoryCache = memoryCache;
-        CacheConfig = cacheConfig;
-        Context = context;
-
-        Repository = new PseudonymRepository(context);
-    }
-
-    public IMemoryCache MemoryCache { get; }
-    public CacheConfig CacheConfig { get; }
-    public PseudonymContext Context { get; }
-    public PseudonymRepository Repository { get; }
+    public IMemoryCache MemoryCache { get; } = memoryCache;
+    public CacheConfig CacheConfig { get; } = cacheConfig;
+    public PseudonymContext Context { get; } = context;
+    public PseudonymRepository Repository { get; } = new PseudonymRepository(context);
 
     public async Task<Pseudonym?> CreateIfNotExist(Pseudonym pseudonym)
     {
