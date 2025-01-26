@@ -1,4 +1,5 @@
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Running;
 using Vfps.PseudonymGenerators;
 
 namespace Vfps.Benchmarks;
@@ -21,4 +22,12 @@ public class PseudonymGeneratorBenchmarks
 
     [Benchmark]
     public string Uuid4Generator() => uuid4Generator.GeneratePseudonym("test", 36);
+}
+
+public static class Program
+{
+    public static void Main()
+    {
+        BenchmarkRunner.Run<PseudonymGeneratorBenchmarks>();
+    }
 }
