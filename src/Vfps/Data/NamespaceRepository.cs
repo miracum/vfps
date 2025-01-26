@@ -21,6 +21,9 @@ public class NamespaceRepository(PseudonymContext context) : INamespaceRepositor
         CancellationToken cancellationToken
     )
     {
-        return await context.Namespaces.FindAsync(namespaceName, cancellationToken);
+        return await context.Namespaces.FindAsync(
+            [namespaceName],
+            cancellationToken: cancellationToken
+        );
     }
 }
