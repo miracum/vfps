@@ -28,6 +28,6 @@ public static class Program
 {
     public static void Main()
     {
-        BenchmarkRunner.Run<PseudonymGeneratorBenchmarks>();
+        BenchmarkRunner.Run(typeof(Program).Assembly);
     }
 }
