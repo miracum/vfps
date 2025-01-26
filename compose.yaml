@@ -1,6 +1,6 @@
 services:
   postgresql:
-    image: docker.io/library/postgres:17.0@sha256:f176fef320ed02c347e9f85352620945547a9a23038f02b57cf7939a198182ae
+    image: docker.io/library/postgres:17.2@sha256:87ec5e0a167dc7d4831729f9e1d2ee7b8597dcc49ccd9e43cc5f89e808d2adae
     restart: unless-stopped
     deploy:
       resources:
@@ -20,7 +20,7 @@ services:
       - "127.0.0.1:35432:5432"
 
   jaeger:
-    image: docker.io/jaegertracing/all-in-one:1.59.0@sha256:e369bd9a8e4a212bfed67aaff59b77ce0676df32828aaccca468a866efcb732b
+    image: docker.io/jaegertracing/all-in-one:1.65.0@sha256:12fa17a231abded2c3b5b715bd252a043678495c588cbe772173991fbdcdf7c8
     restart: unless-stopped
     deploy:
       resources:
