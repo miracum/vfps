@@ -10,26 +10,15 @@ using Vfps.PseudonymGenerators;
 namespace Vfps.Services;
 
 /// <inheritdoc/>
-public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
+/// <inheritdoc/>
+public class PseudonymService(
+    PseudonymContext context,
+    PseudonymizationMethodsLookup lookup,
+    INamespaceRepository namespaceRepository,
+    IPseudonymRepository pseudonymRepository
+) : Protos.PseudonymService.PseudonymServiceBase
 {
-    /// <inheritdoc/>
-    public PseudonymService(
-        PseudonymContext context,
-        PseudonymizationMethodsLookup lookup,
-        INamespaceRepository namespaceRepository,
-        IPseudonymRepository pseudonymRepository
-    )
-    {
-        Context = context;
-        Lookup = lookup;
-        NamespaceRepository = namespaceRepository;
-        PseudonymRepository = pseudonymRepository;
-    }
-
-    private PseudonymContext Context { get; }
-    private PseudonymizationMethodsLookup Lookup { get; }
-    private INamespaceRepository NamespaceRepository { get; }
-    private IPseudonymRepository PseudonymRepository { get; }
+    private PseudonymContext Context { get; } = context;
 
     /// <inheritdoc/>
     public override async Task<PseudonymServiceCreateResponse> Create(
@@ -39,7 +28,7 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
     {
         var now = DateTimeOffset.UtcNow;
 
-        var @namespace = await NamespaceRepository.FindAsync(
+        var @namespace = await namespaceRepository.FindAsync(
             request.Namespace,
             context.CancellationToken
         );
@@ -56,7 +45,7 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
             );
         }
 
-        var generator = Lookup[@namespace.PseudonymGenerationMethod];
+        var generator = lookup[@namespace.PseudonymGenerationMethod];
         var pseudonymValue = string.Empty;
 
         using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
@@ -80,7 +69,7 @@ public class PseudonymService : Protos.PseudonymService.PseudonymServiceBase
             PseudonymValue = pseudonymValue,
         };
 
-        Data.Models.Pseudonym? upsertedPseudonym = await PseudonymRepository.CreateIfNotExist(
+        Data.Models.Pseudonym? upsertedPseudonym = await pseudonymRepository.CreateIfNotExist(
             pseudonym
         );
 

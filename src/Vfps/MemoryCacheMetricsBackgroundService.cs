@@ -4,7 +4,7 @@ using Prometheus;
 
 namespace Vfps;
 
-public class MemoryCacheMetricsBackgroundService : BackgroundService
+public class MemoryCacheMetricsBackgroundService(IMemoryCache memoryCache) : BackgroundService
 {
     private static readonly Gauge EntriesInCache = Metrics.CreateGauge(
         "vfps_cache_entries",
@@ -19,18 +19,11 @@ public class MemoryCacheMetricsBackgroundService : BackgroundService
         "Number of cache hits."
     );
 
-    public MemoryCacheMetricsBackgroundService(IMemoryCache memoryCache)
-    {
-        MemoryCache = memoryCache;
-    }
-
-    private IMemoryCache MemoryCache { get; }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         while (!stoppingToken.IsCancellationRequested)
         {
-            var stats = MemoryCache.GetCurrentStatistics();
+            var stats = memoryCache.GetCurrentStatistics();
             if (stats is not null)
             {
                 EntriesInCache.Set(stats.CurrentEntryCount);

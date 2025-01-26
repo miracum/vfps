@@ -13,23 +13,12 @@ namespace Vfps.Fhir;
 [Route("v1/fhir")]
 [Produces("application/fhir+json")]
 [Consumes("application/fhir+json", "application/json")]
-public class FhirController : ControllerBase
+public class FhirController(
+    ILogger<FhirController> logger,
+    INamespaceRepository namespaceRepository,
+    IPseudonymRepository pseudonymRepository
+) : ControllerBase
 {
-    private readonly ILogger<FhirController> logger;
-
-    public FhirController(
-        ILogger<FhirController> logger,
-        INamespaceRepository namespaceRepository,
-        IPseudonymRepository pseudonymRepository
-    )
-    {
-        this.logger = logger;
-        NamespaceRepository = namespaceRepository;
-        PseudonymRepository = pseudonymRepository;
-    }
-
-    private INamespaceRepository NamespaceRepository { get; }
-    private IPseudonymRepository PseudonymRepository { get; }
     private PseudonymizationMethodsLookup Lookup { get; } = new PseudonymizationMethodsLookup();
 
     /// <summary>
@@ -81,7 +70,7 @@ public class FhirController : ControllerBase
             return BadRequest(outcome);
         }
 
-        var @namespace = await NamespaceRepository.FindAsync(namespaceName, cancellationToken);
+        var @namespace = await namespaceRepository.FindAsync(namespaceName, cancellationToken);
         if (@namespace is null)
         {
             var outcome = new OperationOutcome();
@@ -119,7 +108,7 @@ public class FhirController : ControllerBase
             PseudonymValue = pseudonymValue,
         };
 
-        Data.Models.Pseudonym? upsertedPseudonym = await PseudonymRepository.CreateIfNotExist(
+        Data.Models.Pseudonym? upsertedPseudonym = await pseudonymRepository.CreateIfNotExist(
             pseudonym
         );
 

@@ -8,17 +8,11 @@ using Vfps.Protos;
 namespace Vfps.Services;
 
 /// <inheritdoc/>
-public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
+/// <inheritdoc/>
+public class NamespaceService(PseudonymContext context, INamespaceRepository namespaceRepository)
+    : Protos.NamespaceService.NamespaceServiceBase
 {
-    /// <inheritdoc/>
-    public NamespaceService(PseudonymContext context, INamespaceRepository namespaceRepository)
-    {
-        NamespaceRepository = namespaceRepository;
-        Context = context;
-    }
-
-    private INamespaceRepository NamespaceRepository { get; }
-    private PseudonymContext Context { get; }
+    private PseudonymContext Context { get; } = context;
 
     /// <inheritdoc/>
     public override async Task<NamespaceServiceCreateResponse> Create(
@@ -49,7 +43,7 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
 
         try
         {
-            await NamespaceRepository.CreateAsync(@namespace, context.CancellationToken);
+            await namespaceRepository.CreateAsync(@namespace, context.CancellationToken);
         }
         catch (UniqueConstraintException)
         {
@@ -89,7 +83,7 @@ public class NamespaceService : Protos.NamespaceService.NamespaceServiceBase
         ServerCallContext context
     )
     {
-        var @namespace = await NamespaceRepository.FindAsync(
+        var @namespace = await namespaceRepository.FindAsync(
             request.Name,
             context.CancellationToken
         );

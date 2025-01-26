@@ -31,7 +31,7 @@ jobs:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
   add-code-coverage:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - build
     permissions:
@@ -43,6 +43,7 @@ jobs:
       - name: Set up containerd image store
         shell: bash
         run: |
+          [ -f /etc/docker/daemon.json ] || echo "{}" | sudo tee /etc/docker/daemon.json
           jq '. | .+{"features": {"containerd-snapshotter": true}}' /etc/docker/daemon.json > /tmp/docker-daemon-with-containerd.json
           sudo mv /tmp/docker-daemon-with-containerd.json /etc/docker/daemon.json
           cat /etc/docker/daemon.json
@@ -91,7 +92,7 @@ jobs:
 
   test-api:
     name: test api
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     needs:
       - build
     permissions:
@@ -103,6 +104,7 @@ jobs:
       - name: Set up containerd image store
         shell: bash
         run: |
+          [ -f /etc/docker/daemon.json ] || echo "{}" | sudo tee /etc/docker/daemon.json
           jq '. | .+{"features": {"containerd-snapshotter": true}}' /etc/docker/daemon.json > /tmp/docker-daemon-with-containerd.json
           sudo mv /tmp/docker-daemon-with-containerd.json /etc/docker/daemon.json
           cat /etc/docker/daemon.json
@@ -112,6 +114,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Download container image
         if: ${{ github.event_name == 'pull_request' }}
@@ -152,7 +156,7 @@ jobs:
           VFPS_IMAGE_TAG: ${{ needs.build.outputs.image-version }}
         run: |
           echo "Using VFPS image tag ${VFPS_IMAGE_TAG}"
-          docker compose -f docker-compose.yaml --profile=test up -d
+          docker compose --profile=test up -d
 
       - name: Wait for the healthz endpoint to be ready
         run: |
@@ -200,12 +204,12 @@ jobs:
       - name: Print compose logs
         if: always()
         run: |
-          docker compose --profile=test -f docker-compose.yaml logs
+          docker compose --profile=test logs
           docker compose --profile=test down --volumes --remove-orphans
 
   test-migrations:
     name: test migrations
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     permissions:
       contents: read
     needs:
@@ -216,6 +220,7 @@ jobs:
       - name: Set up containerd image store
         shell: bash
         run: |
+          [ -f /etc/docker/daemon.json ] || echo "{}" | sudo tee /etc/docker/daemon.json
           jq '. | .+{"features": {"containerd-snapshotter": true}}' /etc/docker/daemon.json > /tmp/docker-daemon-with-containerd.json
           sudo mv /tmp/docker-daemon-with-containerd.json /etc/docker/daemon.json
           cat /etc/docker/daemon.json
@@ -225,6 +230,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: Download container image
         if: ${{ github.event_name == 'pull_request' }}
@@ -243,7 +250,7 @@ jobs:
       - name: Install .NET
         uses: actions/setup-dotnet@3e891b0cb619bf60e2c25674b222b8940e2c1c25 # v4.1.0
         with:
-          dotnet-version: "8.0.x"
+          dotnet-version: "9.0.x"
 
       - name: Run migrations tests
         env:
@@ -252,7 +259,7 @@ jobs:
 
   test-iter8:
     name: iter8 tests
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     if: ${{ github.event_name == 'pull_request' }}
     needs:
       - build
@@ -265,6 +272,7 @@ jobs:
       - name: Set up containerd image store
         shell: bash
         run: |
+          [ -f /etc/docker/daemon.json ] || echo "{}" | sudo tee /etc/docker/daemon.json
           jq '. | .+{"features": {"containerd-snapshotter": true}}' /etc/docker/daemon.json > /tmp/docker-daemon-with-containerd.json
           sudo mv /tmp/docker-daemon-with-containerd.json /etc/docker/daemon.json
           cat /etc/docker/daemon.json
@@ -274,6 +282,8 @@ jobs:
 
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
 
       - name: install iter8 cli
         env:
@@ -379,7 +389,7 @@ jobs:
       security-events: write
       actions: read
     with:
-      dotnet-version: "8.0.x"
+      dotnet-version: "9.0.x"
       enable-verify-base-image-signature: false
       enable-validate-gradle-wrapper: false
       codeql-languages: '["csharp"]'

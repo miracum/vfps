@@ -6,40 +6,29 @@ using NamespaceService = Vfps.Services.NamespaceService;
 
 namespace Vfps;
 
-public class InitNamespacesBackgroundService : BackgroundService
+public class InitNamespacesBackgroundService(
+    IServiceProvider serviceProvider,
+    IConfiguration configuration,
+    ILogger<InitNamespacesBackgroundService> logger
+) : BackgroundService
 {
-    public InitNamespacesBackgroundService(
-        IServiceProvider serviceProvider,
-        IConfiguration configuration,
-        ILogger<InitNamespacesBackgroundService> logger
-    )
-    {
-        ServiceProvider = serviceProvider;
-        Configuration = configuration;
-        Logger = logger;
-    }
-
-    private IConfiguration Configuration { get; }
-    private ILogger<InitNamespacesBackgroundService> Logger { get; }
-    private IServiceProvider ServiceProvider { get; }
-
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var namespaces = Configuration
+        var namespaces = configuration
             .GetSection("Init:v1:Namespaces")
             .Get<List<Data.Models.Namespace>>();
         if (namespaces is null || namespaces.Count == 0)
         {
-            Logger.LogInformation("No namespaces configured to create during startup.");
+            logger.LogInformation("No namespaces configured to create during startup.");
             return;
         }
 
-        using var scope = ServiceProvider.CreateScope();
+        using var scope = serviceProvider.CreateScope();
         var namespaceRepository = scope.ServiceProvider.GetRequiredService<INamespaceRepository>();
 
         foreach (var @namespace in namespaces)
         {
-            Logger.LogInformation(
+            logger.LogInformation(
                 "Attempting to create namespace {NamespaceName}",
                 @namespace.Name
             );
@@ -53,28 +42,28 @@ public class InitNamespacesBackgroundService : BackgroundService
             );
             if (maybeExistsNamespace is not null)
             {
-                Logger.LogInformation(
+                logger.LogInformation(
                     "A namespace with the same name {NamespaceName} already exists. Will not be overridden.",
                     @namespace.Name
                 );
                 return;
             }
 
-            Logger.LogInformation(
+            logger.LogInformation(
                 "Namespace {NamespaceName} doesn't seem to exist yet, attempting to create.",
                 @namespace.Name
             );
             try
             {
                 await namespaceRepository.CreateAsync(@namespace, stoppingToken);
-                Logger.LogInformation(
+                logger.LogInformation(
                     "Successfully created namespace {NamespaceName}.",
                     @namespace.Name
                 );
             }
             catch (UniqueConstraintException)
             {
-                Logger.LogInformation(
+                logger.LogInformation(
                     "A namespace with the same name {NamespaceName} already exists. Will not be overridden.",
                     @namespace.Name
                 );

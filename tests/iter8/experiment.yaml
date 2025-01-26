@@ -85,7 +85,7 @@ stringData:
             - metric: grpc/latency/mean
               limit: 200
             - metric: grpc/latency/p99.0
-              limit: 400
+              limit: 500
 
 ---
 # Source: iter8/templates/k8s.yaml

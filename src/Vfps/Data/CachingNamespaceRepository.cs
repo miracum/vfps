@@ -4,22 +4,14 @@ using Vfps.Data.Models;
 
 namespace Vfps.Data;
 
-public class CachingNamespaceRepository : INamespaceRepository
+public class CachingNamespaceRepository(
+    PseudonymContext context,
+    IMemoryCache memoryCache,
+    CacheConfig cacheConfig
+) : INamespaceRepository
 {
-    public CachingNamespaceRepository(
-        PseudonymContext context,
-        IMemoryCache memoryCache,
-        CacheConfig cacheConfig
-    )
-    {
-        MemoryCache = memoryCache;
-        CacheConfig = cacheConfig;
-        NamespaceRepository = new NamespaceRepository(context);
-    }
-
-    private IMemoryCache MemoryCache { get; }
-    private CacheConfig CacheConfig { get; }
-    private NamespaceRepository NamespaceRepository { get; }
+    private CacheConfig CacheConfig { get; } = cacheConfig;
+    private NamespaceRepository NamespaceRepository { get; } = new NamespaceRepository(context);
 
     /// <inheritdoc/>
     public async Task<Namespace> CreateAsync(
@@ -38,7 +30,7 @@ public class CachingNamespaceRepository : INamespaceRepository
     {
         var cacheKey = $"namespaces.{namespaceName}";
 
-        return await MemoryCache.GetOrCreateAsync(
+        return await memoryCache.GetOrCreateAsync(
             cacheKey,
             async entry =>
             {
