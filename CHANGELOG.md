@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.6](https://github.com/miracum/vfps/compare/v1.3.5...v1.3.6) (2025-01-26)
+
+
+### Bug Fixes
+
+* namespace repository find async & refactor+reformat ([#176](https://github.com/miracum/vfps/issues/176)) ([93a2a7b](https://github.com/miracum/vfps/commit/93a2a7bbdd08589b4a22f4565053d4f4f8fc7d29))
+
 ## [1.3.5](https://github.com/miracum/vfps/compare/v1.3.4...v1.3.5) (2024-04-01)
 
 
