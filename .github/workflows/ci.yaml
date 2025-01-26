@@ -156,7 +156,7 @@ jobs:
           VFPS_IMAGE_TAG: ${{ needs.build.outputs.image-version }}
         run: |
           echo "Using VFPS image tag ${VFPS_IMAGE_TAG}"
-          docker compose -f docker-compose.yaml --profile=test up -d
+          docker compose --profile=test up -d
 
       - name: Wait for the healthz endpoint to be ready
         run: |
@@ -204,7 +204,7 @@ jobs:
       - name: Print compose logs
         if: always()
         run: |
-          docker compose --profile=test -f docker-compose.yaml logs
+          docker compose --profile=test logs
           docker compose --profile=test down --volumes --remove-orphans
 
   test-migrations:
