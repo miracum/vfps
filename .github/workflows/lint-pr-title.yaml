@@ -38,3 +38,4 @@ jobs:
             deps
             unit
             e2e
+            master
