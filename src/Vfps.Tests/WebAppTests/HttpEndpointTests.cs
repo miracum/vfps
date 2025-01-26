@@ -57,17 +57,9 @@ public class HttpEndpointTests(IntegrationTestFactory<Program, PseudonymContext>
         {
             Parameter = new List<Parameters.ParameterComponent>
             {
-                new Parameters.ParameterComponent
-                {
-                    Name = "namespace",
-                    Value = new FhirString("existingNamespace"),
-                },
-                new Parameters.ParameterComponent
-                {
-                    Name = "originalValue",
-                    Value = new FhirString("test"),
-                },
-            }
+                new() { Name = "namespace", Value = new FhirString("existingNamespace") },
+                new() { Name = "originalValue", Value = new FhirString("test") },
+            },
         };
 
         var response = await fhirClient.WholeSystemOperationAsync("create-pseudonym", p);

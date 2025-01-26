@@ -31,7 +31,7 @@ public class NamespaceServiceTests : ServiceTestBase
     [Fact]
     public async Task Get_WithExistingNamespace_ShouldReturnNamespace()
     {
-        var request = new NamespaceServiceGetRequest { Name = "existingNamespace", };
+        var request = new NamespaceServiceGetRequest { Name = "existingNamespace" };
 
         var response = await sut.Get(request, TestServerCallContext.Create());
 
@@ -51,7 +51,7 @@ public class NamespaceServiceTests : ServiceTestBase
     [Fact]
     public async Task Get_WithNonExistingNamespace_ShouldThrowNotFoundException()
     {
-        var request = new NamespaceServiceGetRequest { Name = "notExisting", };
+        var request = new NamespaceServiceGetRequest { Name = "notExisting" };
 
         var act = () => sut.Get(request, TestServerCallContext.Create());
 
@@ -81,7 +81,7 @@ public class NamespaceServiceTests : ServiceTestBase
         var request = new NamespaceServiceCreateRequest
         {
             Name = nameof(Create_WithPseudonymLengthZero_ShouldFail),
-            PseudonymLength = 0
+            PseudonymLength = 0,
         };
 
         var act = () => sut.Create(request, TestServerCallContext.Create());
@@ -101,7 +101,7 @@ public class NamespaceServiceTests : ServiceTestBase
 
         await sut.Create(createRequest, TestServerCallContext.Create());
 
-        var deleteRequest = new NamespaceServiceDeleteRequest { Name = "toBeDeleted", };
+        var deleteRequest = new NamespaceServiceDeleteRequest { Name = "toBeDeleted" };
 
         await sut.Delete(deleteRequest, TestServerCallContext.Create());
 
@@ -150,7 +150,7 @@ public class NamespaceServiceTests : ServiceTestBase
 
         pseudonymCount.Should().Be(pseudonymsToCreateCount);
 
-        var deleteRequest = new NamespaceServiceDeleteRequest { Name = createRequest.Name, };
+        var deleteRequest = new NamespaceServiceDeleteRequest { Name = createRequest.Name };
 
         await sut.Delete(deleteRequest, TestServerCallContext.Create());
 
@@ -171,7 +171,7 @@ public class NamespaceServiceTests : ServiceTestBase
     [Fact]
     public async Task Delete_WithNonExistingNamespace_ShouldThrowNotFoundException()
     {
-        var request = new NamespaceServiceDeleteRequest { Name = "notExisting", };
+        var request = new NamespaceServiceDeleteRequest { Name = "notExisting" };
 
         var act = () => sut.Delete(request, TestServerCallContext.Create());
 

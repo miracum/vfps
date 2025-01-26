@@ -10,7 +10,7 @@ public class MemoryCacheMetricsBackgroundServiceTests
     public async Task MemoryCacheMetricsBackgroundService_ShouldStartAndStopWithoutException()
     {
         var memoryCache = new MemoryCache(
-            new MemoryCacheOptions { TrackStatistics = true, SizeLimit = 32, }
+            new MemoryCacheOptions { TrackStatistics = true, SizeLimit = 32 }
         );
 
         var sut = new MemoryCacheMetricsBackgroundService(memoryCache);

@@ -16,7 +16,7 @@ public class PseudonymizationMethodsLookup
                 new CryptoRandomBase64UrlEncodedGenerator()
             },
             { PseudonymGenerationMethod.Sha256HexEncoded, new HexEncodedSha256HashGenerator() },
-            { PseudonymGenerationMethod.Uuid4, new Uuid4Generator() }
+            { PseudonymGenerationMethod.Uuid4, new Uuid4Generator() },
         };
     }
 

@@ -71,9 +71,9 @@ public class NamespaceService(PseudonymContext context, INamespaceRepository nam
                 Meta = new Meta
                 {
                     CreatedAt = Timestamp.FromDateTimeOffset(@namespace.CreatedAt),
-                    LastUpdatedAt = Timestamp.FromDateTimeOffset(@namespace.LastUpdatedAt)
-                }
-            }
+                    LastUpdatedAt = Timestamp.FromDateTimeOffset(@namespace.LastUpdatedAt),
+                },
+            },
         };
     }
 
@@ -113,9 +113,9 @@ public class NamespaceService(PseudonymContext context, INamespaceRepository nam
                 Meta = new Meta
                 {
                     CreatedAt = Timestamp.FromDateTimeOffset(@namespace.CreatedAt),
-                    LastUpdatedAt = Timestamp.FromDateTimeOffset(@namespace.LastUpdatedAt)
-                }
-            }
+                    LastUpdatedAt = Timestamp.FromDateTimeOffset(@namespace.LastUpdatedAt),
+                },
+            },
         };
     }
 
@@ -170,8 +170,8 @@ public class NamespaceService(PseudonymContext context, INamespaceRepository nam
                 Meta = new Meta
                 {
                     CreatedAt = Timestamp.FromDateTimeOffset(n.CreatedAt),
-                    LastUpdatedAt = Timestamp.FromDateTimeOffset(n.LastUpdatedAt)
-                }
+                    LastUpdatedAt = Timestamp.FromDateTimeOffset(n.LastUpdatedAt),
+                },
             })
             .ToListAsync(context.CancellationToken);
 

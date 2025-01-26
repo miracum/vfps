@@ -75,7 +75,7 @@ public class PseudonymService(
 
         if (upsertedPseudonym is null)
         {
-            var metadata = new Metadata { { "Namespace", request.Namespace }, };
+            var metadata = new Metadata { { "Namespace", request.Namespace } };
 
             throw new RpcException(
                 new Status(
@@ -98,7 +98,7 @@ public class PseudonymService(
                     CreatedAt = Timestamp.FromDateTimeOffset(upsertedPseudonym.CreatedAt),
                     LastUpdatedAt = Timestamp.FromDateTimeOffset(upsertedPseudonym.LastUpdatedAt),
                 },
-            }
+            },
         };
     }
 
@@ -118,7 +118,7 @@ public class PseudonymService(
             var metadata = new Metadata
             {
                 { "Namespace", request.Namespace },
-                { "Pseudonym", request.PseudonymValue }
+                { "Pseudonym", request.PseudonymValue },
             };
 
             throw new RpcException(
@@ -142,7 +142,7 @@ public class PseudonymService(
                     CreatedAt = Timestamp.FromDateTimeOffset(pseudonym.CreatedAt),
                     LastUpdatedAt = Timestamp.FromDateTimeOffset(pseudonym.LastUpdatedAt),
                 },
-            }
+            },
         };
     }
 
@@ -154,7 +154,7 @@ public class PseudonymService(
     {
         if (!Context.Namespaces.Where(n => n.Name == request.Namespace).Any())
         {
-            var metadata = new Metadata { { "Namespace", request.Namespace }, };
+            var metadata = new Metadata { { "Namespace", request.Namespace } };
 
             throw new RpcException(
                 new Status(

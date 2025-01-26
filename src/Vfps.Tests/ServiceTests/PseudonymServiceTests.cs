@@ -201,7 +201,7 @@ public class PseudonymServiceTests : ServiceTestBase
     [Fact]
     public async Task List_WithEmptyNamespace_ShouldReturnEmptyList()
     {
-        var request = new PseudonymServiceListRequest { Namespace = "emptyNamespace", };
+        var request = new PseudonymServiceListRequest { Namespace = "emptyNamespace" };
 
         var response = await sut.List(request, TestServerCallContext.Create());
 
@@ -212,7 +212,7 @@ public class PseudonymServiceTests : ServiceTestBase
     [Fact]
     public async Task List_WithNonExistingNamespace_ShouldThrowNotFoundError()
     {
-        var request = new PseudonymServiceListRequest { Namespace = "nonExistingNamespace", };
+        var request = new PseudonymServiceListRequest { Namespace = "nonExistingNamespace" };
 
         await sut.Invoking(async s => await s.List(request, TestServerCallContext.Create()))
             .Should()
@@ -223,7 +223,7 @@ public class PseudonymServiceTests : ServiceTestBase
     [Fact]
     public async Task List_WithExistingNonEmptyNamespace_ShouldReturnAllPseudonyms()
     {
-        var request = new PseudonymServiceListRequest { Namespace = "existingNamespace", };
+        var request = new PseudonymServiceListRequest { Namespace = "existingNamespace" };
 
         var response = await sut.List(request, TestServerCallContext.Create());
 

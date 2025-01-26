@@ -46,7 +46,7 @@ namespace Vfps.Migrations
                         name: "last_updated_at",
                         type: "timestamp with time zone",
                         nullable: false
-                    )
+                    ),
                 },
                 constraints: table =>
                 {
@@ -82,7 +82,7 @@ namespace Vfps.Migrations
                         name: "last_updated_at",
                         type: "timestamp with time zone",
                         nullable: false
-                    )
+                    ),
                 },
                 constraints: table =>
                 {
