@@ -23,8 +23,8 @@ public class StressTests
                 InitialBackoff = TimeSpan.FromSeconds(5),
                 MaxBackoff = TimeSpan.FromSeconds(30),
                 BackoffMultiplier = 2,
-                RetryableStatusCodes = { StatusCode.Unavailable, StatusCode.Internal }
-            }
+                RetryableStatusCodes = { StatusCode.Unavailable, StatusCode.Internal },
+            },
         };
 
         var channel = GrpcChannel.ForAddress(

@@ -160,7 +160,7 @@ app.MapHealthChecks(
         // there's currently no readiness probes depending on external state,
         // but in case we ever add one, this prepares the code for it.
         // see https://learn.microsoft.com/en-us/aspnet/core/host-and-deploy/health-checks?view=aspnetcore-7.0#separate-readiness-and-liveness-probes
-        Predicate = healthCheck => healthCheck.Tags.Contains("ready")
+        Predicate = healthCheck => healthCheck.Tags.Contains("ready"),
     }
 );
 

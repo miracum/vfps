@@ -45,7 +45,7 @@ public class FhirController(
                 {
                     Severity = OperationOutcome.IssueSeverity.Error,
                     Code = OperationOutcome.IssueType.Processing,
-                    Diagnostics = "Received malformed or missing resource"
+                    Diagnostics = "Received malformed or missing resource",
                 }
             );
             logger.LogError("Bad Request: received request body is empty.");
@@ -64,7 +64,7 @@ public class FhirController(
                     Severity = OperationOutcome.IssueSeverity.Error,
                     Code = OperationOutcome.IssueType.Processing,
                     Diagnostics =
-                        "namespace and/or originalValue are missing in the Parameters request object"
+                        "namespace and/or originalValue are missing in the Parameters request object",
                 }
             );
             return BadRequest(outcome);
@@ -79,7 +79,7 @@ public class FhirController(
                 {
                     Severity = OperationOutcome.IssueSeverity.Error,
                     Code = OperationOutcome.IssueType.Processing,
-                    Diagnostics = $"the namespace '{namespaceName}' could not be found."
+                    Diagnostics = $"the namespace '{namespaceName}' could not be found.",
                 }
             );
             return NotFound(outcome);
@@ -120,7 +120,7 @@ public class FhirController(
                 {
                     Severity = OperationOutcome.IssueSeverity.Error,
                     Code = OperationOutcome.IssueType.Processing,
-                    Diagnostics = "failed to store the pseudonym after several retries"
+                    Diagnostics = "failed to store the pseudonym after several retries",
                 }
             );
             return StatusCode(500, outcome);
@@ -131,22 +131,14 @@ public class FhirController(
             {
                 Parameter = new List<Parameters.ParameterComponent>
                 {
-                    new Parameters.ParameterComponent
-                    {
-                        Name = "namespace",
-                        Value = new FhirString(namespaceName),
-                    },
-                    new Parameters.ParameterComponent
-                    {
-                        Name = "originalValue",
-                        Value = new FhirString(originalValue),
-                    },
-                    new Parameters.ParameterComponent
+                    new() { Name = "namespace", Value = new FhirString(namespaceName) },
+                    new() { Name = "originalValue", Value = new FhirString(originalValue) },
+                    new()
                     {
                         Name = "pseudonymValue",
                         Value = new FhirString(upsertedPseudonym.PseudonymValue),
                     },
-                }
+                },
             }
         );
     }
@@ -164,12 +156,12 @@ public class FhirController(
             Status = PublicationStatus.Active,
             Date = DateTime.UtcNow.ToString("s", CultureInfo.InvariantCulture),
             Kind = CapabilityStatementKind.Instance,
-            Software = new CapabilityStatement.SoftwareComponent { Name = "VFPS FHIR API", },
+            Software = new CapabilityStatement.SoftwareComponent { Name = "VFPS FHIR API" },
             FhirVersion = FHIRVersion.N4_0_1,
             Format = new[] { "application/fhir+json" },
             Rest = new List<CapabilityStatement.RestComponent>
             {
-                new() { Mode = CapabilityStatement.RestfulCapabilityMode.Server }
+                new() { Mode = CapabilityStatement.RestfulCapabilityMode.Server },
             },
         };
     }
