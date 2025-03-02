@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1737904897990,
+  "lastUpdate": 1740942312978,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -3252,6 +3252,48 @@ window.BENCHMARK_DATA = {
             "value": 718.57136290414,
             "unit": "ns",
             "range": "± 1.9596824258749435"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7e23ad3642e5016b3b756105729835b2b2042300",
+          "message": "chore(deps): update all non-major dependencies (#182)\n\n* chore(deps): update all non-major dependencies\n\n* downgrade benchmark .net\n\n* trivy fail only on high/critical\n\n* false pos\n\n---------\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>\nCo-authored-by: chgl <chgl@users.noreply.github.com>",
+          "timestamp": "2025-03-02T20:03:27+01:00",
+          "tree_id": "e2c8f09c93441779ba4ffc6fd93998661c5b79ff",
+          "url": "https://github.com/miracum/vfps/commit/7e23ad3642e5016b3b756105729835b2b2042300"
+        },
+        "date": 1740942312636,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1231.4527112325034,
+            "unit": "ns",
+            "range": "± 4.802846712035898"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 876.544767175402,
+            "unit": "ns",
+            "range": "± 4.223072641194816"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 724.3204972585042,
+            "unit": "ns",
+            "range": "± 2.7348785709760226"
           }
         ]
       }
