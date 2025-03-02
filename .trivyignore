@@ -7,3 +7,6 @@ AVD-DS-0002
 
 # no update yet. blocking build.
 CVE-2023-4911
+
+# false positive, also covered by hadolint
+AVD-DS-0017
