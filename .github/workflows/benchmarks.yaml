@@ -12,8 +12,8 @@ on:
     paths:
       - src/**
 
-# Declare default permissions as read only.
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   benchmark:
