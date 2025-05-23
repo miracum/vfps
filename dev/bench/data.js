@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1747985625447,
+  "lastUpdate": 1747988804208,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -3336,6 +3336,48 @@ window.BENCHMARK_DATA = {
             "value": 644.1225889069693,
             "unit": "ns",
             "range": "± 1.7682329484631214"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "2f96ec86a02aea7c3e554196ef060448419aef93",
+          "message": "chore(deps): update dependency nbomber to v6 (#187)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2025-05-23T10:25:15+02:00",
+          "tree_id": "67ca1d547a3cf16d61ac4caa52784dd73194f093",
+          "url": "https://github.com/miracum/vfps/commit/2f96ec86a02aea7c3e554196ef060448419aef93"
+        },
+        "date": 1747988803510,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1264.484990119934,
+            "unit": "ns",
+            "range": "± 9.70200038022513"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 883.8952820851252,
+            "unit": "ns",
+            "range": "± 4.942436870726405"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 649.0065789222717,
+            "unit": "ns",
+            "range": "± 2.1036762862344913"
           }
         ]
       }
