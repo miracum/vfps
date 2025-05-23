@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    uses: miracum/.github/.github/workflows/standard-build.yaml@b09452445e168de479d5059026e8e8a54d11c8d8 # v1.13.2
+    uses: miracum/.github/.github/workflows/standard-build.yaml@563959ec1b63f91b8d12a170152b4537f1b43ba8 # v1.16.14
     permissions:
       contents: write
       id-token: write
@@ -52,7 +52,7 @@ jobs:
           docker info -f '{{ .DriverStatus }}'
 
       - name: Download test image
-        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: ${{ needs.build.outputs.image-slug }}-test
           path: /tmp
@@ -84,7 +84,7 @@ jobs:
           thresholds: "50 50"
 
       - name: Add Coverage PR Comment
-        uses: marocchino/sticky-pull-request-comment@52423e01640425a022ef5fd42c6fb5f633a02728 # v2.9.1
+        uses: marocchino/sticky-pull-request-comment@67d0dec7b07ed060a405f9b2a64b8ab319fdd7db # v2.9.2
         if: ${{ github.event_name == 'pull_request' }}
         with:
           recreate: true
@@ -119,7 +119,7 @@ jobs:
 
       - name: Download container image
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
@@ -195,7 +195,7 @@ jobs:
           } >> ghz-output.md
 
       - name: Append sticky comment with ghz output
-        uses: marocchino/sticky-pull-request-comment@52423e01640425a022ef5fd42c6fb5f633a02728 # v2.9.1
+        uses: marocchino/sticky-pull-request-comment@67d0dec7b07ed060a405f9b2a64b8ab319fdd7db # v2.9.2
         if: ${{ github.event_name == 'pull_request' }}
         with:
           append: true
@@ -235,7 +235,7 @@ jobs:
 
       - name: Download container image
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
@@ -248,7 +248,7 @@ jobs:
           docker image ls -a
 
       - name: Install .NET
-        uses: actions/setup-dotnet@3951f0dfe7a07e2313ec93c75700083e2005cbab # v4.3.0
+        uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with:
           dotnet-version: "9.0.x"
 
@@ -301,7 +301,7 @@ jobs:
 
       - name: Download container image
         if: ${{ github.event_name == 'pull_request' }}
-        uses: actions/download-artifact@cc203385981b70ca67e1cc392babf9cc229d5806 # v4.1.9
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
@@ -352,7 +352,7 @@ jobs:
           } >> iter8-output.md
 
       - name: Append sticky comment with iter8 report
-        uses: marocchino/sticky-pull-request-comment@52423e01640425a022ef5fd42c6fb5f633a02728 # v2.9.1
+        uses: marocchino/sticky-pull-request-comment@67d0dec7b07ed060a405f9b2a64b8ab319fdd7db # v2.9.2
         if: ${{ github.event_name == 'pull_request' }}
         with:
           append: true
@@ -360,7 +360,7 @@ jobs:
 
       - name: Upload report
         if: always()
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: iter8-report.html
           path: |
@@ -374,14 +374,14 @@ jobs:
 
       - name: Upload cluster dump
         if: always()
-        uses: actions/upload-artifact@4cec3d8aa04e39d1a68397de0c4cd6fb9dce8ec1 # v4.6.1
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: kind-cluster-dump.txt
           path: |
             kind-cluster-dump.txt
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@b09452445e168de479d5059026e8e8a54d11c8d8 # v1.13.2
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@563959ec1b63f91b8d12a170152b4537f1b43ba8 # v1.16.14
     permissions:
       contents: read
       pull-requests: write
