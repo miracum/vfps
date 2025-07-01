@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.3.7](https://github.com/miracum/vfps/compare/v1.3.6...v1.3.7) (2025-07-01)
+
+
+### Miscellaneous Chores
+
+* **deps:** update all digest updates ([#188](https://github.com/miracum/vfps/issues/188)) ([dd6e6ab](https://github.com/miracum/vfps/commit/dd6e6ab739b6d82f1776abb66da05fe9e115897a))
+* **deps:** update all digest updates ([#191](https://github.com/miracum/vfps/issues/191)) ([662b9ab](https://github.com/miracum/vfps/commit/662b9ab27e85aa311b77d36ad1fa5ae299d486ab))
+* **deps:** update all digest updates ([#194](https://github.com/miracum/vfps/issues/194)) ([aeb8999](https://github.com/miracum/vfps/commit/aeb89998fe4a1d6c14843f3d87faa27fcd86600c))
+* **deps:** update all non-major dependencies ([#182](https://github.com/miracum/vfps/issues/182)) ([7e23ad3](https://github.com/miracum/vfps/commit/7e23ad3642e5016b3b756105729835b2b2042300))
+* **deps:** update all non-major dependencies ([#185](https://github.com/miracum/vfps/issues/185)) ([74fefde](https://github.com/miracum/vfps/commit/74fefde8c231d873365aa31d61820d3b963d3835))
+* **deps:** update all non-major dependencies ([#193](https://github.com/miracum/vfps/issues/193)) ([7c3ec75](https://github.com/miracum/vfps/commit/7c3ec75e673544d34e4081d502a96905373dc246))
+* **deps:** update all non-major dependencies ([#196](https://github.com/miracum/vfps/issues/196)) ([35ba343](https://github.com/miracum/vfps/commit/35ba3431d9e91d064d03869a2defb115df5c8205))
+* **deps:** update dependency csharpier to v1 ([#189](https://github.com/miracum/vfps/issues/189)) ([421ae5e](https://github.com/miracum/vfps/commit/421ae5ee565ed2a7f34e7ec022f4d95800b08ab6))
+* **deps:** update dependency nbomber to v6 ([#187](https://github.com/miracum/vfps/issues/187)) ([2f96ec8](https://github.com/miracum/vfps/commit/2f96ec86a02aea7c3e554196ef060448419aef93))
+* **deps:** update docker.io/library/ubuntu:24.04 docker digest to 7229784 ([#179](https://github.com/miracum/vfps/issues/179)) ([175f215](https://github.com/miracum/vfps/commit/175f2156faa75b1df214bd1b106b67a48f6abc97))
+* **deps:** update github-actions ([#181](https://github.com/miracum/vfps/issues/181)) ([afb44d3](https://github.com/miracum/vfps/commit/afb44d3a078e25da804935f3039c14eb59ba4d44))
+* **deps:** update github-actions ([#186](https://github.com/miracum/vfps/issues/186)) ([8ff6cdc](https://github.com/miracum/vfps/commit/8ff6cdc4fd9dd7275ea36c65c423fedd0dce976d))
+* **deps:** update github-actions ([#192](https://github.com/miracum/vfps/issues/192)) ([7a1cfc7](https://github.com/miracum/vfps/commit/7a1cfc7b02c399c59ef465ce591b570e2b8f0df3))
+* **deps:** update github-actions ([#195](https://github.com/miracum/vfps/issues/195)) ([0bd6224](https://github.com/miracum/vfps/commit/0bd6224c196449a6219f70d582a8cf46f864e336))
+
+
+### CI/CD
+
+* bump on chore ([9e6460d](https://github.com/miracum/vfps/commit/9e6460d8e995cdb364c6f6faf79980f54c979860))
+* zizmor lints ([cf3d5e0](https://github.com/miracum/vfps/commit/cf3d5e087df175008dfbb52db12bafb87b24e825))
+
 ## [1.3.6](https://github.com/miracum/vfps/compare/v1.3.5...v1.3.6) (2025-01-26)
 
 
