@@ -74,7 +74,7 @@ FROM build AS stress-test
 WORKDIR /opt/vfps-stress
 # https://github.com/hadolint/hadolint/pull/815 isn't yet in mega-linter
 # hadolint ignore=DL3022
-COPY --from=docker.io/bitnami/kubectl:1.33.1@sha256:c963598a2143300db1c74b9a2cc0091511daabaf3eaa0fd8643bc241a15024f3 /opt/bitnami/kubectl/bin/kubectl /usr/bin/kubectl
+COPY --from=docker.io/bitnami/kubectl:1.33.1@sha256:9081a6f83f4febf47369fc46b6f0f7683c7db243df5b43fc9defe51b0471a950 /opt/bitnami/kubectl/bin/kubectl /usr/bin/kubectl
 
 COPY tests/chaos/chaos.yaml /tmp/
 COPY --from=build-stress-test /build/publish .
