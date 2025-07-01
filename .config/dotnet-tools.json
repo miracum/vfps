@@ -7,7 +7,7 @@
       "commands": ["dotnet-outdated"]
     },
     "csharpier": {
-      "version": "1.0.2",
+      "version": "1.0.3",
       "commands": ["dotnet-csharpier"]
     }
   }
