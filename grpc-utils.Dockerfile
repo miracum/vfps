@@ -1,4 +1,4 @@
-FROM docker.io/library/ubuntu:24.04@sha256:728785b59223d755e3e5c5af178fab1be7031f3522c5ccd7a0b32b80d8248123
+FROM docker.io/library/ubuntu:24.04@sha256:c35e29c9450151419d9448b0fd75374fec4fff364a27f176fb458d472dfc9e54
 SHELL ["/bin/bash", "-eo", "pipefail", "-c"]
 
 ENV GRPCURL_URL=https://github.com/fullstorydev/grpcurl/releases/download/v1.8.8/grpcurl_1.8.8_linux_x86_64.tar.gz \
