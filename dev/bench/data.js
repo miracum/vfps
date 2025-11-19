@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1759863225233,
+  "lastUpdate": 1763585964148,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -3504,6 +3504,48 @@ window.BENCHMARK_DATA = {
             "value": 636.655829111735,
             "unit": "ns",
             "range": "± 1.3112421167660435"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c1c7766985fe8ca2bad2db74616e7625644e389f",
+          "message": "chore(deps): update dependency microsoft.net.test.sdk to v18 (#206)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2025-11-19T21:57:32+01:00",
+          "tree_id": "c022bff27b4e9a9b7914a10eb23c03c66845a790",
+          "url": "https://github.com/miracum/vfps/commit/c1c7766985fe8ca2bad2db74616e7625644e389f"
+        },
+        "date": 1763585963508,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1253.2392817277175,
+            "unit": "ns",
+            "range": "± 4.047256533783232"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 981.4179391127366,
+            "unit": "ns",
+            "range": "± 1.6795130828414766"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 632.3381609598796,
+            "unit": "ns",
+            "range": "± 1.3654186945226536"
           }
         ]
       }
