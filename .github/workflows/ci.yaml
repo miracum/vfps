@@ -32,6 +32,7 @@ jobs:
 
   add-code-coverage:
     runs-on: ubuntu-24.04
+    name: add code coverage
     needs:
       - build
     permissions:

@@ -18,6 +18,7 @@ permissions:
 jobs:
   benchmark:
     runs-on: ubuntu-24.04
+    name: benchmark
     permissions:
       contents: write
       pages: write
