@@ -18,13 +18,14 @@ permissions:
 jobs:
   benchmark:
     runs-on: ubuntu-24.04
+    name: benchmark
     permissions:
       contents: write
       pages: write
       pull-requests: write
     steps:
       - name: Checkout
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@93cb6efe18208431cddfb8368fd83d5badbf9bfd # v5.0.1
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -38,7 +39,7 @@ jobs:
         run: dotnet run -c Release --project=src/Vfps.Benchmarks
 
       - name: Store benchmark result
-        uses: benchmark-action/github-action-benchmark@d48d326b4ca9ba73ca0cd0d59f108f9e02a381c7 # v1.20.4
+        uses: benchmark-action/github-action-benchmark@4bdcce38c94cec68da58d012ac24b7b1155efe8b # v1.20.7
         with:
           name: PseudonymGeneratorBenchmarks
           tool: "benchmarkdotnet"
