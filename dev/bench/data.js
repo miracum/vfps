@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1763585964148,
+  "lastUpdate": 1763587229322,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -3546,6 +3546,48 @@ window.BENCHMARK_DATA = {
             "value": 632.3381609598796,
             "unit": "ns",
             "range": "± 1.3654186945226536"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "a765d793493db85fe3aa509c7a911d6a45126ebb",
+          "message": "chore(deps): update dependency hl7.fhir.r4 to v6 (#205)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2025-11-19T22:18:17+01:00",
+          "tree_id": "02c61f11ecc482d3f7cea72447d6d7d7405856a3",
+          "url": "https://github.com/miracum/vfps/commit/a765d793493db85fe3aa509c7a911d6a45126ebb"
+        },
+        "date": 1763587228978,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1269.6111676142766,
+            "unit": "ns",
+            "range": "± 3.9734216543838827"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 981.9551901499431,
+            "unit": "ns",
+            "range": "± 2.3546390223568516"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 631.2348277909415,
+            "unit": "ns",
+            "range": "± 1.3829126250898265"
           }
         ]
       }
