@@ -1,5 +1,4 @@
 <Project Sdk="Microsoft.NET.Sdk">
-
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <ValidateExecutableReferencesMatchSelfContained>false</ValidateExecutableReferencesMatchSelfContained>
@@ -12,5 +11,4 @@
   <ItemGroup>
     <ProjectReference Include="..\Vfps\Vfps.csproj" />
   </ItemGroup>
-
 </Project>
