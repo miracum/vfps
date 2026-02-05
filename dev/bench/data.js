@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1763587229322,
+  "lastUpdate": 1770312816388,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -3588,6 +3588,48 @@ window.BENCHMARK_DATA = {
             "value": 631.2348277909415,
             "unit": "ns",
             "range": "± 1.3829126250898265"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "308d1f027f47f2b0d636413243870d825bb89c9c",
+          "message": "chore(deps): dependency maintenance (#217)\n\n* chore(deps): update dependency efcore.namingconventions to v10\n\n* chore(deps): update dotnet monorepo to v10\n\n* format\n\n* chore(deps): dep updates\n\n---------\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2026-02-05T18:31:47+01:00",
+          "tree_id": "cbabefc41ef310ab8131883b5d9eacc995496032",
+          "url": "https://github.com/miracum/vfps/commit/308d1f027f47f2b0d636413243870d825bb89c9c"
+        },
+        "date": 1770312815590,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1187.3425916944232,
+            "unit": "ns",
+            "range": "± 5.093923172493836"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 717.4569937388102,
+            "unit": "ns",
+            "range": "± 2.1600536985991594"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 625.4110664640154,
+            "unit": "ns",
+            "range": "± 1.0482803847466453"
           }
         ]
       }
