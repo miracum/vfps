@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    uses: miracum/.github/.github/workflows/standard-build.yaml@003a712f7458695cf6d6b32216d3c07e84f77d53 # v1.18.3
+    uses: miracum/.github/.github/workflows/standard-build.yaml@0fe32a245f1e9e2199a0293a3a5fea12774beef7 # v1.20.2
     permissions:
       contents: write
       id-token: write
@@ -249,7 +249,7 @@ jobs:
           docker image ls -a
 
       - name: Install .NET
-        uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
         with:
           dotnet-version: "9.0.x"
 
@@ -296,7 +296,7 @@ jobs:
           iter8 version
 
       - name: Create KinD cluster
-        uses: helm/kind-action@92086f6be054225fa813e0a4b13787fc9088faab # v1.13.0
+        uses: helm/kind-action@ef37e7f390d99f746eb8b610417061a60e82a6cc # v1.14.0
         with:
           cluster_name: kind
 
@@ -382,7 +382,7 @@ jobs:
             kind-cluster-dump.txt
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@003a712f7458695cf6d6b32216d3c07e84f77d53 # v1.18.3
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@0fe32a245f1e9e2199a0293a3a5fea12774beef7 # v1.20.2
     permissions:
       contents: read
       pull-requests: write
