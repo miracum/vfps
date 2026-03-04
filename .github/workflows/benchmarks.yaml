@@ -31,7 +31,7 @@ jobs:
           persist-credentials: false
 
       - name: Install .NET
-        uses: actions/setup-dotnet@d4c94342e560b34958eacfc5d055d21461ed1c5d # v5.0.0
+        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
         with:
           dotnet-version: "9.0.x"
 
@@ -39,7 +39,7 @@ jobs:
         run: dotnet run -c Release --project=src/Vfps.Benchmarks
 
       - name: Store benchmark result
-        uses: benchmark-action/github-action-benchmark@4bdcce38c94cec68da58d012ac24b7b1155efe8b # v1.20.7
+        uses: benchmark-action/github-action-benchmark@a7bc2366eda11037936ea57d811a43b3418d3073 # v1.21.0
         with:
           name: PseudonymGeneratorBenchmarks
           tool: "benchmarkdotnet"
