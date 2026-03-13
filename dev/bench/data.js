@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773386296723,
+  "lastUpdate": 1773386312268,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -3672,6 +3672,48 @@ window.BENCHMARK_DATA = {
             "value": 909.9345076878866,
             "unit": "ns",
             "range": "± 3.321379975047859"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "299f9610dade9dfc29a48a0e888f18ed5a3bdf6f",
+          "message": "chore(deps): update dependency coverlet.collector to v8 (#220)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2026-03-13T08:16:33+01:00",
+          "tree_id": "a19b37a4ae2a33a5d42b529f76734fa61f730b22",
+          "url": "https://github.com/miracum/vfps/commit/299f9610dade9dfc29a48a0e888f18ed5a3bdf6f"
+        },
+        "date": 1773386311498,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1429.3243774414063,
+            "unit": "ns",
+            "range": "± 9.291049035091026"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 714.2601330620902,
+            "unit": "ns",
+            "range": "± 2.272747638212198"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 898.2936602274577,
+            "unit": "ns",
+            "range": "± 1.7654520227748556"
           }
         ]
       }
