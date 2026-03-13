@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1770312816388,
+  "lastUpdate": 1773386296723,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -3630,6 +3630,48 @@ window.BENCHMARK_DATA = {
             "value": 625.4110664640154,
             "unit": "ns",
             "range": "± 1.0482803847466453"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6ffba6da49c1e0d0211e53e32d1d7ab25a7de34a",
+          "message": "chore(deps): update dependency coverlet.msbuild to v8 (#221)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2026-03-13T08:16:12+01:00",
+          "tree_id": "fe0ad20a868cd3955c09f45641bb3df8fba793fa",
+          "url": "https://github.com/miracum/vfps/commit/6ffba6da49c1e0d0211e53e32d1d7ab25a7de34a"
+        },
+        "date": 1773386296117,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1508.0118867329188,
+            "unit": "ns",
+            "range": "± 4.323508091508709"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 717.854391166142,
+            "unit": "ns",
+            "range": "± 1.0657390129745246"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 909.9345076878866,
+            "unit": "ns",
+            "range": "± 3.321379975047859"
           }
         ]
       }
