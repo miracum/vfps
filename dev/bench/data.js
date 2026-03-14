@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773386312268,
+  "lastUpdate": 1773509048721,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -3714,6 +3714,48 @@ window.BENCHMARK_DATA = {
             "value": 898.2936602274577,
             "unit": "ns",
             "range": "± 1.7654520227748556"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c849b64aa178944289f5ab7a48f34f6bcaacbf7",
+          "message": "chore(deps): update all non-major dependencies (#219)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2026-03-14T18:22:14+01:00",
+          "tree_id": "e7a764c75241aa94453cb0ad331781442e17d8b3",
+          "url": "https://github.com/miracum/vfps/commit/8c849b64aa178944289f5ab7a48f34f6bcaacbf7"
+        },
+        "date": 1773509048479,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1505.6122506005424,
+            "unit": "ns",
+            "range": "± 6.685930033575715"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 608.1539551871164,
+            "unit": "ns",
+            "range": "± 1.8311854494565603"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 911.7138517924717,
+            "unit": "ns",
+            "range": "± 1.131379846749692"
           }
         ]
       }
