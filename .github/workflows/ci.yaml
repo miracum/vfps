@@ -13,7 +13,7 @@ permissions:
 
 jobs:
   build:
-    uses: miracum/.github/.github/workflows/standard-build.yaml@e80245abb031a27f87d0e07eeb6f5f54a82a46b8 # v1.20.4
+    uses: miracum/.github/.github/workflows/standard-build.yaml@1478f7e298f11e96e4585dee4afdce8fabc2e162 # v1.20.5
     permissions:
       contents: write
       id-token: write
@@ -249,7 +249,7 @@ jobs:
           docker image ls -a
 
       - name: Install .NET
-        uses: actions/setup-dotnet@baa11fbfe1d6520db94683bd5c7a3818018e4309 # v5.1.0
+        uses: actions/setup-dotnet@c2fa09f4bde5ebb9d1777cf28262a3eb3db3ced7 # v5.2.0
         with:
           dotnet-version: "9.0.x"
 
@@ -382,7 +382,7 @@ jobs:
             kind-cluster-dump.txt
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@e80245abb031a27f87d0e07eeb6f5f54a82a46b8 # v1.20.4
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@1478f7e298f11e96e4585dee4afdce8fabc2e162 # v1.20.5
     permissions:
       contents: read
       pull-requests: write
