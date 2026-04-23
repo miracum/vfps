@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1773532291182,
+  "lastUpdate": 1776984084183,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -3798,6 +3798,48 @@ window.BENCHMARK_DATA = {
             "value": 414.75136268138885,
             "unit": "ns",
             "range": "± 1.6407928826983311"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "29139614+renovate[bot]@users.noreply.github.com",
+            "name": "renovate[bot]",
+            "username": "renovate[bot]"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7c806a43e4b1c013f654b9561080e81ba589f24c",
+          "message": "chore(deps): update dependency opentelemetry.exporter.opentelemetryprotocol to 1.15.3 [security] (#223)\n\nCo-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>",
+          "timestamp": "2026-04-24T00:39:34+02:00",
+          "tree_id": "4d4341908c2bf33195d9b1ab0f2809a9c55e8581",
+          "url": "https://github.com/miracum/vfps/commit/7c806a43e4b1c013f654b9561080e81ba589f24c"
+        },
+        "date": 1776984083775,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1130.2326265970867,
+            "unit": "ns",
+            "range": "± 7.1224212915661544"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 599.6969691594442,
+            "unit": "ns",
+            "range": "± 1.6755779064364689"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 627.2933467456272,
+            "unit": "ns",
+            "range": "± 1.2003421863845012"
           }
         ]
       }
