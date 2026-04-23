@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.8](https://github.com/miracum/vfps/compare/v1.3.7...v1.3.8) (2026-04-23)
+
+
+### Miscellaneous Chores
+
+* **deps:** update dependency opentelemetry.exporter.opentelemetryprotocol to 1.15.3 [security] ([#223](https://github.com/miracum/vfps/issues/223)) ([7c806a4](https://github.com/miracum/vfps/commit/7c806a43e4b1c013f654b9561080e81ba589f24c))
+
 ## [1.3.7](https://github.com/miracum/vfps/compare/v1.3.6...v1.3.7) (2026-03-14)
 
 
