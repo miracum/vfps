@@ -27,6 +27,11 @@ service PseudonymService {
   rpc List(PseudonymServiceListRequest) returns (PseudonymServiceListResponse) {
     option (google.api.http) = {get: "/v1/namespaces/{namespace}/pseudonyms"};
   }
+
+  // delete a specific pseudonym by its value
+  rpc Delete(PseudonymServiceDeleteRequest) returns (PseudonymServiceDeleteResponse) {
+    option (google.api.http) = {delete: "/v1/namespaces/{namespace}/pseudonyms/{pseudonym_value}"};
+  }
 }
 
 // request to list all pseudonyms in a namespace
@@ -103,3 +108,14 @@ message Pseudonym {
   // the pseudonym created for the original value
   string pseudonym_value = 4;
 }
+
+// request to delete a specific pseudonym
+message PseudonymServiceDeleteRequest {
+  // the namespace the pseudonym is a part of
+  string namespace = 1;
+  // the pseudonym value to delete
+  string pseudonym_value = 2;
+}
+
+// response after deleting the pseudonym
+message PseudonymServiceDeleteResponse {}

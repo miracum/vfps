@@ -1,0 +1,222 @@
+@rendermode InteractiveServer
+@using Vfps.Data
+@using Vfps.Data.Models
+@inject PseudonymContext DbContext
+@inject IPseudonymRepository PseudonymRepository
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+<div class="d-flex align-items-center gap-3 mb-3">
+    <span class="text-muted">@(_totalCount.HasValue ? $"{_totalCount:N0} pseudonyms total" : "")</span>
+    <div class="ms-auto d-flex gap-2">
+        <button class="btn btn-sm btn-outline-secondary" @onclick="PrevPage" disabled="@(_pageIndex == 0)">← Prev</button>
+        <span class="align-self-center">Page @(_pageIndex + 1)</span>
+        <button class="btn btn-sm btn-outline-secondary" @onclick="NextPage" disabled="@string.IsNullOrEmpty(_nextPageToken)">Next →</button>
+    </div>
+</div>
+
+@if (_pseudonyms is null)
+{
+    <div class="spinner-border" role="status"><span class="visually-hidden">Loading…</span></div>
+}
+else if (_pseudonyms.Count == 0)
+{
+    <p class="text-muted">No pseudonyms in this namespace.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover table-sm align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Pseudonym value</th>
+                    <th>Original value</th>
+                    <th>Created</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in _pseudonyms)
+                {
+                    <tr>
+                        <td class="font-monospace small">@p.PseudonymValue</td>
+                        <td>@p.OriginalValue</td>
+                        <td>@p.CreatedAt.ToLocalTime().ToString("g")</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    @onclick="() => ConfirmDelete(p.PseudonymValue, p.OriginalValue)">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (_confirmDeletePseudonymValue is not null)
+{
+    <div class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,.4)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete pseudonym</h5>
+                </div>
+                <div class="modal-body">
+                    <p>Delete pseudonym for original value <strong>@_confirmDeleteOriginalValue</strong>? This cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button class="btn btn-danger" @onclick="DeletePseudonym">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public string NamespaceName { get; set; } = string.Empty;
+
+    private const int PageSize = 25;
+
+    private List<Pseudonym>? _pseudonyms;
+    private long? _totalCount;
+    private string? _nextPageToken;
+    private string? _error;
+
+    // Keep a stack of page tokens so we can navigate backwards
+    private readonly List<string> _tokenHistory = [""];
+    private int _pageIndex = 0;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _tokenHistory.Clear();
+        _tokenHistory.Add("");
+        _pageIndex = 0;
+        _nextPageToken = null;
+        _pseudonyms = null;
+        await LoadPageAsync();
+    }
+
+    private async Task LoadPageAsync()
+    {
+        _error = null;
+        try
+        {
+            var currentToken = _tokenHistory[_pageIndex];
+            var (pseudonyms, nextToken, total) = await FetchPageAsync(currentToken, _pageIndex == 0);
+            _pseudonyms = pseudonyms;
+            _nextPageToken = nextToken;
+            if (_pageIndex == 0) _totalCount = total;
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load pseudonyms: {ex.Message}";
+        }
+    }
+
+    private async Task<(List<Pseudonym> pseudonyms, string nextToken, long? total)> FetchPageAsync(
+        string pageToken,
+        bool includeTotal)
+    {
+        // Replicate the cursor-based pagination logic from PseudonymService.List
+        DateTimeOffset createdOnOrBefore;
+        int offset;
+
+        if (string.IsNullOrEmpty(pageToken))
+        {
+            createdOnOrBefore = DateTimeOffset.UtcNow;
+            offset = 0;
+        }
+        else
+        {
+            var decoded = Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlDecode(pageToken);
+            var token = Vfps.Protos.PseudonymListPaginationToken.Parser.ParseFrom(decoded);
+            createdOnOrBefore = token.PseudonymsCreatedOnOrBefore?.ToDateTimeOffset() ?? DateTimeOffset.UtcNow;
+            offset = token.Offset;
+        }
+
+        var pseudonyms = await DbContext.Pseudonyms
+            .Where(p => p.NamespaceName == NamespaceName && p.CreatedAt <= createdOnOrBefore)
+            .OrderByDescending(p => p.CreatedAt)
+            .Skip(offset)
+            .Take(PageSize)
+            .ToListAsync();
+
+        string nextToken = string.Empty;
+        if (pseudonyms.Count >= PageSize)
+        {
+            var paginationToken = new Vfps.Protos.PseudonymListPaginationToken
+            {
+                Offset = offset + PageSize,
+                PseudonymsCreatedOnOrBefore = Google.Protobuf.WellKnownTypes.Timestamp.FromDateTimeOffset(createdOnOrBefore),
+            };
+            nextToken = Microsoft.AspNetCore.WebUtilities.WebEncoders.Base64UrlEncode(paginationToken.ToByteArray());
+        }
+
+        long? total = null;
+        if (includeTotal)
+        {
+            total = await DbContext.Pseudonyms.LongCountAsync(p => p.NamespaceName == NamespaceName);
+        }
+
+        return (pseudonyms, nextToken, total);
+    }
+
+    private async Task NextPage()
+    {
+        if (string.IsNullOrEmpty(_nextPageToken)) return;
+        if (_pageIndex + 1 >= _tokenHistory.Count)
+            _tokenHistory.Add(_nextPageToken);
+        _pageIndex++;
+        await LoadPageAsync();
+    }
+
+    private async Task PrevPage()
+    {
+        if (_pageIndex == 0) return;
+        _pageIndex--;
+        await LoadPageAsync();
+    }
+
+    private string? _confirmDeletePseudonymValue;
+    private string? _confirmDeleteOriginalValue;
+
+    private void ConfirmDelete(string pseudonymValue, string originalValue)
+    {
+        _confirmDeletePseudonymValue = pseudonymValue;
+        _confirmDeleteOriginalValue = originalValue;
+    }
+
+    private void CancelDelete()
+    {
+        _confirmDeletePseudonymValue = null;
+        _confirmDeleteOriginalValue = null;
+    }
+
+    private async Task DeletePseudonym()
+    {
+        if (_confirmDeletePseudonymValue is null) return;
+        try
+        {
+            await PseudonymRepository.DeleteAsync(NamespaceName, _confirmDeletePseudonymValue, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to delete pseudonym: {ex.Message}";
+        }
+        finally
+        {
+            _confirmDeletePseudonymValue = null;
+            _confirmDeleteOriginalValue = null;
+        }
+        await LoadPageAsync();
+        // Refresh total count
+        _totalCount = await DbContext.Pseudonyms.LongCountAsync(p => p.NamespaceName == NamespaceName);
+    }
+}

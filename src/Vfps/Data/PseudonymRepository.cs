@@ -90,4 +90,27 @@ public class PseudonymRepository : IPseudonymRepository
 
         return upsertedPseudonym;
     }
+
+    /// <inheritdoc/>
+    public async Task<bool> DeleteAsync(
+        string namespaceName,
+        string pseudonymValue,
+        CancellationToken cancellationToken
+    )
+    {
+        var pseudonym = await Context
+            .Pseudonyms.Where(p =>
+                p.NamespaceName == namespaceName && p.PseudonymValue == pseudonymValue
+            )
+            .FirstOrDefaultAsync(cancellationToken);
+
+        if (pseudonym is null)
+        {
+            return false;
+        }
+
+        Context.Pseudonyms.Remove(pseudonym);
+        await Context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
 }

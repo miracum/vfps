@@ -1,0 +1,20 @@
+<nav class="d-flex flex-column flex-shrink-0 p-3 bg-dark text-white" style="width:230px">
+    <a href="/ui" class="d-flex align-items-center mb-3 text-white text-decoration-none">
+        <span class="fs-5 fw-semibold">VFPS</span>
+    </a>
+    <hr />
+    <ul class="nav nav-pills flex-column mb-auto">
+        <li class="nav-item">
+            <NavLink class="nav-link text-white" href="/ui/namespaces" Match="NavLinkMatch.Prefix">
+                Namespaces
+            </NavLink>
+        </li>
+        <li class="nav-item">
+            <NavLink class="nav-link text-white" href="/ui/csv" Match="NavLinkMatch.Prefix">
+                CSV Pseudonymization
+            </NavLink>
+        </li>
+    </ul>
+    <hr />
+    <a href="/swagger" class="nav-link text-white px-0" target="_blank">API Docs</a>
+</nav>

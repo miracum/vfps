@@ -226,4 +226,36 @@ public class PseudonymService(
 
         return response;
     }
+
+    /// <inheritdoc/>
+    public override async Task<PseudonymServiceDeleteResponse> Delete(
+        PseudonymServiceDeleteRequest request,
+        ServerCallContext context
+    )
+    {
+        var deleted = await pseudonymRepository.DeleteAsync(
+            request.Namespace,
+            request.PseudonymValue,
+            context.CancellationToken
+        );
+
+        if (!deleted)
+        {
+            var metadata = new Metadata
+            {
+                { "Namespace", request.Namespace },
+                { "Pseudonym", request.PseudonymValue },
+            };
+
+            throw new RpcException(
+                new Status(
+                    StatusCode.NotFound,
+                    "The requested pseudonym does not exist in the namespace."
+                ),
+                metadata
+            );
+        }
+
+        return new PseudonymServiceDeleteResponse();
+    }
 }

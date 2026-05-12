@@ -1,0 +1,261 @@
+@page "/ui/csv"
+@rendermode InteractiveServer
+@using Vfps.Data
+@using Vfps.Data.Models
+@using Microsoft.AspNetCore.Components.Forms
+@implements IDisposable
+@inject PseudonymContext DbContext
+@inject CsvJobService JobService
+@inject UiConfig UiConfig
+@inject NavigationManager Nav
+
+<PageTitle>CSV Pseudonymization – VFPS</PageTitle>
+
+<h1>CSV Pseudonymization</h1>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+@* Upload form *@
+@if (_currentJob is null || _currentJob.Status == CsvJobStatus.Done || _currentJob.Status == CsvJobStatus.Failed)
+{
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title">Upload a CSV file</h5>
+
+            <div class="mb-3">
+                <label class="form-label">Namespace</label>
+                <select class="form-select" @bind="_selectedNamespace">
+                    <option value="">— select namespace —</option>
+                    @foreach (var ns in _namespaces)
+                    {
+                        <option value="@ns.Name">@ns.Name</option>
+                    }
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">CSV file (max @UiConfig.CsvJobs.MaxFileSizeMb MB)</label>
+                <InputFile OnChange="OnFileSelected" accept=".csv" class="form-control" />
+            </div>
+
+            @if (_headers.Count > 0)
+            {
+                <div class="mb-3">
+                    <label class="form-label">Columns to pseudonymize</label>
+                    @foreach (var header in _headers)
+                    {
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="col-@header"
+                                   checked="@_selectedColumns.Contains(header)"
+                                   @onchange="e => ToggleColumn(header, (bool)(e.Value ?? false))" />
+                            <label class="form-check-label" for="col-@header">@header</label>
+                        </div>
+                    }
+                </div>
+            }
+
+            <button class="btn btn-primary"
+                    disabled="@(_selectedFile is null || string.IsNullOrEmpty(_selectedNamespace) || _selectedColumns.Count == 0 || _isSubmitting)"
+                    @onclick="SubmitJob">
+                @if (_isSubmitting) { <span class="spinner-border spinner-border-sm me-1" role="status"></span> }
+                Pseudonymize
+            </button>
+        </div>
+    </div>
+}
+
+@* Active / recent jobs *@
+@if (_allJobs.Count > 0)
+{
+    <h2 class="h5 mt-4">Jobs</h2>
+    <table class="table table-sm align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>Job ID</th>
+                <th>Namespace</th>
+                <th>Status</th>
+                <th>Progress</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var job in _allJobs)
+            {
+                <tr>
+                    <td class="font-monospace small">@job.Id.ToString("D")[..8]…</td>
+                    <td>@job.NamespaceName</td>
+                    <td>
+                        @switch (job.Status)
+                        {
+                            case CsvJobStatus.Queued:
+                                <span class="badge bg-secondary">Queued</span>
+                                break;
+                            case CsvJobStatus.Processing:
+                                <span class="badge bg-primary">Processing</span>
+                                break;
+                            case CsvJobStatus.Done:
+                                <span class="badge bg-success">Done</span>
+                                break;
+                            case CsvJobStatus.Failed:
+                                <span class="badge bg-danger" title="@job.ErrorMessage">Failed</span>
+                                break;
+                        }
+                    </td>
+                    <td style="min-width:160px">
+                        @if (job.Status == CsvJobStatus.Processing)
+                        {
+                            <div class="progress">
+                                <div class="progress-bar progress-bar-striped progress-bar-animated"
+                                     role="progressbar" style="width:100%"></div>
+                            </div>
+                            <small class="text-muted">@job.RowsProcessed rows processed</small>
+                        }
+                        else if (job.Status == CsvJobStatus.Done)
+                        {
+                            <small class="text-muted">@job.TotalRows rows</small>
+                        }
+                    </td>
+                    <td>
+                        @if (job.Status == CsvJobStatus.Done && job.OutputFilePath is not null)
+                        {
+                            <a class="btn btn-sm btn-success"
+                               href="/ui/csv/download/@job.Id"
+                               download>
+                                Download
+                            </a>
+                        }
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private List<Namespace> _namespaces = [];
+    private string _selectedNamespace = string.Empty;
+    private IBrowserFile? _selectedFile;
+    private List<string> _headers = [];
+    private readonly HashSet<string> _selectedColumns = [];
+    private bool _isSubmitting;
+    private string? _error;
+    private CsvPseudonymizationJob? _currentJob;
+    private IReadOnlyList<CsvPseudonymizationJob> _allJobs = [];
+    private PeriodicTimer? _refreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _namespaces = await DbContext.Namespaces.OrderBy(n => n.Name).ToListAsync();
+        RefreshJobs();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _refreshTimer = new PeriodicTimer(TimeSpan.FromSeconds(1));
+            _ = RunRefreshLoopAsync();
+        }
+        await Task.CompletedTask;
+    }
+
+    private async Task RunRefreshLoopAsync()
+    {
+        if (_refreshTimer is null) return;
+        try
+        {
+            while (await _refreshTimer.WaitForNextTickAsync())
+            {
+                RefreshJobs();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException) { }
+    }
+
+    private void RefreshJobs() => _allJobs = JobService.GetAllJobs();
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        _headers.Clear();
+        _selectedColumns.Clear();
+        _selectedFile = null;
+        _error = null;
+
+        var file = e.File;
+        var maxBytes = (long)UiConfig.CsvJobs.MaxFileSizeMb * 1024 * 1024;
+        if (file.Size > maxBytes)
+        {
+            _error = $"File is too large ({file.Size / 1024 / 1024} MB). Maximum is {UiConfig.CsvJobs.MaxFileSizeMb} MB.";
+            return;
+        }
+
+        _selectedFile = file;
+
+        // Read first line to detect headers
+        try
+        {
+            using var stream = file.OpenReadStream(maxBytes);
+            using var reader = new System.IO.StreamReader(stream);
+            var firstLine = await reader.ReadLineAsync();
+            if (!string.IsNullOrWhiteSpace(firstLine))
+            {
+                _headers = firstLine.Split(',').Select(h => h.Trim('"').Trim()).ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Could not read CSV headers: {ex.Message}";
+        }
+    }
+
+    private void ToggleColumn(string header, bool isChecked)
+    {
+        if (isChecked) _selectedColumns.Add(header);
+        else _selectedColumns.Remove(header);
+    }
+
+    private async Task SubmitJob()
+    {
+        if (_selectedFile is null || string.IsNullOrEmpty(_selectedNamespace) || _selectedColumns.Count == 0)
+            return;
+
+        _isSubmitting = true;
+        _error = null;
+        try
+        {
+            var maxBytes = (long)UiConfig.CsvJobs.MaxFileSizeMb * 1024 * 1024;
+            var tempDir = UiConfig.CsvJobs.TempDirectory;
+            Directory.CreateDirectory(tempDir);
+            var inputPath = Path.Combine(tempDir, $"vfps_csv_{Guid.NewGuid():N}.csv");
+
+            await using (var fs = new FileStream(inputPath, FileMode.Create))
+            {
+                await using var stream = _selectedFile.OpenReadStream(maxBytes);
+                await stream.CopyToAsync(fs);
+            }
+
+            _currentJob = JobService.EnqueueJob(inputPath, [.. _selectedColumns], _selectedNamespace);
+            RefreshJobs();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to submit job: {ex.Message}";
+        }
+        finally
+        {
+            _isSubmitting = false;
+            _selectedFile = null;
+            _headers.Clear();
+            _selectedColumns.Clear();
+        }
+    }
+
+    public void Dispose()
+    {
+        _refreshTimer?.Dispose();
+    }
+}

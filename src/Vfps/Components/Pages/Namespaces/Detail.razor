@@ -1,0 +1,72 @@
+@page "/ui/namespaces/{Name}"
+@rendermode InteractiveServer
+@using Vfps.Data
+@using Vfps.Data.Models
+@inject PseudonymContext DbContext
+@inject NavigationManager Nav
+
+<PageTitle>Namespace @Name – VFPS</PageTitle>
+
+@if (_namespace is null && _error is null)
+{
+    <div class="spinner-border" role="status"><span class="visually-hidden">Loading…</span></div>
+}
+else if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+else if (_namespace is not null)
+{
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/ui/namespaces">Namespaces</a></li>
+            <li class="breadcrumb-item active" aria-current="page">@_namespace.Name</li>
+        </ol>
+    </nav>
+
+    <h1>@_namespace.Name</h1>
+
+    <dl class="row mb-4">
+        <dt class="col-sm-3">Description</dt>
+        <dd class="col-sm-9">@(_namespace.Description ?? "-")</dd>
+
+        <dt class="col-sm-3">Generation method</dt>
+        <dd class="col-sm-9">@_namespace.PseudonymGenerationMethod</dd>
+
+        <dt class="col-sm-3">Pseudonym length</dt>
+        <dd class="col-sm-9">@_namespace.PseudonymLength</dd>
+
+        <dt class="col-sm-3">Prefix / Suffix</dt>
+        <dd class="col-sm-9">@(_namespace.PseudonymPrefix ?? "") / @(_namespace.PseudonymSuffix ?? "")</dd>
+
+        <dt class="col-sm-3">Created</dt>
+        <dd class="col-sm-9">@_namespace.CreatedAt.ToLocalTime().ToString("f")</dd>
+    </dl>
+
+    <h2 class="h4">Pseudonyms</h2>
+    <PseudonymTable NamespaceName="@_namespace.Name" />
+}
+
+@code {
+    [Parameter]
+    public string Name { get; set; } = string.Empty;
+
+    private Namespace? _namespace;
+    private string? _error;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _namespace = null;
+        _error = null;
+        try
+        {
+            _namespace = await DbContext.Namespaces.FindAsync(Name);
+            if (_namespace is null)
+                _error = $"Namespace '{Name}' not found.";
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load namespace: {ex.Message}";
+        }
+    }
+}

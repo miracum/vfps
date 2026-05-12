@@ -6,12 +6,14 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
 using Prometheus;
 using Vfps;
+using Vfps.Components;
 using Vfps.Config;
 using Vfps.Data;
 using Vfps.Fhir;
 using Vfps.PseudonymGenerators;
 using Vfps.Services;
 using Vfps.Tracing;
+using Vfps.UI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -141,6 +143,18 @@ if (isTracingEnabled)
     builder.AddTracing();
 }
 
+// Web UI
+var uiConfig = new UiConfig();
+builder.Configuration.GetSection("UI").Bind(uiConfig);
+builder.Services.AddSingleton(uiConfig);
+
+if (uiConfig.IsEnabled)
+{
+    builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+    builder.Services.AddSingleton<CsvJobService>();
+    builder.Services.AddHostedService<CsvPseudonymizationBackgroundService>();
+}
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -174,6 +188,35 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapControllers();
+
+if (uiConfig.IsEnabled)
+{
+    app.UseStaticFiles();
+    app.UseAntiforgery();
+    app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+
+    // Streaming download endpoint for pseudonymized CSV output files
+    app.MapGet(
+        "/ui/csv/download/{jobId:guid}",
+        (Guid jobId, CsvJobService jobService) =>
+        {
+            var job = jobService.GetJob(jobId);
+            if (job is null || job.OutputFilePath is null || !File.Exists(job.OutputFilePath))
+                return Results.NotFound();
+
+            var stream = new FileStream(
+                job.OutputFilePath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 65536,
+                useAsync: true
+            );
+            var fileName = Path.GetFileName(job.OutputFilePath);
+            return Results.File(stream, "text/csv", fileName);
+        }
+    );
+}
 
 var shouldRunDatabaseMigrations =
     app.Environment.IsDevelopment()

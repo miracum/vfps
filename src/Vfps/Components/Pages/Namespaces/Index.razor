@@ -1,0 +1,132 @@
+@page "/ui"
+@page "/ui/namespaces"
+@rendermode InteractiveServer
+@using Vfps.Data
+@using Vfps.Data.Models
+@inject PseudonymContext DbContext
+@inject NavigationManager Nav
+
+<PageTitle>Namespaces – VFPS</PageTitle>
+
+<h1>Namespaces</h1>
+
+@if (_error is not null)
+{
+    <div class="alert alert-danger">@_error</div>
+}
+
+@if (_namespaces is null)
+{
+    <div class="spinner-border" role="status"><span class="visually-hidden">Loading…</span></div>
+}
+else if (_namespaces.Count == 0)
+{
+    <p class="text-muted">No namespaces found.</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Name</th>
+                    <th>Description</th>
+                    <th>Generation Method</th>
+                    <th>Length</th>
+                    <th>Created</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var ns in _namespaces)
+                {
+                    <tr>
+                        <td><a href="/ui/namespaces/@Uri.EscapeDataString(ns.Name)">@ns.Name</a></td>
+                        <td>@ns.Description</td>
+                        <td>@ns.PseudonymGenerationMethod</td>
+                        <td>@ns.PseudonymLength</td>
+                        <td>@ns.CreatedAt.ToLocalTime().ToString("g")</td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-danger"
+                                    @onclick="() => ConfirmDelete(ns.Name)">
+                                Delete
+                            </button>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+@if (_confirmDeleteName is not null)
+{
+    <div class="modal d-block" tabindex="-1" style="background:rgba(0,0,0,.4)">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete namespace</h5>
+                </div>
+                <div class="modal-body">
+                    <p>Delete namespace <strong>@_confirmDeleteName</strong> and all its pseudonyms? This cannot be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" @onclick="CancelDelete">Cancel</button>
+                    <button class="btn btn-danger" @onclick="DeleteNamespace">Delete</button>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Namespace>? _namespaces;
+    private string? _confirmDeleteName;
+    private string? _error;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadNamespacesAsync();
+    }
+
+    private async Task LoadNamespacesAsync()
+    {
+        _error = null;
+        try
+        {
+            _namespaces = await DbContext.Namespaces
+                .OrderBy(n => n.Name)
+                .ToListAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to load namespaces: {ex.Message}";
+        }
+    }
+
+    private void ConfirmDelete(string name) => _confirmDeleteName = name;
+    private void CancelDelete() => _confirmDeleteName = null;
+
+    private async Task DeleteNamespace()
+    {
+        if (_confirmDeleteName is null) return;
+        try
+        {
+            var ns = await DbContext.Namespaces.FindAsync(_confirmDeleteName);
+            if (ns is not null)
+            {
+                DbContext.Namespaces.Remove(ns);
+                await DbContext.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = $"Failed to delete namespace: {ex.Message}";
+        }
+        finally
+        {
+            _confirmDeleteName = null;
+        }
+        await LoadNamespacesAsync();
+    }
+}

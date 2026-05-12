@@ -29,4 +29,13 @@ public class CachingPseudonymRepository(
             }
         );
     }
+
+    public async Task<bool> DeleteAsync(
+        string namespaceName,
+        string pseudonymValue,
+        CancellationToken cancellationToken
+    )
+    {
+        return await Repository.DeleteAsync(namespaceName, pseudonymValue, cancellationToken);
+    }
 }
