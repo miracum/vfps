@@ -118,7 +118,11 @@ else
             _nextPageToken = nextToken;
             if (_pageIndex == 0) _totalCount = total;
         }
-        catch (Exception ex)
+        catch (OperationCanceledException ex)
+        {
+            _error = $"Failed to load pseudonyms: {ex.Message}";
+        }
+        catch (InvalidOperationException ex)
         {
             _error = $"Failed to load pseudonyms: {ex.Message}";
         }
