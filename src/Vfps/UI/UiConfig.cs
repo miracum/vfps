@@ -10,6 +10,44 @@ public class UiConfig
 
     /// <summary>CSV job settings.</summary>
     public CsvJobsConfig CsvJobs { get; set; } = new();
+
+    /// <summary>OIDC authentication settings for the web UI.</summary>
+    public OidcConfig Oidc { get; set; } = new();
+}
+
+/// <summary>
+/// Configuration for OIDC authentication of the web UI.
+/// When <see cref="IsEnabled"/> is <c>true</c> all UI routes are protected and the user must
+/// authenticate via an OpenID Connect provider such as Keycloak before accessing any page.
+/// </summary>
+public class OidcConfig
+{
+    /// <summary>
+    /// Whether OIDC authentication is required for the web UI.
+    /// Defaults to <c>false</c> (UI is accessible without authentication).
+    /// </summary>
+    public bool IsEnabled { get; set; }
+
+    /// <summary>
+    /// The OpenID Connect authority URL, e.g. the Keycloak realm URL
+    /// <c>https://keycloak.example.com/realms/myrealm</c>.
+    /// </summary>
+    public string Authority { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The OIDC client ID registered in the identity provider.
+    /// </summary>
+    public string ClientId { get; set; } = string.Empty;
+
+    /// <summary>
+    /// The OIDC client secret. Leave empty for public clients.
+    /// </summary>
+    public string ClientSecret { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Additional scopes to request beyond <c>openid profile email</c>.
+    /// </summary>
+    public string[] AdditionalScopes { get; set; } = [];
 }
 
 /// <summary>

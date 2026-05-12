@@ -1,3 +1,5 @@
+@inject UiConfig UiConfig
+
 <nav class="d-flex flex-column flex-shrink-0 p-3 bg-dark text-white" style="width:230px">
     <a href="/ui" class="d-flex align-items-center mb-3 text-white text-decoration-none">
         <span class="fs-5 fw-semibold">VFPS</span>
@@ -17,4 +19,19 @@
     </ul>
     <hr />
     <a href="/swagger" class="nav-link text-white px-0" target="_blank">API Docs</a>
+    @if (UiConfig.Oidc.IsEnabled)
+    {
+        <hr />
+        <AuthorizeView>
+            <Authorized>
+                <div class="text-white-50 small text-truncate mb-2" title="@context.User.Identity?.Name">
+                    @context.User.Identity?.Name
+                </div>
+                <a href="/ui/logout" class="btn btn-outline-light btn-sm w-100">Sign out</a>
+            </Authorized>
+            <NotAuthorized>
+                <a href="/ui/login" class="btn btn-outline-light btn-sm w-100">Sign in</a>
+            </NotAuthorized>
+        </AuthorizeView>
+    }
 </nav>

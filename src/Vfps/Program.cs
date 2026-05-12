@@ -1,4 +1,7 @@
 using System.Diagnostics;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -154,6 +157,41 @@ if (uiConfig.IsEnabled)
     builder.Services.AddRazorComponents().AddInteractiveServerComponents();
     builder.Services.AddSingleton<CsvJobService>();
 
+    if (uiConfig.Oidc.IsEnabled)
+    {
+        var oidcConfig = uiConfig.Oidc;
+        builder.Services
+            .AddAuthentication(options =>
+            {
+                options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = OpenIdConnectDefaults.AuthenticationScheme;
+            })
+            .AddCookie(CookieAuthenticationDefaults.AuthenticationScheme)
+            .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
+            {
+                options.Authority = oidcConfig.Authority;
+                options.ClientId = oidcConfig.ClientId;
+                if (!string.IsNullOrWhiteSpace(oidcConfig.ClientSecret))
+                {
+                    options.ClientSecret = oidcConfig.ClientSecret;
+                }
+                options.ResponseType = "code";
+                options.SaveTokens = true;
+                options.GetClaimsFromUserInfoEndpoint = true;
+                options.Scope.Add("profile");
+                options.Scope.Add("email");
+                foreach (var scope in oidcConfig.AdditionalScopes)
+                {
+                    options.Scope.Add(scope);
+                }
+                // Required for Keycloak: map the preferred_username claim
+                options.TokenValidationParameters.NameClaimType = "preferred_username";
+            });
+
+        builder.Services.AddAuthorization();
+        builder.Services.AddCascadingAuthenticationState();
+    }
+
     if (uiConfig.CsvJobs.S3.IsEnabled)
     {
         var s3Config = uiConfig.CsvJobs.S3;
@@ -224,10 +262,46 @@ if (uiConfig.IsEnabled)
 {
     app.UseStaticFiles();
     app.UseAntiforgery();
-    app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
+
+    if (uiConfig.Oidc.IsEnabled)
+    {
+        app.UseAuthentication();
+        app.UseAuthorization();
+
+        // Login endpoint: triggers the OIDC challenge and redirects back to the UI
+        app.MapGet(
+            "/ui/login",
+            (string? returnUrl) =>
+            {
+                var redirectUri = string.IsNullOrWhiteSpace(returnUrl) ? "/ui" : returnUrl;
+                return Results.Challenge(
+                    new AuthenticationProperties { RedirectUri = redirectUri },
+                    [OpenIdConnectDefaults.AuthenticationScheme]
+                );
+            }
+        );
+
+        // Logout endpoint: clears the local cookie and signs out from the OIDC provider
+        app.MapGet(
+            "/ui/logout",
+            () =>
+                Results.SignOut(
+                    new AuthenticationProperties { RedirectUri = "/" },
+                    [CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme]
+                )
+        );
+    }
+
+    var razorComponentsBuilder = app.MapRazorComponents<App>()
+        .AddInteractiveServerRenderMode();
+
+    if (uiConfig.Oidc.IsEnabled)
+    {
+        razorComponentsBuilder.RequireAuthorization();
+    }
 
     // Streaming download endpoint for pseudonymized CSV output files
-    app.MapGet(
+    var csvDownload = app.MapGet(
         "/ui/csv/download/{jobId:guid}",
         async (Guid jobId, CsvJobService jobService, ICsvFileStore fileStore) =>
         {
@@ -243,6 +317,11 @@ if (uiConfig.IsEnabled)
             return Results.File(stream, "text/csv", fileName);
         }
     );
+
+    if (uiConfig.Oidc.IsEnabled)
+    {
+        csvDownload.RequireAuthorization();
+    }
 }
 
 var shouldRunDatabaseMigrations =
