@@ -8,6 +8,10 @@ namespace Vfps.UI;
 /// (including MinIO). Objects are stored in the bucket specified by <see cref="S3StorageConfig.BucketName"/>.
 /// The storage key is the S3 object key (e.g. <c>vfps-csv/vfps_csv_&lt;guid&gt;_input.csv</c>).
 /// </summary>
+/// <remarks>
+/// The S3 bucket referenced by <see cref="S3StorageConfig.BucketName"/> must already exist.
+/// Bucket creation is the responsibility of the infrastructure administrator.
+/// </remarks>
 public sealed class S3CsvFileStore(IAmazonS3 s3Client, S3StorageConfig config, ILogger<S3CsvFileStore> logger)
     : ICsvFileStore
 {
@@ -17,8 +21,6 @@ public sealed class S3CsvFileStore(IAmazonS3 s3Client, S3StorageConfig config, I
         CancellationToken cancellationToken
     )
     {
-        await EnsureBucketExistsAsync(cancellationToken);
-
         var safeFileName = Path.GetFileName(suggestedFileName);
         var objectKey = $"vfps_csv_{Guid.NewGuid():N}_{safeFileName}";
 
@@ -59,18 +61,6 @@ public sealed class S3CsvFileStore(IAmazonS3 s3Client, S3StorageConfig config, I
         catch (AmazonS3Exception ex) when (ex.StatusCode == System.Net.HttpStatusCode.NotFound)
         {
             return false;
-        }
-    }
-
-    private async Task EnsureBucketExistsAsync(CancellationToken cancellationToken)
-    {
-        try
-        {
-            await s3Client.EnsureBucketExistsAsync(config.BucketName);
-        }
-        catch (AmazonS3Exception ex)
-        {
-            logger.LogWarning(ex, "Could not ensure S3 bucket '{Bucket}' exists: {Message}", config.BucketName, ex.Message);
         }
     }
 }
