@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Vfps.Config;
 using Vfps.Data.Models;
@@ -36,6 +37,23 @@ public class CachingPseudonymRepository(
         CancellationToken cancellationToken
     )
     {
-        return await Repository.DeleteAsync(namespaceName, pseudonymValue, cancellationToken);
+        // Resolve the original value before deletion so we can evict the cache entry, which is
+        // keyed by original value (matching the key used in CreateIfNotExist).
+        var originalValue = await Context
+            .Pseudonyms.Where(p =>
+                p.NamespaceName == namespaceName && p.PseudonymValue == pseudonymValue
+            )
+            .Select(p => p.OriginalValue)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        var deleted = await Repository.DeleteAsync(namespaceName, pseudonymValue, cancellationToken);
+
+        if (deleted && originalValue is not null)
+        {
+            var cacheKey = $"pseudonyms.{originalValue}@{namespaceName}";
+            MemoryCache.Remove(cacheKey);
+        }
+
+        return deleted;
     }
 }

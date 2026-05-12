@@ -105,7 +105,10 @@ public class CsvPseudonymizationBackgroundService(
 
         var columnsToProcessSet = new HashSet<string>(job.ColumnsToProcess, StringComparer.OrdinalIgnoreCase);
         long rowsProcessed = 0;
-        var batch = new List<(string NamespaceName, string OriginalValue, string PseudonymValue)>(BatchSize);
+        // rowPseudonyms holds the pseudonym candidates for all selected columns in the current row.
+        // Each row's columns are persisted individually via CreateIfNotExist (which is an upsert).
+        // This ensures correct deduplication semantics across replicas without requiring a bulk upsert API.
+        var rowPseudonyms = new List<(string NamespaceName, string OriginalValue, string PseudonymValue)>(BatchSize);
 
         while (await csvReader.ReadAsync())
         {
@@ -117,8 +120,8 @@ public class CsvPseudonymizationBackgroundService(
                 rowValues[i] = csvReader.GetField(i) ?? string.Empty;
             }
 
-            // Collect batch items for columns that need pseudonymization
-            batch.Clear();
+            // Collect the pseudonym candidates for all selected columns in this row
+            rowPseudonyms.Clear();
             for (int i = 0; i < headers.Length; i++)
             {
                 if (columnsToProcessSet.Contains(headers[i]))
@@ -127,13 +130,13 @@ public class CsvPseudonymizationBackgroundService(
                     var pseudonymValue = @namespace.PseudonymPrefix
                         + generator.GeneratePseudonym(originalValue, @namespace.PseudonymLength)
                         + @namespace.PseudonymSuffix;
-                    batch.Add((job.NamespaceName, originalValue, pseudonymValue));
+                    rowPseudonyms.Add((job.NamespaceName, originalValue, pseudonymValue));
                 }
             }
 
             // Persist pseudonyms for this row
             var pseudonymMap = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var (namespaceName, originalValue, pseudonymValue) in batch)
+            foreach (var (namespaceName, originalValue, pseudonymValue) in rowPseudonyms)
             {
                 var stored = await pseudonymRepository.CreateIfNotExist(new Pseudonym
                 {

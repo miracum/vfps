@@ -1,6 +1,7 @@
 @rendermode InteractiveServer
 @using Vfps.Data
 @using Vfps.Data.Models
+@implements IAsyncDisposable
 @inject PseudonymContext DbContext
 @inject IPseudonymRepository PseudonymRepository
 
@@ -88,6 +89,9 @@ else
     private long? _totalCount;
     private string? _nextPageToken;
     private string? _error;
+
+    // Used to cancel in-flight DB operations when the component is disposed
+    private readonly CancellationTokenSource _cts = new();
 
     // Keep a stack of page tokens so we can navigate backwards
     private readonly List<string> _tokenHistory = [""];
@@ -204,7 +208,7 @@ else
         if (_confirmDeletePseudonymValue is null) return;
         try
         {
-            await PseudonymRepository.DeleteAsync(NamespaceName, _confirmDeletePseudonymValue, CancellationToken.None);
+            await PseudonymRepository.DeleteAsync(NamespaceName, _confirmDeletePseudonymValue, _cts.Token);
         }
         catch (Exception ex)
         {
@@ -217,6 +221,12 @@ else
         }
         await LoadPageAsync();
         // Refresh total count
-        _totalCount = await DbContext.Pseudonyms.LongCountAsync(p => p.NamespaceName == NamespaceName);
+        _totalCount = await DbContext.Pseudonyms.LongCountAsync(p => p.NamespaceName == NamespaceName, _cts.Token);
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await _cts.CancelAsync();
+        _cts.Dispose();
     }
 }
