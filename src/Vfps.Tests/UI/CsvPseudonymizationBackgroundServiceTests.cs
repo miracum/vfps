@@ -85,7 +85,7 @@ public class CsvPseudonymizationBackgroundServiceTests : ServiceTestBase
     [Fact]
     public async Task ProcessJob_ShouldStorePseudonymsInDatabase()
     {
-        var inputFile = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.csv");
+        var inputFile = Path.Join(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.csv");
         await File.WriteAllTextAsync(inputFile, "id,name\nALICE,Alice Smith\nBOB,Bob Jones\n");
 
         try
