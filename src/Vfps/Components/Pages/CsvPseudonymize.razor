@@ -3,7 +3,7 @@
 @using Vfps.Data
 @using Vfps.Data.Models
 @using Microsoft.AspNetCore.Components.Forms
-@implements IDisposable
+@implements IAsyncDisposable
 @inject PseudonymContext DbContext
 @inject CsvJobService JobService
 @inject ICsvFileStore FileStore
@@ -146,6 +146,7 @@
     private CsvPseudonymizationJob? _currentJob;
     private IReadOnlyList<CsvPseudonymizationJob> _allJobs = [];
     private PeriodicTimer? _refreshTimer;
+    private readonly CancellationTokenSource _cts = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -166,15 +167,20 @@
     private async Task RunRefreshLoopAsync()
     {
         if (_refreshTimer is null) return;
-        try
+        while (true)
         {
-            while (await _refreshTimer.WaitForNextTickAsync())
+            try
             {
-                RefreshJobs();
-                await InvokeAsync(StateHasChanged);
+                if (!await _refreshTimer.WaitForNextTickAsync(_cts.Token))
+                    break;
             }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            RefreshJobs();
+            await InvokeAsync(StateHasChanged);
         }
-        catch (OperationCanceledException) { }
     }
 
     private void RefreshJobs() => _allJobs = JobService.GetAllJobs();
@@ -255,8 +261,10 @@
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
+        await _cts.CancelAsync();
+        _cts.Dispose();
         _refreshTimer?.Dispose();
     }
 }
