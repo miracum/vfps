@@ -28,7 +28,6 @@ public sealed class S3CsvFileStore(IAmazonS3 s3Client, S3StorageConfig config, I
             Key = objectKey,
             InputStream = content,
             ContentType = "text/csv",
-            DisableDefaultChecksumValidation = true,
         };
 
         await s3Client.PutObjectAsync(request, cancellationToken);
