@@ -15,14 +15,14 @@ public class CsvJobService
 
     /// <summary>Enqueue a new job and return it.</summary>
     public CsvPseudonymizationJob EnqueueJob(
-        string inputFilePath,
+        string inputKey,
         string[] columnsToProcess,
         string namespaceName
     )
     {
         var job = new CsvPseudonymizationJob
         {
-            InputFilePath = inputFilePath,
+            InputKey = inputKey,
             ColumnsToProcess = columnsToProcess,
             NamespaceName = namespaceName,
         };

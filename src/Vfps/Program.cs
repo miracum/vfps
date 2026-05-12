@@ -147,11 +147,42 @@ if (isTracingEnabled)
 var uiConfig = new UiConfig();
 builder.Configuration.GetSection("UI").Bind(uiConfig);
 builder.Services.AddSingleton(uiConfig);
+builder.Services.AddSingleton(uiConfig.CsvJobs);
 
 if (uiConfig.IsEnabled)
 {
     builder.Services.AddRazorComponents().AddInteractiveServerComponents();
     builder.Services.AddSingleton<CsvJobService>();
+
+    if (uiConfig.CsvJobs.S3.IsEnabled)
+    {
+        var s3Config = uiConfig.CsvJobs.S3;
+        builder.Services.AddSingleton<Amazon.S3.IAmazonS3>(_ =>
+        {
+            var awsConfig = new Amazon.S3.AmazonS3Config
+            {
+                ForcePathStyle = s3Config.ForcePathStyle,
+                AuthenticationRegion = s3Config.Region,
+            };
+            if (!string.IsNullOrWhiteSpace(s3Config.ServiceUrl))
+            {
+                awsConfig.ServiceURL = s3Config.ServiceUrl;
+            }
+            else
+            {
+                awsConfig.RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(s3Config.Region);
+            }
+            var credentials = new Amazon.Runtime.BasicAWSCredentials(s3Config.AccessKey, s3Config.SecretKey);
+            return new Amazon.S3.AmazonS3Client(credentials, awsConfig);
+        });
+        builder.Services.AddSingleton(s3Config);
+        builder.Services.AddSingleton<ICsvFileStore, S3CsvFileStore>();
+    }
+    else
+    {
+        builder.Services.AddSingleton<ICsvFileStore, LocalCsvFileStore>();
+    }
+
     builder.Services.AddHostedService<CsvPseudonymizationBackgroundService>();
 }
 
@@ -198,21 +229,17 @@ if (uiConfig.IsEnabled)
     // Streaming download endpoint for pseudonymized CSV output files
     app.MapGet(
         "/ui/csv/download/{jobId:guid}",
-        (Guid jobId, CsvJobService jobService) =>
+        async (Guid jobId, CsvJobService jobService, ICsvFileStore fileStore) =>
         {
             var job = jobService.GetJob(jobId);
-            if (job is null || job.OutputFilePath is null || !File.Exists(job.OutputFilePath))
+            if (job is null || job.OutputKey is null)
                 return Results.NotFound();
 
-            var stream = new FileStream(
-                job.OutputFilePath,
-                FileMode.Open,
-                FileAccess.Read,
-                FileShare.Read,
-                bufferSize: 65536,
-                useAsync: true
-            );
-            var fileName = Path.GetFileName(job.OutputFilePath);
+            var stream = await fileStore.OpenReadAsync(job.OutputKey, CancellationToken.None);
+            if (stream is null)
+                return Results.NotFound();
+
+            var fileName = $"pseudonymized_{jobId:N}.csv";
             return Results.File(stream, "text/csv", fileName);
         }
     );

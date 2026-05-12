@@ -14,6 +14,7 @@ namespace Vfps.UI;
 /// </summary>
 public class CsvPseudonymizationBackgroundService(
     CsvJobService jobService,
+    ICsvFileStore fileStore,
     IServiceProvider serviceProvider,
     ILogger<CsvPseudonymizationBackgroundService> logger
 ) : BackgroundService
@@ -60,35 +61,17 @@ public class CsvPseudonymizationBackgroundService(
 
         var generator = lookup[@namespace.PseudonymGenerationMethod];
 
-        var outputPath = Path.ChangeExtension(job.InputFilePath, null) + "_pseudonymized.csv";
-        job.OutputFilePath = outputPath;
-
         var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
             HasHeaderRecord = true,
         };
 
-        using var inputStream = new FileStream(
-            job.InputFilePath,
-            FileMode.Open,
-            FileAccess.Read,
-            FileShare.Read,
-            bufferSize: 65536,
-            useAsync: true
-        );
+        using var inputStream =
+            await fileStore.OpenReadAsync(job.InputKey, cancellationToken)
+            ?? throw new InvalidOperationException($"Input file not found for key '{job.InputKey}'.");
+
         using var inputReader = new StreamReader(inputStream);
         using var csvReader = new CsvReader(inputReader, csvConfig);
-
-        using var outputStream = new FileStream(
-            outputPath,
-            FileMode.Create,
-            FileAccess.Write,
-            FileShare.None,
-            bufferSize: 65536,
-            useAsync: true
-        );
-        using var outputWriter = new StreamWriter(outputStream);
-        using var csvWriter = new CsvWriter(outputWriter, csvConfig);
 
         // Read headers
         await csvReader.ReadAsync();
@@ -96,84 +79,125 @@ public class CsvPseudonymizationBackgroundService(
         var headers = csvReader.HeaderRecord
             ?? throw new InvalidOperationException("CSV file has no header row.");
 
-        // Write headers unchanged
-        foreach (var header in headers)
-        {
-            csvWriter.WriteField(header);
-        }
-        await csvWriter.NextRecordAsync();
-
         var columnsToProcessSet = new HashSet<string>(job.ColumnsToProcess, StringComparer.OrdinalIgnoreCase);
         long rowsProcessed = 0;
-        // rowPseudonyms holds the pseudonym candidates for all selected columns in the current row.
-        // Each row's columns are persisted individually via CreateIfNotExist (which is an upsert).
-        // This ensures correct deduplication semantics across replicas without requiring a bulk upsert API.
-        var rowPseudonyms = new List<(string NamespaceName, string OriginalValue, string PseudonymValue)>(BatchSize);
 
-        while (await csvReader.ReadAsync())
+        // Write pseudonymized output to a temp file, then upload to the file store.
+        // Using a temp file avoids buffering the whole CSV in memory and works for
+        // both small and large files, regardless of the storage backend.
+        var tempOutputPath = Path.Combine(Path.GetTempPath(), $"vfps_out_{job.Id:N}.csv");
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var rowValues = new string[headers.Length];
-            for (int i = 0; i < headers.Length; i++)
+            await using (var outputStream = new FileStream(
+                tempOutputPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 65536,
+                useAsync: true
+            ))
+            await using (var outputWriter = new StreamWriter(outputStream))
             {
-                rowValues[i] = csvReader.GetField(i) ?? string.Empty;
-            }
+                using var csvWriter = new CsvWriter(outputWriter, csvConfig);
 
-            // Collect the pseudonym candidates for all selected columns in this row
-            rowPseudonyms.Clear();
-            for (int i = 0; i < headers.Length; i++)
-            {
-                if (columnsToProcessSet.Contains(headers[i]))
+                // Write headers unchanged
+                foreach (var header in headers)
                 {
-                    var originalValue = rowValues[i];
-                    var pseudonymValue = @namespace.PseudonymPrefix
-                        + generator.GeneratePseudonym(originalValue, @namespace.PseudonymLength)
-                        + @namespace.PseudonymSuffix;
-                    rowPseudonyms.Add((job.NamespaceName, originalValue, pseudonymValue));
+                    csvWriter.WriteField(header);
                 }
-            }
+                await csvWriter.NextRecordAsync();
 
-            // Persist pseudonyms for this row
-            var pseudonymMap = new Dictionary<string, string>(StringComparer.Ordinal);
-            foreach (var (namespaceName, originalValue, pseudonymValue) in rowPseudonyms)
-            {
-                var stored = await pseudonymRepository.CreateIfNotExist(new Pseudonym
-                {
-                    NamespaceName = namespaceName,
-                    OriginalValue = originalValue,
-                    PseudonymValue = pseudonymValue,
-                    CreatedAt = DateTimeOffset.UtcNow,
-                    LastUpdatedAt = DateTimeOffset.UtcNow,
-                });
-                pseudonymMap[originalValue] = stored?.PseudonymValue ?? pseudonymValue;
-            }
+                // rowPseudonyms holds the pseudonym candidates for all selected columns in the current row.
+                // Each row's columns are persisted individually via CreateIfNotExist (which is an upsert).
+                // This ensures correct deduplication semantics across replicas without requiring a bulk upsert API.
+                var rowPseudonyms = new List<(string NamespaceName, string OriginalValue, string PseudonymValue)>(BatchSize);
 
-            // Write output row
-            for (int i = 0; i < headers.Length; i++)
-            {
-                if (columnsToProcessSet.Contains(headers[i]) && pseudonymMap.TryGetValue(rowValues[i], out var pv))
+                while (await csvReader.ReadAsync())
                 {
-                    csvWriter.WriteField(pv);
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    var rowValues = new string[headers.Length];
+                    for (int i = 0; i < headers.Length; i++)
+                    {
+                        rowValues[i] = csvReader.GetField(i) ?? string.Empty;
+                    }
+
+                    // Collect the pseudonym candidates for all selected columns in this row
+                    rowPseudonyms.Clear();
+                    for (int i = 0; i < headers.Length; i++)
+                    {
+                        if (columnsToProcessSet.Contains(headers[i]))
+                        {
+                            var originalValue = rowValues[i];
+                            var pseudonymValue = @namespace.PseudonymPrefix
+                                + generator.GeneratePseudonym(originalValue, @namespace.PseudonymLength)
+                                + @namespace.PseudonymSuffix;
+                            rowPseudonyms.Add((job.NamespaceName, originalValue, pseudonymValue));
+                        }
+                    }
+
+                    // Persist pseudonyms for this row
+                    var pseudonymMap = new Dictionary<string, string>(StringComparer.Ordinal);
+                    foreach (var (namespaceName, originalValue, pseudonymValue) in rowPseudonyms)
+                    {
+                        var stored = await pseudonymRepository.CreateIfNotExist(new Pseudonym
+                        {
+                            NamespaceName = namespaceName,
+                            OriginalValue = originalValue,
+                            PseudonymValue = pseudonymValue,
+                            CreatedAt = DateTimeOffset.UtcNow,
+                            LastUpdatedAt = DateTimeOffset.UtcNow,
+                        });
+                        pseudonymMap[originalValue] = stored?.PseudonymValue ?? pseudonymValue;
+                    }
+
+                    // Write output row
+                    for (int i = 0; i < headers.Length; i++)
+                    {
+                        if (columnsToProcessSet.Contains(headers[i]) && pseudonymMap.TryGetValue(rowValues[i], out var pv))
+                        {
+                            csvWriter.WriteField(pv);
+                        }
+                        else
+                        {
+                            csvWriter.WriteField(rowValues[i]);
+                        }
+                    }
+                    await csvWriter.NextRecordAsync();
+
+                    rowsProcessed++;
+                    if (rowsProcessed % BatchSize == 0)
+                    {
+                        job.RowsProcessed = rowsProcessed;
+                        await outputWriter.FlushAsync(cancellationToken);
+                        logger.LogDebug("Job {JobId}: processed {Rows} rows", job.Id, rowsProcessed);
+                    }
                 }
-                else
-                {
-                    csvWriter.WriteField(rowValues[i]);
-                }
-            }
-            await csvWriter.NextRecordAsync();
 
-            rowsProcessed++;
-            if (rowsProcessed % BatchSize == 0)
-            {
                 job.RowsProcessed = rowsProcessed;
+                job.TotalRows = rowsProcessed;
                 await outputWriter.FlushAsync(cancellationToken);
-                logger.LogDebug("Job {JobId}: processed {Rows} rows", job.Id, rowsProcessed);
             }
-        }
 
-        job.RowsProcessed = rowsProcessed;
-        job.TotalRows = rowsProcessed;
-        await outputWriter.FlushAsync(cancellationToken);
+            // Upload the finished output file to the file store
+            await using var tempReadStream = new FileStream(
+                tempOutputPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.Read,
+                bufferSize: 65536,
+                useAsync: true
+            );
+            job.OutputKey = await fileStore.UploadAsync(
+                tempReadStream,
+                $"pseudonymized_{job.Id:N}.csv",
+                cancellationToken
+            );
+        }
+        finally
+        {
+            if (File.Exists(tempOutputPath))
+                File.Delete(tempOutputPath);
+        }
     }
 }

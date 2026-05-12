@@ -10,11 +10,13 @@ namespace Vfps.Tests.UI;
 public class CsvPseudonymizationBackgroundServiceTests : ServiceTestBase
 {
     private readonly CsvJobService _jobService;
+    private readonly LocalCsvFileStore _fileStore;
     private readonly CsvPseudonymizationBackgroundService _sut;
 
     public CsvPseudonymizationBackgroundServiceTests()
     {
         _jobService = new CsvJobService();
+        _fileStore = new LocalCsvFileStore(new CsvJobsConfig());
 
         var services = new ServiceCollection();
         services.AddSingleton(InMemoryPseudonymContext);
@@ -24,6 +26,7 @@ public class CsvPseudonymizationBackgroundServiceTests : ServiceTestBase
 
         _sut = new CsvPseudonymizationBackgroundService(
             _jobService,
+            _fileStore,
             services.BuildServiceProvider(),
             NullLogger<CsvPseudonymizationBackgroundService>.Instance
         );
@@ -38,6 +41,7 @@ public class CsvPseudonymizationBackgroundServiceTests : ServiceTestBase
 
         try
         {
+            // Use the file path as the input key; LocalCsvFileStore.OpenReadAsync accepts file paths.
             var job = _jobService.EnqueueJob(
                 inputFile,
                 columnsToProcess: ["patient_id"],
@@ -58,12 +62,12 @@ public class CsvPseudonymizationBackgroundServiceTests : ServiceTestBase
             await backgroundTask;
 
             job.Status.Should().Be(CsvJobStatus.Done);
-            job.OutputFilePath.Should().NotBeNull();
-            File.Exists(job.OutputFilePath).Should().BeTrue();
+            job.OutputKey.Should().NotBeNull();
+            File.Exists(job.OutputKey).Should().BeTrue();
             job.TotalRows.Should().Be(2);
 
             // The output should still have the original diagnosis and visit_date columns
-            var outputContent = await File.ReadAllTextAsync(job.OutputFilePath!);
+            var outputContent = await File.ReadAllTextAsync(job.OutputKey!);
             outputContent.Should().Contain("cold");
             outputContent.Should().Contain("flu");
             outputContent.Should().Contain("2024-01-01");

@@ -6,6 +6,7 @@
 @implements IDisposable
 @inject PseudonymContext DbContext
 @inject CsvJobService JobService
+@inject ICsvFileStore FileStore
 @inject UiConfig UiConfig
 @inject NavigationManager Nav
 
@@ -119,7 +120,7 @@
                         }
                     </td>
                     <td>
-                        @if (job.Status == CsvJobStatus.Done && job.OutputFilePath is not null)
+                        @if (job.Status == CsvJobStatus.Done && job.OutputKey is not null)
                         {
                             <a class="btn btn-sm btn-success"
                                href="/ui/csv/download/@job.Id"
@@ -228,17 +229,9 @@
         try
         {
             var maxBytes = (long)UiConfig.CsvJobs.MaxFileSizeMb * 1024 * 1024;
-            var tempDir = UiConfig.CsvJobs.TempDirectory;
-            Directory.CreateDirectory(tempDir);
-            var inputPath = Path.Combine(tempDir, $"vfps_csv_{Guid.NewGuid():N}.csv");
-
-            await using (var fs = new FileStream(inputPath, FileMode.Create))
-            {
-                await using var stream = _selectedFile.OpenReadStream(maxBytes);
-                await stream.CopyToAsync(fs);
-            }
-
-            _currentJob = JobService.EnqueueJob(inputPath, [.. _selectedColumns], _selectedNamespace);
+            await using var stream = _selectedFile.OpenReadStream(maxBytes);
+            var inputKey = await FileStore.UploadAsync(stream, _selectedFile.Name, CancellationToken.None);
+            _currentJob = JobService.EnqueueJob(inputKey, [.. _selectedColumns], _selectedNamespace);
             RefreshJobs();
         }
         catch (Exception ex)
