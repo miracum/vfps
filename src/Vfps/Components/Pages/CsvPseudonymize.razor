@@ -207,7 +207,15 @@
                 _headers = firstLine.Split(',').Select(h => h.Trim('"').Trim()).ToList();
             }
         }
-        catch (Exception ex)
+        catch (System.IO.IOException ex)
+        {
+            _error = $"Could not read CSV headers: {ex.Message}";
+        }
+        catch (System.IO.InvalidDataException ex)
+        {
+            _error = $"Could not read CSV headers: {ex.Message}";
+        }
+        catch (OperationCanceledException ex)
         {
             _error = $"Could not read CSV headers: {ex.Message}";
         }
