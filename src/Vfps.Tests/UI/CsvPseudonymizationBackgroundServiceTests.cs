@@ -35,7 +35,7 @@ public class CsvPseudonymizationBackgroundServiceTests : ServiceTestBase
     [Fact]
     public async Task ProcessJob_WithValidCsvAndSelectedColumns_ShouldProduceOutputFile()
     {
-        var inputFile = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.csv");
+        var inputFile = Path.Join(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.csv");
         var csvContent = "patient_id,diagnosis,visit_date\nPAT001,cold,2024-01-01\nPAT002,flu,2024-02-01\n";
         await File.WriteAllTextAsync(inputFile, csvContent);
 
