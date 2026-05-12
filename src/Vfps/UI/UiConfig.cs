@@ -20,9 +20,15 @@ public class CsvJobsConfig
     /// <summary>Maximum allowed upload file size in megabytes. Defaults to 512 MB.</summary>
     public int MaxFileSizeMb { get; set; } = 512;
 
+    private string _tempDirectory = string.Empty;
+
     /// <summary>
     /// Directory where uploaded and output CSV files are stored.
-    /// Defaults to <see cref="Path.GetTempPath"/>.
+    /// Defaults to <see cref="Path.GetTempPath"/> when not set or set to an empty string.
     /// </summary>
-    public string TempDirectory { get; set; } = Path.GetTempPath();
+    public string TempDirectory
+    {
+        get => string.IsNullOrWhiteSpace(_tempDirectory) ? Path.GetTempPath() : _tempDirectory;
+        set => _tempDirectory = value;
+    }
 }
