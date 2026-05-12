@@ -127,7 +127,7 @@ public class CsvPseudonymizationBackgroundServiceTests : ServiceTestBase
     [Fact]
     public async Task ProcessJob_WithNonExistingNamespace_ShouldMarkJobAsFailed()
     {
-        var inputFile = Path.Combine(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.csv");
+        var inputFile = Path.Join(Path.GetTempPath(), $"test_{Guid.NewGuid():N}.csv");
         await File.WriteAllTextAsync(inputFile, "id\nABC\n");
 
         try
