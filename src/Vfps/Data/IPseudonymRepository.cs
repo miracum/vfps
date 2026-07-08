@@ -31,5 +31,16 @@ namespace Vfps.Data
         /// only call it when a caller has explicitly opted into paying for a total count.
         /// </summary>
         Task<long> CountByNamespaceAsync(string namespaceName, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Reverse lookup: finds a pseudonym by its pseudonym_value (revealing original_value).
+        /// Backed by the (namespace_name, pseudonym_value) index - see
+        /// AddPseudonymKeysetAndReverseLookupIndexes.
+        /// </summary>
+        Task<Pseudonym?> FindByPseudonymValueAsync(
+            string namespaceName,
+            string pseudonymValue,
+            CancellationToken cancellationToken
+        );
     }
 }

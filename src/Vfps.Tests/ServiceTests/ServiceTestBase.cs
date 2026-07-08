@@ -1,6 +1,9 @@
 using EntityFramework.Exceptions.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.Extensions.Options;
+using Vfps.Config;
 
 namespace Vfps.Tests.ServiceTests;
 
@@ -62,6 +65,27 @@ public class ServiceTestBase : IDisposable
     }
 
     protected PseudonymContext InMemoryPseudonymContext { get; }
+
+    /// <summary>
+    /// A permission checker with authorization disabled (the default) - every check passes,
+    /// matching this codebase's off-by-default idiom. Pass a populated <see cref="AuthorizationConfig"/>
+    /// to test actual enforcement.
+    /// </summary>
+    protected static INamespacePermissionChecker CreatePermissionChecker(
+        AuthorizationConfig? config = null
+    ) => new NamespacePermissionChecker(Options.Create(config ?? new AuthorizationConfig()));
+
+    protected static PseudonymAppService CreatePseudonymAppService(
+        INamespaceRepository namespaceRepository,
+        IPseudonymRepository pseudonymRepository,
+        AuthorizationConfig? config = null
+    ) =>
+        new(
+            namespaceRepository,
+            pseudonymRepository,
+            CreatePermissionChecker(config),
+            NullLogger<PseudonymAppService>.Instance
+        );
 
     protected virtual void Dispose(bool disposing)
     {

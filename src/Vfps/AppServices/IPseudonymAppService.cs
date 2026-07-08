@@ -1,10 +1,12 @@
+using System.Security.Claims;
+using Vfps.Data.Models;
+
 namespace Vfps.AppServices;
 
 /// <summary>
-/// Pseudonym-listing operations shared by the gRPC adapter (<see cref="Services.PseudonymService"/>)
-/// and Blazor Server components. Only covers listing for now (Create/reverse-lookup aren't part
-/// of the read-only browsing phase this was introduced for) - see PseudonymService.cs for those,
-/// still handled directly there.
+/// Pseudonym operations shared by the gRPC adapter (<see cref="Services.PseudonymService"/>) and
+/// Blazor Server components. See <see cref="INamespaceAppService"/> for why every method takes
+/// the caller's <see cref="ClaimsPrincipal"/> explicitly.
 /// </summary>
 public interface IPseudonymAppService
 {
@@ -12,14 +14,27 @@ public interface IPseudonymAppService
     /// Lists pseudonyms in a namespace, keyset-paginated. Deliberately returns
     /// <see cref="PseudonymSummaryDto"/> rather than a type carrying the original value - this
     /// is the read path that a UI renders in bulk, and the original value must never cross into
-    /// it. Reverse lookup is the only way to see an original value, one record at a time, and is
-    /// a separate, more tightly-gated action.
+    /// it. <see cref="ReverseLookupAsync"/> is the only way to see an original value, one record
+    /// at a time. Requires read access to the namespace.
     /// </summary>
     Task<PseudonymPageDto> ListAsync(
         string namespaceName,
         int pageSize,
         string? pageToken,
         bool includeTotalSize,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Reveals the original value for a single pseudonym. This is a distinct, more tightly-gated
+    /// action than <see cref="ListAsync"/> (requires reverse-lookup access, not just read access)
+    /// and every call is audit-logged.
+    /// </summary>
+    Task<Pseudonym?> ReverseLookupAsync(
+        string namespaceName,
+        string pseudonymValue,
+        ClaimsPrincipal user,
         CancellationToken cancellationToken
     );
 }

@@ -56,4 +56,21 @@ public class CachingPseudonymRepository(
     {
         return await Repository.CountByNamespaceAsync(namespaceName, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<Pseudonym?> FindByPseudonymValueAsync(
+        string namespaceName,
+        string pseudonymValue,
+        CancellationToken cancellationToken
+    )
+    {
+        // Not cached: this cache is keyed by original_value (the Create path), not by
+        // pseudonym_value, and reverse lookup is meant to be an infrequent, audited action
+        // rather than a hot path worth adding a second cache key scheme for.
+        return await Repository.FindByPseudonymValueAsync(
+            namespaceName,
+            pseudonymValue,
+            cancellationToken
+        );
+    }
 }

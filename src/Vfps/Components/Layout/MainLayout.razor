@@ -1,4 +1,8 @@
 @inherits LayoutComponentBase
+@using Microsoft.Extensions.Options
+@using Vfps.Config
+@inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
+@inject NavigationManager NavigationManager
 
 <div class="page">
     <header class="top-row px-4">
@@ -6,9 +10,29 @@
             <a href="/ui">vfps admin</a>
             <a href="/ui/namespaces">Namespaces</a>
         </nav>
+        @if (AuthorizationConfigOptions.Value.IsEnabled)
+        {
+            <AuthorizeView>
+                <Authorized>
+                    <span>Signed in as @context.User.Identity?.Name</span>
+                    <form action="/authentication/logout" method="post">
+                        <AntiforgeryToken />
+                        <button type="submit">Sign out</button>
+                    </form>
+                </Authorized>
+                <NotAuthorized>
+                    <a href="@LoginUrl">Sign in</a>
+                </NotAuthorized>
+            </AuthorizeView>
+        }
     </header>
 
     <main class="content px-4">
         @Body
     </main>
 </div>
+
+@code {
+    private string LoginUrl =>
+        $"/authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri))}";
+}

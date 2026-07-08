@@ -1,19 +1,20 @@
+using System.Security.Claims;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Logging;
+using Vfps.Authorization;
 using Vfps.Data;
 using Vfps.Protos;
 
 namespace Vfps.AppServices;
 
-/// <summary>
-/// Implements the UI-facing pseudonym-listing contract on top of <see cref="IPseudonymRepository"/>.
-/// Used directly by Blazor Server components (in-process) and by <see cref="Services.PseudonymService"/>
-/// (the gRPC adapter).
-/// </summary>
+/// <inheritdoc cref="IPseudonymAppService"/>
 public class PseudonymAppService(
     INamespaceRepository namespaceRepository,
-    IPseudonymRepository pseudonymRepository
+    IPseudonymRepository pseudonymRepository,
+    INamespacePermissionChecker permissionChecker,
+    ILogger<PseudonymAppService> logger
 ) : IPseudonymAppService
 {
     private const int DefaultPageSize = 25;
@@ -24,6 +25,7 @@ public class PseudonymAppService(
         int pageSize,
         string? pageToken,
         bool includeTotalSize,
+        ClaimsPrincipal user,
         CancellationToken cancellationToken
     )
     {
@@ -31,6 +33,13 @@ public class PseudonymAppService(
         if (@namespace is null)
         {
             throw new NamespaceNotFoundException(namespaceName);
+        }
+
+        if (!permissionChecker.HasReadAccess(user, namespaceName))
+        {
+            throw new ForbiddenException(
+                $"Read access to namespace '{namespaceName}' is required."
+            );
         }
 
         var effectivePageSize = pageSize <= 0 ? DefaultPageSize : pageSize;
@@ -70,6 +79,43 @@ public class PseudonymAppService(
             .ToList();
 
         return new PseudonymPageDto(items, nextPageToken, totalSize);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Data.Models.Pseudonym?> ReverseLookupAsync(
+        string namespaceName,
+        string pseudonymValue,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!permissionChecker.HasReverseLookupAccess(user, namespaceName))
+        {
+            throw new ForbiddenException(
+                $"Reverse-lookup access to namespace '{namespaceName}' is required."
+            );
+        }
+
+        var pseudonym = await pseudonymRepository.FindByPseudonymValueAsync(
+            namespaceName,
+            pseudonymValue,
+            cancellationToken
+        );
+
+        // Audit every reverse-lookup attempt, found or not - this is the one place original
+        // values can be revealed, so who looked up what, and when, needs to be recorded
+        // regardless of whether the record existed.
+        var subject = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous";
+        logger.LogInformation(
+            "Reverse lookup: {Subject} looked up pseudonym {PseudonymValue} in namespace {Namespace} at {Timestamp} (found: {Found})",
+            subject,
+            pseudonymValue,
+            namespaceName,
+            DateTimeOffset.UtcNow,
+            pseudonym is not null
+        );
+
+        return pseudonym;
     }
 
     private static PseudonymPageCursor? DecodeCursor(string? pageToken)

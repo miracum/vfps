@@ -13,7 +13,7 @@ public class NamespaceServiceTests : ServiceTestBase
         sut = new Services.NamespaceService(
             InMemoryPseudonymContext,
             namespaceRepository,
-            new AppServices.NamespaceAppService(namespaceRepository)
+            new NamespaceAppService(namespaceRepository, CreatePermissionChecker())
         );
     }
 
@@ -134,10 +134,7 @@ public class NamespaceServiceTests : ServiceTestBase
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
             namespaceRepositoryForPseudonymService,
             pseudonymRepository,
-            new AppServices.PseudonymAppService(
-                namespaceRepositoryForPseudonymService,
-                pseudonymRepository
-            )
+            CreatePseudonymAppService(namespaceRepositoryForPseudonymService, pseudonymRepository)
         );
 
         var pseudonymsToCreateCount = 100;

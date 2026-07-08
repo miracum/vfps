@@ -170,4 +170,17 @@ public class PseudonymRepository : IPseudonymRepository
             .Where(p => p.NamespaceName == namespaceName)
             .LongCountAsync(cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<Pseudonym?> FindByPseudonymValueAsync(
+        string namespaceName,
+        string pseudonymValue,
+        CancellationToken cancellationToken
+    )
+    {
+        return await Context
+            .Pseudonyms.AsNoTracking()
+            .Where(p => p.NamespaceName == namespaceName && p.PseudonymValue == pseudonymValue)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 }

@@ -7,6 +7,32 @@
 <h1>Pseudonyms in @NamespaceName</h1>
 <p><a href="/ui/namespaces">&larr; Back to namespaces</a></p>
 
+<BbCard>
+    <BbCardHeader>
+        <BbCardTitle>Reverse lookup</BbCardTitle>
+    </BbCardHeader>
+    <BbCardContent>
+        <p>
+            Reveals the original value for one pseudonym. This is a separate, more tightly-gated,
+            audited action - it is never shown in the table below.
+        </p>
+        <BbInput @bind-Value="_lookupValue" Placeholder="Pseudonym value" Id="lookupValue" />
+        <BbButton OnClick="ReverseLookupAsync" Loading="_isLookingUp">Look up</BbButton>
+        @if (_lookupError is not null)
+        {
+            <BbAlert Variant="AlertVariant.Danger">
+                <BbAlertDescription>@_lookupError</BbAlertDescription>
+            </BbAlert>
+        }
+        @if (_lookupResult is not null)
+        {
+            <p>
+                Original value: <code>@_lookupResult.OriginalValue</code>
+            </p>
+        }
+    </BbCardContent>
+</BbCard>
+
 @if (_errorMessage is not null)
 {
     <BbAlert Variant="AlertVariant.Danger">
@@ -48,6 +74,9 @@ else
 @code {
     private const int PageSize = 25;
 
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
     [Parameter]
     public string NamespaceName { get; set; } = string.Empty;
 
@@ -58,10 +87,18 @@ else
     private bool _isLoading;
     private string? _errorMessage;
 
+    private string _lookupValue = string.Empty;
+    private bool _isLookingUp;
+    private string? _lookupError;
+    private Vfps.Data.Models.Pseudonym? _lookupResult;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadPageAsync(null);
     }
+
+    private async Task<ClaimsPrincipal> GetUserAsync() =>
+        AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
 
     private async Task LoadPageAsync(string? pageToken)
     {
@@ -69,11 +106,13 @@ else
         _errorMessage = null;
         try
         {
+            var user = await GetUserAsync();
             var page = await PseudonymAppService.ListAsync(
                 NamespaceName,
                 PageSize,
                 pageToken,
                 includeTotalSize: false,
+                user,
                 CancellationToken.None
             );
             _items = page.Items;
@@ -84,9 +123,42 @@ else
         {
             _errorMessage = ex.Message;
         }
+        catch (ForbiddenException ex)
+        {
+            _errorMessage = ex.Message;
+        }
         finally
         {
             _isLoading = false;
+        }
+    }
+
+    private async Task ReverseLookupAsync()
+    {
+        _isLookingUp = true;
+        _lookupError = null;
+        _lookupResult = null;
+        try
+        {
+            var user = await GetUserAsync();
+            _lookupResult = await PseudonymAppService.ReverseLookupAsync(
+                NamespaceName,
+                _lookupValue,
+                user,
+                CancellationToken.None
+            );
+            if (_lookupResult is null)
+            {
+                _lookupError = $"No pseudonym '{_lookupValue}' found in namespace '{NamespaceName}'.";
+            }
+        }
+        catch (ForbiddenException ex)
+        {
+            _lookupError = ex.Message;
+        }
+        finally
+        {
+            _isLookingUp = false;
         }
     }
 

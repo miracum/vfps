@@ -1,6 +1,7 @@
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Vfps.AppServices;
+using Vfps.Authorization;
 using Vfps.Data;
 using Vfps.Protos;
 
@@ -37,6 +38,7 @@ public class NamespaceService(
         {
             created = await namespaceAppService.CreateAsync(
                 namespaceToCreate,
+                context.GetUser(),
                 context.CancellationToken
             );
         }
@@ -55,6 +57,10 @@ public class NamespaceService(
                 ),
                 metadata
             );
+        }
+        catch (ForbiddenException ex)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
         }
 
         return new NamespaceServiceCreateResponse { Namespace = ToProto(created) };
@@ -123,7 +129,10 @@ public class NamespaceService(
         ServerCallContext context
     )
     {
-        var namespaces = await namespaceAppService.GetAllAsync(context.CancellationToken);
+        var namespaces = await namespaceAppService.GetAllAsync(
+            context.GetUser(),
+            context.CancellationToken
+        );
 
         var response = new NamespaceServiceGetAllResponse();
         response.Namespaces.AddRange(namespaces.Select(ToProto));

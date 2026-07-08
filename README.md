@@ -73,6 +73,20 @@ Available configuration options which can be set as environment variables:
 | `Pseudonymization__Caching__Pseudonyms__IsEnabled` | `bool`       | `false`             | Set to `true` to enable pseudonym caching.                                                                                    |
 | `Pseudonymization__Caching__SizeLimit`             | `int`        | `65534`             | Maximum number of entries in the cache. The cache is shared between the pseudonyms and namespaces.                            |
 | `Pseudonymization__Caching__AbsoluteExpiration`    | `D.HH:mm:nn` | `0.01:00:00`        | Time after which a cache entry expires.                                                                                       |
+| `ConnectionStrings__Redis`                         | `string`     | `""`                | Redis connection string. Only required when `Authorization__IsEnabled=true`; shares the ASP.NET Core Data Protection key ring across replicas so auth cookies/antiforgery tokens minted by one replica remain valid on another. Not a session store and not a SignalR backplane. |
+| `Authorization__IsEnabled`                         | `bool`       | `false`             | Enable OIDC authentication and namespace-scoped authorization for the API and admin UI. **Off by default: with this disabled, the API and admin UI are reachable without authentication and every namespace is fully accessible.** |
+| `Authorization__Authority`                         | `string`     | `""`                | The OIDC issuer/authority URL (e.g. a Keycloak realm URL).                                                                    |
+| `Authorization__Audience`                          | `string`     | `""`                | Audience validated for bearer-token (gRPC/REST API) callers.                                                                  |
+| `Authorization__ClientId`                          | `string`     | `""`                | Confidential client id used by the admin UI's Authorization Code flow.                                                        |
+| `Authorization__ClientSecret`                      | `string`     | `""`                | Confidential client secret used by the admin UI's Authorization Code flow.                                                    |
+| `Authorization__RoleClaimType`                     | `string`     | `"roles"`           | Which claim on the validated token carries the caller's roles/groups.                                                         |
+| `Authorization__AdminRoles__0`, `__1`, ...          | `string`     | -                   | Roles granting full access: all namespaces, plus namespace create/delete.                                                     |
+| `Authorization__NamespaceRules__0__Namespace`      | `string`     | -                   | Namespace name this rule applies to, or `"*"` for all namespaces.                                                             |
+| `Authorization__NamespaceRules__0__ReadRoles__0`, ... | `string`  | -                   | Roles granting read access (namespace browsing, pseudonym list) to the namespace above.                                       |
+| `Authorization__NamespaceRules__0__WriteRoles__0`, ... | `string` | -                   | Roles granting write access to the namespace above.                                                                           |
+| `Authorization__NamespaceRules__0__ReverseLookupRoles__0`, ... | `string` | -            | Roles granting reverse-lookup access (revealing a pseudonym's original value) to the namespace above - a separate, more tightly-scoped grant than read access. |
+
+`NamespaceRules` as indexed env vars gets unwieldy for more than a couple of namespaces; mounting a JSON file (e.g. via `appsettings.Production.json` or a config provider pointed at a mounted file) for this section is a reasonable alternative for larger rule sets.
 
 ## Observability
 

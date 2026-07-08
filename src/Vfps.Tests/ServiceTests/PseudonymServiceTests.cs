@@ -17,7 +17,7 @@ public class PseudonymServiceTests : ServiceTestBase
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
             namespaceRepository,
             pseudonymRepository,
-            new AppServices.PseudonymAppService(namespaceRepository, pseudonymRepository)
+            CreatePseudonymAppService(namespaceRepository, pseudonymRepository)
         );
     }
 
@@ -137,7 +137,7 @@ public class PseudonymServiceTests : ServiceTestBase
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
             cachingNamespaceRepository,
             pseudonymRepository,
-            new AppServices.PseudonymAppService(cachingNamespaceRepository, pseudonymRepository)
+            CreatePseudonymAppService(cachingNamespaceRepository, pseudonymRepository)
         );
 
         var request = new PseudonymServiceCreateRequest
@@ -181,10 +181,7 @@ public class PseudonymServiceTests : ServiceTestBase
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
             cachingNamespaceRepository,
             cachingPseudonymRepository,
-            new AppServices.PseudonymAppService(
-                cachingNamespaceRepository,
-                cachingPseudonymRepository
-            )
+            CreatePseudonymAppService(cachingNamespaceRepository, cachingPseudonymRepository)
         );
 
         var request = new PseudonymServiceCreateRequest

@@ -1,7 +1,7 @@
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
-using Microsoft.EntityFrameworkCore;
 using Vfps.AppServices;
+using Vfps.Authorization;
 using Vfps.Data;
 using Vfps.Protos;
 using Vfps.PseudonymGenerators;
@@ -108,11 +108,21 @@ public class PseudonymService(
         ServerCallContext context
     )
     {
-        var pseudonym = await Context
-            .Pseudonyms.Where(p =>
-                p.NamespaceName == request.Namespace && p.PseudonymValue == request.PseudonymValue
-            )
-            .FirstOrDefaultAsync();
+        Data.Models.Pseudonym? pseudonym;
+        try
+        {
+            pseudonym = await pseudonymAppService.ReverseLookupAsync(
+                request.Namespace,
+                request.PseudonymValue,
+                context.GetUser(),
+                context.CancellationToken
+            );
+        }
+        catch (ForbiddenException ex)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
+        }
+
         if (pseudonym is null)
         {
             var metadata = new Metadata
@@ -160,6 +170,7 @@ public class PseudonymService(
                 request.PageSize,
                 request.PageToken,
                 request.IncludeTotalSize,
+                context.GetUser(),
                 context.CancellationToken
             );
         }
@@ -174,6 +185,10 @@ public class PseudonymService(
                 ),
                 metadata
             );
+        }
+        catch (ForbiddenException ex)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
         }
 
         var response = new PseudonymServiceListResponse

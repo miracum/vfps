@@ -40,6 +40,54 @@ services:
       - "6831:6831/udp"
       - "127.0.0.1:16686:16686"
 
+  redis:
+    image: docker.io/library/redis:8-alpine
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+        reservations:
+          memory: 256m
+    cap_drop:
+      - ALL
+    ipc: none
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    profiles:
+      - keycloak
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  # Local OIDC provider for testing Authorization:IsEnabled=true. Imports tests/keycloak/vfps-realm.json,
+  # which pre-configures the "vfps-web" client and two users: admin/admin (realm role vfps-admin) and
+  # reader/reader (realm role vfps-ns-development-read). Not started by default - requires the
+  # "keycloak" compose profile.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    restart: unless-stopped
+    command: start-dev --import-realm
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 1g
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    environment:
+      KEYCLOAK_ADMIN: admin
+      # kics-scan ignore-line
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./tests/keycloak/vfps-realm.json:/opt/keycloak/data/import/vfps-realm.json:ro
+    profiles:
+      - keycloak
+    ports:
+      - "127.0.0.1:8180:8080"
+
   vfps:
     image: ghcr.io/miracum/vfps:${VFPS_IMAGE_TAG:-v1.3.7} # x-release-please-version
     restart: unless-stopped
@@ -67,6 +115,16 @@ services:
       PGUSER: postgres
       # kics-scan ignore-line
       PGPASSWORD: postgres
+      # Only takes effect when Authorization__IsEnabled=true is also set (e.g. for manually
+      # testing against the "keycloak" profile above) - off by default, see README.
+      ConnectionStrings__Redis: "redis:6379"
+      Authorization__Authority: "http://keycloak:8080/realms/vfps"
+      Authorization__ClientId: "vfps-web"
+      # kics-scan ignore-line
+      Authorization__ClientSecret: "vfps-web-secret"
+      Authorization__AdminRoles__0: "vfps-admin"
+      Authorization__NamespaceRules__0__Namespace: "development"
+      Authorization__NamespaceRules__0__ReadRoles__0: "vfps-ns-development-read"
     ports:
       # Http1, Http2, Http3
       - "127.0.0.1:8080:8080"

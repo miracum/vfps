@@ -1,8 +1,27 @@
 @page "/ui/namespaces"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.Extensions.Options
+@using Vfps.Config
 @using Vfps.Data.Models
 @inject INamespaceAppService NamespaceAppService
+@inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
+@inject NavigationManager NavigationManager
+
+@if (AuthorizationConfigOptions.Value.IsEnabled)
+{
+    <AuthorizeView>
+        <NotAuthorized>
+            <BbAlert Variant="AlertVariant.Warning">
+                <BbAlertTitle>Not signed in</BbAlertTitle>
+                <BbAlertDescription>
+                    <a href="@LoginUrl">Sign in</a> to create a namespace or see any
+                    namespaces you don't have anonymous read access to.
+                </BbAlertDescription>
+            </BbAlert>
+        </NotAuthorized>
+    </AuthorizeView>
+}
 
 <PageTitle>Namespaces</PageTitle>
 
@@ -108,6 +127,12 @@
 </BbDataGrid>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private string LoginUrl =>
+        $"/authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri))}";
+
     private IReadOnlyList<Namespace> _namespaces = [];
     private NewNamespaceModel _newNamespace = new();
     private string? _errorMessage;
@@ -118,9 +143,13 @@
         await ReloadAsync();
     }
 
+    private async Task<ClaimsPrincipal> GetUserAsync() =>
+        AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
+
     private async Task ReloadAsync()
     {
-        _namespaces = await NamespaceAppService.GetAllAsync(CancellationToken.None);
+        var user = await GetUserAsync();
+        _namespaces = await NamespaceAppService.GetAllAsync(user, CancellationToken.None);
     }
 
     private async Task CreateNamespaceAsync()
@@ -129,6 +158,7 @@
         _errorMessage = null;
         try
         {
+            var user = await GetUserAsync();
             await NamespaceAppService.CreateAsync(
                 new Namespace
                 {
@@ -139,6 +169,7 @@
                     PseudonymPrefix = _newNamespace.PseudonymPrefix,
                     PseudonymSuffix = _newNamespace.PseudonymSuffix,
                 },
+                user,
                 CancellationToken.None
             );
 
@@ -150,6 +181,10 @@
             _errorMessage = ex.Message;
         }
         catch (ArgumentOutOfRangeException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch (ForbiddenException ex)
         {
             _errorMessage = ex.Message;
         }
