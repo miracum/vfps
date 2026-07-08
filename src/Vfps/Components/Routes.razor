@@ -1,6 +1,4 @@
-@using Vfps.Web.Layout
-
-<Router AppAssembly="typeof(Program).Assembly" AdditionalAssemblies="new[] { typeof(Vfps.Web._Imports).Assembly }">
+<Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />

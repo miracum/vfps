@@ -40,4 +40,12 @@ public class CachingNamespaceRepository(
             }
         );
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Namespace>> GetAllAsync(CancellationToken cancellationToken)
+    {
+        // Not cached: namespace cardinality is low and this isn't on a hot path the way
+        // single-namespace lookups (used on every pseudonym Create/List) are.
+        return await NamespaceRepository.GetAllAsync(cancellationToken);
+    }
 }

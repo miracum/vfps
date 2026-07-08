@@ -10,7 +10,11 @@ public class NamespaceServiceTests : ServiceTestBase
     public NamespaceServiceTests()
     {
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
-        sut = new Services.NamespaceService(InMemoryPseudonymContext, namespaceRepository);
+        sut = new Services.NamespaceService(
+            InMemoryPseudonymContext,
+            namespaceRepository,
+            new AppServices.NamespaceAppService(namespaceRepository)
+        );
     }
 
     [Fact]
@@ -121,11 +125,19 @@ public class NamespaceServiceTests : ServiceTestBase
 
         await sut.Create(createRequest, TestServerCallContext.Create());
 
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var namespaceRepositoryForPseudonymService = new NamespaceRepository(
+            InMemoryPseudonymContext
+        );
         var pseudonymService = new Services.PseudonymService(
             InMemoryPseudonymContext,
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
-            new NamespaceRepository(InMemoryPseudonymContext),
-            new PseudonymRepository(InMemoryPseudonymContext)
+            namespaceRepositoryForPseudonymService,
+            pseudonymRepository,
+            new AppServices.PseudonymAppService(
+                namespaceRepositoryForPseudonymService,
+                pseudonymRepository
+            )
         );
 
         var pseudonymsToCreateCount = 100;

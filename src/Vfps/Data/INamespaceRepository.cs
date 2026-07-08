@@ -23,4 +23,11 @@ public interface INamespaceRepository
         Models.Namespace @namespace,
         CancellationToken cancellationToken
     );
+
+    /// <summary>
+    /// Lists all namespaces. Namespace cardinality is expected to stay low (unlike pseudonyms),
+    /// so this intentionally isn't paginated.
+    /// </summary>
+    /// <param name="cancellationToken">A cancellation token to abort the action</param>
+    Task<IReadOnlyList<Models.Namespace>> GetAllAsync(CancellationToken cancellationToken);
 }

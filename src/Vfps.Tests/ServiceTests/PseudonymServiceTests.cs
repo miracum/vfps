@@ -10,11 +10,14 @@ public class PseudonymServiceTests : ServiceTestBase
 
     public PseudonymServiceTests()
     {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
         sut = new Services.PseudonymService(
             InMemoryPseudonymContext,
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
-            new NamespaceRepository(InMemoryPseudonymContext),
-            new PseudonymRepository(InMemoryPseudonymContext)
+            namespaceRepository,
+            pseudonymRepository,
+            new AppServices.PseudonymAppService(namespaceRepository, pseudonymRepository)
         );
     }
 
@@ -123,15 +126,18 @@ public class PseudonymServiceTests : ServiceTestBase
     {
         var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 32 });
 
+        var cachingNamespaceRepository = new CachingNamespaceRepository(
+            InMemoryPseudonymContext,
+            cache,
+            new Config.CacheConfig()
+        );
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
         var cachingSut = new Services.PseudonymService(
             InMemoryPseudonymContext,
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
-            new CachingNamespaceRepository(
-                InMemoryPseudonymContext,
-                cache,
-                new Config.CacheConfig()
-            ),
-            new PseudonymRepository(InMemoryPseudonymContext)
+            cachingNamespaceRepository,
+            pseudonymRepository,
+            new AppServices.PseudonymAppService(cachingNamespaceRepository, pseudonymRepository)
         );
 
         var request = new PseudonymServiceCreateRequest
@@ -160,18 +166,24 @@ public class PseudonymServiceTests : ServiceTestBase
     {
         var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 32 });
 
+        var cachingNamespaceRepository = new CachingNamespaceRepository(
+            InMemoryPseudonymContext,
+            cache,
+            new Config.CacheConfig()
+        );
+        var cachingPseudonymRepository = new CachingPseudonymRepository(
+            InMemoryPseudonymContext,
+            cache,
+            new Config.CacheConfig()
+        );
         var cachingSut = new Services.PseudonymService(
             InMemoryPseudonymContext,
             new PseudonymGenerators.PseudonymizationMethodsLookup(),
-            new CachingNamespaceRepository(
-                InMemoryPseudonymContext,
-                cache,
-                new Config.CacheConfig()
-            ),
-            new CachingPseudonymRepository(
-                InMemoryPseudonymContext,
-                cache,
-                new Config.CacheConfig()
+            cachingNamespaceRepository,
+            cachingPseudonymRepository,
+            new AppServices.PseudonymAppService(
+                cachingNamespaceRepository,
+                cachingPseudonymRepository
             )
         );
 
@@ -230,9 +242,23 @@ public class PseudonymServiceTests : ServiceTestBase
         response.Pseudonyms.Should().HaveSameCount(InMemoryPseudonymContext.Pseudonyms);
     }
 
-    [Fact(
-        Skip = "there's an issue with timezones in SQLite vs. DateTimeOffset.UtcNow. This causes L152 in PseudonymService.cs to never find any value."
-    )]
+    [Fact]
+    public async Task List_ShouldNeverPopulateOriginalValue()
+    {
+        // this is a privacy invariant, not just a today-it-happens-to-be-true fact: the pseudonym
+        // list/browse path must never expose original values in bulk. Reverse lookup (Get) is
+        // the only place original_value is allowed to appear, one record at a time. Checking
+        // HasOriginalValue (proto field-presence), not OriginalValue itself, since the generated
+        // getter returns "" rather than null when the optional field is unset.
+        var request = new PseudonymServiceListRequest { Namespace = "existingNamespace" };
+
+        var response = await sut.List(request, TestServerCallContext.Create());
+
+        response.Pseudonyms.Should().NotBeEmpty();
+        response.Pseudonyms.Should().OnlyContain(p => !p.HasOriginalValue);
+    }
+
+    [Fact]
     public async Task List_WithMoreItemsThanPageSize_ShouldReturnAllPseudonymsViaPaging()
     {
         var namespaceName = "emptyNamespace";

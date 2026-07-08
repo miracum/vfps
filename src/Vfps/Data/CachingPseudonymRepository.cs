@@ -29,4 +29,31 @@ public class CachingPseudonymRepository(
             }
         );
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Pseudonym>> ListByNamespaceAsync(
+        string namespaceName,
+        PseudonymPageCursor? cursor,
+        int pageSize,
+        CancellationToken cancellationToken
+    )
+    {
+        // Not cached: this is a bulk browsing query, not the single-key lookup this cache
+        // (keyed by original_value) is designed for.
+        return await Repository.ListByNamespaceAsync(
+            namespaceName,
+            cursor,
+            pageSize,
+            cancellationToken
+        );
+    }
+
+    /// <inheritdoc/>
+    public async Task<long> CountByNamespaceAsync(
+        string namespaceName,
+        CancellationToken cancellationToken
+    )
+    {
+        return await Repository.CountByNamespaceAsync(namespaceName, cancellationToken);
+    }
 }

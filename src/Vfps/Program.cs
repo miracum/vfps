@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using BlazorBlueprint.Components;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
@@ -6,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
 using Prometheus;
 using Vfps;
+using Vfps.AppServices;
 using Vfps.Components;
 using Vfps.Config;
 using Vfps.Data;
@@ -18,6 +20,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+builder.Services.AddBlazorBlueprintComponents();
 
 builder.Services.AddGrpc().AddJsonTranscoding();
 builder.Services.AddGrpcSwagger();
@@ -129,6 +132,9 @@ if (isNamespaceCachingEnabled || isPseudonymCachingEnabled)
     builder.Services.AddHostedService<MemoryCacheMetricsBackgroundService>();
 }
 
+builder.Services.AddScoped<INamespaceAppService, NamespaceAppService>();
+builder.Services.AddScoped<IPseudonymAppService, PseudonymAppService>();
+
 builder.Services.AddHostedService<InitNamespacesBackgroundService>();
 
 builder.Services.AddControllers(options =>
@@ -158,9 +164,7 @@ app.UseHttpMetrics();
 app.UseAntiforgery();
 
 app.MapStaticAssets();
-app.MapRazorComponents<App>()
-    .AddInteractiveServerRenderMode()
-    .AddAdditionalAssemblies(typeof(Vfps.Web._Imports).Assembly);
+app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 
 app.MapHealthChecks("/healthz");
 app.MapHealthChecks(

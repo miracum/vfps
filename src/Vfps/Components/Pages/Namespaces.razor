@@ -1,0 +1,175 @@
+@page "/ui/namespaces"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Vfps.Data.Models
+@inject INamespaceAppService NamespaceAppService
+
+<PageTitle>Namespaces</PageTitle>
+
+<h1>Namespaces</h1>
+
+@if (_errorMessage is not null)
+{
+    <BbAlert Variant="AlertVariant.Danger">
+        <BbAlertTitle>Could not create namespace</BbAlertTitle>
+        <BbAlertDescription>@_errorMessage</BbAlertDescription>
+    </BbAlert>
+}
+
+<BbCard>
+    <BbCardHeader>
+        <BbCardTitle>Create namespace</BbCardTitle>
+    </BbCardHeader>
+    <BbCardContent>
+        <EditForm Model="_newNamespace" OnValidSubmit="CreateNamespaceAsync">
+            <DataAnnotationsValidator />
+            <BbField>
+                <BbFieldLabel For="name">Name</BbFieldLabel>
+                <BbFieldContent>
+                    <BbInput @bind-Value="_newNamespace.Name" Id="name" Required="true" />
+                </BbFieldContent>
+            </BbField>
+            <BbField>
+                <BbFieldLabel For="description">Description</BbFieldLabel>
+                <BbFieldContent>
+                    <BbInput @bind-Value="_newNamespace.Description" Id="description" />
+                </BbFieldContent>
+            </BbField>
+            <BbField>
+                <BbFieldLabel For="method">Pseudonym generation method</BbFieldLabel>
+                <BbFieldContent>
+                    <BbSelect
+                        @bind-Value="_newNamespace.PseudonymGenerationMethod"
+                        TValue="Vfps.Protos.PseudonymGenerationMethod"
+                    >
+                        <BbSelectTrigger>
+                            <BbSelectValue />
+                        </BbSelectTrigger>
+                        <BbSelectContent>
+                            <BbSelectItem
+                                Value="Vfps.Protos.PseudonymGenerationMethod.SecureRandomBase64UrlEncoded"
+                                Text="Secure random (base64url)"
+                            />
+                            <BbSelectItem
+                                Value="Vfps.Protos.PseudonymGenerationMethod.Sha256HexEncoded"
+                                Text="SHA-256 (hex)"
+                            />
+                            <BbSelectItem
+                                Value="Vfps.Protos.PseudonymGenerationMethod.Uuid4"
+                                Text="UUIDv4"
+                            />
+                        </BbSelectContent>
+                    </BbSelect>
+                </BbFieldContent>
+            </BbField>
+            <BbField>
+                <BbFieldLabel For="length">Pseudonym length</BbFieldLabel>
+                <BbFieldContent>
+                    <BbNumericInput
+                        @bind-Value="_newNamespace.PseudonymLength"
+                        Id="length"
+                        Min="1"
+                        TValue="uint"
+                    />
+                </BbFieldContent>
+            </BbField>
+            <BbField>
+                <BbFieldLabel For="prefix">Prefix</BbFieldLabel>
+                <BbFieldContent>
+                    <BbInput @bind-Value="_newNamespace.PseudonymPrefix" Id="prefix" />
+                </BbFieldContent>
+            </BbField>
+            <BbField>
+                <BbFieldLabel For="suffix">Suffix</BbFieldLabel>
+                <BbFieldContent>
+                    <BbInput @bind-Value="_newNamespace.PseudonymSuffix" Id="suffix" />
+                </BbFieldContent>
+            </BbField>
+            <BbButton Type="ButtonType.Submit" Loading="_isCreating">Create</BbButton>
+        </EditForm>
+    </BbCardContent>
+</BbCard>
+
+<BbDataGrid Items="@_namespaces" ShowPagination="false">
+    <Columns>
+        <BbDataGridPropertyColumn Property="@(n => n.Name)" Title="Name" />
+        <BbDataGridPropertyColumn Property="@(n => n.Description)" Title="Description" />
+        <BbDataGridPropertyColumn
+            Property="@(n => n.PseudonymGenerationMethod)"
+            Title="Generation method"
+        />
+        <BbDataGridPropertyColumn Property="@(n => n.PseudonymLength)" Title="Length" />
+        <BbDataGridTemplateColumn Title="Pseudonyms">
+            <ChildContent Context="n">
+                <a href="@($"/ui/namespaces/{n.Name}/pseudonyms")">Browse</a>
+            </ChildContent>
+        </BbDataGridTemplateColumn>
+    </Columns>
+</BbDataGrid>
+
+@code {
+    private IReadOnlyList<Namespace> _namespaces = [];
+    private NewNamespaceModel _newNamespace = new();
+    private string? _errorMessage;
+    private bool _isCreating;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private async Task ReloadAsync()
+    {
+        _namespaces = await NamespaceAppService.GetAllAsync(CancellationToken.None);
+    }
+
+    private async Task CreateNamespaceAsync()
+    {
+        _isCreating = true;
+        _errorMessage = null;
+        try
+        {
+            await NamespaceAppService.CreateAsync(
+                new Namespace
+                {
+                    Name = _newNamespace.Name,
+                    Description = _newNamespace.Description,
+                    PseudonymGenerationMethod = _newNamespace.PseudonymGenerationMethod,
+                    PseudonymLength = _newNamespace.PseudonymLength,
+                    PseudonymPrefix = _newNamespace.PseudonymPrefix,
+                    PseudonymSuffix = _newNamespace.PseudonymSuffix,
+                },
+                CancellationToken.None
+            );
+
+            _newNamespace = new NewNamespaceModel();
+            await ReloadAsync();
+        }
+        catch (NamespaceAlreadyExistsException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isCreating = false;
+        }
+    }
+
+    private sealed class NewNamespaceModel
+    {
+        [Required]
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public Vfps.Protos.PseudonymGenerationMethod PseudonymGenerationMethod { get; set; } =
+            Vfps.Protos.PseudonymGenerationMethod.SecureRandomBase64UrlEncoded;
+
+        [Range(1, int.MaxValue)]
+        public uint PseudonymLength { get; set; } = 16;
+        public string? PseudonymPrefix { get; set; }
+        public string? PseudonymSuffix { get; set; }
+    }
+}

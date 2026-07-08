@@ -1,0 +1,114 @@
+@page "/ui/namespaces/{NamespaceName}/pseudonyms"
+@rendermode InteractiveServer
+@inject IPseudonymAppService PseudonymAppService
+
+<PageTitle>Pseudonyms - @NamespaceName</PageTitle>
+
+<h1>Pseudonyms in @NamespaceName</h1>
+<p><a href="/ui/namespaces">&larr; Back to namespaces</a></p>
+
+@if (_errorMessage is not null)
+{
+    <BbAlert Variant="AlertVariant.Danger">
+        <BbAlertTitle>Could not load pseudonyms</BbAlertTitle>
+        <BbAlertDescription>@_errorMessage</BbAlertDescription>
+    </BbAlert>
+}
+else
+{
+    <BbDataGrid Items="@_items" ShowPagination="false" IsLoading="@_isLoading">
+        <Columns>
+            <BbDataGridPropertyColumn Property="@(p => p.PseudonymValue)" Title="Pseudonym" />
+            <BbDataGridPropertyColumn
+                Property="@(p => p.CreatedAt)"
+                Title="Created at"
+                Format="yyyy-MM-dd HH:mm:ss"
+            />
+            <BbDataGridPropertyColumn
+                Property="@(p => p.LastUpdatedAt)"
+                Title="Last updated"
+                Format="yyyy-MM-dd HH:mm:ss"
+            />
+        </Columns>
+    </BbDataGrid>
+
+    <div>
+        <BbButton
+            OnClick="GoToPreviousPageAsync"
+            Disabled="@(_pageTokenStack.Count == 0 || _isLoading)"
+        >
+            Previous
+        </BbButton>
+        <BbButton OnClick="GoToNextPageAsync" Disabled="@(_nextPageToken is null || _isLoading)">
+            Next
+        </BbButton>
+    </div>
+}
+
+@code {
+    private const int PageSize = 25;
+
+    [Parameter]
+    public string NamespaceName { get; set; } = string.Empty;
+
+    private IReadOnlyList<PseudonymSummaryDto> _items = [];
+    private string? _currentPageToken;
+    private string? _nextPageToken;
+    private readonly Stack<string?> _pageTokenStack = new();
+    private bool _isLoading;
+    private string? _errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPageAsync(null);
+    }
+
+    private async Task LoadPageAsync(string? pageToken)
+    {
+        _isLoading = true;
+        _errorMessage = null;
+        try
+        {
+            var page = await PseudonymAppService.ListAsync(
+                NamespaceName,
+                PageSize,
+                pageToken,
+                includeTotalSize: false,
+                CancellationToken.None
+            );
+            _items = page.Items;
+            _nextPageToken = page.NextPageToken;
+            _currentPageToken = pageToken;
+        }
+        catch (NamespaceNotFoundException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isLoading = false;
+        }
+    }
+
+    private async Task GoToNextPageAsync()
+    {
+        if (_nextPageToken is null)
+        {
+            return;
+        }
+
+        _pageTokenStack.Push(_currentPageToken);
+        await LoadPageAsync(_nextPageToken);
+    }
+
+    private async Task GoToPreviousPageAsync()
+    {
+        if (_pageTokenStack.Count == 0)
+        {
+            return;
+        }
+
+        var previousToken = _pageTokenStack.Pop();
+        await LoadPageAsync(previousToken);
+    }
+}
