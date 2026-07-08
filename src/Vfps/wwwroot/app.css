@@ -1,0 +1,23 @@
+html, body {
+    font-family: system-ui, sans-serif;
+}
+
+.page {
+    display: flex;
+    flex-direction: column;
+}
+
+.top-row {
+    background-color: #1b6ec2;
+    padding: 0.75rem 1rem;
+}
+
+.top-row a {
+    color: white;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.content {
+    padding-top: 1rem;
+}

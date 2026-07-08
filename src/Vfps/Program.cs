@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
 using Prometheus;
 using Vfps;
+using Vfps.Components;
 using Vfps.Config;
 using Vfps.Data;
 using Vfps.Fhir;
@@ -16,6 +17,8 @@ using Vfps.Tracing;
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+builder.Services.AddRazorComponents().AddInteractiveServerComponents();
+
 builder.Services.AddGrpc().AddJsonTranscoding();
 builder.Services.AddGrpcSwagger();
 builder.Services.AddGrpcHealthChecks();
@@ -151,6 +154,13 @@ app.MapGet("/", () => Results.Redirect("/swagger"));
 app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "VFPS API v1"));
 app.UseHttpMetrics();
+
+app.UseAntiforgery();
+
+app.MapStaticAssets();
+app.MapRazorComponents<App>()
+    .AddInteractiveServerRenderMode()
+    .AddAdditionalAssemblies(typeof(Vfps.Web._Imports).Assembly);
 
 app.MapHealthChecks("/healthz");
 app.MapHealthChecks(

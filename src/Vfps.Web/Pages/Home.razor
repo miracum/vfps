@@ -1,0 +1,20 @@
+@page "/admin"
+@rendermode InteractiveServer
+
+<PageTitle>vfps admin</PageTitle>
+
+<h1>vfps admin</h1>
+
+<p>Interactive server render mode check: clicking the button below updates the count without a full page reload, which only happens if the SignalR circuit is actually live.</p>
+
+<p role="status">Count: @_count</p>
+<button class="btn btn-primary" @onclick="Increment">Click me</button>
+
+@code {
+    private int _count;
+
+    private void Increment()
+    {
+        _count++;
+    }
+}
