@@ -65,6 +65,10 @@ builder.Services.AddSwaggerGen(c =>
     c.IncludeXmlComments(filePath);
     c.IncludeGrpcXmlComments(filePath, includeControllerXmlComments: true);
     c.UseInlineDefinitionsForEnums();
+
+    // Vfps.Protos and Hl7.Fhir.Model both define a type named "Meta", which otherwise
+    // collide under Swashbuckle's default (short-name-only) schemaId generation.
+    c.CustomSchemaIds(type => type.FullName?.Replace('+', '.'));
 });
 
 builder.Services.AddDbContext<PseudonymContext>(
