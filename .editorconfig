@@ -13,7 +13,6 @@ trim_trailing_whitespace = true
 
 # Code files
 [*.{cs,csx,vb,vbx}]
-indent_size = 4
 dotnet_diagnostic.CS1591.severity = none
 
 # XML project files
