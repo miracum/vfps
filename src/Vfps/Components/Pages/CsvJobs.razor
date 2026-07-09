@@ -247,6 +247,24 @@ else
                             Title="Created at"
                             Format="yyyy-MM-dd HH:mm:ss"
                         />
+                        <BbDataGridTemplateColumn Title="Error">
+                            <ChildContent Context="j">
+                                @if (j.Status == PseudonymizationJobStatus.Failed && j.ErrorMessage is not null)
+                                {
+                                    <div
+                                        class="flex max-w-xs items-start gap-1.5 text-xs text-destructive"
+                                        title="@j.ErrorMessage"
+                                    >
+                                        <LucideIcon
+                                            Name="triangle-alert"
+                                            Size="14"
+                                            Class="mt-0.5 shrink-0"
+                                        />
+                                        <span class="truncate">@j.ErrorMessage</span>
+                                    </div>
+                                }
+                            </ChildContent>
+                        </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="Actions">
                             <ChildContent Context="j">
                                 <div class="flex items-center gap-2">
@@ -273,12 +291,6 @@ else
                                         >
                                             Cancel
                                         </BbButton>
-                                    }
-                                    @if (j.Status == PseudonymizationJobStatus.Failed && j.ErrorMessage is not null)
-                                    {
-                                        <span class="text-xs text-muted-foreground" title="@j.ErrorMessage">
-                                            @j.ErrorMessage
-                                        </span>
                                     }
                                 </div>
                             </ChildContent>
