@@ -33,10 +33,7 @@
     }
   ],
   "roles": {
-    "realm": [
-      { "name": "vfps-admin" },
-      { "name": "vfps-ns-development-read" }
-    ]
+    "realm": [{ "name": "vfps-admin" }, { "name": "vfps-ns-development-read" }]
   },
   "users": [
     {
@@ -46,7 +43,9 @@
       "firstName": "Admin",
       "lastName": "User",
       "email": "admin@vfps.example",
-      "credentials": [{ "type": "password", "value": "admin", "temporary": false }],
+      "credentials": [
+        { "type": "password", "value": "admin", "temporary": false }
+      ],
       "realmRoles": ["vfps-admin"]
     },
     {
@@ -56,7 +55,9 @@
       "firstName": "Reader",
       "lastName": "User",
       "email": "reader@vfps.example",
-      "credentials": [{ "type": "password", "value": "reader", "temporary": false }],
+      "credentials": [
+        { "type": "password", "value": "reader", "temporary": false }
+      ],
       "realmRoles": ["vfps-ns-development-read"]
     }
   ]
