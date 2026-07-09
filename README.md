@@ -229,32 +229,6 @@ rm -rf coverage/
 docker build -t ghcr.io/miracum/vfps:latest .
 ```
 
-### Run iter8 SLO experiments locally
-
-```sh
-kind create cluster
-
-export IMAGE_TAG="iter8-test"
-
-docker build -t ghcr.io/miracum/vfps:${IMAGE_TAG} .
-
-kind load docker-image ghcr.io/miracum/vfps:${IMAGE_TAG}
-
-helm upgrade --install \
-  --set="image.tag=${IMAGE_TAG}" \
-  -f tests/iter8/values.yaml \
-  --wait \
-  --timeout=15m \
-  --version=^1.0.0 \
-  vfps oci://ghcr.io/miracum/charts/vfps
-
-kubectl apply -f tests/iter8/experiment.yaml
-
-iter8 k assert -c completed --timeout 15m
-iter8 k assert -c nofailure,slos
-iter8 k report
-```
-
 ## Benchmarks
 
 ### Micro benchmarks

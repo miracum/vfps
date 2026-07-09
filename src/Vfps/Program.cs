@@ -228,10 +228,8 @@ if (authConfig.IsEnabled)
     {
         var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
         // Without this, ConnectionMultiplexer.Connect throws immediately if Redis isn't reachable
-        // the moment the app starts - which also breaks `dotnet ef` design-time tooling (it loads
-        // this same appsettings.Development.json and evaluates this whole file, Redis-reachable
-        // or not). With it, the multiplexer instead keeps retrying in the background and this
-        // line always succeeds; callers only see an error if they try to use it before it
+        // the moment the app starts. With it, the multiplexer instead keeps retrying in the background
+        // and this line always succeeds; callers only see an error if they try to use it before it
         // connects, which is the correct failure mode for a transient dependency at startup.
         redisOptions.AbortOnConnectFail = false;
         var redis = ConnectionMultiplexer.Connect(redisOptions);
