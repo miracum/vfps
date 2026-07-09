@@ -24,15 +24,11 @@ public class NamespacePermissionChecker(IOptions<AuthorizationConfig> options)
 
     /// <inheritdoc/>
     public bool HasReadAccess(ClaimsPrincipal user, string namespaceName) =>
-        !Config.IsEnabled
-        || IsAdmin(user)
-        || HasAnyRole(user, namespaceName, r => r.ReadRoles);
+        !Config.IsEnabled || IsAdmin(user) || HasAnyRole(user, namespaceName, r => r.ReadRoles);
 
     /// <inheritdoc/>
     public bool HasWriteAccess(ClaimsPrincipal user, string namespaceName) =>
-        !Config.IsEnabled
-        || IsAdmin(user)
-        || HasAnyRole(user, namespaceName, r => r.WriteRoles);
+        !Config.IsEnabled || IsAdmin(user) || HasAnyRole(user, namespaceName, r => r.WriteRoles);
 
     /// <inheritdoc/>
     public bool HasReverseLookupAccess(ClaimsPrincipal user, string namespaceName) =>

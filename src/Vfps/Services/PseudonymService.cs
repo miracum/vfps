@@ -2,37 +2,31 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Vfps.AppServices;
 using Vfps.Authorization;
-using Vfps.Data;
 using Vfps.Protos;
-using Vfps.PseudonymGenerators;
 
 namespace Vfps.Services;
 
 /// <inheritdoc/>
-/// <inheritdoc/>
-public class PseudonymService(
-    PseudonymContext context,
-    PseudonymizationMethodsLookup lookup,
-    INamespaceRepository namespaceRepository,
-    IPseudonymRepository pseudonymRepository,
-    IPseudonymAppService pseudonymAppService
-) : Protos.PseudonymService.PseudonymServiceBase
+public class PseudonymService(IPseudonymAppService pseudonymAppService)
+    : Protos.PseudonymService.PseudonymServiceBase
 {
-    private PseudonymContext Context { get; } = context;
-
     /// <inheritdoc/>
     public override async Task<PseudonymServiceCreateResponse> Create(
         PseudonymServiceCreateRequest request,
         ServerCallContext context
     )
     {
-        var now = DateTimeOffset.UtcNow;
-
-        var @namespace = await namespaceRepository.FindAsync(
-            request.Namespace,
-            context.CancellationToken
-        );
-        if (@namespace is null)
+        Data.Models.Pseudonym upsertedPseudonym;
+        try
+        {
+            upsertedPseudonym = await pseudonymAppService.CreateAsync(
+                request.Namespace,
+                request.OriginalValue,
+                context.GetUser(),
+                context.CancellationToken
+            );
+        }
+        catch (NamespaceNotFoundException)
         {
             var metadata = new Metadata { { "Namespace", request.Namespace } };
 
@@ -44,46 +38,15 @@ public class PseudonymService(
                 metadata
             );
         }
-
-        var generator = lookup[@namespace.PseudonymGenerationMethod];
-        var pseudonymValue = string.Empty;
-
-        using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
+        catch (ForbiddenException ex)
         {
-            activity?.SetTag("Method", generator.GetType().Name);
-
-            pseudonymValue = generator.GeneratePseudonym(
-                request.OriginalValue,
-                @namespace.PseudonymLength
-            );
-            pseudonymValue =
-                @namespace.PseudonymPrefix + pseudonymValue + @namespace.PseudonymSuffix;
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
         }
-
-        var pseudonym = new Data.Models.Pseudonym()
-        {
-            CreatedAt = now,
-            LastUpdatedAt = now,
-            NamespaceName = @namespace.Name,
-            OriginalValue = request.OriginalValue,
-            PseudonymValue = pseudonymValue,
-        };
-
-        Data.Models.Pseudonym? upsertedPseudonym = await pseudonymRepository.CreateIfNotExist(
-            pseudonym
-        );
-
-        if (upsertedPseudonym is null)
+        catch (PseudonymUpsertFailedException ex)
         {
             var metadata = new Metadata { { "Namespace", request.Namespace } };
 
-            throw new RpcException(
-                new Status(
-                    StatusCode.Internal,
-                    "Failed to upsert the pseudonym after several retries."
-                ),
-                metadata
-            );
+            throw new RpcException(new Status(StatusCode.Internal, ex.Message), metadata);
         }
 
         return new PseudonymServiceCreateResponse

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Vfps.Config;
+using Vfps.PseudonymGenerators;
 
 namespace Vfps.Tests.ServiceTests;
 
@@ -84,6 +85,7 @@ public class ServiceTestBase : IDisposable
             namespaceRepository,
             pseudonymRepository,
             CreatePermissionChecker(config),
+            new PseudonymizationMethodsLookup(),
             NullLogger<PseudonymAppService>.Instance
         );
 

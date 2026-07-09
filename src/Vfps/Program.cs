@@ -1,6 +1,9 @@
 using System.Diagnostics;
 using System.Security.Claims;
+using Amazon.S3;
 using BlazorBlueprint.Components;
+using Hangfire;
+using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -18,6 +21,7 @@ using Vfps.AppServices;
 using Vfps.Authorization;
 using Vfps.Components;
 using Vfps.Config;
+using Vfps.CsvProcessing;
 using Vfps.Data;
 using Vfps.Fhir;
 using Vfps.PseudonymGenerators;
@@ -175,10 +179,9 @@ if (authConfig.IsEnabled)
             options =>
             {
                 options.ForwardDefaultSelector = context =>
-                    context.Request.Headers.Authorization.ToString().StartsWith(
-                        "Bearer ",
-                        StringComparison.OrdinalIgnoreCase
-                    )
+                    context
+                        .Request.Headers.Authorization.ToString()
+                        .StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
                         ? JwtBearerDefaults.AuthenticationScheme
                         : CookieAuthenticationDefaults.AuthenticationScheme;
             }
@@ -228,6 +231,50 @@ if (authConfig.IsEnabled)
             .Services.AddDataProtection()
             .PersistKeysToStackExchangeRedis(redis, "vfps-DataProtection-Keys");
     }
+}
+
+// CSV pseudonymization jobs: off by default, matching this codebase's optional-feature idiom.
+// Input/output files live in S3-compatible object storage - see Config/S3Config.cs.
+builder.Services.Configure<S3Config>(builder.Configuration.GetSection("S3"));
+var s3Config = new S3Config();
+builder.Configuration.GetSection("S3").Bind(s3Config);
+
+if (s3Config.IsEnabled)
+{
+    builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
+        s3Config.AccessKey,
+        s3Config.SecretKey,
+        new AmazonS3Config
+        {
+            ServiceURL = s3Config.ServiceUrl,
+            ForcePathStyle = s3Config.ForcePathStyle,
+            // AWSSDK doesn't infer the scheme from ServiceURL for presigned URLs - without this,
+            // a plain-HTTP endpoint (e.g. local MinIO) still gets signed as "https://", which the
+            // browser then fails to load against a server not actually listening for TLS there.
+            UseHttp = s3Config.ServiceUrl.StartsWith("http://", StringComparison.Ordinal),
+        }
+    ));
+
+    builder.Services.AddScoped<IPseudonymizationJobRepository, PseudonymizationJobRepository>();
+    builder.Services.AddScoped<IPseudonymizationJobAppService, PseudonymizationJobAppService>();
+    builder.Services.AddScoped<ICsvPseudonymizationJobRunner, CsvPseudonymizationJobRunner>();
+
+    var postgresConnectionString =
+        builder.Configuration.GetConnectionString("PostgreSQL")
+        ?? throw new InvalidOperationException(
+            "S3:IsEnabled requires ConnectionStrings:PostgreSQL to also be set - Hangfire reuses "
+                + "the same database, no separate storage is provisioned for it."
+        );
+
+    // Hangfire's Postgres storage handles distributed locking itself, so every horizontally
+    // scaled replica can safely run AddHangfireServer() and pick up jobs with no extra
+    // coordination work needed - consistent with "no new service" for this feature.
+    builder.Services.AddHangfire(config =>
+        config.UsePostgreSqlStorage(options =>
+            options.UseNpgsqlConnection(postgresConnectionString)
+        )
+    );
+    builder.Services.AddHangfireServer();
 }
 
 builder.Services.AddControllers(options =>

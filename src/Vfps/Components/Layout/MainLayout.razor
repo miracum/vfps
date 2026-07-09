@@ -2,6 +2,7 @@
 @using Microsoft.Extensions.Options
 @using Vfps.Config
 @inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
+@inject IOptions<S3Config> S3ConfigOptions
 @inject NavigationManager NavigationManager
 
 <div class="page">
@@ -9,6 +10,10 @@
         <nav>
             <a href="/ui">vfps admin</a>
             <a href="/ui/namespaces">Namespaces</a>
+            @if (S3ConfigOptions.Value.IsEnabled)
+            {
+                <a href="/ui/csv-jobs">CSV pseudonymization</a>
+            }
         </nav>
         @if (AuthorizationConfigOptions.Value.IsEnabled)
         {

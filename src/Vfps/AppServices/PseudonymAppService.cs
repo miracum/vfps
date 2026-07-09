@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Vfps.Authorization;
 using Vfps.Data;
 using Vfps.Protos;
+using Vfps.PseudonymGenerators;
 
 namespace Vfps.AppServices;
 
@@ -14,10 +15,62 @@ public class PseudonymAppService(
     INamespaceRepository namespaceRepository,
     IPseudonymRepository pseudonymRepository,
     INamespacePermissionChecker permissionChecker,
+    PseudonymizationMethodsLookup methodsLookup,
     ILogger<PseudonymAppService> logger
 ) : IPseudonymAppService
 {
     private const int DefaultPageSize = 25;
+
+    /// <inheritdoc/>
+    public async Task<Data.Models.Pseudonym> CreateAsync(
+        string namespaceName,
+        string originalValue,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!permissionChecker.HasWriteAccess(user, namespaceName))
+        {
+            throw new ForbiddenException(
+                $"Write access to namespace '{namespaceName}' is required."
+            );
+        }
+
+        return await CreateTrustedAsync(namespaceName, originalValue, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Data.Models.Pseudonym> CreateTrustedAsync(
+        string namespaceName,
+        string originalValue,
+        CancellationToken cancellationToken
+    )
+    {
+        var @namespace = await namespaceRepository.FindAsync(namespaceName, cancellationToken);
+        if (@namespace is null)
+        {
+            throw new NamespaceNotFoundException(namespaceName);
+        }
+
+        var generator = methodsLookup[@namespace.PseudonymGenerationMethod];
+        string pseudonymValue;
+        using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
+        {
+            activity?.SetTag("Method", generator.GetType().Name);
+            pseudonymValue = generator.GeneratePseudonym(originalValue, @namespace.PseudonymLength);
+        }
+        pseudonymValue = @namespace.PseudonymPrefix + pseudonymValue + @namespace.PseudonymSuffix;
+
+        var pseudonym = new Data.Models.Pseudonym
+        {
+            NamespaceName = @namespace.Name,
+            OriginalValue = originalValue,
+            PseudonymValue = pseudonymValue,
+        };
+
+        var upserted = await pseudonymRepository.CreateIfNotExist(pseudonym);
+        return upserted ?? throw new PseudonymUpsertFailedException(namespaceName);
+    }
 
     /// <inheritdoc/>
     public async Task<PseudonymPageDto> ListAsync(

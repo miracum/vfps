@@ -88,6 +88,45 @@ services:
     ports:
       - "127.0.0.1:8180:8080"
 
+  # Local S3-compatible object storage for testing S3__IsEnabled=true (CSV pseudonymization
+  # jobs). Not started by default - requires the "s3" compose profile.
+  minio:
+    image: quay.io/minio/minio:RELEASE.2024-11-07T00-52-20Z
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 512m
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    environment:
+      MINIO_ROOT_USER: vfps
+      # kics-scan ignore-line
+      MINIO_ROOT_PASSWORD: vfps-minio-secret
+    profiles:
+      - s3
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+
+  # One-shot sidecar that creates the "vfps-csv-jobs" bucket vfps uploads/downloads CSV job
+  # files to/from, then exits - MinIO itself doesn't auto-create buckets.
+  minio-create-bucket:
+    image: quay.io/minio/mc:RELEASE.2024-10-08T09-37-26Z
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 vfps vfps-minio-secret; do sleep 1; done;
+      mc mb --ignore-existing local/vfps-csv-jobs;
+      "
+    profiles:
+      - s3
+
   vfps:
     image: ghcr.io/miracum/vfps:${VFPS_IMAGE_TAG:-v1.3.7} # x-release-please-version
     restart: unless-stopped
@@ -125,6 +164,14 @@ services:
       Authorization__AdminRoles__0: "vfps-admin"
       Authorization__NamespaceRules__0__Namespace: "development"
       Authorization__NamespaceRules__0__ReadRoles__0: "vfps-ns-development-read"
+      # Only takes effect when S3__IsEnabled=true is also set (e.g. for manually testing
+      # against the "s3" profile above) - off by default, see README.
+      S3__ServiceUrl: "http://minio:9000"
+      S3__AccessKey: "vfps"
+      # kics-scan ignore-line
+      S3__SecretKey: "vfps-minio-secret"
+      S3__Bucket: "vfps-csv-jobs"
+      S3__ForcePathStyle: "true"
     ports:
       # Http1, Http2, Http3
       - "127.0.0.1:8080:8080"

@@ -34,11 +34,7 @@ public class NamespacePermissionCheckerTests
                 AdminRoles = ["admin"],
                 NamespaceRules =
                 [
-                    new NamespaceRule
-                    {
-                        Namespace = "ns1",
-                        ReadRoles = ["ns1-read"],
-                    },
+                    new NamespaceRule { Namespace = "ns1", ReadRoles = ["ns1-read"] },
                 ],
             }
         );
@@ -71,11 +67,7 @@ public class NamespacePermissionCheckerTests
                 IsEnabled = true,
                 NamespaceRules =
                 [
-                    new NamespaceRule
-                    {
-                        Namespace = "ns1",
-                        ReadRoles = ["ns1-read"],
-                    },
+                    new NamespaceRule { Namespace = "ns1", ReadRoles = ["ns1-read"] },
                 ],
             }
         );

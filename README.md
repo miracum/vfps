@@ -88,6 +88,19 @@ Available configuration options which can be set as environment variables:
 
 `NamespaceRules` as indexed env vars gets unwieldy for more than a couple of namespaces; mounting a JSON file (e.g. via `appsettings.Production.json` or a config provider pointed at a mounted file) for this section is a reasonable alternative for larger rule sets.
 
+| Variable                     | Type     | Default        | Description                                                                                                              |
+| ---------------------------- | -------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `S3__IsEnabled`               | `bool`   | `false`        | Enable CSV pseudonymization jobs (admin UI upload/download + the Hangfire job runner). **Off by default** - also requires `ConnectionStrings__PostgreSQL` (Hangfire reuses the same database for its job storage). |
+| `S3__ServiceUrl`              | `string` | `""`           | S3-compatible endpoint URL, e.g. a local MinIO instance or a real AWS/S3-compatible endpoint.                            |
+| `S3__AccessKey`               | `string` | `""`           | Access key for the bucket above.                                                                                         |
+| `S3__SecretKey`               | `string` | `""`           | Secret key for the bucket above.                                                                                         |
+| `S3__Bucket`                  | `string` | `""`           | Bucket CSV job input/output files are stored in.                                                                          |
+| `S3__Region`                  | `string` | `"us-east-1"`  | Region passed to the S3 client.                                                                                          |
+| `S3__ForcePathStyle`          | `bool`   | `true`         | Path-style addressing (`https://host/bucket/key`) rather than virtual-hosted-style - required for MinIO and most non-AWS S3-compatible stores. |
+| `S3__PresignedUrlExpiry`      | `TimeSpan` | `"0.00:15:00"` | How long presigned upload/download URLs remain valid.                                                                    |
+
+CSV job input/output bytes never pass through the vfps process itself: the admin UI uploads directly to a presigned S3 PUT URL and downloads directly from a presigned S3 GET URL, and the Hangfire background job (running in-process, no separate worker deployment) streams the file S3-to-S3. See `compose.yaml`'s `s3` profile for a local MinIO setup usable for manual testing.
+
 ## Observability
 
 The service exports metrics in Prometheus format on `:8082/metrics`.

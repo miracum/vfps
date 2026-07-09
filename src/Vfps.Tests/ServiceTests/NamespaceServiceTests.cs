@@ -130,10 +130,6 @@ public class NamespaceServiceTests : ServiceTestBase
             InMemoryPseudonymContext
         );
         var pseudonymService = new Services.PseudonymService(
-            InMemoryPseudonymContext,
-            new PseudonymGenerators.PseudonymizationMethodsLookup(),
-            namespaceRepositoryForPseudonymService,
-            pseudonymRepository,
             CreatePseudonymAppService(namespaceRepositoryForPseudonymService, pseudonymRepository)
         );
 

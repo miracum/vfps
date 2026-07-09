@@ -1,0 +1,387 @@
+@page "/ui/csv-jobs"
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+@using System.Security.Claims
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Options
+@using Vfps.Config
+@using Vfps.Data.Models
+@inject IOptions<S3Config> S3ConfigOptions
+@inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
+@inject IServiceProvider ServiceProvider
+@inject INamespaceAppService NamespaceAppService
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+<PageTitle>CSV pseudonymization</PageTitle>
+
+<h1>CSV pseudonymization</h1>
+
+@if (!S3ConfigOptions.Value.IsEnabled)
+{
+    <BbAlert Variant="AlertVariant.Warning">
+        <BbAlertTitle>CSV pseudonymization is disabled</BbAlertTitle>
+        <BbAlertDescription>
+            Set <code>S3__IsEnabled=true</code> (and the other <code>S3__*</code> settings) to
+            enable this feature - it requires S3-compatible object storage.
+        </BbAlertDescription>
+    </BbAlert>
+}
+else
+{
+    @if (AuthorizationConfigOptions.Value.IsEnabled)
+    {
+        <AuthorizeView>
+            <NotAuthorized>
+                <BbAlert Variant="AlertVariant.Warning">
+                    <BbAlertTitle>Not signed in</BbAlertTitle>
+                    <BbAlertDescription>
+                        <a href="@LoginUrl">Sign in</a> to submit or view CSV pseudonymization
+                        jobs.
+                    </BbAlertDescription>
+                </BbAlert>
+            </NotAuthorized>
+        </AuthorizeView>
+    }
+
+    @if (_createError is not null)
+    {
+        <BbAlert Variant="AlertVariant.Danger">
+            <BbAlertTitle>Could not create job</BbAlertTitle>
+            <BbAlertDescription>@_createError</BbAlertDescription>
+        </BbAlert>
+    }
+
+    <BbCard>
+        <BbCardHeader>
+            <BbCardTitle>New job</BbCardTitle>
+        </BbCardHeader>
+        <BbCardContent>
+            <BbField>
+                <BbFieldLabel For="csvFileInput">CSV file</BbFieldLabel>
+                <BbFieldContent>
+                    <input type="file" id="csvFileInput" accept=".csv,text/csv" />
+                </BbFieldContent>
+            </BbField>
+
+            <BbField>
+                <BbFieldLabel For="encoding">Encoding</BbFieldLabel>
+                <BbFieldContent>
+                    <BbInput @bind-Value="_encoding" Id="encoding" />
+                </BbFieldContent>
+            </BbField>
+            <BbField>
+                <BbFieldLabel For="delimiter">Delimiter</BbFieldLabel>
+                <BbFieldContent>
+                    <BbInput @bind-Value="_delimiter" Id="delimiter" />
+                </BbFieldContent>
+            </BbField>
+            <BbField>
+                <BbFieldContent>
+                    <BbCheckbox @bind-Checked="_hasHeaderRow" Id="hasHeaderRow" />
+                    <BbFieldLabel For="hasHeaderRow">File has a header row</BbFieldLabel>
+                </BbFieldContent>
+            </BbField>
+
+            <h3>Column mappings</h3>
+            <p>
+                Each row replaces a source column's value with its pseudonym in the given
+                namespace - either in place, or into a new appended column (leave "target column"
+                empty to replace in place).
+            </p>
+            @foreach (var row in _columnMappings)
+            {
+                <div style="display:flex; gap: 0.5rem; align-items: end; margin-bottom: 0.5rem;">
+                    <BbField>
+                        <BbFieldLabel For="@row.SourceColumnId">
+                            Source column (name or 0-based index)
+                        </BbFieldLabel>
+                        <BbFieldContent>
+                            <BbInput @bind-Value="row.SourceColumn" Id="@row.SourceColumnId" />
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="@row.TargetColumnId">
+                            Target column (empty = replace in place)
+                        </BbFieldLabel>
+                        <BbFieldContent>
+                            <BbInput @bind-Value="row.TargetColumn" Id="@row.TargetColumnId" />
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="@row.NamespaceId">Namespace</BbFieldLabel>
+                        <BbFieldContent>
+                            <select @bind="row.Namespace" id="@row.NamespaceId">
+                                <option value="">Select a namespace</option>
+                                @foreach (var ns in _namespaces)
+                                {
+                                    <option value="@ns.Name">@ns.Name</option>
+                                }
+                            </select>
+                        </BbFieldContent>
+                    </BbField>
+                    <BbButton
+                        Variant="ButtonVariant.Outline"
+                        OnClick="() => RemoveMappingRow(row)"
+                        Disabled="@(_columnMappings.Count == 1)"
+                    >
+                        Remove
+                    </BbButton>
+                </div>
+            }
+            <BbButton Variant="ButtonVariant.Outline" OnClick="AddMappingRow">
+                Add column mapping
+            </BbButton>
+
+            <div style="margin-top: 1rem;">
+                <BbButton OnClick="CreateJobAsync" Loading="_isCreating">
+                    Upload and process
+                </BbButton>
+            </div>
+        </BbCardContent>
+    </BbCard>
+
+    <h2>Jobs</h2>
+    <BbDataGrid Items="@_jobs" ShowPagination="false">
+        <Columns>
+            <BbDataGridTemplateColumn Title="Id">
+                <ChildContent Context="j">@j.Id.ToString()[..8]</ChildContent>
+            </BbDataGridTemplateColumn>
+            <BbDataGridPropertyColumn Property="@(j => j.Status)" Title="Status" />
+            <BbDataGridTemplateColumn Title="Progress">
+                <ChildContent Context="j">
+                    @(j.TotalBytes > 0
+                        ? $"{j.RowsProcessed} rows ({100 * j.BytesProcessed / j.TotalBytes}%)"
+                        : $"{j.RowsProcessed} rows")
+                </ChildContent>
+            </BbDataGridTemplateColumn>
+            <BbDataGridPropertyColumn
+                Property="@(j => j.CreatedAt)"
+                Title="Created at"
+                Format="yyyy-MM-dd HH:mm:ss"
+            />
+            <BbDataGridTemplateColumn Title="Actions">
+                <ChildContent Context="j">
+                    @if (j.Status == PseudonymizationJobStatus.Completed)
+                    {
+                        <BbButton Variant="ButtonVariant.Outline" OnClick="() => DownloadAsync(j.Id)">
+                            Download
+                        </BbButton>
+                    }
+                    @if (
+                        j.Status is PseudonymizationJobStatus.AwaitingUpload
+                            or PseudonymizationJobStatus.Queued
+                            or PseudonymizationJobStatus.Running
+                    )
+                    {
+                        <BbButton Variant="ButtonVariant.Outline" OnClick="() => CancelJobAsync(j.Id)">
+                            Cancel
+                        </BbButton>
+                    }
+                    @if (j.Status == PseudonymizationJobStatus.Failed && j.ErrorMessage is not null)
+                    {
+                        <span title="@j.ErrorMessage">@j.ErrorMessage</span>
+                    }
+                </ChildContent>
+            </BbDataGridTemplateColumn>
+        </Columns>
+    </BbDataGrid>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private string LoginUrl =>
+        $"/authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri))}";
+
+    private IPseudonymizationJobAppService? _jobAppService;
+    private IReadOnlyList<Namespace> _namespaces = [];
+    private readonly List<ColumnMappingRow> _columnMappings = [new()];
+    private string _encoding = "utf-8";
+    private string _delimiter = ",";
+    private bool _hasHeaderRow = true;
+    private bool _isCreating;
+    private string? _createError;
+    private IReadOnlyList<PseudonymizationJob> _jobs = [];
+
+    private CancellationTokenSource? _pollCts;
+    private Task? _pollTask;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!S3ConfigOptions.Value.IsEnabled)
+        {
+            return;
+        }
+
+        _jobAppService = ServiceProvider.GetRequiredService<IPseudonymizationJobAppService>();
+
+        var user = await GetUserAsync();
+        _namespaces = await NamespaceAppService.GetAllAsync(user, CancellationToken.None);
+
+        await ReloadJobsAsync();
+
+        _pollCts = new CancellationTokenSource();
+        _pollTask = PollLoopAsync(_pollCts.Token);
+    }
+
+    private async Task PollLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await ReloadJobsAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // expected on dispose
+        }
+    }
+
+    private async Task<ClaimsPrincipal> GetUserAsync() =>
+        AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
+
+    private async Task ReloadJobsAsync()
+    {
+        if (_jobAppService is null)
+        {
+            return;
+        }
+
+        var user = await GetUserAsync();
+        _jobs = await _jobAppService.ListAsync(user, CancellationToken.None);
+    }
+
+    private void AddMappingRow() => _columnMappings.Add(new ColumnMappingRow());
+
+    private void RemoveMappingRow(ColumnMappingRow row) => _columnMappings.Remove(row);
+
+    private async Task CreateJobAsync()
+    {
+        if (_jobAppService is null)
+        {
+            return;
+        }
+
+        _isCreating = true;
+        _createError = null;
+        try
+        {
+            var mappings = _columnMappings
+                .Where(m =>
+                    !string.IsNullOrWhiteSpace(m.SourceColumn)
+                    && !string.IsNullOrWhiteSpace(m.Namespace)
+                )
+                .Select(m => new ColumnMapping
+                {
+                    SourceColumn = m.SourceColumn,
+                    TargetColumn = string.IsNullOrWhiteSpace(m.TargetColumn)
+                        ? null
+                        : m.TargetColumn,
+                    Namespace = m.Namespace,
+                })
+                .ToList();
+
+            if (mappings.Count == 0)
+            {
+                _createError =
+                    "At least one column mapping with a source column and namespace is required.";
+                return;
+            }
+
+            var user = await GetUserAsync();
+            var request = new CreateCsvJobRequest(_encoding, _delimiter, _hasHeaderRow, mappings);
+            var (job, uploadUrl) = await _jobAppService.CreateJobAsync(
+                request,
+                user,
+                CancellationToken.None
+            );
+
+            await JS.InvokeVoidAsync("vfpsCsvUpload.uploadFile", "csvFileInput", uploadUrl);
+            await _jobAppService.MarkUploadCompleteAsync(job.Id, user, CancellationToken.None);
+
+            _columnMappings.Clear();
+            _columnMappings.Add(new ColumnMappingRow());
+            await ReloadJobsAsync();
+        }
+        catch (ForbiddenException ex)
+        {
+            _createError = ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _createError = ex.Message;
+        }
+        catch (Microsoft.JSInterop.JSException ex)
+        {
+            _createError = $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            _isCreating = false;
+        }
+    }
+
+    private async Task CancelJobAsync(Guid jobId)
+    {
+        if (_jobAppService is null)
+        {
+            return;
+        }
+
+        var user = await GetUserAsync();
+        await _jobAppService.CancelAsync(jobId, user, CancellationToken.None);
+        await ReloadJobsAsync();
+    }
+
+    private async Task DownloadAsync(Guid jobId)
+    {
+        if (_jobAppService is null)
+        {
+            return;
+        }
+
+        var user = await GetUserAsync();
+        var url = await _jobAppService.GetDownloadUrlAsync(jobId, user, CancellationToken.None);
+        await JS.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _pollCts?.Cancel();
+        if (_pollTask is not null)
+        {
+            try
+            {
+                await _pollTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // expected
+            }
+        }
+
+        _pollCts?.Dispose();
+    }
+
+    private sealed class ColumnMappingRow
+    {
+        // A stable per-row id, distinct from list position - looping with a mutable index
+        // variable and using it inside nested components' Id parameters isn't safe here, since
+        // those parameters are captured by reference in the surrounding ChildContent closures.
+        private readonly string _id = Guid.NewGuid().ToString("N");
+
+        public string SourceColumnId => $"sourceColumn-{_id}";
+        public string TargetColumnId => $"targetColumn-{_id}";
+        public string NamespaceId => $"namespace-{_id}";
+
+        public string SourceColumn { get; set; } = string.Empty;
+        public string? TargetColumn { get; set; }
+        public string Namespace { get; set; } = string.Empty;
+    }
+}
