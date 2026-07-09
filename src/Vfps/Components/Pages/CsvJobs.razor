@@ -232,7 +232,7 @@ else
                                 @if (j.TotalBytes > 0)
                                 {
                                     <div class="flex items-center gap-2">
-                                        <BbProgress Value="@(100 * j.BytesProcessed / j.TotalBytes)" Class="w-24" />
+                                        <BbProgress Value="@(100.0 * j.BytesProcessed / j.TotalBytes)" Class="w-24" />
                                         <span class="text-xs text-muted-foreground">@j.RowsProcessed rows</span>
                                     </div>
                                 }
