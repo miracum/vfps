@@ -35,7 +35,13 @@ dotnet publish src/Vfps/Vfps.csproj \
     --configuration=Release \
     -o /build/publish
 
-dotnet ef migrations bundle \
+# dotnet-ef has no --environment flag - it only reads ASPNETCORE_ENVIRONMENT/DOTNET_ENVIRONMENT,
+# defaulting to "Development" (and thus appsettings.Development.json) when neither is set. That
+# file enables Authorization/S3 by default for local `dotnet run`, and evaluating it here - with
+# no Redis/Postgres/MinIO actually reachable in this build sandbox - previously crashed the whole
+# design-time host before EF could discover the DbContext. Bundled migrations run in Production
+# anyway, so building them under that same environment is also just the more correct choice.
+ASPNETCORE_ENVIRONMENT=Production DOTNET_ENVIRONMENT=Production dotnet ef migrations bundle \
     --project=src/Vfps/Vfps.csproj \
     --startup-project=src/Vfps/Vfps.csproj \
     --configuration=Release \
