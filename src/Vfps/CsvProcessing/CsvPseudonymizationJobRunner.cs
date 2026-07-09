@@ -114,7 +114,8 @@ public class CsvPseudonymizationJobRunner(
             pipe.Writer,
             cancellationToken
         );
-        var uploadTask = new TransferUtility(s3).UploadAsync(
+        using var transferUtility = new TransferUtility(s3);
+        var uploadTask = transferUtility.UploadAsync(
             pipe.Reader.AsStream(),
             s3Config.Value.Bucket,
             outputObjectKey,
