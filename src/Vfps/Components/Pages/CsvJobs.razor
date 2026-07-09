@@ -425,6 +425,13 @@ else
             return;
         }
 
+        // Guards against re-entrant invocation - see the identical comment on
+        // Namespaces.razor's CreateNamespaceAsync for why this matters under Blazor Server.
+        if (_isCreating)
+        {
+            return;
+        }
+
         _isCreating = true;
         _createError = null;
         try

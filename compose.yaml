@@ -167,9 +167,9 @@ services:
       Authorization__AdminRoles__0: "vfps-admin"
       Authorization__NamespaceRules__0__Namespace: "development"
       Authorization__NamespaceRules__0__ReadRoles__0: "vfps-ns-development-read"
-      # Only takes effect when S3__IsEnabled=true is also set (e.g. for manually testing
-      # against the "s3" profile above) - off by default, see README.
-      S3__ServiceUrl: "http://minio:9000"
+      # requires externally-reachable minio. host.docker-internal doesnt quite work.
+      #S3__IsEnabled: "true"
+      S3__ServiceUrl: "http://host.docker.internal:9000"
       S3__AccessKey: "vfps"
       # kics-scan ignore-line
       S3__SecretKey: "vfps-minio-secret"

@@ -12,15 +12,25 @@ public class NamespaceRepository(PseudonymContext context) : INamespaceRepositor
     )
     {
         context.Add(@namespace);
-        await context.SaveChangesAsync(cancellationToken);
-
-        // Blazor Server keeps a single scoped PseudonymContext alive for a whole circuit
-        // (unlike gRPC, where each call gets a fresh request-scoped context), so a tracked
-        // entity from this call would otherwise still be present the next time this same
-        // context instance is used - e.g. a second Create attempt with the same name would
-        // conflict with this now-stale tracked instance before the query even reaches the
-        // database. Clearing here keeps this repository correct regardless of caller lifetime.
-        context.ChangeTracker.Clear();
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        finally
+        {
+            // Blazor Server keeps a single scoped PseudonymContext alive for a whole circuit
+            // (unlike gRPC, where each call gets a fresh request-scoped context), so a tracked
+            // entity from this call would otherwise still be present the next time this same
+            // context instance is used - e.g. a second Create attempt with the same name would
+            // conflict with this now-stale tracked instance before the query even reaches the
+            // database. This must run on the failure path too (hence `finally`, not just after
+            // a successful save) - a duplicate-name attempt fails SaveChangesAsync, but leaves
+            // the entity tracked as "Added" regardless, so the *next* Create call (even for a
+            // different, genuinely new name) would try to re-insert that stale failed entity
+            // alongside the new one and either violate the same unique constraint again under
+            // the new call's name, or hit this exact "already being tracked" conflict itself.
+            context.ChangeTracker.Clear();
+        }
 
         return @namespace;
     }

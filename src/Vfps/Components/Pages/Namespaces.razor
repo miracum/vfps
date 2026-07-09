@@ -172,6 +172,16 @@
 
     private async Task CreateNamespaceAsync()
     {
+        // Guards against re-entrant invocation: Blazor Server dispatches each click as a
+        // separate event, and if a second click arrives before this method's first `await`
+        // suspends and the resulting "disabled" render reaches the client, both invocations
+        // would run concurrently against the same circuit-scoped DbContext, which isn't
+        // thread-safe (surfaces as an EF "already being tracked" exception for a shared name).
+        if (_isCreating)
+        {
+            return;
+        }
+
         _isCreating = true;
         _errorMessage = null;
         try

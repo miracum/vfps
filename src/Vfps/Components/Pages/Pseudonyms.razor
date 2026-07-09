@@ -131,6 +131,13 @@
 
     private async Task LoadPageAsync(string? pageToken)
     {
+        // Guards against re-entrant invocation - see the identical comment on
+        // Namespaces.razor's CreateNamespaceAsync for why this matters under Blazor Server.
+        if (_isLoading)
+        {
+            return;
+        }
+
         _isLoading = true;
         _errorMessage = null;
         try
@@ -164,6 +171,13 @@
 
     private async Task ReverseLookupAsync()
     {
+        // Guards against re-entrant invocation - see the identical comment on
+        // Namespaces.razor's CreateNamespaceAsync for why this matters under Blazor Server.
+        if (_isLookingUp)
+        {
+            return;
+        }
+
         _isLookingUp = true;
         _lookupError = null;
         _lookupResult = null;

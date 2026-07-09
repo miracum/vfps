@@ -14,11 +14,16 @@ public class PseudonymizationJobRepository(PseudonymContext context)
     )
     {
         context.Add(job);
-        await context.SaveChangesAsync(cancellationToken);
-
-        // See NamespaceRepository.CreateAsync for why this matters under Blazor Server's
-        // circuit-scoped DbContext lifetime.
-        context.ChangeTracker.Clear();
+        try
+        {
+            await context.SaveChangesAsync(cancellationToken);
+        }
+        finally
+        {
+            // See NamespaceRepository.CreateAsync for why this must run on the failure path
+            // too (hence `finally`), not just after a successful save.
+            context.ChangeTracker.Clear();
+        }
 
         return job;
     }
