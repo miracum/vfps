@@ -40,8 +40,8 @@ public class PseudonymizationJobAppService(
     )
     {
         foreach (
-            var namespaceName in request.ColumnMappings
-                .Select(m => m.Namespace)
+            var namespaceName in request
+                .ColumnMappings.Select(m => m.Namespace)
                 .Distinct()
                 .Where(namespaceName => !permissionChecker.HasWriteAccess(user, namespaceName))
         )
