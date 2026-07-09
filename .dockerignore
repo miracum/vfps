@@ -1,7 +1,7 @@
 *
 !src
 !.editorconfig
-!*.sln
+!*.slnx
 !Directory.Build.props
 !tests/chaos
 src/**/bin

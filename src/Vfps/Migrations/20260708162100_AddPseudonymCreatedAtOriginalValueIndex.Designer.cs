@@ -12,8 +12,8 @@ using Vfps.Data;
 namespace Vfps.Migrations
 {
     [DbContext(typeof(PseudonymContext))]
-    [Migration("20260708162100_AddPseudonymKeysetAndReverseLookupIndexes")]
-    partial class AddPseudonymKeysetAndReverseLookupIndexes
+    [Migration("20260708162100_AddPseudonymCreatedAtOriginalValueIndex")]
+    partial class AddPseudonymCreatedAtOriginalValueIndex
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -90,10 +90,6 @@ namespace Vfps.Migrations
 
                     b.HasKey("NamespaceName", "OriginalValue")
                         .HasName("pk_pseudonyms");
-
-                    b.HasIndex("NamespaceName", "PseudonymValue")
-                        .HasDatabaseName("ix_pseudonyms_namespace_name_pseudonym_value")
-                        .HasAnnotation("Npgsql:CreatedConcurrently", true);
 
                     b.HasIndex("NamespaceName", "CreatedAt", "OriginalValue")
                         .HasDatabaseName("ix_pseudonyms_namespace_name_created_at_original_value")

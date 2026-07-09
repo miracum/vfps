@@ -1,15 +1,3 @@
-# kics false positive "Missing User Instruction": <https://docs.kics.io/latest/queries/dockerfile-queries/fd54f200-402c-4333-a5a4-36ef6709af2f/>
-# kics-scan ignore-line
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.5-noble-chiseled@sha256:1191b4891ae8b1a8184b2de52b2c6332dfb27c30b58d282632044357db63761d AS runtime
-WORKDIR /opt/vfps
-EXPOSE 8080/tcp 8081/tcp 8082/tcp
-USER 65534:65534
-ENV DOTNET_ENVIRONMENT="Production" \
-    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
-    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
-    ASPNETCORE_URLS="" \
-    DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
-
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.201-noble@sha256:478b9038d187e5b5c29bfa8173ded5d29e864b5ad06102a12106380ee01e2e49 AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
@@ -92,7 +80,15 @@ USER 0:0
 ENTRYPOINT ["dotnet"]
 CMD ["test", "/opt/vfps-stress/Vfps.StressTests.dll", "-l", "console;verbosity=detailed"]
 
-FROM runtime
-COPY --chown=65534:65534 --from=build /build/publish .
-COPY --chown=65534:65534 --from=build /build/efbundle .
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.5-noble-chiseled@sha256:1191b4891ae8b1a8184b2de52b2c6332dfb27c30b58d282632044357db63761d AS runtime
+WORKDIR /opt/vfps
+EXPOSE 8080/tcp 8081/tcp 8082/tcp
+USER 65534:65534
+ENV DOTNET_ENVIRONMENT="Production" \
+    DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=1 \
+    DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    ASPNETCORE_URLS="" \
+    DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
+COPY --from=build /build/publish .
+COPY --from=build /build/efbundle .
 CMD ["/opt/vfps/Vfps.dll"]
