@@ -8,123 +8,137 @@
 @inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
 @inject NavigationManager NavigationManager
 
-@if (AuthorizationConfigOptions.Value.IsEnabled)
-{
-    <AuthorizeView>
-        <NotAuthorized>
-            <BbAlert Variant="AlertVariant.Warning">
-                <BbAlertTitle>Not signed in</BbAlertTitle>
-                <BbAlertDescription>
-                    <a href="@LoginUrl">Sign in</a> to create a namespace or see any
-                    namespaces you don't have anonymous read access to.
-                </BbAlertDescription>
-            </BbAlert>
-        </NotAuthorized>
-    </AuthorizeView>
-}
-
 <PageTitle>Namespaces</PageTitle>
 
-<h1>Namespaces</h1>
+<div class="mx-auto max-w-5xl space-y-6">
+    <div class="flex items-center gap-2">
+        <LucideIcon Name="database" Size="24" Class="text-primary" />
+        <h1 class="text-2xl font-semibold tracking-tight">Namespaces</h1>
+    </div>
 
-@if (_errorMessage is not null)
-{
-    <BbAlert Variant="AlertVariant.Danger">
-        <BbAlertTitle>Could not create namespace</BbAlertTitle>
-        <BbAlertDescription>@_errorMessage</BbAlertDescription>
-    </BbAlert>
-}
+    @if (AuthorizationConfigOptions.Value.IsEnabled)
+    {
+        <AuthorizeView>
+            <NotAuthorized>
+                <BbAlert Variant="AlertVariant.Warning">
+                    <BbAlertTitle>Not signed in</BbAlertTitle>
+                    <BbAlertDescription>
+                        <a href="@LoginUrl">Sign in</a> to create a namespace or see any
+                        namespaces you don't have anonymous read access to.
+                    </BbAlertDescription>
+                </BbAlert>
+            </NotAuthorized>
+        </AuthorizeView>
+    }
 
-<BbCard>
-    <BbCardHeader>
-        <BbCardTitle>Create namespace</BbCardTitle>
-    </BbCardHeader>
-    <BbCardContent>
-        <EditForm Model="_newNamespace" OnValidSubmit="CreateNamespaceAsync">
-            <DataAnnotationsValidator />
-            <BbField>
-                <BbFieldLabel For="name">Name</BbFieldLabel>
-                <BbFieldContent>
-                    <BbInput @bind-Value="_newNamespace.Name" Id="name" Required="true" />
-                </BbFieldContent>
-            </BbField>
-            <BbField>
-                <BbFieldLabel For="description">Description</BbFieldLabel>
-                <BbFieldContent>
-                    <BbInput @bind-Value="_newNamespace.Description" Id="description" />
-                </BbFieldContent>
-            </BbField>
-            <BbField>
-                <BbFieldLabel For="method">Pseudonym generation method</BbFieldLabel>
-                <BbFieldContent>
-                    <BbSelect
-                        @bind-Value="_newNamespace.PseudonymGenerationMethod"
-                        TValue="Vfps.Protos.PseudonymGenerationMethod"
-                    >
-                        <BbSelectTrigger>
-                            <BbSelectValue />
-                        </BbSelectTrigger>
-                        <BbSelectContent>
-                            <BbSelectItem
-                                Value="Vfps.Protos.PseudonymGenerationMethod.SecureRandomBase64UrlEncoded"
-                                Text="Secure random (base64url)"
+    @if (_errorMessage is not null)
+    {
+        <BbAlert Variant="AlertVariant.Danger">
+            <BbAlertTitle>Could not create namespace</BbAlertTitle>
+            <BbAlertDescription>@_errorMessage</BbAlertDescription>
+        </BbAlert>
+    }
+
+    <BbCard>
+        <BbCardHeader>
+            <BbCardTitle>Create namespace</BbCardTitle>
+            <BbCardDescription>
+                Namespaces are immutable once created - delete and re-create instead of editing.
+            </BbCardDescription>
+        </BbCardHeader>
+        <BbCardContent>
+            <EditForm Model="_newNamespace" OnValidSubmit="CreateNamespaceAsync">
+                <DataAnnotationsValidator />
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <BbField>
+                        <BbFieldLabel For="name">Name</BbFieldLabel>
+                        <BbFieldContent>
+                            <BbInput @bind-Value="_newNamespace.Name" Id="name" Required="true" />
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="description">Description</BbFieldLabel>
+                        <BbFieldContent>
+                            <BbInput @bind-Value="_newNamespace.Description" Id="description" />
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="method">Pseudonym generation method</BbFieldLabel>
+                        <BbFieldContent>
+                            <select
+                                @bind="_selectedMethod"
+                                id="method"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <option value="SecureRandomBase64UrlEncoded">
+                                    Secure random (base64url)
+                                </option>
+                                <option value="Sha256HexEncoded">SHA-256 (hex)</option>
+                                <option value="Uuid4">UUIDv4</option>
+                            </select>
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="length">Pseudonym length</BbFieldLabel>
+                        <BbFieldContent>
+                            <BbNumericInput
+                                @bind-Value="_newNamespace.PseudonymLength"
+                                Id="length"
+                                Min="1"
+                                TValue="uint"
                             />
-                            <BbSelectItem
-                                Value="Vfps.Protos.PseudonymGenerationMethod.Sha256HexEncoded"
-                                Text="SHA-256 (hex)"
-                            />
-                            <BbSelectItem
-                                Value="Vfps.Protos.PseudonymGenerationMethod.Uuid4"
-                                Text="UUIDv4"
-                            />
-                        </BbSelectContent>
-                    </BbSelect>
-                </BbFieldContent>
-            </BbField>
-            <BbField>
-                <BbFieldLabel For="length">Pseudonym length</BbFieldLabel>
-                <BbFieldContent>
-                    <BbNumericInput
-                        @bind-Value="_newNamespace.PseudonymLength"
-                        Id="length"
-                        Min="1"
-                        TValue="uint"
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="prefix">Prefix</BbFieldLabel>
+                        <BbFieldContent>
+                            <BbInput @bind-Value="_newNamespace.PseudonymPrefix" Id="prefix" />
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="suffix">Suffix</BbFieldLabel>
+                        <BbFieldContent>
+                            <BbInput @bind-Value="_newNamespace.PseudonymSuffix" Id="suffix" />
+                        </BbFieldContent>
+                    </BbField>
+                </div>
+                <BbButton Type="ButtonType.Submit" Loading="_isCreating" Class="mt-4">
+                    Create
+                </BbButton>
+            </EditForm>
+        </BbCardContent>
+    </BbCard>
+
+    <BbCard>
+        <BbCardHeader>
+            <BbCardTitle>All namespaces</BbCardTitle>
+        </BbCardHeader>
+        <BbCardContent>
+            <BbDataGrid Items="@_namespaces" ShowPagination="false">
+                <Columns>
+                    <BbDataGridPropertyColumn Property="@(n => n.Name)" Title="Name" />
+                    <BbDataGridPropertyColumn Property="@(n => n.Description)" Title="Description" />
+                    <BbDataGridPropertyColumn
+                        Property="@(n => n.PseudonymGenerationMethod)"
+                        Title="Generation method"
                     />
-                </BbFieldContent>
-            </BbField>
-            <BbField>
-                <BbFieldLabel For="prefix">Prefix</BbFieldLabel>
-                <BbFieldContent>
-                    <BbInput @bind-Value="_newNamespace.PseudonymPrefix" Id="prefix" />
-                </BbFieldContent>
-            </BbField>
-            <BbField>
-                <BbFieldLabel For="suffix">Suffix</BbFieldLabel>
-                <BbFieldContent>
-                    <BbInput @bind-Value="_newNamespace.PseudonymSuffix" Id="suffix" />
-                </BbFieldContent>
-            </BbField>
-            <BbButton Type="ButtonType.Submit" Loading="_isCreating">Create</BbButton>
-        </EditForm>
-    </BbCardContent>
-</BbCard>
-
-<BbDataGrid Items="@_namespaces" ShowPagination="false">
-    <Columns>
-        <BbDataGridPropertyColumn Property="@(n => n.Name)" Title="Name" />
-        <BbDataGridPropertyColumn Property="@(n => n.Description)" Title="Description" />
-        <BbDataGridPropertyColumn
-            Property="@(n => n.PseudonymGenerationMethod)"
-            Title="Generation method"
-        />
-        <BbDataGridPropertyColumn Property="@(n => n.PseudonymLength)" Title="Length" />
-        <BbDataGridTemplateColumn Title="Pseudonyms">
-            <ChildContent Context="n">
-                <a href="@($"/ui/namespaces/{n.Name}/pseudonyms")">Browse</a>
-            </ChildContent>
-        </BbDataGridTemplateColumn>
-    </Columns>
-</BbDataGrid>
+                    <BbDataGridPropertyColumn Property="@(n => n.PseudonymLength)" Title="Length" />
+                    <BbDataGridTemplateColumn Title="Pseudonyms">
+                        <ChildContent Context="n">
+                            <BbButton
+                                Variant="ButtonVariant.Outline"
+                                Size="ButtonSize.Small"
+                                Href="@($"/ui/namespaces/{Uri.EscapeDataString(n.Name)}/pseudonyms")"
+                            >
+                                Browse
+                            </BbButton>
+                        </ChildContent>
+                    </BbDataGridTemplateColumn>
+                </Columns>
+            </BbDataGrid>
+        </BbCardContent>
+    </BbCard>
+</div>
 
 @code {
     [CascadingParameter]
@@ -135,6 +149,10 @@
 
     private IReadOnlyList<Namespace> _namespaces = [];
     private NewNamespaceModel _newNamespace = new();
+    private string _selectedMethod = Vfps
+        .Protos
+        .PseudonymGenerationMethod
+        .SecureRandomBase64UrlEncoded.ToString();
     private string? _errorMessage;
     private bool _isCreating;
 
@@ -164,7 +182,9 @@
                 {
                     Name = _newNamespace.Name,
                     Description = _newNamespace.Description,
-                    PseudonymGenerationMethod = _newNamespace.PseudonymGenerationMethod,
+                    PseudonymGenerationMethod = Enum.Parse<Vfps.Protos.PseudonymGenerationMethod>(
+                        _selectedMethod
+                    ),
                     PseudonymLength = _newNamespace.PseudonymLength,
                     PseudonymPrefix = _newNamespace.PseudonymPrefix,
                     PseudonymSuffix = _newNamespace.PseudonymSuffix,
@@ -199,8 +219,6 @@
         [Required]
         public string Name { get; set; } = string.Empty;
         public string? Description { get; set; }
-        public Vfps.Protos.PseudonymGenerationMethod PseudonymGenerationMethod { get; set; } =
-            Vfps.Protos.PseudonymGenerationMethod.SecureRandomBase64UrlEncoded;
 
         [Range(1, int.MaxValue)]
         public uint PseudonymLength { get; set; } = 16;

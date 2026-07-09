@@ -49,6 +49,7 @@ public class PseudonymizationJobAppService(
         }
 
         var jobId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
         var job = new PseudonymizationJob
         {
             Id = jobId,
@@ -58,6 +59,8 @@ public class PseudonymizationJobAppService(
             Delimiter = request.Delimiter,
             HasHeaderRow = request.HasHeaderRow,
             ColumnMappings = [.. request.ColumnMappings],
+            CreatedAt = now,
+            LastUpdatedAt = now,
         };
 
         await jobRepository.CreateAsync(job, cancellationToken);

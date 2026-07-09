@@ -5,6 +5,7 @@
   <ItemGroup>
     <PackageReference Include="AWSSDK.S3" Version="4.0.100.3" />
     <PackageReference Include="BlazorBlueprint.Components" Version="3.13.0" />
+    <PackageReference Include="BlazorBlueprint.Icons.Lucide" Version="2.0.0" />
     <PackageReference Include="CsvHelper" Version="33.1.0" />
     <PackageReference Include="EFCore.NamingConventions" Version="10.0.1" />
     <PackageReference Include="EntityFrameworkCore.Exceptions.PostgreSQL" Version="8.1.3" />

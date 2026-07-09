@@ -1,4 +1,63 @@
+function parseCsvLine(line, delimiter) {
+    const fields = [];
+    let current = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+
+        if (!inQuotes && ch === '"' && current === "") {
+            inQuotes = true;
+            continue;
+        }
+
+        if (inQuotes && ch === '"') {
+            if (line[i + 1] === '"') {
+                current += '"';
+                i++;
+            } else {
+                inQuotes = false;
+            }
+            continue;
+        }
+
+        if (!inQuotes && ch === delimiter) {
+            fields.push(current);
+            current = "";
+            continue;
+        }
+
+        current += ch;
+    }
+    fields.push(current);
+
+    return fields.map((f) => f.trim());
+}
+
 window.vfpsCsvUpload = {
+    readHeaderRow: async function (inputElementId, delimiter) {
+        const input = document.getElementById(inputElementId);
+        if (!input || !input.files || input.files.length === 0) {
+            return [];
+        }
+
+        const file = input.files[0];
+        // The header row is always near the start of the file - a small prefix is enough even
+        // for multi-GB files, and avoids reading the whole thing just to show column names.
+        const chunk = await file.slice(0, 65536).text();
+        const newlineIndex = chunk.indexOf("\n");
+        const firstLine = (newlineIndex === -1 ? chunk : chunk.slice(0, newlineIndex)).replace(
+            /\r$/,
+            ""
+        );
+
+        if (!firstLine) {
+            return [];
+        }
+
+        return parseCsvLine(firstLine, delimiter || ",");
+    },
+
     uploadFile: async function (inputElementId, presignedUrl) {
         const input = document.getElementById(inputElementId);
         if (!input || !input.files || input.files.length === 0) {

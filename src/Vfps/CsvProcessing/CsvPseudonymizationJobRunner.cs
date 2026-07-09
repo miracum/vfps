@@ -36,7 +36,15 @@ public class CsvPseudonymizationJobRunner(
                 $"Pseudonymization job '{jobId}' does not exist."
             );
 
-        if (job.Status == PseudonymizationJobStatus.Cancelled)
+        // Guards against a manual re-run (e.g. via the Hangfire dashboard) of a job that's
+        // already reached a terminal state - automatic retries are disabled (see Program.cs),
+        // but nothing stops an operator from clicking "Retry" there directly.
+        if (
+            job.Status
+            is PseudonymizationJobStatus.Cancelled
+                or PseudonymizationJobStatus.Completed
+                or PseudonymizationJobStatus.Failed
+        )
         {
             return;
         }

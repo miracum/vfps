@@ -4,72 +4,101 @@
 
 <PageTitle>Pseudonyms - @NamespaceName</PageTitle>
 
-<h1>Pseudonyms in @NamespaceName</h1>
-<p><a href="/ui/namespaces">&larr; Back to namespaces</a></p>
-
-<BbCard>
-    <BbCardHeader>
-        <BbCardTitle>Reverse lookup</BbCardTitle>
-    </BbCardHeader>
-    <BbCardContent>
-        <p>
-            Reveals the original value for one pseudonym. This is a separate, more tightly-gated,
-            audited action - it is never shown in the table below.
-        </p>
-        <BbInput @bind-Value="_lookupValue" Placeholder="Pseudonym value" Id="lookupValue" />
-        <BbButton OnClick="ReverseLookupAsync" Loading="_isLookingUp">Look up</BbButton>
-        @if (_lookupError is not null)
-        {
-            <BbAlert Variant="AlertVariant.Danger">
-                <BbAlertDescription>@_lookupError</BbAlertDescription>
-            </BbAlert>
-        }
-        @if (_lookupResult is not null)
-        {
-            <p>
-                Original value: <code>@_lookupResult.OriginalValue</code>
-            </p>
-        }
-    </BbCardContent>
-</BbCard>
-
-@if (_errorMessage is not null)
-{
-    <BbAlert Variant="AlertVariant.Danger">
-        <BbAlertTitle>Could not load pseudonyms</BbAlertTitle>
-        <BbAlertDescription>@_errorMessage</BbAlertDescription>
-    </BbAlert>
-}
-else
-{
-    <BbDataGrid Items="@_items" ShowPagination="false" IsLoading="@_isLoading">
-        <Columns>
-            <BbDataGridPropertyColumn Property="@(p => p.PseudonymValue)" Title="Pseudonym" />
-            <BbDataGridPropertyColumn
-                Property="@(p => p.CreatedAt)"
-                Title="Created at"
-                Format="yyyy-MM-dd HH:mm:ss"
-            />
-            <BbDataGridPropertyColumn
-                Property="@(p => p.LastUpdatedAt)"
-                Title="Last updated"
-                Format="yyyy-MM-dd HH:mm:ss"
-            />
-        </Columns>
-    </BbDataGrid>
-
+<div class="mx-auto max-w-5xl space-y-6">
     <div>
-        <BbButton
-            OnClick="GoToPreviousPageAsync"
-            Disabled="@(_pageTokenStack.Count == 0 || _isLoading)"
-        >
-            Previous
+        <BbButton Variant="ButtonVariant.Link" Href="/ui/namespaces" Class="px-0">
+            <LucideIcon Name="arrow-left" Size="16" />
+            Back to namespaces
         </BbButton>
-        <BbButton OnClick="GoToNextPageAsync" Disabled="@(_nextPageToken is null || _isLoading)">
-            Next
-        </BbButton>
+        <div class="flex items-center gap-2">
+            <LucideIcon Name="key-round" Size="24" Class="text-primary" />
+            <h1 class="text-2xl font-semibold tracking-tight">Pseudonyms in @NamespaceName</h1>
+        </div>
     </div>
-}
+
+    <BbCard>
+        <BbCardHeader>
+            <BbCardTitle>Reverse lookup</BbCardTitle>
+            <BbCardDescription>
+                Reveals the original value for one pseudonym. This is a separate, more
+                tightly-gated, audited action - it is never shown in the table below.
+            </BbCardDescription>
+        </BbCardHeader>
+        <BbCardContent Class="space-y-3">
+            <div class="flex flex-wrap items-end gap-2">
+                <BbField Class="w-full max-w-sm">
+                    <BbFieldLabel For="lookupValue">Pseudonym value</BbFieldLabel>
+                    <BbFieldContent>
+                        <BbInput @bind-Value="_lookupValue" Id="lookupValue" />
+                    </BbFieldContent>
+                </BbField>
+                <BbButton OnClick="ReverseLookupAsync" Loading="_isLookingUp">Look up</BbButton>
+            </div>
+            @if (_lookupError is not null)
+            {
+                <BbAlert Variant="AlertVariant.Danger">
+                    <BbAlertDescription>@_lookupError</BbAlertDescription>
+                </BbAlert>
+            }
+            @if (_lookupResult is not null)
+            {
+                <p class="text-sm">
+                    Original value: <code class="rounded bg-muted px-1.5 py-0.5">@_lookupResult.OriginalValue</code>
+                </p>
+            }
+        </BbCardContent>
+    </BbCard>
+
+    @if (_errorMessage is not null)
+    {
+        <BbAlert Variant="AlertVariant.Danger">
+            <BbAlertTitle>Could not load pseudonyms</BbAlertTitle>
+            <BbAlertDescription>@_errorMessage</BbAlertDescription>
+        </BbAlert>
+    }
+    else
+    {
+        <BbCard>
+            <BbCardHeader>
+                <BbCardTitle>Pseudonyms</BbCardTitle>
+            </BbCardHeader>
+            <BbCardContent>
+                <BbDataGrid Items="@_items" ShowPagination="false" IsLoading="@_isLoading">
+                    <Columns>
+                        <BbDataGridPropertyColumn Property="@(p => p.PseudonymValue)" Title="Pseudonym" />
+                        <BbDataGridPropertyColumn
+                            Property="@(p => p.CreatedAt)"
+                            Title="Created at"
+                            Format="yyyy-MM-dd HH:mm:ss"
+                        />
+                        <BbDataGridPropertyColumn
+                            Property="@(p => p.LastUpdatedAt)"
+                            Title="Last updated"
+                            Format="yyyy-MM-dd HH:mm:ss"
+                        />
+                    </Columns>
+                </BbDataGrid>
+
+                <div class="mt-4 flex gap-2">
+                    <BbButton
+                        Variant="ButtonVariant.Outline"
+                        OnClick="GoToPreviousPageAsync"
+                        Disabled="@(_pageTokenStack.Count == 0 || _isLoading)"
+                    >
+                        Previous
+                    </BbButton>
+                    <BbButton
+                        Variant="ButtonVariant.Outline"
+                        OnClick="GoToNextPageAsync"
+                        Disabled="@(_nextPageToken is null || _isLoading)"
+                    >
+                        Next
+                    </BbButton>
+                </div>
+            </BbCardContent>
+        </BbCard>
+    }
+</div>
 
 @code {
     private const int PageSize = 25;

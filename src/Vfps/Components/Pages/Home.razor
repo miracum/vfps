@@ -1,7 +1,54 @@
 @page "/ui"
+@using Microsoft.Extensions.Options
+@using Vfps.Config
+@inject IOptions<S3Config> S3ConfigOptions
 
 <PageTitle>vfps admin</PageTitle>
 
-<h1>vfps admin</h1>
+<div class="mx-auto max-w-3xl space-y-6">
+    <div>
+        <h1 class="text-2xl font-semibold tracking-tight">vfps admin</h1>
+        <p class="text-muted-foreground">
+            A very fast and resource-efficient pseudonym service.
+        </p>
+    </div>
 
-<p><a href="/ui/namespaces">Namespaces</a></p>
+    <div class="grid gap-4 sm:grid-cols-2">
+        <BbCard>
+            <BbCardHeader>
+                <div class="flex items-center gap-2">
+                    <LucideIcon Name="database" Size="18" Class="text-primary" />
+                    <BbCardTitle>Namespaces</BbCardTitle>
+                </div>
+                <BbCardDescription>
+                    Create namespaces and browse pseudonyms at scale.
+                </BbCardDescription>
+            </BbCardHeader>
+            <BbCardFooter>
+                <BbButton Href="/ui/namespaces" Variant="ButtonVariant.Outline">
+                    Open
+                </BbButton>
+            </BbCardFooter>
+        </BbCard>
+
+        @if (S3ConfigOptions.Value.IsEnabled)
+        {
+            <BbCard>
+                <BbCardHeader>
+                    <div class="flex items-center gap-2">
+                        <LucideIcon Name="file-spreadsheet" Size="18" Class="text-primary" />
+                        <BbCardTitle>CSV Processing</BbCardTitle>
+                    </div>
+                    <BbCardDescription>
+                        Pseudonymize columns in a CSV file asynchronously.
+                    </BbCardDescription>
+                </BbCardHeader>
+                <BbCardFooter>
+                    <BbButton Href="/ui/csv-jobs" Variant="ButtonVariant.Outline">
+                        Open
+                    </BbButton>
+                </BbCardFooter>
+            </BbCard>
+        }
+    </div>
+</div>

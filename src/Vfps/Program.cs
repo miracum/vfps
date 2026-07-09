@@ -270,9 +270,16 @@ if (s3Config.IsEnabled)
     // scaled replica can safely run AddHangfireServer() and pick up jobs with no extra
     // coordination work needed - consistent with "no new service" for this feature.
     builder.Services.AddHangfire(config =>
-        config.UsePostgreSqlStorage(options =>
-            options.UseNpgsqlConnection(postgresConnectionString)
-        )
+        config
+            .UsePostgreSqlStorage(options =>
+                options.UseNpgsqlConnection(postgresConnectionString)
+            )
+            // CsvPseudonymizationJobRunner already handles its own failures (marks the job
+            // Failed with a sanitized message, logs the full exception server-side) - Hangfire's
+            // default of 10 automatic retries would silently re-run the whole job (tying up a
+            // worker slot each time) even though most failures here are deterministic (a bad
+            // column name, malformed input) and will just fail again identically.
+            .UseFilter(new AutomaticRetryAttribute { Attempts = 0 })
     );
     builder.Services.AddHangfireServer();
 }
