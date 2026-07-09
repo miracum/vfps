@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Net;
 using System.Security.Claims;
 using Amazon.S3;
@@ -38,14 +39,16 @@ public class PseudonymizationJobAppService(
         CancellationToken cancellationToken
     )
     {
-        foreach (var namespaceName in request.ColumnMappings.Select(m => m.Namespace).Distinct())
+        foreach (
+            var namespaceName in request.ColumnMappings
+                .Select(m => m.Namespace)
+                .Distinct()
+                .Where(namespaceName => !permissionChecker.HasWriteAccess(user, namespaceName))
+        )
         {
-            if (!permissionChecker.HasWriteAccess(user, namespaceName))
-            {
-                throw new ForbiddenException(
-                    $"Write access to namespace '{namespaceName}' is required."
-                );
-            }
+            throw new ForbiddenException(
+                $"Write access to namespace '{namespaceName}' is required."
+            );
         }
 
         var jobId = Guid.NewGuid();
