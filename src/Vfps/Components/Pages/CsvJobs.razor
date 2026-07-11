@@ -307,7 +307,7 @@ else
     private Task<AuthenticationState>? AuthenticationState { get; set; }
 
     private string LoginUrl =>
-        $"/authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri))}";
+        $"/ui/authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri))}";
 
     private IPseudonymizationJobAppService? _jobAppService;
     private IReadOnlyList<Namespace> _namespaces = [];

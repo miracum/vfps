@@ -38,7 +38,7 @@
                             <span class="hidden text-sm text-muted-foreground sm:inline">
                                 @context.User.Identity?.Name
                             </span>
-                            <form action="/authentication/logout" method="post">
+                            <form action="/ui/authentication/logout" method="post">
                                 <AntiforgeryToken />
                                 <BbButton
                                     Type="ButtonType.Submit"
@@ -94,7 +94,7 @@
     }
 
     private string LoginUrl =>
-        $"/authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri))}";
+        $"/ui/authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri))}";
 
     private string BuildUserTooltip(ClaimsPrincipal user)
     {

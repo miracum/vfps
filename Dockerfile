@@ -3,7 +3,7 @@ WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="/root/.dotnet/tools:${PATH}"
 
-RUN dotnet tool install --global dotnet-ef --version=10.0.5
+RUN dotnet tool install --global dotnet-ef --version=10.0.9
 
 COPY src/Directory.Build.props src/
 COPY src/Vfps/Vfps.csproj src/Vfps/
@@ -26,15 +26,28 @@ dotnet publish src/Vfps/Vfps.csproj \
 # dotnet-ef has no --environment flag - it only reads ASPNETCORE_ENVIRONMENT/DOTNET_ENVIRONMENT,
 # defaulting to "Development" (and thus appsettings.Development.json) when neither is set. That
 # file enables Authorization/S3 by default for local `dotnet run`, and evaluating it here - with
-# no Redis/Postgres/MinIO actually reachable in this build sandbox - previously crashed the whole
+# no Postgres/MinIO actually reachable in this build sandbox - previously crashed the whole
 # design-time host before EF could discover the DbContext. Bundled migrations run in Production
 # anyway, so building them under that same environment is also just the more correct choice.
+#
+# Two DbContexts now have migrations (PseudonymContext, DataProtectionKeyContext), and
+# `migrations bundle` errors out ("More than one DbContext was found") without an explicit
+# --context, so this produces one bundle executable per context.
 ASPNETCORE_ENVIRONMENT=Production DOTNET_ENVIRONMENT=Production dotnet ef migrations bundle \
     --project=src/Vfps/Vfps.csproj \
     --startup-project=src/Vfps/Vfps.csproj \
+    --context=PseudonymContext \
     --configuration=Release \
     --verbose \
     -o /build/efbundle
+
+ASPNETCORE_ENVIRONMENT=Production DOTNET_ENVIRONMENT=Production dotnet ef migrations bundle \
+    --project=src/Vfps/Vfps.csproj \
+    --startup-project=src/Vfps/Vfps.csproj \
+    --context=DataProtectionKeyContext \
+    --configuration=Release \
+    --verbose \
+    -o /build/efbundle-dataprotection
 EOF
 
 FROM build AS build-test
@@ -91,4 +104,5 @@ ENV DOTNET_ENVIRONMENT="Production" \
     DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
 COPY --from=build /build/publish .
 COPY --from=build /build/efbundle .
+COPY --from=build /build/efbundle-dataprotection .
 CMD ["/opt/vfps/Vfps.dll"]

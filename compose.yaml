@@ -40,26 +40,6 @@ services:
       - "6831:6831/udp"
       - "127.0.0.1:16686:16686"
 
-  redis:
-    image: docker.io/library/redis:8-alpine
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256m
-        reservations:
-          memory: 256m
-    cap_drop:
-      - ALL
-    ipc: none
-    security_opt:
-      - "no-new-privileges:true"
-    privileged: false
-    profiles:
-      - keycloak
-    ports:
-      - "127.0.0.1:6379:6379"
-
   # Local OIDC provider for testing Authorization:IsEnabled=true. Imports tests/keycloak/vfps-realm.json,
   # which pre-configures the "vfps-web" client and two users: admin/admin (realm role vfps-admin) and
   # reader/reader (realm role vfps-ns-development-read). Not started by default - requires the
@@ -157,9 +137,6 @@ services:
       PGUSER: postgres
       # kics-scan ignore-line
       PGPASSWORD: postgres
-      # Only takes effect when Authorization__IsEnabled=true is also set (e.g. for manually
-      # testing against the "keycloak" profile above) - off by default, see README.
-      ConnectionStrings__Redis: "redis:6379"
       Authorization__Authority: "http://keycloak:8080/realms/vfps"
       Authorization__ClientId: "vfps-web"
       # kics-scan ignore-line

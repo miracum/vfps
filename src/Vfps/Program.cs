@@ -15,7 +15,6 @@ using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
 using Prometheus;
-using StackExchange.Redis;
 using Vfps;
 using Vfps.AppServices;
 using Vfps.Authorization;
@@ -221,21 +220,16 @@ if (authConfig.IsEnabled)
     // the Data Protection key ring that encrypts auth cookies/antiforgery tokens needs to be
     // shared so a request landing on a different replica than the one that issued the cookie
     // can still decrypt it (relevant even with ingress session affinity, e.g. right after a
-    // scaling event). This is the actual reason Redis is needed here - sticky sessions
-    // themselves are an ingress-level concern, documented in the README, not implemented here.
-    var redisConnectionString = builder.Configuration.GetConnectionString("Redis");
-    if (!string.IsNullOrEmpty(redisConnectionString))
+    // scaling event). Persisted to Postgres (the same database vfps already depends on) rather
+    // than a separate Redis instance - sticky sessions themselves are an ingress-level concern,
+    // documented in the README, not implemented here.
+    var dataProtectionConnectionString = builder.Configuration.GetConnectionString("PostgreSQL");
+    if (!string.IsNullOrEmpty(dataProtectionConnectionString))
     {
-        var redisOptions = ConfigurationOptions.Parse(redisConnectionString);
-        // Without this, ConnectionMultiplexer.Connect throws immediately if Redis isn't reachable
-        // the moment the app starts. With it, the multiplexer instead keeps retrying in the background
-        // and this line always succeeds; callers only see an error if they try to use it before it
-        // connects, which is the correct failure mode for a transient dependency at startup.
-        redisOptions.AbortOnConnectFail = false;
-        var redis = ConnectionMultiplexer.Connect(redisOptions);
-        builder
-            .Services.AddDataProtection()
-            .PersistKeysToStackExchangeRedis(redis, "vfps-DataProtection-Keys");
+        builder.Services.AddDbContext<DataProtectionKeyContext>(options =>
+            options.UseNpgsql(dataProtectionConnectionString)
+        );
+        builder.Services.AddDataProtection().PersistKeysToDbContext<DataProtectionKeyContext>();
     }
 }
 
@@ -391,6 +385,11 @@ if (shouldRunDatabaseMigrations)
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<PseudonymContext>();
     db.Database.Migrate();
+
+    // Only registered when Authorization:IsEnabled and a connection string are set - see the
+    // AddDbContext<DataProtectionKeyContext> call above.
+    var dataProtectionDb = scope.ServiceProvider.GetService<DataProtectionKeyContext>();
+    dataProtectionDb?.Database.Migrate();
 }
 
 app.Run();
