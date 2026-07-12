@@ -306,16 +306,16 @@ if (!authConfig.IsEnabled)
     );
 }
 
+app.UsePathBase("/ui");
+app.UseRouting();
+
 // Configure the HTTP request pipeline.
 app.MapGrpcService<PseudonymService>();
 app.MapGrpcService<NamespaceService>();
 app.MapGrpcHealthChecksService();
-app.MapGet("/", () => Results.Redirect("/ui"));
 app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "VFPS API v1"));
 app.UseHttpMetrics();
-
-app.UsePathBase("/ui");
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -327,7 +327,7 @@ if (authConfig.IsEnabled)
     // can't issue the redirect-based OIDC challenge themselves, so a plain link to these
     // endpoints (not Blazor-routed navigation) triggers the actual sign-in/sign-out flow.
     app.MapGet(
-            "/ui/authentication/login",
+            "/authentication/login",
             (string? returnUrl) =>
                 Results.Challenge(
                     new AuthenticationProperties { RedirectUri = returnUrl ?? "/ui" },
@@ -337,7 +337,7 @@ if (authConfig.IsEnabled)
         .AllowAnonymous();
 
     app.MapPost(
-        "/ui/authentication/logout",
+        "/authentication/logout",
         async (HttpContext httpContext) =>
         {
             await httpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

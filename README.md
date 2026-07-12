@@ -18,7 +18,7 @@ Supports horizontal service replication for highly-available deployments.
 > unoptimized PostgreSQL deployment.
 
 ```sh
-docker compose -f docker-compose.yaml --profile=test up
+docker compose -f compose.yaml --profile=test up
 ```
 
 Visit <http://localhost:8080/> to view the OpenAPI specification of the Vfps API:
