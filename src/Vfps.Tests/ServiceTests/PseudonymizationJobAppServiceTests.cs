@@ -19,12 +19,13 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
     private static ClaimsPrincipal UserWithRoles(params string[] roles) =>
         new(new ClaimsIdentity(roles.Select(r => new Claim("roles", r))));
 
+    // "sub", not ClaimTypes.NameIdentifier - Program.cs sets MapInboundClaims = false on both
+    // the OIDC and JWT bearer handlers, so a real token's short "sub" claim name survives
+    // unmapped, matching what GetSubject()/ClaimsPrincipalExtensions actually reads.
     private static ClaimsPrincipal UserWithSubject(string subject, params string[] roles) =>
         new(
             new ClaimsIdentity(
-                roles
-                    .Select(r => new Claim("roles", r))
-                    .Append(new Claim(ClaimTypes.NameIdentifier, subject))
+                roles.Select(r => new Claim("roles", r)).Append(new Claim("sub", subject))
             )
         );
 

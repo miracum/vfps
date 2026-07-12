@@ -63,7 +63,7 @@ public class PseudonymizationJobAppService(
         var job = new PseudonymizationJob
         {
             Id = jobId,
-            CreatedBy = GetSubject(user),
+            CreatedBy = user.GetSubject(),
             InputObjectKey = $"{S3ObjectKeyPrefix}{jobId}/input.csv",
             Encoding = request.Encoding,
             Delimiter = request.Delimiter,
@@ -138,7 +138,7 @@ public class PseudonymizationJobAppService(
         CancellationToken cancellationToken
     )
     {
-        var createdBy = permissionChecker.IsAdmin(user) ? null : GetSubject(user);
+        var createdBy = permissionChecker.IsAdmin(user) ? null : user.GetSubject();
         return await jobRepository.ListAsync(createdBy, cancellationToken);
     }
 
@@ -213,7 +213,7 @@ public class PseudonymizationJobAppService(
         var job =
             await jobRepository.FindAsync(jobId, cancellationToken)
             ?? throw new PseudonymizationJobNotFoundException(jobId);
-        if (job.CreatedBy != GetSubject(user) && !permissionChecker.IsAdmin(user))
+        if (job.CreatedBy != user.GetSubject() && !permissionChecker.IsAdmin(user))
         {
             throw new ForbiddenException(
                 "Only the job's creator, or an admin, can access this job."
@@ -222,7 +222,4 @@ public class PseudonymizationJobAppService(
 
         return job;
     }
-
-    private static string GetSubject(ClaimsPrincipal user) =>
-        user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous";
 }

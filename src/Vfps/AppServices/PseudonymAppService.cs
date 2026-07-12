@@ -152,7 +152,7 @@ public class PseudonymAppService(
         // Audit every reverse-lookup attempt, found or not - this is the one place original
         // values can be revealed, so who looked up what, and when, needs to be recorded
         // regardless of whether the record existed.
-        var subject = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? "anonymous";
+        var subject = user.GetSubject();
         logger.LogInformation(
             "Reverse lookup: {Subject} looked up pseudonym {PseudonymValue} in namespace {Namespace} at {Timestamp} (found: {Found})",
             subject,
