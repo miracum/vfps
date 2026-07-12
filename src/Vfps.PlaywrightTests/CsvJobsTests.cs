@@ -22,7 +22,7 @@ public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
         // be true for this page to render the upload form at all. Not run by the default CI
         // job; run locally with `docker compose --profile test --profile s3 up -d --build` and
         // `dotnet test --filter Category=RequiresS3`.
-        var csvPath = Path.Combine(Path.GetTempPath(), $"vfps-e2e-{UniqueSuffix()}.csv");
+        var csvPath = Path.Join(Path.GetTempPath(), $"vfps-e2e-{UniqueSuffix()}.csv");
         await File.WriteAllTextAsync(csvPath, "patient_id,name,notes\n1,Jane Doe,none\n");
         try
         {
