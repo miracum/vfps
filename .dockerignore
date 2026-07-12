@@ -4,5 +4,6 @@
 !*.slnx
 !Directory.Build.props
 !tests/chaos
+!.config/
 src/**/bin
 src/**/obj

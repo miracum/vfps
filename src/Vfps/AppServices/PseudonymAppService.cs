@@ -79,7 +79,7 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
-        var @namespace =
+        var _ =
             await namespaceRepository.FindAsync(namespaceName, cancellationToken)
             ?? throw new NamespaceNotFoundException(namespaceName);
         if (!permissionChecker.HasReadAccess(user, namespaceName))

@@ -1,14 +1,17 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.201-noble@sha256:478b9038d187e5b5c29bfa8173ded5d29e864b5ad06102a12106380ee01e2e49 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.301-resolute@sha256:fe81f048c2ff6cdbcc16ad4c1690c5a4f383edab8fdabdf02b3b782591b656c5 AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="/root/.dotnet/tools:${PATH}"
 
-RUN dotnet tool install --global dotnet-ef --version=10.0.9
+COPY .config/ .
+
+RUN dotnet tool restore
 
 COPY src/Directory.Build.props src/
 COPY src/Vfps/Vfps.csproj src/Vfps/
+COPY src/Vfps/packages.lock.json src/Vfps/
 
-RUN dotnet restore --runtime=linux-x64 src/Vfps/Vfps.csproj
+RUN dotnet restore --locked-mode src/Vfps/Vfps.csproj
 
 COPY . .
 
@@ -33,11 +36,16 @@ dotnet publish src/Vfps/Vfps.csproj \
 # Two DbContexts now have migrations (PseudonymContext, DataProtectionKeyContext), and
 # `migrations bundle` errors out ("More than one DbContext was found") without an explicit
 # --context, so this produces one bundle executable per context.
+# --runtime/--target-runtime pin this to the same linux-x64 RID as the restore/build/publish
+# steps above - without it, dotnet-ef's own internal project evaluation resolves no RID at all,
+# which conflicts with the RID-specific packages.lock.json section under RestoreLockedMode.
 ASPNETCORE_ENVIRONMENT=Production DOTNET_ENVIRONMENT=Production dotnet ef migrations bundle \
     --project=src/Vfps/Vfps.csproj \
     --startup-project=src/Vfps/Vfps.csproj \
     --context=PseudonymContext \
     --configuration=Release \
+    --runtime=linux-x64 \
+    --target-runtime=linux-x64 \
     --verbose \
     -o /build/efbundle
 
@@ -46,6 +54,8 @@ ASPNETCORE_ENVIRONMENT=Production DOTNET_ENVIRONMENT=Production dotnet ef migrat
     --startup-project=src/Vfps/Vfps.csproj \
     --context=DataProtectionKeyContext \
     --configuration=Release \
+    --runtime=linux-x64 \
+    --target-runtime=linux-x64 \
     --verbose \
     -o /build/efbundle-dataprotection
 EOF
@@ -93,7 +103,7 @@ USER 0:0
 ENTRYPOINT ["dotnet"]
 CMD ["test", "/opt/vfps-stress/Vfps.StressTests.dll", "-l", "console;verbosity=detailed"]
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.5-noble-chiseled@sha256:1191b4891ae8b1a8184b2de52b2c6332dfb27c30b58d282632044357db63761d AS runtime
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.9-resolute-chiseled@sha256:d942d0db45f473ca68a9a9adcb1b2d8886a75d3586a8a08eedbb42046f0dab7c AS runtime
 WORKDIR /opt/vfps
 EXPOSE 8080/tcp 8081/tcp 8082/tcp
 USER 65534:65534

@@ -9,14 +9,17 @@
     <link rel="stylesheet" href="_content/BlazorBlueprint.Components/blazorblueprint.css" />
     <link rel="stylesheet" href="app.css" />
     <script>
-        // Applied before first paint to avoid a flash of the wrong theme.
-        (function () {
+        function vfpsApplyTheme() {
             var stored = localStorage.getItem("vfps-dark-mode");
             var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-            if (stored === "1" || (stored === null && prefersDark)) {
-                document.documentElement.classList.add("dark");
-            }
-        })();
+            document.documentElement.classList.toggle(
+                "dark",
+                stored === "1" || (stored === null && prefersDark)
+            );
+        }
+
+        // Applied before first paint to avoid a flash of the wrong theme.
+        vfpsApplyTheme();
     </script>
     <HeadOutlet />
 </head>
