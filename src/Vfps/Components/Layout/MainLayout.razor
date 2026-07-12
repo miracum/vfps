@@ -97,8 +97,7 @@
         _navItems = items;
     }
 
-    private string LoginUrl =>
-        $"/ui/authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri))}";
+    private string LoginUrl => NavigationManager.BuildLoginUrl();
 
     private string BuildUserTooltip(ClaimsPrincipal user)
     {

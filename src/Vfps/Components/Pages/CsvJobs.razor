@@ -7,7 +7,6 @@
 @using Vfps.Config
 @using Vfps.Data.Models
 @inject IOptions<S3Config> S3ConfigOptions
-@inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
 @inject IServiceProvider ServiceProvider
 @inject INamespaceAppService NamespaceAppService
 @inject IJSRuntime JS
@@ -34,21 +33,6 @@ else
             <LucideIcon Name="file-spreadsheet" Size="24" Class="text-primary" />
             <h1 class="text-2xl font-semibold tracking-tight">CSV pseudonymization</h1>
         </div>
-
-        @if (AuthorizationConfigOptions.Value.IsEnabled)
-        {
-            <AuthorizeView>
-                <NotAuthorized>
-                    <BbAlert Variant="AlertVariant.Warning">
-                        <BbAlertTitle>Not signed in</BbAlertTitle>
-                        <BbAlertDescription>
-                            <a href="@LoginUrl">Sign in</a> to submit or view CSV pseudonymization
-                            jobs.
-                        </BbAlertDescription>
-                    </BbAlert>
-                </NotAuthorized>
-            </AuthorizeView>
-        }
 
         @if (_createError is not null)
         {
@@ -305,9 +289,6 @@ else
 @code {
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationState { get; set; }
-
-    private string LoginUrl =>
-        $"/ui/authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri))}";
 
     private IPseudonymizationJobAppService? _jobAppService;
     private IReadOnlyList<Namespace> _namespaces = [];

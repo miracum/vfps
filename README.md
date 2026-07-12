@@ -158,17 +158,17 @@ will create a pseudonym in the `test` namespace. The expected response looks as 
 
 ### Build & run
 
-Start an empty PostgreSQL database for development (optionally add `-d` to run in the background):
+Start an empty PostgreSQL database, Keycloak, and MinIO for development (optionally add `-d` to run in the background):
 
 ```sh
-docker compose -f docker-compose.yaml up
+docker compose -f compose.yaml --profile=keycloak --profile=s3 up
 ```
 
 To additionally start an instance of [Jaeger Tracing](https://www.jaegertracing.io/), you can specify the `jaeger`
 profile:
 
 ```sh
-docker compose -f docker-compose.yaml --profile=jaeger up
+docker compose -f compose.yaml --profile=jaeger up
 ```
 
 Restore dependencies and run in Debug mode:

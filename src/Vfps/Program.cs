@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Amazon.S3;
 using BlazorBlueprint.Components;
 using Hangfire;
+using Hangfire.Dashboard;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -185,7 +186,19 @@ if (authConfig.IsEnabled)
                         : CookieAuthenticationDefaults.AuthenticationScheme;
             }
         )
-        .AddCookie()
+        .AddCookie(options =>
+        {
+            // Blazor's [Authorize]-on-a-page metadata is enforced by ASP.NET Core's own
+            // authorization middleware before Blazor's AuthorizeRouteView/NotAuthorized
+            // template ever runs, so an unauthenticated request to any gated page is
+            // challenged here first. Without this, it defaults to the nonexistent
+            // "/Account/Login" and dead-ends instead of reaching the real OIDC challenge
+            // endpoint below. Written without the "/ui" prefix - like every other server-side
+            // route template in this file, it's added back via PathBase for the redirect the
+            // browser actually receives.
+            options.LoginPath = "/authentication/login";
+            options.ReturnUrlParameter = "returnUrl";
+        })
         .AddOpenIdConnect(options =>
         {
             options.Authority = authConfig.Authority;
@@ -330,7 +343,14 @@ if (authConfig.IsEnabled)
             "/authentication/login",
             (string? returnUrl) =>
                 Results.Challenge(
-                    new AuthenticationProperties { RedirectUri = returnUrl ?? "/ui" },
+                    // An empty (not just null) returnUrl must also fall back to "/ui" - it's
+                    // what NavigationManager.ToBaseRelativePath produces for a page outside the
+                    // "/ui" base (e.g. a bare "/" request), and an empty RedirectUri here never
+                    // completes OIDC sign-in, causing an infinite login/redirect loop.
+                    new AuthenticationProperties
+                    {
+                        RedirectUri = string.IsNullOrEmpty(returnUrl) ? "/ui" : returnUrl,
+                    },
                     [OpenIdConnectDefaults.AuthenticationScheme]
                 )
         )
@@ -372,6 +392,18 @@ if (app.Environment.IsDevelopment())
 {
     app.MapGrpcReflectionService();
 }
+
+app.UseHangfireDashboard(
+    "/hangfire",
+    options: new DashboardOptions
+    {
+        IsReadOnlyFunc = dashboardContext =>
+        {
+            var context = dashboardContext.GetHttpContext();
+            return !context.User.IsInRole("admin");
+        },
+    }
+);
 
 app.MapControllers();
 

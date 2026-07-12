@@ -1,11 +1,8 @@
 @page "/namespaces"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
-@using Microsoft.Extensions.Options
-@using Vfps.Config
 @using Vfps.Data.Models
 @inject INamespaceAppService NamespaceAppService
-@inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
 @inject NavigationManager NavigationManager
 
 <PageTitle>Namespaces</PageTitle>
@@ -15,21 +12,6 @@
         <LucideIcon Name="database" Size="24" Class="text-primary" />
         <h1 class="text-2xl font-semibold tracking-tight">Namespaces</h1>
     </div>
-
-    @if (AuthorizationConfigOptions.Value.IsEnabled)
-    {
-        <AuthorizeView>
-            <NotAuthorized>
-                <BbAlert Variant="AlertVariant.Warning">
-                    <BbAlertTitle>Not signed in</BbAlertTitle>
-                    <BbAlertDescription>
-                        <a href="@LoginUrl">Sign in</a> to create a namespace or see any
-                        namespaces you don't have anonymous read access to.
-                    </BbAlertDescription>
-                </BbAlert>
-            </NotAuthorized>
-        </AuthorizeView>
-    }
 
     @if (_errorMessage is not null)
     {
@@ -146,9 +128,6 @@
 @code {
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationState { get; set; }
-
-    private string LoginUrl =>
-        $"/ui/authentication/login?returnUrl={Uri.EscapeDataString(NavigationManager.ToBaseRelativePath(NavigationManager.Uri))}";
 
     private IReadOnlyList<Namespace> _namespaces = [];
     private NewNamespaceModel _newNamespace = new();
