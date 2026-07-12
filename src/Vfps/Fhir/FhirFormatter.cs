@@ -18,7 +18,7 @@ public class FhirOutputFormatter : TextOutputFormatter
     }
 
     private JsonSerializerOptions FhirJsonOptions { get; } =
-        new JsonSerializerOptions().ForFhir(typeof(Bundle).Assembly);
+        new JsonSerializerOptions().ForFhir(ModelInfo.ModelInspector);
 
     protected override bool CanWriteType(Type? type)
     {
@@ -60,7 +60,7 @@ public class FhirInputFormatter : TextInputFormatter
     }
 
     private JsonSerializerOptions FhirJsonOptions { get; } =
-        new JsonSerializerOptions().ForFhir(typeof(Bundle).Assembly);
+        new JsonSerializerOptions().ForFhir(ModelInfo.ModelInspector);
 
     public override async Task<InputFormatterResult> ReadRequestBodyAsync(
         InputFormatterContext context,
