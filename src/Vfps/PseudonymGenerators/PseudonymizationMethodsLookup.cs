@@ -17,6 +17,12 @@ public class PseudonymizationMethodsLookup
             },
             { PseudonymGenerationMethod.Sha256HexEncoded, new HexEncodedSha256HashGenerator() },
             { PseudonymGenerationMethod.Uuid4, new Uuid4Generator() },
+            { PseudonymGenerationMethod.Uuid7, new Uuid7Generator() },
+            { PseudonymGenerationMethod.FullRandomHexEncoded, new FullRandomHexEncodedGenerator() },
+            {
+                PseudonymGenerationMethod.FullRandomBase62Encoded,
+                new FullRandomBase62EncodedGenerator()
+            },
         };
     }
 

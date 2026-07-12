@@ -203,12 +203,9 @@ public class PseudonymizationJobAppService(
         CancellationToken cancellationToken
     )
     {
-        var job = await jobRepository.FindAsync(jobId, cancellationToken);
-        if (job is null)
-        {
-            throw new PseudonymizationJobNotFoundException(jobId);
-        }
-
+        var job =
+            await jobRepository.FindAsync(jobId, cancellationToken)
+            ?? throw new PseudonymizationJobNotFoundException(jobId);
         if (job.CreatedBy != GetSubject(user) && !permissionChecker.IsAdmin(user))
         {
             throw new ForbiddenException(

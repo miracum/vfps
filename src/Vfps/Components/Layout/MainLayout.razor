@@ -38,7 +38,11 @@
                             <span class="hidden text-sm text-muted-foreground sm:inline">
                                 @context.User.Identity?.Name
                             </span>
-                            <form action="/ui/authentication/logout" method="post">
+                            <form
+                                action="/ui/authentication/logout"
+                                method="post"
+                                @formname="logout"
+                            >
                                 <AntiforgeryToken />
                                 <BbButton
                                     Type="ButtonType.Submit"

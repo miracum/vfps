@@ -46,12 +46,9 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
-        var @namespace = await namespaceRepository.FindAsync(namespaceName, cancellationToken);
-        if (@namespace is null)
-        {
-            throw new NamespaceNotFoundException(namespaceName);
-        }
-
+        var @namespace =
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            ?? throw new NamespaceNotFoundException(namespaceName);
         var generator = methodsLookup[@namespace.PseudonymGenerationMethod];
         string pseudonymValue;
         using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
@@ -82,12 +79,9 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
-        var @namespace = await namespaceRepository.FindAsync(namespaceName, cancellationToken);
-        if (@namespace is null)
-        {
-            throw new NamespaceNotFoundException(namespaceName);
-        }
-
+        var @namespace =
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            ?? throw new NamespaceNotFoundException(namespaceName);
         if (!permissionChecker.HasReadAccess(user, namespaceName))
         {
             throw new ForbiddenException(

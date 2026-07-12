@@ -47,7 +47,11 @@
             </BbCardDescription>
         </BbCardHeader>
         <BbCardContent>
-            <EditForm Model="_newNamespace" OnValidSubmit="CreateNamespaceAsync">
+            <EditForm
+                Model="_newNamespace"
+                FormName="create-namespace"
+                OnValidSubmit="CreateNamespaceAsync"
+            >
                 <DataAnnotationsValidator />
                 <div class="grid gap-4 sm:grid-cols-2">
                     <BbField>
@@ -70,11 +74,10 @@
                                 id="method"
                                 class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                <option value="SecureRandomBase64UrlEncoded">
-                                    Secure random (base64url)
-                                </option>
-                                <option value="Sha256HexEncoded">SHA-256 (hex)</option>
-                                <option value="Uuid4">UUIDv4</option>
+                                @foreach (var method in SelectablePseudonymGenerationMethods)
+                                {
+                                    <option value="@method">@FriendlyMethodName(method)</option>
+                                }
                             </select>
                         </BbFieldContent>
                     </BbField>
@@ -155,6 +158,26 @@
         .SecureRandomBase64UrlEncoded.ToString();
     private string? _errorMessage;
     private bool _isCreating;
+
+    // Derived from the enum itself, rather than a hand-maintained list, so a newly-added
+    // PseudonymGenerationMethod can't be forgotten here the way UUIDv7 previously was.
+    private static readonly IReadOnlyList<Vfps.Protos.PseudonymGenerationMethod> SelectablePseudonymGenerationMethods =
+        Enum.GetValues<Vfps.Protos.PseudonymGenerationMethod>()
+            .Where(method => method != Vfps.Protos.PseudonymGenerationMethod.Unspecified)
+            .ToArray();
+
+    private static string FriendlyMethodName(Vfps.Protos.PseudonymGenerationMethod method) =>
+        method switch
+        {
+            Vfps.Protos.PseudonymGenerationMethod.SecureRandomBase64UrlEncoded =>
+                "Secure random (base64url)",
+            Vfps.Protos.PseudonymGenerationMethod.Sha256HexEncoded => "SHA-256 (hex)",
+            Vfps.Protos.PseudonymGenerationMethod.Uuid4 => "UUIDv4",
+            Vfps.Protos.PseudonymGenerationMethod.Uuid7 => "UUIDv7",
+            Vfps.Protos.PseudonymGenerationMethod.FullRandomHexEncoded => "Full random (hex)",
+            Vfps.Protos.PseudonymGenerationMethod.FullRandomBase62Encoded => "Full random (Base62)",
+            _ => method.ToString(),
+        };
 
     protected override async Task OnInitializedAsync()
     {
