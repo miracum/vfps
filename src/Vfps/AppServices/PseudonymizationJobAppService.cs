@@ -22,6 +22,13 @@ public class PseudonymizationJobAppService(
     IOptions<S3Config> s3Config
 ) : IPseudonymizationJobAppService
 {
+    /// <summary>
+    /// Shared by <see cref="CsvPseudonymizationJobRunner"/> (which writes the output object
+    /// under this prefix) and <see cref="S3LifecyclePolicyBackgroundService"/> (which scopes the
+    /// bucket's expiration rule to it), so all three stay in sync on a single literal.
+    /// </summary>
+    public const string S3ObjectKeyPrefix = "csv-jobs/";
+
     private S3Config Config => s3Config.Value;
 
     // GetPreSignedUrlRequest.Protocol defaults to https regardless of the S3 client's own
@@ -57,7 +64,7 @@ public class PseudonymizationJobAppService(
         {
             Id = jobId,
             CreatedBy = GetSubject(user),
-            InputObjectKey = $"csv-jobs/{jobId}/input.csv",
+            InputObjectKey = $"{S3ObjectKeyPrefix}{jobId}/input.csv",
             Encoding = request.Encoding,
             Delimiter = request.Delimiter,
             HasHeaderRow = request.HasHeaderRow,

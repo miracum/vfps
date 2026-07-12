@@ -24,4 +24,13 @@ public class S3Config
 
     /// <summary>How long presigned upload/download URLs remain valid.</summary>
     public TimeSpan PresignedUrlExpiry { get; set; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// How many days an uploaded CSV or its pseudonymized output is kept before an S3 bucket
+    /// lifecycle rule expires (deletes) it. Applied on startup, scoped to the "csv-jobs/" prefix
+    /// only. Job records themselves are never deleted, so without this the objects they
+    /// reference - the original, unpseudonymized input included - would otherwise live in the
+    /// bucket forever. Set to 0 to leave the bucket's lifecycle configuration untouched.
+    /// </summary>
+    public int ObjectRetentionDays { get; set; } = 30;
 }

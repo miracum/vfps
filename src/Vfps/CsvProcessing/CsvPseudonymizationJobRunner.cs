@@ -93,7 +93,8 @@ public class CsvPseudonymizationJobRunner(
         IJobCancellationToken cancellationToken
     )
     {
-        var outputObjectKey = $"csv-jobs/{job.Id}/output.csv";
+        var outputObjectKey =
+            $"{PseudonymizationJobAppService.S3ObjectKeyPrefix}{job.Id}/output.csv";
         var encoding = Encoding.GetEncoding(job.Encoding);
         var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
         {

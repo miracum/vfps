@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Claims;
+using Amazon.Runtime;
 using Amazon.S3;
 using BlazorBlueprint.Components;
 using Hangfire;
@@ -274,12 +275,19 @@ if (s3Config.IsEnabled)
             // a plain-HTTP endpoint (e.g. local MinIO) still gets signed as "https://", which the
             // browser then fails to load against a server not actually listening for TLS there.
             UseHttp = s3Config.ServiceUrl.StartsWith("http://", StringComparison.Ordinal),
+            // AWSSDK v4's default (WHEN_SUPPORTED) calculates a newer flexible checksum instead
+            // of the classic Content-MD5 header for some operations, including
+            // PutBucketLifecycleConfiguration - MinIO (and likely other S3-compatible stores)
+            // rejects that request with "Missing required header for this request: Content-Md5".
+            // WHEN_REQUIRED falls back to the legacy MD5 behavior those operations still expect.
+            RequestChecksumCalculation = RequestChecksumCalculation.WHEN_REQUIRED,
         }
     ));
 
     builder.Services.AddScoped<IPseudonymizationJobRepository, PseudonymizationJobRepository>();
     builder.Services.AddScoped<IPseudonymizationJobAppService, PseudonymizationJobAppService>();
     builder.Services.AddScoped<ICsvPseudonymizationJobRunner, CsvPseudonymizationJobRunner>();
+    builder.Services.AddHostedService<S3LifecyclePolicyBackgroundService>();
 
     var postgresConnectionString =
         builder.Configuration.GetConnectionString("PostgreSQL")

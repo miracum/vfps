@@ -2,11 +2,6 @@
   <PropertyGroup>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <RequiresAspNetWebAssets>true</RequiresAspNetWebAssets>
-    <!-- Declared here (rather than relying on a bare "dotnet restore -r linux-x64" CLI flag) so
-         every restore of this project - with or without an explicit -r flag, e.g. from
-         Vfps.Tests' ProjectReference, or from dotnet-ef's own internal build - resolves the same
-         RID graph and stays consistent with the checked-in packages.lock.json under
-         RestoreLockedMode. -->
     <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
   </PropertyGroup>
   <ItemGroup>

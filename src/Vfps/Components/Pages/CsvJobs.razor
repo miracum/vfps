@@ -34,6 +34,16 @@ else
             <h1 class="text-2xl font-semibold tracking-tight">CSV pseudonymization</h1>
         </div>
 
+        @if (S3ConfigOptions.Value.ObjectRetentionDays > 0)
+        {
+            <BbAlert Variant="AlertVariant.Info">
+                <BbAlertDescription>
+                    Uploaded input files and their pseudonymized output are automatically deleted
+                    from object storage @S3ConfigOptions.Value.ObjectRetentionDays day@(S3ConfigOptions.Value.ObjectRetentionDays == 1 ? "" : "s") after upload. Download output you need to keep before then.
+                </BbAlertDescription>
+            </BbAlert>
+        }
+
         @if (_createError is not null)
         {
             <BbAlert Variant="AlertVariant.Danger">
