@@ -229,6 +229,15 @@ if (authConfig.IsEnabled)
             options.TokenValidationParameters.RoleClaimType = authConfig.RoleClaimType;
         });
 
+    // Gates the Hangfire dashboard (mapped further down, only when S3/CSV jobs are enabled)
+    // behind the same login as the rest of the UI - RequireAuthenticatedUser() here is what
+    // makes an unauthenticated request get a real challenge/redirect to the OIDC login flow via
+    // ASP.NET Core's own authorization middleware, instead of the bare "Unauthorized" page
+    // Hangfire's own IDashboardAuthorizationFilter mechanism would otherwise render.
+    builder.Services.AddAuthorization(options =>
+        options.AddPolicy("HangfireDashboard", policy => policy.RequireAuthenticatedUser())
+    );
+
     // Blazor Server keeps one process per replica but many circuits/cookies across replicas -
     // the Data Protection key ring that encrypts auth cookies/antiforgery tokens needs to be
     // shared so a request landing on a different replica than the one that issued the cookie
@@ -393,17 +402,35 @@ if (app.Environment.IsDevelopment())
     app.MapGrpcReflectionService();
 }
 
-app.UseHangfireDashboard(
-    "/hangfire",
-    options: new DashboardOptions
+if (s3Config.IsEnabled)
+{
+    // Only mapped when Hangfire itself is registered (see the AddHangfire/AddHangfireServer
+    // block above, also gated on s3Config.IsEnabled) - mapping the dashboard without those
+    // services registered throws "Unable to find the required services" on every request.
+    var permissionChecker = app.Services.GetRequiredService<INamespacePermissionChecker>();
+    var dashboardOptions = new DashboardOptions
     {
+        // Same admin-role check used everywhere else in the app (falls back to "everyone is
+        // admin" when Authorization:IsEnabled=false, matching the rest of the app's
+        // off-by-default, fully-open behavior) - rather than a hardcoded "admin" role name that
+        // doesn't match Authorization:AdminRoles/RoleClaimType.
         IsReadOnlyFunc = dashboardContext =>
-        {
-            var context = dashboardContext.GetHttpContext();
-            return !context.User.IsInRole("admin");
-        },
+            !permissionChecker.IsAdmin(dashboardContext.GetHttpContext().User),
+    };
+
+    if (authConfig.IsEnabled)
+    {
+        app.MapHangfireDashboardWithAuthorizationPolicy(
+            "HangfireDashboard",
+            "/hangfire",
+            dashboardOptions
+        );
     }
-);
+    else
+    {
+        app.MapHangfireDashboardWithNoAuthorizationFilters("/hangfire", dashboardOptions);
+    }
+}
 
 app.MapControllers();
 
