@@ -63,12 +63,10 @@ Available configuration options which can be set as environment variables:
 | `ConnectionStrings__PostgreSQL`                    | `string`     | `""`                | Connection string to the PostgreSQL database. See <https://www.npgsql.org/doc/connection-string-parameters.html> for options. Also used, when `Authorization__IsEnabled=true`, to persist the ASP.NET Core Data Protection key ring so auth cookies/antiforgery tokens minted by one replica remain valid on another - see the `efbundle-dataprotection` migrations bundle. |
 | `ForceRunDatabaseMigrations`                       | `bool`       | `false`             | Run database migrations as part of the startup. Only recommended when a single replica of the application is used.            |
 | `Tracing__IsEnabled`                               | `bool`       | `false`             | Enable distributed tracing support.                                                                                           |
-| `Tracing__Exporter`                                | `string`     | `"jaeger"`          | The tracing export format. One of `jaeger`, `otlp`.                                                                           |
 | `Tracing__ServiceName`                             | `string`     | `"vfps"`            | Tracing service name.                                                                                                         |
 | `Tracing__RootSampler`                             | `string`     | `"AlwaysOnSampler"` | Tracing parent root sampler. One of `AlwaysOnSampler`, `AlwaysOffSampler`, `TraceIdRatioBasedSampler`                         |
 | `Tracing__SamplingProbability`                     | `double`     | `0.1`               | Sampling probability to use if `Tracing__RootSampler` is set to `TraceIdRatioBasedSampler`.                                   |
-| `Tracing__Jaeger`                                  | `object`     | `{}`                | Jaeger exporter options.                                                                                                      |
-| `Tracing__Otlp__Endpoint`                          | `string`     | `""`                | The OTLP gRPC Endpoint URL.                                                                                                   |
+| `Tracing__Otlp__Endpoint`                          | `string`     | `""`                | The OTLP gRPC Endpoint URL traces are exported to (e.g. a Jaeger v2 or other OTLP-compatible collector).                      |
 | `Pseudonymization__Caching__Namespaces__IsEnabled` | `bool`       | `false`             | Set to `true` to enable namespace caching.                                                                                    |
 | `Pseudonymization__Caching__Pseudonyms__IsEnabled` | `bool`       | `false`             | Set to `true` to enable pseudonym caching.                                                                                    |
 | `Pseudonymization__Caching__SizeLimit`             | `int`        | `65534`             | Maximum number of entries in the cache. The cache is shared between the pseudonyms and namespaces.                            |
@@ -170,6 +168,9 @@ profile:
 ```sh
 docker compose -f compose.yaml --profile=jaeger up
 ```
+
+Then set `Tracing__IsEnabled=true` and `Tracing__Otlp__Endpoint=http://localhost:4317` (already the default in
+`appsettings.Development.json`) and view traces at <http://localhost:16686>.
 
 Restore dependencies and run in Debug mode:
 
