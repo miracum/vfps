@@ -44,8 +44,6 @@ ASPNETCORE_ENVIRONMENT=Production DOTNET_ENVIRONMENT=Production dotnet ef migrat
     --startup-project=src/Vfps/Vfps.csproj \
     --context=PseudonymContext \
     --configuration=Release \
-    --runtime=linux-x64 \
-    --target-runtime=linux-x64 \
     --verbose \
     -o /build/efbundle
 
@@ -54,8 +52,6 @@ ASPNETCORE_ENVIRONMENT=Production DOTNET_ENVIRONMENT=Production dotnet ef migrat
     --startup-project=src/Vfps/Vfps.csproj \
     --context=DataProtectionKeyContext \
     --configuration=Release \
-    --runtime=linux-x64 \
-    --target-runtime=linux-x64 \
     --verbose \
     -o /build/efbundle-dataprotection
 EOF
