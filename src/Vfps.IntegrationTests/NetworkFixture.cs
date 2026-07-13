@@ -12,13 +12,13 @@ public sealed class NetworkFixture : IAsyncLifetime
             .WithName(Guid.NewGuid().ToString("D"))
             .Build();
 
-    public Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
-        return this.Network.CreateAsync();
+        await this.Network.CreateAsync();
     }
 
-    public Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        return this.Network.DeleteAsync();
+        await this.Network.DeleteAsync();
     }
 }

@@ -79,7 +79,7 @@ jobs:
       - name: Code Coverage Report
         uses: irongut/CodeCoverageSummary@51cc3a756ddcd398d447c044c02cb6aa83fdae95 # tag=v1.3.0
         with:
-          filename: coverage/**/coverage.cobertura.xml
+          filename: coverage/coverage.cobertura.xml
           badge: true
           fail_below_min: true
           format: markdown
@@ -282,8 +282,7 @@ jobs:
           # wire up (the "s3" compose profile's MinIO) - see Vfps.PlaywrightTests/CsvJobsTests.cs.
           dotnet test src/Vfps.PlaywrightTests \
             --configuration=Release \
-            --filter "Category!=RequiresS3" \
-            -l "console;verbosity=detailed"
+            --filter-not-trait "Category=RequiresS3"
 
       - name: Print compose logs
         if: always()
@@ -339,7 +338,7 @@ jobs:
       - name: Run migrations tests
         env:
           VFPS_IMAGE_TAG: ${{ needs.build.outputs.image-version }}
-        run: dotnet test src/Vfps.IntegrationTests --configuration=Release -l "console;verbosity=detailed"
+        run: dotnet test src/Vfps.IntegrationTests --configuration=Release
 
   lint:
     uses: miracum/.github/.github/workflows/standard-lint.yaml@56f97afca6189a2fafd4e5d7cbabc6c9b83c8a85 # v1.22.4

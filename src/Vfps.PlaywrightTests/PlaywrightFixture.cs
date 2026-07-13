@@ -18,7 +18,7 @@ public sealed class PlaywrightFixture : IAsyncLifetime
     public IPlaywright Playwright { get; private set; } = null!;
     public IBrowser Browser { get; private set; } = null!;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         Playwright = await Microsoft.Playwright.Playwright.CreateAsync();
         Browser = await Playwright.Chromium.LaunchAsync(
@@ -26,7 +26,7 @@ public sealed class PlaywrightFixture : IAsyncLifetime
         );
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         await Browser.CloseAsync();
         Playwright.Dispose();
