@@ -7,6 +7,8 @@ on:
     types: [created]
   pull_request:
     branches: [master]
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
@@ -39,7 +41,9 @@ jobs:
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@650006c6eb7dba73a995cc03b0b2d7f5ca915bee # v4.2.0
-        if: ${{ github.event_name != 'pull_request' }}
+        # Explicit allow-list, not "!= pull_request" - a merge_group run validates a speculative
+        # merge commit before it actually lands, so it shouldn't publish anything either.
+        if: ${{ github.event_name == 'push' || github.event_name == 'release' }}
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -48,7 +52,7 @@ jobs:
       - name: Build and push gRPC utils image
         uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
-          push: ${{ github.event_name != 'pull_request' }}
+          push: ${{ github.event_name == 'push' || github.event_name == 'release' }}
           tags: ${{ steps.container_grpc_utils_meta.outputs.tags }}
           labels: ${{ steps.container_grpc_utils_meta.outputs.labels }}
           cache-from: type=gha

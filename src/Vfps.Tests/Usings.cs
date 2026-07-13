@@ -1,4 +1,4 @@
-global using FluentAssertions;
+global using AwesomeAssertions;
 global using Vfps.AppServices;
 global using Vfps.Authorization;
 global using Vfps.Data;

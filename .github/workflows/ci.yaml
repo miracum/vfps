@@ -7,6 +7,8 @@ on:
     types: [created]
   pull_request:
     branches: [master]
+  merge_group:
+    types: [checks_requested]
 
 permissions:
   contents: read
@@ -122,14 +124,14 @@ jobs:
           persist-credentials: false
 
       - name: Download container image
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
 
       - name: Load image
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
         run: |
           ls -lar /tmp
           docker load --input /tmp/image.tar
@@ -238,14 +240,14 @@ jobs:
           persist-credentials: false
 
       - name: Download container image
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
 
       - name: Load image
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
         run: |
           ls -lar /tmp
           docker load --input /tmp/image.tar
@@ -316,14 +318,14 @@ jobs:
           persist-credentials: false
 
       - name: Download container image
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: ${{ needs.build.outputs.image-slug }}
           path: /tmp
 
       - name: Load image
-        if: ${{ github.event_name == 'pull_request' }}
+        if: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
         run: |
           ls -lar /tmp
           docker load --input /tmp/image.tar
