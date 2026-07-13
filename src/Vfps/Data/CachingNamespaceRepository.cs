@@ -30,15 +30,31 @@ public class CachingNamespaceRepository(
     {
         var cacheKey = $"namespaces.{namespaceName}";
 
-        return await memoryCache.GetOrCreateAsync(
-            cacheKey,
-            async entry =>
-            {
-                entry.SetSize(1).SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration);
+        if (memoryCache.TryGetValue(cacheKey, out Namespace? cached))
+        {
+            return cached;
+        }
 
-                return await NamespaceRepository.FindAsync(namespaceName, cancellationToken);
-            }
-        );
+        var found = await NamespaceRepository.FindAsync(namespaceName, cancellationToken);
+
+        // Only cache a hit, never a miss - a miss just before creation (e.g.
+        // InitNamespacesBackgroundService's own existence check, immediately followed by
+        // CreateAsync) would otherwise poison this key for the full cache lifetime, making a
+        // namespace that visibly exists (GetAllAsync isn't cached) invisible to every
+        // single-namespace lookup - which is exactly what Create/List/Browse use - until
+        // expiry. Namespaces are immutable once created, so a hit never goes stale.
+        if (found is not null)
+        {
+            memoryCache.Set(
+                cacheKey,
+                found,
+                new MemoryCacheEntryOptions()
+                    .SetSize(1)
+                    .SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration)
+            );
+        }
+
+        return found;
     }
 
     /// <inheritdoc/>
