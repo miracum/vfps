@@ -60,10 +60,11 @@ FROM build AS build-test
 WORKDIR /build/src/Vfps.Tests
 RUN dotnet test \
     --configuration=Release \
-    --collect:"XPlat Code Coverage" \
     --results-directory=./coverage \
-    -l "console;verbosity=detailed" \
-    --settings=runsettings.xml
+    -- --coverage \
+    --coverage-output-format cobertura \
+    --coverage-output coverage.cobertura.xml \
+    --coverage-settings codecoverage.config
 
 FROM scratch AS test
 WORKDIR /build/src/Vfps.Tests/coverage
@@ -97,7 +98,7 @@ COPY --from=build-stress-test /build/publish .
 # hadolint ignore=DL3002
 USER 0:0
 ENTRYPOINT ["dotnet"]
-CMD ["test", "/opt/vfps-stress/Vfps.StressTests.dll", "-l", "console;verbosity=detailed"]
+CMD ["/opt/vfps-stress/Vfps.StressTests.dll", "-reporter", "verbose"]
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.9-resolute-chiseled@sha256:d942d0db45f473ca68a9a9adcb1b2d8886a75d3586a8a08eedbb42046f0dab7c AS runtime
 WORKDIR /opt/vfps

@@ -6,13 +6,13 @@ public abstract class VfpsPageTestBase(PlaywrightFixture fixture) : IAsyncLifeti
     protected IBrowserContext Context { get; private set; } = null!;
     protected IPage Page { get; private set; } = null!;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         Context = await fixture.Browser.NewContextAsync();
         Page = await Context.NewPageAsync();
     }
 
-    public async Task DisposeAsync() => await Context.CloseAsync();
+    public async ValueTask DisposeAsync() => await Context.CloseAsync();
 
     protected async Task GotoAsync(string path) =>
         await Page.GotoAsync(

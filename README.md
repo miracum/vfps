@@ -205,10 +205,11 @@ grpcurl -plaintext \
 ```sh
 dotnet test src/Vfps.Tests \
   --configuration=Release \
-  --collect:"XPlat Code Coverage" \
   --results-directory=./coverage \
-  -l "console;verbosity=detailed" \
-  --settings=src/Vfps.Tests/runsettings.xml
+  -- --coverage \
+  --coverage-output-format cobertura \
+  --coverage-output coverage.cobertura.xml \
+  --coverage-settings src/Vfps.Tests/codecoverage.config
 ```
 
 #### Generate Code coverage report
@@ -220,10 +221,7 @@ dotnet tool install -g dotnet-reportgenerator-globaltool
 ```
 
 ```sh
-reportgenerator -reports:"./coverage/*/coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:Html
-# remove the coverage directory so successive runs won't cause issues with their random GUID.
-# See <https://github.com/microsoft/vstest/issues/2378>
-rm -rf coverage/
+reportgenerator -reports:"./coverage/coverage.cobertura.xml" -targetdir:"coveragereport" -reporttypes:Html
 ```
 
 ### Build container image

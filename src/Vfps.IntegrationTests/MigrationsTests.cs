@@ -1,6 +1,5 @@
 using DotNet.Testcontainers.Builders;
 using Testcontainers.PostgreSql;
-using Xunit.Abstractions;
 
 namespace Vfps.IntegrationTests;
 
@@ -98,13 +97,13 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
         exitCode.Should().Be(1);
     }
 
-    public Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
-        return postgresqlContainer.StartAsync();
+        await postgresqlContainer.StartAsync();
     }
 
-    public Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
-        return postgresqlContainer.DisposeAsync().AsTask();
+        await postgresqlContainer.DisposeAsync();
     }
 }
