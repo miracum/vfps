@@ -16,8 +16,8 @@ DISABLE_LINTERS:
   - YAML_V8R
   - CSHARP_DOTNET_FORMAT
   - JAVASCRIPT_STANDARD
-  # redundant with trivy
-  - REPOSITORY_GRYPE
+  # disabled in favor of trivy for now; also doesn't support nuget
+  - REPOSITORY_OSV_SCANNER
 
 SHOW_ELAPSED_TIME: true
 FILEIO_REPORTER: false
@@ -40,3 +40,6 @@ MARKDOWN_MARKDOWN_TABLE_FORMATTER_ARGUMENTS:
   - --columnpadding=0
 
 REPOSITORY_TRIVY_CONFIG_FILE: .trivy.yaml
+
+ACTION_ZIZMOR_UNSECURED_ENV_VARIABLES:
+  - GITHUB_TOKEN
