@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.4.0](https://github.com/miracum/vfps/compare/v1.3.8...v1.4.0) (2026-07-13)
+
+
+### Features
+
+* added a web ui ([#228](https://github.com/miracum/vfps/issues/228)) ([effd950](https://github.com/miracum/vfps/commit/effd95023b8867b191084db72dcfd11952e710e6))
+
+
+### Bug Fixes
+
+* update vfps image reference in compose.yaml ([#231](https://github.com/miracum/vfps/issues/231)) ([de159a9](https://github.com/miracum/vfps/commit/de159a98ceed4392e49474f2814a7d88daf915f8))
+
+
+### CI/CD
+
+* drop grype ([c522059](https://github.com/miracum/vfps/commit/c522059c8bcafab13a12c91371b8db84f4eb9c0d))
+
 ## [1.3.8](https://github.com/miracum/vfps/compare/v1.3.7...v1.3.8) (2026-07-13)
 
 
