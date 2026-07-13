@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.4.3](https://github.com/miracum/vfps/compare/v1.4.2...v1.4.3) (2026-07-13)
+
+
+### Miscellaneous Chores
+
+* **deps:** pin dependencies ([#238](https://github.com/miracum/vfps/issues/238)) ([f5765aa](https://github.com/miracum/vfps/commit/f5765aa0a182f9629da3f12656ed91d33471f7af))
+* **deps:** update actions/setup-dotnet action to v5.4.0 ([#240](https://github.com/miracum/vfps/issues/240)) ([4427fb8](https://github.com/miracum/vfps/commit/4427fb8bb928e554d43335891cda4848047cddbf))
+* **deps:** update all digest updates ([#239](https://github.com/miracum/vfps/issues/239)) ([0927244](https://github.com/miracum/vfps/commit/09272449b936ca168ed08e336192c0d5abcc5289))
+* **deps:** update all non-major dependencies ([#241](https://github.com/miracum/vfps/issues/241)) ([dd7abd0](https://github.com/miracum/vfps/commit/dd7abd09cee494cd81d0ea15f24b479f25b5d4a6))
+* **deps:** update docker.io/library/ubuntu docker tag to v26 ([#242](https://github.com/miracum/vfps/issues/242)) ([2c855ff](https://github.com/miracum/vfps/commit/2c855ffab499412b1fad29c6f627fb7e605fe3ae))
+* **deps:** update github-actions ([#243](https://github.com/miracum/vfps/issues/243)) ([b939568](https://github.com/miracum/vfps/commit/b939568c658214dad28619345d5971783309a224))
+
 ## [1.4.2](https://github.com/miracum/vfps/compare/v1.4.1...v1.4.2) (2026-07-13)
 
 
