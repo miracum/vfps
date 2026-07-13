@@ -21,6 +21,7 @@ jobs:
       pull-requests: write
       actions: read
       security-events: write
+      # required by standard-build for artifact attestations/provenance uploads
       artifact-metadata: write
       attestations: write
     with:
