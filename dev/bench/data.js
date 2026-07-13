@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783978304113,
+  "lastUpdate": 1783980232203,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -4182,6 +4182,66 @@ window.BENCHMARK_DATA = {
             "value": 1192.37178843362,
             "unit": "ns",
             "range": "± 2.0216309617280115"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "535533ec2884dfbbc35bca4a70569684d79d4783",
+          "message": "chore(deps): upgrade to new dotnet test framework (#235)\n\nCo-authored-by: chgl <5307555+chgl@users.noreply.github.com>",
+          "timestamp": "2026-07-14T00:01:21+02:00",
+          "tree_id": "9ce707eca7d240fa1e1ebe36b9080c1b019773c5",
+          "url": "https://github.com/miracum/vfps/commit/535533ec2884dfbbc35bca4a70569684d79d4783"
+        },
+        "date": 1783980231617,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 998.7202035358974,
+            "unit": "ns",
+            "range": "± 4.8156362896624065"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 557.7393629367535,
+            "unit": "ns",
+            "range": "± 1.4154100668213556"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 569.9492120061602,
+            "unit": "ns",
+            "range": "± 2.589103191128335"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 589.7899900163923,
+            "unit": "ns",
+            "range": "± 0.5536546041227514"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 942.1570305090684,
+            "unit": "ns",
+            "range": "± 3.2678318850516574"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1040.847632408142,
+            "unit": "ns",
+            "range": "± 1.7595309761760765"
           }
         ]
       }
