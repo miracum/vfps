@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783968825392,
+  "lastUpdate": 1783973120737,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -3882,6 +3882,66 @@ window.BENCHMARK_DATA = {
             "value": 650.7702312469482,
             "unit": "ns",
             "range": "± 0.7624654161050142"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "effd95023b8867b191084db72dcfd11952e710e6",
+          "message": "feat: added a web ui (#228)\n\n* phase0\n\n* phase 1\n\n* phase 2\n\n* fix: swagger error\n\n* phase 3\n\n* fix: theming and some bugs\n\n* fmt\n\n* Potential fix for pull request finding 'CodeQL / Missing Dispose call on local IDisposable'\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>\n\n* Potential fix for pull request finding 'CodeQL / Missed opportunity to use Where'\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>\n\n* enc\n\n* slnx\n\n* edit\n\n* lint\n\n* ci\n\n* fix\n\n* Potential fix for pull request finding 'CodeQL / Possible loss of precision'\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>\n\n* get rid of deprecated iter8\n\n* build\n\n* fix re-entrant bugs\n\n* migrate away from redis\n\n* added playwright tests\n\n* new generation methods\n\n* fix /ui/ path\n\n* fix redirect loop\n\n* enable hangfire dashboard\nauth\n\n* drop jaeger exporter\n\n* bumped all deps\n\n* lockfile\n\n* warnings\n\n* fix\n\n* runtime\n\n* Potential fix for pull request finding 'CodeQL / Call to 'System.IO.Path.Combine' may silently drop its earlier arguments'\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>\n\n* garbage collect csvs\n\n* fix: subject name\n\n* feat: de-pseudonymization support for CSV\n\n* fix caching bug\n\n* require non-blank originalValue\n\n* refactor generators\n\n* encoding\n\n* refactor: namespace length setup\n\n* single namespace lookup\n\n* improve performance for d-identifying CSVs\n\n* chore: resolve merge conflicts with master\n\n* chore: polish merged linter configuration comment\n\n* rm iter8\n\n---------\n\nCo-authored-by: chgl <5307555+chgl@users.noreply.github.com>\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>\nCo-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>",
+          "timestamp": "2026-07-13T22:02:41+02:00",
+          "tree_id": "c1ff936c7dcb06640fbc0bd1e92dd85e79c0624b",
+          "url": "https://github.com/miracum/vfps/commit/effd95023b8867b191084db72dcfd11952e710e6"
+        },
+        "date": 1783973120365,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1175.2486968721662,
+            "unit": "ns",
+            "range": "± 9.184531901497635"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 604.646233852093,
+            "unit": "ns",
+            "range": "± 1.1936042868841956"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 638.3319568634033,
+            "unit": "ns",
+            "range": "± 0.5568629633057675"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 668.3150154994084,
+            "unit": "ns",
+            "range": "± 1.8002189996875613"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 1082.239121500651,
+            "unit": "ns",
+            "range": "± 2.5718197494100603"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1227.2884516034808,
+            "unit": "ns",
+            "range": "± 6.881124098833572"
           }
         ]
       }
