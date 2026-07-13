@@ -42,6 +42,10 @@ public class PseudonymService(IPseudonymAppService pseudonymAppService)
         {
             throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
         }
+        catch (ArgumentException ex)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
         catch (PseudonymUpsertFailedException ex)
         {
             var metadata = new Metadata { { "Namespace", request.Namespace } };

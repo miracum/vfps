@@ -48,6 +48,27 @@ public class FhirControllerTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task CreatePseudonym_WithBlankOriginalValue_ShouldReturnErrorOutcome()
+    {
+        var p = new Parameters
+        {
+            Parameter = new List<Parameters.ParameterComponent>
+            {
+                new() { Name = "namespace", Value = new FhirString("existingNamespace") },
+                new() { Name = "originalValue", Value = new FhirString("   ") },
+            },
+        };
+
+        var response = await sut.CreatePseudonym(p);
+
+        response
+            .Should()
+            .BeOfType<BadRequestObjectResult>()
+            .Which.Value.Should()
+            .BeOfType<OperationOutcome>();
+    }
+
+    [Fact]
     public async Task CreatePseudonym_WithExistingNamespaceRequested_ShouldSucceed()
     {
         var p = new Parameters

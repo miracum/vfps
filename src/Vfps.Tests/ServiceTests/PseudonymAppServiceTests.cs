@@ -8,6 +8,36 @@ public class PseudonymAppServiceTests : ServiceTestBase
     private static ClaimsPrincipal UserWithRoles(params string[] roles) =>
         new(new ClaimsIdentity(roles.Select(r => new Claim("roles", r))));
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateTrustedAsync_WithBlankOriginalValue_ShouldThrowArgumentException(
+        string blankValue
+    )
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(namespaceRepository, pseudonymRepository);
+
+        var act = () =>
+            sut.CreateTrustedAsync("existingNamespace", blankValue, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithBlankOriginalValue_ShouldThrowArgumentExceptionBeforeUpsert()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(namespaceRepository, pseudonymRepository);
+
+        var act = () =>
+            sut.CreateAsync("existingNamespace", " ", UserWithRoles(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
     [Fact]
     public async Task ListAsync_WithAuthorizationEnabledAndNoReadAccess_ShouldThrowForbidden()
     {

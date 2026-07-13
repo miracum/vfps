@@ -44,6 +44,14 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
+        if (string.IsNullOrWhiteSpace(originalValue))
+        {
+            throw new ArgumentException(
+                "The original value must not be blank.",
+                nameof(originalValue)
+            );
+        }
+
         var @namespace =
             await namespaceRepository.FindAsync(namespaceName, cancellationToken)
             ?? throw new NamespaceNotFoundException(namespaceName);

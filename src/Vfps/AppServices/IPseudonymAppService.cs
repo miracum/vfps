@@ -16,6 +16,7 @@ public interface IPseudonymAppService
     /// gRPC adapter and <see cref="CsvProcessing.CsvPseudonymizationJobRunner"/>, so both paths
     /// get identical generation logic and per-namespace write-access enforcement.
     /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
     Task<Pseudonym> CreateAsync(
         string namespaceName,
         string originalValue,
@@ -31,6 +32,7 @@ public interface IPseudonymAppService
     /// began. The runner has no caller <see cref="ClaimsPrincipal"/> to re-check against - it
     /// runs later, in a Hangfire background thread, well after the request that created the job.
     /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
     Task<Pseudonym> CreateTrustedAsync(
         string namespaceName,
         string originalValue,

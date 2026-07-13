@@ -31,6 +31,6 @@ public partial class FullRandomHexEncodedGeneratorTests
         first.Should().NotBe(second);
     }
 
-    [GeneratedRegex("^[0-9A-F]*$")]
+    [GeneratedRegex("^[0-9a-f]*$")]
     private static partial Regex HexCharacters();
 }

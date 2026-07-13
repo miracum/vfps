@@ -85,6 +85,21 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task Create_WithBlankOriginalValue_ShouldThrowInvalidArgumentError()
+    {
+        var request = new PseudonymServiceCreateRequest
+        {
+            Namespace = "existingNamespace",
+            OriginalValue = "   ",
+        };
+
+        await sut.Invoking(async s => await s.Create(request, TestServerCallContext.Create()))
+            .Should()
+            .ThrowAsync<RpcException>()
+            .Where(e => e.StatusCode == StatusCode.InvalidArgument);
+    }
+
+    [Fact]
     public async Task Create_CalledMultipleTimesWithTheSameOriginalValue_ShouldOnlyStoreOnePseudonym()
     {
         var request = new PseudonymServiceCreateRequest
