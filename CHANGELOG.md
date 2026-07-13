@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/miracum/vfps/compare/v1.4.0...v1.4.1) (2026-07-13)
+
+
+### CI/CD
+
+* mq support and AwesomeAssertions ([#232](https://github.com/miracum/vfps/issues/232)) ([8759233](https://github.com/miracum/vfps/commit/875923322e2623da04e50192157859dac5224391))
+
 ## [1.4.0](https://github.com/miracum/vfps/compare/v1.3.8...v1.4.0) (2026-07-13)
 
 
