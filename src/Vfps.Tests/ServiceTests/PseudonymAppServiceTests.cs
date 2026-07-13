@@ -54,6 +54,45 @@ public class PseudonymAppServiceTests : ServiceTestBase
         created.PseudonymValue.Should().HaveLength(16);
     }
 
+    [Fact]
+    public async Task CreateTrustedAsync_CalledManyTimesConcurrently_ShouldNotThrowAndShouldCreateAll()
+    {
+        // The CSV job runner now calls this concurrently for a whole chunk of rows at once (see
+        // CsvPseudonymizationJobRunner.FlushChunkAsync). DbContext instances aren't safe for
+        // concurrent use, so this only works because CreateTrustedAsync(Namespace, ...) resolves
+        // its own fresh DbContext per call via IDbContextFactory rather than reusing one shared
+        // instance - if that regressed, this would throw a DbContext concurrency exception
+        // instead of completing cleanly.
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            new PseudonymRepository(InMemoryPseudonymContext)
+        );
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "existingNamespace",
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+        };
+
+        var results = await Task.WhenAll(
+            Enumerable
+                .Range(0, 20)
+                .Select(i =>
+                    sut.CreateTrustedAsync(
+                        @namespace,
+                        $"concurrent-value-{i}",
+                        CancellationToken.None
+                    )
+                )
+        );
+
+        results
+            .Select(r => r.OriginalValue)
+            .Should()
+            .BeEquivalentTo(Enumerable.Range(0, 20).Select(i => $"concurrent-value-{i}"));
+        results.Select(r => r.PseudonymValue).Distinct().Should().HaveCount(20);
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
@@ -66,7 +105,11 @@ public class PseudonymAppServiceTests : ServiceTestBase
             new NamespaceRepository(InMemoryPseudonymContext),
             pseudonymRepository
         );
-        var @namespace = new Data.Models.Namespace { Name = "existingNamespace", PseudonymLength = 16 };
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "existingNamespace",
+            PseudonymLength = 16,
+        };
 
         var act = () => sut.CreateTrustedAsync(@namespace, blankValue, CancellationToken.None);
 

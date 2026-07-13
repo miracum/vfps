@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.EntityFrameworkCore;
 using Vfps.Authorization;
 using Vfps.Data;
 using Vfps.Protos;
@@ -14,7 +15,8 @@ public class PseudonymAppService(
     INamespaceRepository namespaceRepository,
     IPseudonymRepository pseudonymRepository,
     INamespacePermissionChecker permissionChecker,
-    PseudonymizationMethodsLookup methodsLookup
+    PseudonymizationMethodsLookup methodsLookup,
+    IDbContextFactory<PseudonymContext> contextFactory
 ) : IPseudonymAppService
 {
     private const int DefaultPageSize = 25;
@@ -85,7 +87,12 @@ public class PseudonymAppService(
             PseudonymValue = pseudonymValue,
         };
 
-        var upserted = await pseudonymRepository.CreateIfNotExist(pseudonym);
+        // A fresh, pooled DbContext per call rather than the scoped pseudonymRepository above -
+        // this overload is what the CSV job runner calls, many times concurrently, within a
+        // single Hangfire job's DI scope. DbContext instances aren't safe for concurrent use, so
+        // the scoped one shared across that whole job would throw if used this way.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var upserted = await new PseudonymRepository(context).CreateIfNotExist(pseudonym);
         return upserted ?? throw new PseudonymUpsertFailedException(@namespace.Name);
     }
 
@@ -175,12 +182,18 @@ public class PseudonymAppService(
         string namespaceName,
         string pseudonymValue,
         CancellationToken cancellationToken
-    ) =>
-        await pseudonymRepository.FindByPseudonymValueAsync(
+    )
+    {
+        // Same reasoning as CreateTrustedAsync(Namespace, ...) above - called many times
+        // concurrently by the CSV job runner within a single Hangfire job's DI scope, so this
+        // needs its own fresh, pooled DbContext rather than the shared scoped one.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await new PseudonymRepository(context).FindByPseudonymValueAsync(
             namespaceName,
             pseudonymValue,
             cancellationToken
         );
+    }
 
     private static PseudonymPageCursor? DecodeCursor(string? pageToken)
     {

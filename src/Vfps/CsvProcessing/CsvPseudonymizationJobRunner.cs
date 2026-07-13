@@ -28,6 +28,14 @@ public class CsvPseudonymizationJobRunner(
     private const int ProgressUpdateRowInterval = 200;
     private static readonly TimeSpan ProgressUpdateInterval = TimeSpan.FromSeconds(2);
 
+    // Rows are buffered into chunks of this size, and every field resolution across a whole
+    // chunk is kicked off concurrently (via Task.WhenAll) rather than awaited one row/field at a
+    // time - the dominant per-row cost is database round-trip latency, and concurrent calls
+    // overlap that latency instead of paying it sequentially. Kept well under the connection
+    // pool's "Maximum Pool Size=50" default (see appsettings.Development.json/compose.yaml) so
+    // one CSV job can't starve every other Hangfire worker or request of a connection.
+    private const int ConcurrencyChunkSize = 20;
+
     /// <inheritdoc/>
     public async Task RunAsync(Guid jobId, IJobCancellationToken cancellationToken)
     {
@@ -208,6 +216,8 @@ public class CsvPseudonymizationJobRunner(
 
             var rows = 0L;
             var sinceLastUpdate = Stopwatch.StartNew();
+            var chunk = new List<BufferedRow>(ConcurrencyChunkSize);
+
             while (await csvReader.ReadAsync())
             {
                 cancellationToken.ThrowIfCancellationRequested();
@@ -219,50 +229,46 @@ public class CsvPseudonymizationJobRunner(
                     rawFields[i] = csvReader.GetField(i);
                 }
 
-                for (var i = 0; i < fieldCount; i++)
+                chunk.Add(new BufferedRow(rawFields));
+
+                if (chunk.Count < ConcurrencyChunkSize)
                 {
-                    var raw = rawFields[i] ?? string.Empty;
-                    if (inPlaceBySourceIndex.TryGetValue(i, out var ns))
-                    {
-                        csvWriter.WriteField(await ResolveValueAsync(job.Direction, ns, raw));
-                    }
-                    else
-                    {
-                        csvWriter.WriteField(raw);
-                    }
+                    continue;
                 }
 
-                foreach (var a in appended)
-                {
-                    var raw =
-                        a.SourceIndex < rawFields.Length
-                            ? rawFields[a.SourceIndex] ?? string.Empty
-                            : string.Empty;
-                    csvWriter.WriteField(await ResolveValueAsync(job.Direction, a.Namespace, raw));
-                }
-
-                await csvWriter.NextRecordAsync();
-                rows++;
+                await FlushChunkAsync(
+                    chunk,
+                    job.Direction,
+                    inPlaceBySourceIndex,
+                    appended,
+                    csvWriter
+                );
+                rows += chunk.Count;
+                chunk.Clear();
 
                 if (
-                    rows % ProgressUpdateRowInterval == 0
-                    || sinceLastUpdate.Elapsed >= ProgressUpdateInterval
+                    await MaybeReportProgressAndCheckCancelledAsync(
+                        job.Id,
+                        countingStream,
+                        rows,
+                        sinceLastUpdate
+                    )
                 )
                 {
-                    await jobRepository.UpdateProgressAsync(
-                        job.Id,
-                        countingStream.BytesRead,
-                        rows,
-                        CancellationToken.None
-                    );
-                    sinceLastUpdate.Restart();
-
-                    var current = await jobRepository.FindAsync(job.Id, CancellationToken.None);
-                    if (current?.Status == PseudonymizationJobStatus.Cancelled)
-                    {
-                        return rows;
-                    }
+                    return rows;
                 }
+            }
+
+            if (chunk.Count > 0)
+            {
+                await FlushChunkAsync(
+                    chunk,
+                    job.Direction,
+                    inPlaceBySourceIndex,
+                    appended,
+                    csvWriter
+                );
+                rows += chunk.Count;
             }
 
             await jobRepository.UpdateProgressAsync(
@@ -280,6 +286,112 @@ public class CsvPseudonymizationJobRunner(
             // task (reading from the other end of the same pipe) would hang forever.
             await pipeOutStream.DisposeAsync();
         }
+    }
+
+    /// <summary>
+    /// Resolves every field of every row in <paramref name="chunk"/> concurrently (each call
+    /// uses its own pooled DbContext under the hood - see PseudonymAppService's trusted methods),
+    /// then writes the rows out in their original order once every result is ready. Order is
+    /// preserved even though resolution completes out of order, since writing only starts after
+    /// the whole chunk's <see cref="Task.WhenAll(Task[])"/> has completed.
+    /// </summary>
+    private async Task FlushChunkAsync(
+        List<BufferedRow> chunk,
+        PseudonymizationJobDirection direction,
+        Dictionary<int, Namespace> inPlaceBySourceIndex,
+        List<(int SourceIndex, string TargetColumn, Namespace Namespace)> appended,
+        CsvWriter csvWriter
+    )
+    {
+        foreach (var row in chunk)
+        {
+            row.InPlaceResults = new Task<string>?[row.RawFields.Length];
+            for (var i = 0; i < row.RawFields.Length; i++)
+            {
+                if (inPlaceBySourceIndex.TryGetValue(i, out var ns))
+                {
+                    row.InPlaceResults[i] = ResolveValueAsync(
+                        direction,
+                        ns,
+                        row.RawFields[i] ?? string.Empty
+                    );
+                }
+            }
+
+            row.AppendedResults = new Task<string>[appended.Count];
+            for (var a = 0; a < appended.Count; a++)
+            {
+                var mapping = appended[a];
+                var raw =
+                    mapping.SourceIndex < row.RawFields.Length
+                        ? row.RawFields[mapping.SourceIndex] ?? string.Empty
+                        : string.Empty;
+                row.AppendedResults[a] = ResolveValueAsync(direction, mapping.Namespace, raw);
+            }
+        }
+
+        await Task.WhenAll(
+            chunk.SelectMany(r =>
+                r.InPlaceResults.Where(t => t is not null)
+                    .Cast<Task<string>>()
+                    .Concat(r.AppendedResults)
+            )
+        );
+
+        foreach (var row in chunk)
+        {
+            for (var i = 0; i < row.RawFields.Length; i++)
+            {
+                // Already completed - every task in this chunk was awaited via WhenAll above.
+                csvWriter.WriteField(
+                    row.InPlaceResults[i] is { } task
+                        ? await task
+                        : row.RawFields[i] ?? string.Empty
+                );
+            }
+
+            foreach (var appendedTask in row.AppendedResults)
+            {
+                csvWriter.WriteField(await appendedTask);
+            }
+
+            await csvWriter.NextRecordAsync();
+        }
+    }
+
+    /// <returns>true if the job was cancelled and processing should stop.</returns>
+    private async Task<bool> MaybeReportProgressAndCheckCancelledAsync(
+        Guid jobId,
+        ByteCountingStream countingStream,
+        long rows,
+        Stopwatch sinceLastUpdate
+    )
+    {
+        if (
+            rows % ProgressUpdateRowInterval != 0
+            && sinceLastUpdate.Elapsed < ProgressUpdateInterval
+        )
+        {
+            return false;
+        }
+
+        await jobRepository.UpdateProgressAsync(
+            jobId,
+            countingStream.BytesRead,
+            rows,
+            CancellationToken.None
+        );
+        sinceLastUpdate.Restart();
+
+        var current = await jobRepository.FindAsync(jobId, CancellationToken.None);
+        return current?.Status == PseudonymizationJobStatus.Cancelled;
+    }
+
+    private sealed class BufferedRow(string?[] rawFields)
+    {
+        public string?[] RawFields { get; } = rawFields;
+        public Task<string>?[] InPlaceResults { get; set; } = [];
+        public Task<string>[] AppendedResults { get; set; } = [];
     }
 
     /// <summary>

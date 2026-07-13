@@ -76,34 +76,48 @@ builder.Services.AddSwaggerGen(c =>
     c.CustomSchemaIds(type => type.FullName?.Replace('+', '.'));
 });
 
-builder.Services.AddDbContext<PseudonymContext>(
-    (isp, options) =>
+void ConfigurePseudonymContext(IServiceProvider isp, DbContextOptionsBuilder options)
+{
+    var config = isp.GetService<IConfiguration>()!;
+
+    var backingStore =
+        config.GetValue<string>("Pseudonymization:BackingStore")
+        ?? throw new InvalidOperationException(
+            "Failed to get backing store config. Make sure Pseudonymization:BackingStore is set"
+        );
+
+    var connString =
+        config.GetConnectionString(backingStore)
+        ?? throw new InvalidOperationException(
+            $"Failed to get connection string for '{backingStore}' backing store"
+        );
+
+    switch (backingStore.ToLowerInvariant())
     {
-        var config = isp.GetService<IConfiguration>()!;
-
-        var backingStore =
-            config.GetValue<string>("Pseudonymization:BackingStore")
-            ?? throw new InvalidOperationException(
-                "Failed to get backing store config. Make sure Pseudonymization:BackingStore is set"
+        case "postgresql":
+            options.UseNpgsql(connString);
+            break;
+        default:
+            throw new InvalidOperationException(
+                $"Unsupported backing store specified: {backingStore}"
             );
-
-        var connString =
-            config.GetConnectionString(backingStore)
-            ?? throw new InvalidOperationException(
-                $"Failed to get connection string for '{backingStore}' backing store"
-            );
-
-        switch (backingStore.ToLowerInvariant())
-        {
-            case "postgresql":
-                options.UseNpgsql(connString);
-                break;
-            default:
-                throw new InvalidOperationException(
-                    $"Unsupported backing store specified: {backingStore}"
-                );
-        }
     }
+}
+
+// A factory, not a plain AddDbContext - PseudonymAppService's "trusted" methods
+// (CreateTrustedAsync/ReverseLookupTrustedAsync) use IDbContextFactory<PseudonymContext>
+// directly to get their own independent context per call, since the CSV job runner calls them
+// many times concurrently within a single Hangfire job's DI scope, and DbContext instances
+// aren't safe for concurrent use. Everything else in the app still injects a plain, scoped
+// PseudonymContext as before - the AddScoped registration below just sources that one instance
+// per scope from the same factory, rather than registering AddDbContext separately (which would
+// conflict on DbContextOptions<PseudonymContext>'s lifetime). Not pooled: PseudonymContext's
+// OnConfiguring (snake_case naming, exception processing) mutates options post-construction,
+// which DbContext pooling explicitly disallows ("'OnConfiguring' cannot be used to modify
+// DbContextOptions when DbContext pooling is enabled").
+builder.Services.AddDbContextFactory<PseudonymContext>(ConfigurePseudonymContext);
+builder.Services.AddScoped<PseudonymContext>(isp =>
+    isp.GetRequiredService<IDbContextFactory<PseudonymContext>>().CreateDbContext()
 );
 
 builder.Services.AddSingleton<PseudonymizationMethodsLookup>();
