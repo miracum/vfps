@@ -40,6 +40,20 @@ public interface IPseudonymAppService
     );
 
     /// <summary>
+    /// Same as <see cref="CreateTrustedAsync(string, string, CancellationToken)"/>, but skips the
+    /// namespace lookup too - only for the CSV job runner, which resolves each distinct namespace
+    /// its column mappings reference exactly once before processing any rows, rather than
+    /// re-fetching the same namespace on every field of every row (the dominant per-row cost
+    /// otherwise, since a CSV job calls this far more often than any other caller ever would).
+    /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
+    Task<Pseudonym> CreateTrustedAsync(
+        Namespace @namespace,
+        string originalValue,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Lists pseudonyms in a namespace, keyset-paginated. Deliberately returns
     /// <see cref="PseudonymSummaryDto"/> rather than a type carrying the original value - this
     /// is the read path that a UI renders in bulk, and the original value must never cross into
@@ -71,8 +85,8 @@ public interface IPseudonymAppService
     /// for the CSV job runner, which already verified reverse-lookup access to every namespace a
     /// de-pseudonymization job's column mappings reference up front, at job creation time (see
     /// <see cref="IPseudonymizationJobAppService.CreateJobAsync"/>). Same reasoning as
-    /// <see cref="CreateTrustedAsync"/> - the runner has no caller <see cref="ClaimsPrincipal"/>
-    /// to re-check against.
+    /// <see cref="CreateTrustedAsync(string, string, CancellationToken)"/> - the runner has no
+    /// caller <see cref="ClaimsPrincipal"/> to re-check against.
     /// </summary>
     Task<Pseudonym?> ReverseLookupTrustedAsync(
         string namespaceName,

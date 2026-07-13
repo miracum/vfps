@@ -19,6 +19,7 @@ namespace Vfps.CsvProcessing;
 public class CsvPseudonymizationJobRunner(
     IPseudonymizationJobRepository jobRepository,
     IPseudonymAppService pseudonymAppService,
+    INamespaceRepository namespaceRepository,
     IAmazonS3 s3,
     IOptions<S3Config> s3Config,
     ILogger<CsvPseudonymizationJobRunner> logger
@@ -159,18 +160,34 @@ public class CsvPseudonymizationJobRunner(
                 header = csvReader.HeaderRecord;
             }
 
-            var inPlaceBySourceIndex = new Dictionary<int, string>();
-            var appended = new List<(int SourceIndex, string TargetColumn, string Namespace)>();
+            // Resolve every distinct namespace this job's column mappings reference exactly
+            // once, up front - not on every field of every row, which used to be the dominant
+            // per-row cost (a namespace lookup on top of the actual upsert/reverse-lookup, for
+            // every single value). Also fails the job immediately if a mapping references a
+            // namespace that no longer exists, rather than only discovering that many rows in.
+            var namespaces = new Dictionary<string, Namespace>();
+            foreach (var namespaceName in job.ColumnMappings.Select(m => m.Namespace).Distinct())
+            {
+                namespaces[namespaceName] =
+                    await namespaceRepository.FindAsync(namespaceName, CancellationToken.None)
+                    ?? throw new InvalidOperationException(
+                        $"Namespace '{namespaceName}' does not exist."
+                    );
+            }
+
+            var inPlaceBySourceIndex = new Dictionary<int, Namespace>();
+            var appended = new List<(int SourceIndex, string TargetColumn, Namespace Namespace)>();
             foreach (var mapping in job.ColumnMappings)
             {
                 var sourceIndex = ResolveColumnIndex(mapping.SourceColumn, header);
+                var @namespace = namespaces[mapping.Namespace];
                 if (mapping.TargetColumn is null)
                 {
-                    inPlaceBySourceIndex.TryAdd(sourceIndex, mapping.Namespace);
+                    inPlaceBySourceIndex.TryAdd(sourceIndex, @namespace);
                 }
                 else
                 {
-                    appended.Add((sourceIndex, mapping.TargetColumn, mapping.Namespace));
+                    appended.Add((sourceIndex, mapping.TargetColumn, @namespace));
                 }
             }
 
@@ -274,14 +291,14 @@ public class CsvPseudonymizationJobRunner(
     /// </summary>
     private async Task<string> ResolveValueAsync(
         PseudonymizationJobDirection direction,
-        string namespaceName,
+        Namespace @namespace,
         string rawValue
     )
     {
         if (direction == PseudonymizationJobDirection.Depseudonymize)
         {
             var pseudonym = await pseudonymAppService.ReverseLookupTrustedAsync(
-                namespaceName,
+                @namespace.Name,
                 rawValue,
                 CancellationToken.None
             );
@@ -289,7 +306,7 @@ public class CsvPseudonymizationJobRunner(
         }
 
         var created = await pseudonymAppService.CreateTrustedAsync(
-            namespaceName,
+            @namespace,
             rawValue,
             CancellationToken.None
         );

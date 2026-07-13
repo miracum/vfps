@@ -44,6 +44,20 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
+        var @namespace =
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            ?? throw new NamespaceNotFoundException(namespaceName);
+
+        return await CreateTrustedAsync(@namespace, originalValue, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Data.Models.Pseudonym> CreateTrustedAsync(
+        Data.Models.Namespace @namespace,
+        string originalValue,
+        CancellationToken cancellationToken
+    )
+    {
         if (string.IsNullOrWhiteSpace(originalValue))
         {
             throw new ArgumentException(
@@ -52,9 +66,6 @@ public class PseudonymAppService(
             );
         }
 
-        var @namespace =
-            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
-            ?? throw new NamespaceNotFoundException(namespaceName);
         string pseudonymValue;
         using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
         {
@@ -75,7 +86,7 @@ public class PseudonymAppService(
         };
 
         var upserted = await pseudonymRepository.CreateIfNotExist(pseudonym);
-        return upserted ?? throw new PseudonymUpsertFailedException(namespaceName);
+        return upserted ?? throw new PseudonymUpsertFailedException(@namespace.Name);
     }
 
     /// <inheritdoc/>

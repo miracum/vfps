@@ -26,6 +26,54 @@ public class PseudonymAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task CreateTrustedAsync_WithResolvedNamespace_ShouldCreateWithoutLookingItUp()
+    {
+        // The CSV job runner resolves each namespace once up front and passes the object
+        // directly - this overload must not need to look it up again (or even need it to exist
+        // in the "Namespaces" table under that exact instance), which is what makes the
+        // once-per-job resolution actually save the redundant per-row lookups.
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "existingNamespace",
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+        };
+
+        var created = await sut.CreateTrustedAsync(
+            @namespace,
+            "resolved-namespace-value",
+            CancellationToken.None
+        );
+
+        created.OriginalValue.Should().Be("resolved-namespace-value");
+        created.PseudonymValue.Should().HaveLength(16);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateTrustedAsync_WithResolvedNamespaceAndBlankOriginalValue_ShouldThrowArgumentException(
+        string blankValue
+    )
+    {
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var @namespace = new Data.Models.Namespace { Name = "existingNamespace", PseudonymLength = 16 };
+
+        var act = () => sut.CreateTrustedAsync(@namespace, blankValue, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
     public async Task CreateAsync_WithBlankOriginalValue_ShouldThrowArgumentExceptionBeforeUpsert()
     {
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
