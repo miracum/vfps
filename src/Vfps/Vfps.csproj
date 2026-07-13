@@ -51,4 +51,7 @@
   <ItemGroup>
     <Protobuf Include="Protos\vfps\api\v1\*.proto" />
   </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vfps.Tests" />
+  </ItemGroup>
 </Project>
