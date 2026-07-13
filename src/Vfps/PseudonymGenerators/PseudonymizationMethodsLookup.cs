@@ -37,6 +37,16 @@ public class PseudonymizationMethodsLookup
     }
 
     /// <summary>
+    /// The required pseudonym length for <paramref name="method"/>, or null if it's freely
+    /// configurable. Backed by <see cref="IHasFixedPseudonymLength"/> on the registered generator
+    /// itself, so this can never drift out of sync with what the generator actually enforces.
+    /// Used to validate a namespace's PseudonymLength upfront at namespace-creation time (see
+    /// NamespaceAppService.CreateAsync) and to drive the admin UI's namespace-creation form.
+    /// </summary>
+    public uint? GetFixedPseudonymLength(PseudonymGenerationMethod method) =>
+        (lookup[method] as IHasFixedPseudonymLength)?.FixedPseudonymLength;
+
+    /// <summary>
     /// Generates a pseudonym for <paramref name="method"/>, passing <paramref name="originalValue"/>
     /// through only if the registered generator actually needs it. The single place that knows
     /// about the <see cref="IPseudonymGenerator"/>/<see cref="IDeterministicPseudonymGenerator"/>

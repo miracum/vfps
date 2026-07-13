@@ -2,8 +2,10 @@
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using Vfps.Data.Models
+@using Vfps.PseudonymGenerators
 @inject INamespaceAppService NamespaceAppService
 @inject NavigationManager NavigationManager
+@inject PseudonymizationMethodsLookup MethodsLookup
 
 <PageTitle>Namespaces</PageTitle>
 
@@ -53,6 +55,7 @@
                         <BbFieldContent>
                             <select
                                 @bind="_selectedMethod"
+                                @bind:after="OnMethodChanged"
                                 id="method"
                                 class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                             >
@@ -71,7 +74,14 @@
                                 Id="length"
                                 Min="1"
                                 TValue="uint"
+                                Disabled="@FixedPseudonymLength.HasValue"
                             />
+                            @if (FixedPseudonymLength is not null)
+                            {
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    Fixed at @FixedPseudonymLength for this generation method.
+                                </p>
+                            }
                         </BbFieldContent>
                     </BbField>
                     <BbField>
@@ -108,6 +118,8 @@
                         Title="Generation method"
                     />
                     <BbDataGridPropertyColumn Property="@(n => n.PseudonymLength)" Title="Length" />
+                    <BbDataGridPropertyColumn Property="@(n => n.PseudonymPrefix)" Title="Prefix" />
+                    <BbDataGridPropertyColumn Property="@(n => n.PseudonymSuffix)" Title="Suffix" />
                     <BbDataGridTemplateColumn Title="Pseudonyms">
                         <ChildContent Context="n">
                             <BbButton
@@ -138,6 +150,13 @@
     private string? _errorMessage;
     private bool _isCreating;
 
+    // Null for a freely-configurable method - non-null (e.g. Uuid4's 36) means the length field
+    // is locked to this value, since the generator itself has no length concept to configure.
+    private uint? FixedPseudonymLength =>
+        MethodsLookup.GetFixedPseudonymLength(
+            Enum.Parse<Vfps.Protos.PseudonymGenerationMethod>(_selectedMethod)
+        );
+
     // Derived from the enum itself, rather than a hand-maintained list, so a newly-added
     // PseudonymGenerationMethod can't be forgotten here the way UUIDv7 previously was.
     private static readonly IReadOnlyList<Vfps.Protos.PseudonymGenerationMethod> SelectablePseudonymGenerationMethods =
@@ -161,6 +180,14 @@
     protected override async Task OnInitializedAsync()
     {
         await ReloadAsync();
+    }
+
+    private void OnMethodChanged()
+    {
+        if (FixedPseudonymLength is { } fixedLength)
+        {
+            _newNamespace.PseudonymLength = fixedLength;
+        }
     }
 
     private async Task<ClaimsPrincipal> GetUserAsync() =>

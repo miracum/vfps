@@ -12,11 +12,9 @@ public class NamespaceAppServiceTests : ServiceTestBase
     public async Task CreateAsync_WithAuthorizationEnabledAndNonAdminUser_ShouldThrowForbidden()
     {
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
-        var sut = new NamespaceAppService(
+        var sut = CreateNamespaceAppService(
             namespaceRepository,
-            CreatePermissionChecker(
-                new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
-            )
+            new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
         );
 
         var act = () =>
@@ -33,11 +31,9 @@ public class NamespaceAppServiceTests : ServiceTestBase
     public async Task CreateAsync_WithAuthorizationEnabledAndAdminUser_ShouldSucceed()
     {
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
-        var sut = new NamespaceAppService(
+        var sut = CreateNamespaceAppService(
             namespaceRepository,
-            CreatePermissionChecker(
-                new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
-            )
+            new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
         );
 
         var created = await sut.CreateAsync(
@@ -50,25 +46,66 @@ public class NamespaceAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task CreateAsync_WithFixedLengthMethodAndMismatchedLength_ShouldThrowArgumentOutOfRange()
+    {
+        // Uuid4 always produces a 36-character value - a namespace can't be created asking for
+        // anything else, rather than only failing later at first pseudonym-creation time.
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var act = () =>
+            sut.CreateAsync(
+                new Data.Models.Namespace
+                {
+                    Name = "should-not-be-created",
+                    PseudonymLength = 16,
+                    PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.Uuid4,
+                },
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithFixedLengthMethodAndCorrectLength_ShouldSucceed()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var created = await sut.CreateAsync(
+            new Data.Models.Namespace
+            {
+                Name = "uuid4-namespace",
+                PseudonymLength = 36,
+                PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.Uuid4,
+            },
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        created.Name.Should().Be("uuid4-namespace");
+    }
+
+    [Fact]
     public async Task GetAllAsync_WithAuthorizationEnabled_ShouldOnlyReturnNamespacesUserCanRead()
     {
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
-        var sut = new NamespaceAppService(
+        var sut = CreateNamespaceAppService(
             namespaceRepository,
-            CreatePermissionChecker(
-                new AuthorizationConfig
-                {
-                    IsEnabled = true,
-                    NamespaceRules =
-                    [
-                        new NamespaceRule
-                        {
-                            Namespace = "existingNamespace",
-                            ReadRoles = ["can-read-existing"],
-                        },
-                    ],
-                }
-            )
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        ReadRoles = ["can-read-existing"],
+                    },
+                ],
+            }
         );
 
         var result = await sut.GetAllAsync(

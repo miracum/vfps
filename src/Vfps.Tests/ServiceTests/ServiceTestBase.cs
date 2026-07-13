@@ -87,6 +87,16 @@ public class ServiceTestBase : IDisposable
             new PseudonymizationMethodsLookup()
         );
 
+    protected static NamespaceAppService CreateNamespaceAppService(
+        INamespaceRepository namespaceRepository,
+        AuthorizationConfig? config = null
+    ) =>
+        new(
+            namespaceRepository,
+            CreatePermissionChecker(config),
+            new PseudonymizationMethodsLookup()
+        );
+
     protected virtual void Dispose(bool disposing)
     {
         if (!disposedValue)

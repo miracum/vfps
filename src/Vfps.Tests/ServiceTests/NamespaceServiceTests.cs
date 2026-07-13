@@ -13,7 +13,7 @@ public class NamespaceServiceTests : ServiceTestBase
         sut = new Services.NamespaceService(
             InMemoryPseudonymContext,
             namespaceRepository,
-            new NamespaceAppService(namespaceRepository, CreatePermissionChecker())
+            CreateNamespaceAppService(namespaceRepository)
         );
     }
 

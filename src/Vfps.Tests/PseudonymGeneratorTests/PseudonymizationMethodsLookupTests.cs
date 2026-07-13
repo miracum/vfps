@@ -40,4 +40,28 @@ public class PseudonymizationMethodsLookupTests
                 .NotBeNullOrEmpty($"'{method}' should generate a pseudonym");
         }
     }
+
+    [Theory]
+    [InlineData(PseudonymGenerationMethod.Uuid4, 36u)]
+    [InlineData(PseudonymGenerationMethod.Uuid7, 36u)]
+    [InlineData(PseudonymGenerationMethod.Sha256HexEncoded, 64u)]
+    public void GetFixedPseudonymLength_WithFixedLengthMethod_ShouldReturnItsLength(
+        PseudonymGenerationMethod method,
+        uint expectedLength
+    )
+    {
+        sut.GetFixedPseudonymLength(method).Should().Be(expectedLength);
+    }
+
+    [Theory]
+    [InlineData(PseudonymGenerationMethod.Unspecified)]
+    [InlineData(PseudonymGenerationMethod.SecureRandomBase64UrlEncoded)]
+    [InlineData(PseudonymGenerationMethod.FullRandomHexEncoded)]
+    [InlineData(PseudonymGenerationMethod.FullRandomBase62Encoded)]
+    public void GetFixedPseudonymLength_WithConfigurableLengthMethod_ShouldReturnNull(
+        PseudonymGenerationMethod method
+    )
+    {
+        sut.GetFixedPseudonymLength(method).Should().BeNull();
+    }
 }
