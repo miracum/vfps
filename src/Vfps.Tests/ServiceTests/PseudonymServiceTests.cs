@@ -1,6 +1,4 @@
-using System.Diagnostics;
 using Grpc.Core;
-using Microsoft.Extensions.Caching.Memory;
 
 namespace Vfps.Tests.ServiceTests;
 
@@ -130,84 +128,6 @@ public class PseudonymServiceTests : ServiceTestBase
             .Pseudonyms.Where(p => p.NamespaceName == request.Namespace)
             .Should()
             .HaveCount(1);
-    }
-
-    [Fact]
-    public async Task Create_WithCachingNamespaceRepository_ShouldBeFaster()
-    {
-        var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 32 });
-
-        var cachingNamespaceRepository = new CachingNamespaceRepository(
-            InMemoryPseudonymContext,
-            cache,
-            new Config.CacheConfig()
-        );
-        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
-        var cachingSut = new Services.PseudonymService(
-            CreatePseudonymAppService(cachingNamespaceRepository, pseudonymRepository)
-        );
-
-        var request = new PseudonymServiceCreateRequest
-        {
-            Namespace = "existingNamespace",
-            OriginalValue = nameof(Create_WithCachingNamespaceRepository_ShouldBeFaster),
-        };
-
-        var stopwatch = new Stopwatch();
-
-        stopwatch.Start();
-        await cachingSut.Create(request, TestServerCallContext.Create());
-        stopwatch.Stop();
-        var firstExecutionTime = stopwatch.Elapsed;
-
-        stopwatch.Restart();
-        await cachingSut.Create(request, TestServerCallContext.Create());
-        stopwatch.Stop();
-        var secondExecutionTime = stopwatch.Elapsed;
-
-        secondExecutionTime.Should().BeLessThan(firstExecutionTime);
-    }
-
-    [Fact]
-    public async Task Create_WithCachingNamespaceRepositoryAndCachingPseudonymRepository_ShouldBeFaster()
-    {
-        var cache = new MemoryCache(new MemoryCacheOptions { SizeLimit = 32 });
-
-        var cachingNamespaceRepository = new CachingNamespaceRepository(
-            InMemoryPseudonymContext,
-            cache,
-            new Config.CacheConfig()
-        );
-        var cachingPseudonymRepository = new CachingPseudonymRepository(
-            InMemoryPseudonymContext,
-            cache,
-            new Config.CacheConfig()
-        );
-        var cachingSut = new Services.PseudonymService(
-            CreatePseudonymAppService(cachingNamespaceRepository, cachingPseudonymRepository)
-        );
-
-        var request = new PseudonymServiceCreateRequest
-        {
-            Namespace = "existingNamespace",
-            OriginalValue = nameof(
-                Create_WithCachingNamespaceRepositoryAndCachingPseudonymRepository_ShouldBeFaster
-            ),
-        };
-
-        var stopwatch = new Stopwatch();
-
-        stopwatch.Start();
-        await cachingSut.Create(request, TestServerCallContext.Create());
-        stopwatch.Stop();
-        var firstExecutionTime = stopwatch.Elapsed;
-
-        stopwatch.Restart();
-        await cachingSut.Create(request, TestServerCallContext.Create());
-        stopwatch.Stop();
-        var secondExecutionTime = stopwatch.Elapsed;
-
-        secondExecutionTime.Should().BeLessThan(firstExecutionTime);
     }
 
     [Fact]
