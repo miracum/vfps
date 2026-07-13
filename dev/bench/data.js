@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1783981066662,
+  "lastUpdate": 1783983658958,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -4302,6 +4302,66 @@ window.BENCHMARK_DATA = {
             "value": 934.6080774160532,
             "unit": "ns",
             "range": "± 3.217355116567367"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e64e39a1f289e5730473fc034dec9719ddee4e7d",
+          "message": "test: improve coverage (#237)\n\n* test: improve coverage\n\n* Potential fix for pull request finding 'CodeQL / Missing Dispose call on local IDisposable'\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>\n\n* Potential fix for pull request finding 'CodeQL / Useless upcast'\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>\n\n* test\n\n---------\n\nCo-authored-by: chgl <5307555+chgl@users.noreply.github.com>\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>",
+          "timestamp": "2026-07-14T00:58:18+02:00",
+          "tree_id": "59b74ad0260d97b39698d463a41fc2d4b597c00e",
+          "url": "https://github.com/miracum/vfps/commit/e64e39a1f289e5730473fc034dec9719ddee4e7d"
+        },
+        "date": 1783983658525,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1159.0606271198817,
+            "unit": "ns",
+            "range": "± 5.8885508949266585"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 602.2790876797268,
+            "unit": "ns",
+            "range": "± 0.8943463680923057"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 646.1670620991633,
+            "unit": "ns",
+            "range": "± 0.7569067589980263"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 669.7227781735934,
+            "unit": "ns",
+            "range": "± 0.6305081964076577"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 1064.7406874338785,
+            "unit": "ns",
+            "range": "± 4.307475466965316"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1286.8319517771404,
+            "unit": "ns",
+            "range": "± 2.22482985024054"
           }
         ]
       }
