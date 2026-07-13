@@ -16,11 +16,13 @@ namespace Vfps.Tests.CsvProcessingTests;
 // These tests deliberately verify the row-transform logic (which namespace/value each field
 // resolves to, in what order, and how many rows get processed) via the calls made to
 // pseudonymAppService/jobRepository, rather than by reading back the uploaded output object's
-// bytes. TransferUtility.UploadAsync doesn't handle the non-seekable Pipe-backed stream
-// ProcessAsync gives it (its Length getter throws NotSupportedException, and TransferUtility
-// silently treats that as an empty upload) - a separate, real bug - so asserting on uploaded
-// content here would either mask that bug or make these tests fail for a reason unrelated to
-// what they're meant to verify.
+// bytes. A fully-faked IAmazonS3 doesn't model TransferUtility faithfully enough for that:
+// TransferUtility.UploadAsync reads internal client config (e.g. buffer/part size) off
+// IAmazonS3.Config, and FakeItEasy auto-fakes that property to an object with zeroed-out
+// values, which makes TransferUtility produce a bogus empty upload - confirmed to be a test-only
+// artifact, not a real bug, via an actual end-to-end run (real browser upload, real MinIO,
+// correct pseudonymized content downloaded back). Asserting on "uploaded" content here would
+// just be asserting on that artifact.
 public class CsvPseudonymizationJobRunnerTests
 {
     private const string Bucket = "test-bucket";
@@ -74,16 +76,14 @@ public class CsvPseudonymizationJobRunnerTests
             ColumnMappings = [.. columnMappings],
         };
 
-    private void FakeInputObject(PseudonymizationJob job, string csvContent)
-    {
-        var responseStream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent));
-        var response = A.Fake<GetObjectResponse>();
-        A.CallTo(() => response.ResponseStream).Returns(responseStream);
-        A.CallTo(() => response.Dispose()).Invokes(responseStream.Dispose);
-
+    private void FakeInputObject(PseudonymizationJob job, string csvContent) =>
         A.CallTo(() => s3.GetObjectAsync(Bucket, job.InputObjectKey, A<CancellationToken>._))
-            .Returns(response);
-    }
+            .Returns(
+                new GetObjectResponse
+                {
+                    ResponseStream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent)),
+                }
+            );
 
     private void FakeFindJob(PseudonymizationJob job) =>
         A.CallTo(() => jobRepository.FindAsync(job.Id, A<CancellationToken>._)).Returns(job);
@@ -325,7 +325,7 @@ public class CsvPseudonymizationJobRunnerTests
         );
         FakeFindJob(job);
         A.CallTo(() => namespaceRepository.FindAsync("does-not-exist", A<CancellationToken>._))
-            .Returns(null);
+            .Returns((Data.Models.Namespace?)null);
         FakeInputObject(job, "id,value\n1,secret\n");
 
         var sut = CreateSut();
