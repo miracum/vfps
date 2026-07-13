@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.2](https://github.com/miracum/vfps/compare/v1.4.1...v1.4.2) (2026-07-13)
+
+
+### Miscellaneous Chores
+
+* **deps:** upgrade to new dotnet test framework ([#235](https://github.com/miracum/vfps/issues/235)) ([535533e](https://github.com/miracum/vfps/commit/535533ec2884dfbbc35bca4a70569684d79d4783))
+
 ## [1.4.1](https://github.com/miracum/vfps/compare/v1.4.0...v1.4.1) (2026-07-13)
 
 
