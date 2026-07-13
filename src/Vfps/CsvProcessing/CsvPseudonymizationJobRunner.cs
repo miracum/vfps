@@ -207,12 +207,7 @@ public class CsvPseudonymizationJobRunner(
                     var raw = rawFields[i] ?? string.Empty;
                     if (inPlaceBySourceIndex.TryGetValue(i, out var ns))
                     {
-                        var pseudonym = await pseudonymAppService.CreateTrustedAsync(
-                            ns,
-                            raw,
-                            CancellationToken.None
-                        );
-                        csvWriter.WriteField(pseudonym.PseudonymValue);
+                        csvWriter.WriteField(await ResolveValueAsync(job.Direction, ns, raw));
                     }
                     else
                     {
@@ -226,12 +221,7 @@ public class CsvPseudonymizationJobRunner(
                         a.SourceIndex < rawFields.Length
                             ? rawFields[a.SourceIndex] ?? string.Empty
                             : string.Empty;
-                    var pseudonym = await pseudonymAppService.CreateTrustedAsync(
-                        a.Namespace,
-                        raw,
-                        CancellationToken.None
-                    );
-                    csvWriter.WriteField(pseudonym.PseudonymValue);
+                    csvWriter.WriteField(await ResolveValueAsync(job.Direction, a.Namespace, raw));
                 }
 
                 await csvWriter.NextRecordAsync();
@@ -273,6 +263,37 @@ public class CsvPseudonymizationJobRunner(
             // task (reading from the other end of the same pipe) would hang forever.
             await pipeOutStream.DisposeAsync();
         }
+    }
+
+    /// <summary>
+    /// Transforms one field according to the job's direction. Depseudonymize on a value with no
+    /// matching pseudonym leaves it unchanged rather than failing the whole job or blanking it -
+    /// the field is left exactly as it was found in the input, whether that's a genuine unknown
+    /// pseudonym or a value that was never pseudonymized in the first place, so a partial/wrong
+    /// column selection is inspectable in the output rather than silently destroying data.
+    /// </summary>
+    private async Task<string> ResolveValueAsync(
+        PseudonymizationJobDirection direction,
+        string namespaceName,
+        string rawValue
+    )
+    {
+        if (direction == PseudonymizationJobDirection.Depseudonymize)
+        {
+            var pseudonym = await pseudonymAppService.ReverseLookupTrustedAsync(
+                namespaceName,
+                rawValue,
+                CancellationToken.None
+            );
+            return pseudonym?.OriginalValue ?? rawValue;
+        }
+
+        var created = await pseudonymAppService.CreateTrustedAsync(
+            namespaceName,
+            rawValue,
+            CancellationToken.None
+        );
+        return created.PseudonymValue;
     }
 
     private static int ResolveColumnIndex(string sourceColumn, string[]? header)

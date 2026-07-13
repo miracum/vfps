@@ -55,13 +55,26 @@ public interface IPseudonymAppService
 
     /// <summary>
     /// Reveals the original value for a single pseudonym. This is a distinct, more tightly-gated
-    /// action than <see cref="ListAsync"/> (requires reverse-lookup access, not just read access)
-    /// and every call is audit-logged.
+    /// action than <see cref="ListAsync"/> (requires reverse-lookup access, not just read access).
     /// </summary>
     Task<Pseudonym?> ReverseLookupAsync(
         string namespaceName,
         string pseudonymValue,
         ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Same as <see cref="ReverseLookupAsync"/> but skips the per-call permission check - only
+    /// for the CSV job runner, which already verified reverse-lookup access to every namespace a
+    /// de-pseudonymization job's column mappings reference up front, at job creation time (see
+    /// <see cref="IPseudonymizationJobAppService.CreateJobAsync"/>). Same reasoning as
+    /// <see cref="CreateTrustedAsync"/> - the runner has no caller <see cref="ClaimsPrincipal"/>
+    /// to re-check against.
+    /// </summary>
+    Task<Pseudonym?> ReverseLookupTrustedAsync(
+        string namespaceName,
+        string pseudonymValue,
         CancellationToken cancellationToken
     );
 }

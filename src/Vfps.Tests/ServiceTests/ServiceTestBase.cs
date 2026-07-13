@@ -1,7 +1,6 @@
 using EntityFramework.Exceptions.Sqlite;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Vfps.Config;
 using Vfps.PseudonymGenerators;
@@ -85,8 +84,7 @@ public class ServiceTestBase : IDisposable
             namespaceRepository,
             pseudonymRepository,
             CreatePermissionChecker(config),
-            new PseudonymizationMethodsLookup(),
-            NullLogger<PseudonymAppService>.Instance
+            new PseudonymizationMethodsLookup()
         );
 
     protected virtual void Dispose(bool disposing)

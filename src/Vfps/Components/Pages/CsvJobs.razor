@@ -63,6 +63,33 @@ else
             <BbCardContent Class="space-y-6">
                 <div class="grid gap-4 sm:grid-cols-3">
                     <BbField Class="sm:col-span-3">
+                        <BbFieldLabel For="direction">Direction</BbFieldLabel>
+                        <BbFieldContent>
+                            <select
+                                @bind="_direction"
+                                id="direction"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <option value="@nameof(PseudonymizationJobDirection.Pseudonymize)">
+                                    Pseudonymize - replace original values with pseudonyms
+                                </option>
+                                <option value="@nameof(PseudonymizationJobDirection.Depseudonymize)">
+                                    De-pseudonymize - replace pseudonyms with original values
+                                </option>
+                            </select>
+                        </BbFieldContent>
+                    </BbField>
+                    @if (_direction == nameof(PseudonymizationJobDirection.Depseudonymize))
+                    {
+                        <BbAlert Variant="AlertVariant.Warning" Class="sm:col-span-3">
+                            <BbAlertDescription>
+                                This reveals original values into the output file - requires
+                                reverse-lookup access to every namespace used below, same as the
+                                reverse lookup on a namespace's pseudonym list.
+                            </BbAlertDescription>
+                        </BbAlert>
+                    }
+                    <BbField Class="sm:col-span-3">
                         <BbFieldLabel For="csvFileInput">CSV file</BbFieldLabel>
                         <BbFieldContent>
                             <input
@@ -109,11 +136,25 @@ else
                 <div>
                     <h3 class="text-sm font-medium">Column mappings</h3>
                     <p class="mt-1 text-sm text-muted-foreground">
-                        Each row replaces a source column's value with its pseudonym in the given
-                        namespace - either in place, or into a new appended column (leave "target
-                        column" empty to replace in place). Pick a CSV file above with "File has a
-                        header row" checked to select source columns by name instead of typing
-                        them.
+                        @if (_direction == nameof(PseudonymizationJobDirection.Depseudonymize))
+                        {
+                            <text>
+                                Each row replaces a source column's pseudonym with its original
+                                value in the given namespace - either in place, or into a new
+                                appended column (leave "target column" empty to replace in place).
+                                A pseudonym with no match in that namespace is left unchanged.
+                            </text>
+                        }
+                        else
+                        {
+                            <text>
+                                Each row replaces a source column's value with its pseudonym in
+                                the given namespace - either in place, or into a new appended
+                                column (leave "target column" empty to replace in place).
+                            </text>
+                        }
+                        Pick a CSV file above with "File has a header row" checked to select
+                        source columns by name instead of typing them.
                     </p>
 
                     <div class="mt-3 space-y-3">
@@ -214,6 +255,13 @@ else
                                 <code class="text-xs">@j.Id.ToString()[..8]</code>
                             </ChildContent>
                         </BbDataGridTemplateColumn>
+                        <BbDataGridTemplateColumn Title="Direction">
+                            <ChildContent Context="j">
+                                @(j.Direction == PseudonymizationJobDirection.Depseudonymize
+                                    ? "De-pseudonymize"
+                                    : "Pseudonymize")
+                            </ChildContent>
+                        </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="Status">
                             <ChildContent Context="j">
                                 <BbBadge Variant="@BadgeVariantFor(j.Status)" Class="@BadgeClassFor(j.Status)">
@@ -303,6 +351,7 @@ else
     private IPseudonymizationJobAppService? _jobAppService;
     private IReadOnlyList<Namespace> _namespaces = [];
     private readonly List<ColumnMappingRow> _columnMappings = [new()];
+    private string _direction = nameof(PseudonymizationJobDirection.Pseudonymize);
     private string _encoding = "utf-8";
     private string _delimiter = ",";
     private bool _hasHeaderRow = true;
@@ -450,7 +499,13 @@ else
             }
 
             var user = await GetUserAsync();
-            var request = new CreateCsvJobRequest(_encoding, _delimiter, _hasHeaderRow, mappings);
+            var request = new CreateCsvJobRequest(
+                _encoding,
+                _delimiter,
+                _hasHeaderRow,
+                mappings,
+                Enum.Parse<PseudonymizationJobDirection>(_direction)
+            );
             var (job, uploadUrl) = await _jobAppService.CreateJobAsync(
                 request,
                 user,

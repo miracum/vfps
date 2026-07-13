@@ -16,8 +16,24 @@ public enum PseudonymizationJobStatus
 }
 
 /// <summary>
-/// One column of a CSV job: replaces the value in <see cref="SourceColumn"/> with its pseudonym
-/// in <see cref="Namespace"/>, either in place or into <see cref="TargetColumn"/>.
+/// Which way a job's <see cref="ColumnMapping"/>s transform values. Determines both the required
+/// permission at job creation (see
+/// <see cref="AppServices.IPseudonymizationJobAppService.CreateJobAsync"/>) and which
+/// <see cref="AppServices.IPseudonymAppService"/> method the runner calls per field.
+/// </summary>
+public enum PseudonymizationJobDirection
+{
+    /// <summary>Source column holds original values - replaced with their pseudonym. Requires write access.</summary>
+    Pseudonymize,
+
+    /// <summary>Source column holds pseudonym values - replaced with their original value. Requires reverse-lookup access.</summary>
+    Depseudonymize,
+}
+
+/// <summary>
+/// One column of a CSV job: replaces the value in <see cref="SourceColumn"/> - interpreted
+/// according to the job's <see cref="PseudonymizationJob.Direction"/> - in
+/// <see cref="Namespace"/>, either in place or into <see cref="TargetColumn"/>.
 /// </summary>
 public class ColumnMapping
 {
@@ -30,10 +46,11 @@ public class ColumnMapping
 }
 
 /// <summary>
-/// A CSV pseudonymization job: input/output files live in S3-compatible object storage (see
-/// <see cref="Config.S3Config"/>), rows are processed by <see cref="CsvProcessing.CsvPseudonymizationJobRunner"/>
-/// via Hangfire. No FK to <see cref="Namespace"/> - a single job's <see cref="ColumnMappings"/>
-/// can span multiple namespaces.
+/// A CSV pseudonymization (or de-pseudonymization - see <see cref="Direction"/>) job:
+/// input/output files live in S3-compatible object storage (see <see cref="Config.S3Config"/>),
+/// rows are processed by <see cref="CsvProcessing.CsvPseudonymizationJobRunner"/> via Hangfire.
+/// No FK to <see cref="Namespace"/> - a single job's <see cref="ColumnMappings"/> can span
+/// multiple namespaces.
 /// </summary>
 public class PseudonymizationJob : TracksCreationAndUpdates
 {
@@ -41,8 +58,10 @@ public class PseudonymizationJob : TracksCreationAndUpdates
     public Guid Id { get; set; }
     public PseudonymizationJobStatus Status { get; set; } =
         PseudonymizationJobStatus.AwaitingUpload;
+    public PseudonymizationJobDirection Direction { get; set; } =
+        PseudonymizationJobDirection.Pseudonymize;
 
-    /// <summary>Subject (NameIdentifier claim) of the user who created this job.</summary>
+    /// <summary>Subject ("sub" claim) of the user who created this job.</summary>
     public required string CreatedBy { get; set; }
 
     public required string InputObjectKey { get; set; }

@@ -107,8 +107,78 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         );
 
         job.Status.Should().Be(PseudonymizationJobStatus.AwaitingUpload);
+        job.Direction.Should().Be(PseudonymizationJobDirection.Pseudonymize);
         job.InputObjectKey.Should().Contain(job.Id.ToString());
         uploadUrl.Should().Be("https://example.invalid/presigned");
+    }
+
+    [Fact]
+    public async Task CreateJobAsync_DepseudonymizeWithWriteAccessButNotReverseLookupAccess_ShouldThrowForbidden()
+    {
+        // Depseudonymize reveals original values, so it must be gated on reverse-lookup access,
+        // not write access - even though write access alone is enough for a Pseudonymize job.
+        var (sut, _, _, _) = CreateSut(
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        WriteRoles = ["can-write"],
+                    },
+                ],
+            }
+        );
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
+            PseudonymizationJobDirection.Depseudonymize
+        );
+
+        var act = () =>
+            sut.CreateJobAsync(request, UserWithRoles("can-write"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task CreateJobAsync_DepseudonymizeWithReverseLookupAccess_ShouldCreateJob()
+    {
+        var (sut, _, _, _) = CreateSut(
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        ReverseLookupRoles = ["can-reverse-lookup"],
+                    },
+                ],
+            }
+        );
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
+            PseudonymizationJobDirection.Depseudonymize
+        );
+
+        var (job, _) = await sut.CreateJobAsync(
+            request,
+            UserWithRoles("can-reverse-lookup"),
+            CancellationToken.None
+        );
+
+        job.Direction.Should().Be(PseudonymizationJobDirection.Depseudonymize);
     }
 
     [Fact]

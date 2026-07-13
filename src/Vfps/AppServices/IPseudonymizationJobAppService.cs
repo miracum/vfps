@@ -13,8 +13,9 @@ public interface IPseudonymizationJobAppService
     /// <summary>
     /// Creates a job record (status <see cref="PseudonymizationJobStatus.AwaitingUpload"/>) and
     /// returns a presigned S3 PUT URL for the caller to upload the input file to directly.
-    /// Requires write access to every namespace referenced in <paramref name="request"/>'s
-    /// column mappings.
+    /// Requires write access (Pseudonymize) or reverse-lookup access (Depseudonymize) - see
+    /// <see cref="CreateCsvJobRequest.Direction"/> - to every namespace referenced in
+    /// <paramref name="request"/>'s column mappings.
     /// </summary>
     Task<(PseudonymizationJob Job, string UploadUrl)> CreateJobAsync(
         CreateCsvJobRequest request,
@@ -65,7 +66,8 @@ public record CreateCsvJobRequest(
     string Encoding,
     string Delimiter,
     bool HasHeaderRow,
-    IReadOnlyList<ColumnMapping> ColumnMappings
+    IReadOnlyList<ColumnMapping> ColumnMappings,
+    PseudonymizationJobDirection Direction = PseudonymizationJobDirection.Pseudonymize
 );
 
 public class PseudonymizationJobNotFoundException(Guid jobId)

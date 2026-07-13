@@ -46,15 +46,29 @@ public class PseudonymizationJobAppService(
         CancellationToken cancellationToken
     )
     {
+        // Depseudonymize reveals original values, so it's gated the same as the manual
+        // reverse-lookup textbox (reverse-lookup access), not merely write access.
+        Func<string, bool> hasAccess = request.Direction switch
+        {
+            PseudonymizationJobDirection.Depseudonymize => namespaceName =>
+                permissionChecker.HasReverseLookupAccess(user, namespaceName),
+            _ => namespaceName => permissionChecker.HasWriteAccess(user, namespaceName),
+        };
+        var requiredAccessDescription = request.Direction switch
+        {
+            PseudonymizationJobDirection.Depseudonymize => "Reverse-lookup",
+            _ => "Write",
+        };
+
         foreach (
             var namespaceName in request
                 .ColumnMappings.Select(m => m.Namespace)
                 .Distinct()
-                .Where(namespaceName => !permissionChecker.HasWriteAccess(user, namespaceName))
+                .Where(namespaceName => !hasAccess(namespaceName))
         )
         {
             throw new ForbiddenException(
-                $"Write access to namespace '{namespaceName}' is required."
+                $"{requiredAccessDescription} access to namespace '{namespaceName}' is required."
             );
         }
 
@@ -63,6 +77,7 @@ public class PseudonymizationJobAppService(
         var job = new PseudonymizationJob
         {
             Id = jobId,
+            Direction = request.Direction,
             CreatedBy = user.GetSubject(),
             InputObjectKey = $"{S3ObjectKeyPrefix}{jobId}/input.csv",
             Encoding = request.Encoding,

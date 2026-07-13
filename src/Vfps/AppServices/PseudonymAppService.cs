@@ -2,7 +2,6 @@ using System.Security.Claims;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Logging;
 using Vfps.Authorization;
 using Vfps.Data;
 using Vfps.Protos;
@@ -15,8 +14,7 @@ public class PseudonymAppService(
     INamespaceRepository namespaceRepository,
     IPseudonymRepository pseudonymRepository,
     INamespacePermissionChecker permissionChecker,
-    PseudonymizationMethodsLookup methodsLookup,
-    ILogger<PseudonymAppService> logger
+    PseudonymizationMethodsLookup methodsLookup
 ) : IPseudonymAppService
 {
     private const int DefaultPageSize = 25;
@@ -143,27 +141,24 @@ public class PseudonymAppService(
             );
         }
 
-        var pseudonym = await pseudonymRepository.FindByPseudonymValueAsync(
+        return await pseudonymRepository.FindByPseudonymValueAsync(
             namespaceName,
             pseudonymValue,
             cancellationToken
         );
-
-        // Audit every reverse-lookup attempt, found or not - this is the one place original
-        // values can be revealed, so who looked up what, and when, needs to be recorded
-        // regardless of whether the record existed.
-        var subject = user.GetSubject();
-        logger.LogInformation(
-            "Reverse lookup: {Subject} looked up pseudonym {PseudonymValue} in namespace {Namespace} at {Timestamp} (found: {Found})",
-            subject,
-            pseudonymValue,
-            namespaceName,
-            DateTimeOffset.UtcNow,
-            pseudonym is not null
-        );
-
-        return pseudonym;
     }
+
+    /// <inheritdoc/>
+    public async Task<Data.Models.Pseudonym?> ReverseLookupTrustedAsync(
+        string namespaceName,
+        string pseudonymValue,
+        CancellationToken cancellationToken
+    ) =>
+        await pseudonymRepository.FindByPseudonymValueAsync(
+            namespaceName,
+            pseudonymValue,
+            cancellationToken
+        );
 
     private static PseudonymPageCursor? DecodeCursor(string? pageToken)
     {
