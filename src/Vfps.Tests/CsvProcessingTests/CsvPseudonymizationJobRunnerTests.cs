@@ -74,14 +74,16 @@ public class CsvPseudonymizationJobRunnerTests
             ColumnMappings = [.. columnMappings],
         };
 
-    private void FakeInputObject(PseudonymizationJob job, string csvContent) =>
+    private void FakeInputObject(PseudonymizationJob job, string csvContent)
+    {
+        var responseStream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent));
+        var response = A.Fake<GetObjectResponse>();
+        A.CallTo(() => response.ResponseStream).Returns(responseStream);
+        A.CallTo(() => response.Dispose()).Invokes(responseStream.Dispose);
+
         A.CallTo(() => s3.GetObjectAsync(Bucket, job.InputObjectKey, A<CancellationToken>._))
-            .Returns(
-                new GetObjectResponse
-                {
-                    ResponseStream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent)),
-                }
-            );
+            .Returns(response);
+    }
 
     private void FakeFindJob(PseudonymizationJob job) =>
         A.CallTo(() => jobRepository.FindAsync(job.Id, A<CancellationToken>._)).Returns(job);
