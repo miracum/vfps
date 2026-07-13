@@ -1,0 +1,13 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="src/Vfps.Benchmarks/Vfps.Benchmarks.csproj" />
+  <Project Path="src/Vfps.IntegrationTests/Vfps.IntegrationTests.csproj" />
+  <Project Path="src/Vfps.PlaywrightTests/Vfps.PlaywrightTests.csproj" />
+  <Project Path="src/Vfps.StressTests/Vfps.StressTests.csproj" />
+  <Project Path="src/Vfps.Tests/Vfps.Tests.csproj" Type="fb0508b1-3e31-4aba-bc1d-c0294175ffc7" />
+  <Project Path="src/Vfps/Vfps.csproj" />
+</Solution>

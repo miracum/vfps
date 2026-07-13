@@ -18,7 +18,7 @@ Supports horizontal service replication for highly-available deployments.
 > unoptimized PostgreSQL deployment.
 
 ```sh
-docker compose -f docker-compose.yaml --profile=test up
+docker compose -f compose.yaml --profile=test up
 ```
 
 Visit <http://localhost:8080/> to view the OpenAPI specification of the Vfps API:
@@ -60,19 +60,46 @@ Available configuration options which can be set as environment variables:
 
 | Variable                                           | Type         | Default             | Description                                                                                                                   |
 | -------------------------------------------------- | ------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `ConnectionStrings__PostgreSQL`                    | `string`     | `""`                | Connection string to the PostgreSQL database. See <https://www.npgsql.org/doc/connection-string-parameters.html> for options. |
+| `ConnectionStrings__PostgreSQL`                    | `string`     | `""`                | Connection string to the PostgreSQL database. See <https://www.npgsql.org/doc/connection-string-parameters.html> for options. Also used, when `Authorization__IsEnabled=true`, to persist the ASP.NET Core Data Protection key ring so auth cookies/antiforgery tokens minted by one replica remain valid on another - see the `efbundle-dataprotection` migrations bundle. |
 | `ForceRunDatabaseMigrations`                       | `bool`       | `false`             | Run database migrations as part of the startup. Only recommended when a single replica of the application is used.            |
 | `Tracing__IsEnabled`                               | `bool`       | `false`             | Enable distributed tracing support.                                                                                           |
-| `Tracing__Exporter`                                | `string`     | `"jaeger"`          | The tracing export format. One of `jaeger`, `otlp`.                                                                           |
 | `Tracing__ServiceName`                             | `string`     | `"vfps"`            | Tracing service name.                                                                                                         |
 | `Tracing__RootSampler`                             | `string`     | `"AlwaysOnSampler"` | Tracing parent root sampler. One of `AlwaysOnSampler`, `AlwaysOffSampler`, `TraceIdRatioBasedSampler`                         |
 | `Tracing__SamplingProbability`                     | `double`     | `0.1`               | Sampling probability to use if `Tracing__RootSampler` is set to `TraceIdRatioBasedSampler`.                                   |
-| `Tracing__Jaeger`                                  | `object`     | `{}`                | Jaeger exporter options.                                                                                                      |
-| `Tracing__Otlp__Endpoint`                          | `string`     | `""`                | The OTLP gRPC Endpoint URL.                                                                                                   |
+| `Tracing__Otlp__Endpoint`                          | `string`     | `""`                | The OTLP gRPC Endpoint URL traces are exported to (e.g. a Jaeger v2 or other OTLP-compatible collector).                      |
 | `Pseudonymization__Caching__Namespaces__IsEnabled` | `bool`       | `false`             | Set to `true` to enable namespace caching.                                                                                    |
 | `Pseudonymization__Caching__Pseudonyms__IsEnabled` | `bool`       | `false`             | Set to `true` to enable pseudonym caching.                                                                                    |
 | `Pseudonymization__Caching__SizeLimit`             | `int`        | `65534`             | Maximum number of entries in the cache. The cache is shared between the pseudonyms and namespaces.                            |
 | `Pseudonymization__Caching__AbsoluteExpiration`    | `D.HH:mm:nn` | `0.01:00:00`        | Time after which a cache entry expires.                                                                                       |
+| `Authorization__IsEnabled`                         | `bool`       | `false`             | Enable OIDC authentication and namespace-scoped authorization for the API and admin UI. **Off by default: with this disabled, the API and admin UI are reachable without authentication and every namespace is fully accessible.** Note for deployments running the bundled migrations as a separate init job: run both `efbundle` and `efbundle-dataprotection` when this is enabled. |
+| `Authorization__Authority`                         | `string`     | `""`                | The OIDC issuer/authority URL (e.g. a Keycloak realm URL).                                                                    |
+| `Authorization__Audience`                          | `string`     | `""`                | Audience validated for bearer-token (gRPC/REST API) callers.                                                                  |
+| `Authorization__ClientId`                          | `string`     | `""`                | Confidential client id used by the admin UI's Authorization Code flow.                                                        |
+| `Authorization__ClientSecret`                      | `string`     | `""`                | Confidential client secret used by the admin UI's Authorization Code flow.                                                    |
+| `Authorization__RoleClaimType`                     | `string`     | `"roles"`           | Which claim on the validated token carries the caller's roles/groups.                                                         |
+| `Authorization__AdminRoles__0`, `__1`, ...          | `string`     | -                   | Roles granting full access: all namespaces, plus namespace create/delete.                                                     |
+| `Authorization__NamespaceRules__0__Namespace`      | `string`     | -                   | Namespace name this rule applies to, or `"*"` for all namespaces.                                                             |
+| `Authorization__NamespaceRules__0__ReadRoles__0`, ... | `string`  | -                   | Roles granting read access (namespace browsing, pseudonym list) to the namespace above.                                       |
+| `Authorization__NamespaceRules__0__WriteRoles__0`, ... | `string` | -                   | Roles granting write access to the namespace above.                                                                           |
+| `Authorization__NamespaceRules__0__ReverseLookupRoles__0`, ... | `string` | -            | Roles granting reverse-lookup access (revealing a pseudonym's original value) to the namespace above - a separate, more tightly-scoped grant than read access. |
+
+`NamespaceRules` as indexed env vars gets unwieldy for more than a couple of namespaces; mounting a JSON file (e.g. via `appsettings.Production.json` or a config provider pointed at a mounted file) for this section is a reasonable alternative for larger rule sets.
+
+| Variable                     | Type     | Default        | Description                                                                                                              |
+| ---------------------------- | -------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `S3__IsEnabled`               | `bool`   | `false`        | Enable CSV pseudonymization jobs (admin UI upload/download + the Hangfire job runner). **Off by default** - also requires `ConnectionStrings__PostgreSQL` (Hangfire reuses the same database for its job storage). |
+| `S3__ServiceUrl`              | `string` | `""`           | S3-compatible endpoint URL, e.g. a local MinIO instance or a real AWS/S3-compatible endpoint.                            |
+| `S3__AccessKey`               | `string` | `""`           | Access key for the bucket above.                                                                                         |
+| `S3__SecretKey`               | `string` | `""`           | Secret key for the bucket above.                                                                                         |
+| `S3__Bucket`                  | `string` | `""`           | Bucket CSV job input/output files are stored in.                                                                          |
+| `S3__Region`                  | `string` | `"us-east-1"`  | Region passed to the S3 client.                                                                                          |
+| `S3__ForcePathStyle`          | `bool`   | `true`         | Path-style addressing (`https://host/bucket/key`) rather than virtual-hosted-style - required for MinIO and most non-AWS S3-compatible stores. |
+| `S3__PresignedUrlExpiry`      | `TimeSpan` | `"0.00:15:00"` | How long presigned upload/download URLs remain valid.                                                                    |
+| `S3__ObjectRetentionDays`     | `int`    | `30`           | Days before an S3 bucket lifecycle rule expires (deletes) a CSV job's input/output objects. Applied on startup, scoped to the `csv-jobs/` prefix. Job records themselves are never deleted, so without this the original, unpseudonymized input would otherwise live in the bucket forever. Set to `0` to leave the bucket's lifecycle configuration untouched. **Overwrites the bucket's entire existing lifecycle configuration** - use a bucket dedicated to vfps. |
+
+CSV job input/output bytes never pass through the vfps process itself: the admin UI uploads directly to a presigned S3 PUT URL and downloads directly from a presigned S3 GET URL, and the Hangfire background job (running in-process, no separate worker deployment) streams the file S3-to-S3. See `compose.yaml`'s `s3` profile for a local MinIO setup usable for manual testing.
+
+Each job runs in one of two directions: **Pseudonymize** (replace original values with their pseudonym - requires write access to every namespace used) or **De-pseudonymize** (replace pseudonym values with their original value - requires reverse-lookup access, since this reveals data). A pseudonym with no match in its namespace during de-pseudonymization is left unchanged in the output rather than failing the job.
 
 ## Observability
 
@@ -132,18 +159,21 @@ will create a pseudonym in the `test` namespace. The expected response looks as 
 
 ### Build & run
 
-Start an empty PostgreSQL database for development (optionally add `-d` to run in the background):
+Start an empty PostgreSQL database, Keycloak, and MinIO for development (optionally add `-d` to run in the background):
 
 ```sh
-docker compose -f docker-compose.yaml up
+docker compose -f compose.yaml --profile=keycloak --profile=s3 up
 ```
 
 To additionally start an instance of [Jaeger Tracing](https://www.jaegertracing.io/), you can specify the `jaeger`
 profile:
 
 ```sh
-docker compose -f docker-compose.yaml --profile=jaeger up
+docker compose -f compose.yaml --profile=jaeger up
 ```
+
+Then set `Tracing__IsEnabled=true` and `Tracing__Otlp__Endpoint=http://localhost:4317` (already the default in
+`appsettings.Development.json`) and view traces at <http://localhost:16686>.
 
 Restore dependencies and run in Debug mode:
 
@@ -200,32 +230,6 @@ rm -rf coverage/
 
 ```sh
 docker build -t ghcr.io/miracum/vfps:latest .
-```
-
-### Run iter8 SLO experiments locally
-
-```sh
-kind create cluster
-
-export IMAGE_TAG="iter8-test"
-
-docker build -t ghcr.io/miracum/vfps:${IMAGE_TAG} .
-
-kind load docker-image ghcr.io/miracum/vfps:${IMAGE_TAG}
-
-helm upgrade --install \
-  --set="image.tag=${IMAGE_TAG}" \
-  -f tests/iter8/values.yaml \
-  --wait \
-  --timeout=15m \
-  --version=^1.0.0 \
-  vfps oci://ghcr.io/miracum/charts/vfps
-
-kubectl apply -f tests/iter8/experiment.yaml
-
-iter8 k assert -c completed --timeout 15m
-iter8 k assert -c nofailure,slos
-iter8 k report
 ```
 
 ## Benchmarks

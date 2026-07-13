@@ -1,7 +1,7 @@
-using EntityFramework.Exceptions.Common;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
-using Microsoft.EntityFrameworkCore;
+using Vfps.AppServices;
+using Vfps.Authorization;
 using Vfps.Data;
 using Vfps.Protos;
 
@@ -9,8 +9,11 @@ namespace Vfps.Services;
 
 /// <inheritdoc/>
 /// <inheritdoc/>
-public class NamespaceService(PseudonymContext context, INamespaceRepository namespaceRepository)
-    : Protos.NamespaceService.NamespaceServiceBase
+public class NamespaceService(
+    PseudonymContext context,
+    INamespaceRepository namespaceRepository,
+    INamespaceAppService namespaceAppService
+) : Protos.NamespaceService.NamespaceServiceBase
 {
     private PseudonymContext Context { get; } = context;
 
@@ -20,16 +23,7 @@ public class NamespaceService(PseudonymContext context, INamespaceRepository nam
         ServerCallContext context
     )
     {
-        var now = DateTimeOffset.UtcNow;
-
-        if (request.PseudonymLength <= 0)
-        {
-            throw new RpcException(
-                new Status(StatusCode.OutOfRange, "Pseudonym length must be larger than 0.")
-            );
-        }
-
-        var @namespace = new Data.Models.Namespace()
+        var namespaceToCreate = new Data.Models.Namespace
         {
             Name = request.Name,
             Description = request.Description,
@@ -37,15 +31,22 @@ public class NamespaceService(PseudonymContext context, INamespaceRepository nam
             PseudonymPrefix = request.PseudonymPrefix,
             PseudonymSuffix = request.PseudonymSuffix,
             PseudonymGenerationMethod = request.PseudonymGenerationMethod,
-            CreatedAt = now,
-            LastUpdatedAt = now,
         };
 
+        Data.Models.Namespace created;
         try
         {
-            await namespaceRepository.CreateAsync(@namespace, context.CancellationToken);
+            created = await namespaceAppService.CreateAsync(
+                namespaceToCreate,
+                context.GetUser(),
+                context.CancellationToken
+            );
         }
-        catch (UniqueConstraintException)
+        catch (ArgumentOutOfRangeException ex)
+        {
+            throw new RpcException(new Status(StatusCode.OutOfRange, ex.Message));
+        }
+        catch (NamespaceAlreadyExistsException)
         {
             var metadata = new Metadata { { "Namespace", request.Name } };
 
@@ -57,24 +58,12 @@ public class NamespaceService(PseudonymContext context, INamespaceRepository nam
                 metadata
             );
         }
-
-        return new NamespaceServiceCreateResponse
+        catch (ForbiddenException ex)
         {
-            Namespace = new Namespace
-            {
-                Name = @namespace.Name,
-                Description = @namespace.Description,
-                PseudonymGenerationMethod = @namespace.PseudonymGenerationMethod,
-                PseudonymLength = @namespace.PseudonymLength,
-                PseudonymPrefix = @namespace.PseudonymPrefix,
-                PseudonymSuffix = @namespace.PseudonymSuffix,
-                Meta = new Meta
-                {
-                    CreatedAt = Timestamp.FromDateTimeOffset(@namespace.CreatedAt),
-                    LastUpdatedAt = Timestamp.FromDateTimeOffset(@namespace.LastUpdatedAt),
-                },
-            },
-        };
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
+        }
+
+        return new NamespaceServiceCreateResponse { Namespace = ToProto(created) };
     }
 
     /// <inheritdoc/>
@@ -100,23 +89,7 @@ public class NamespaceService(PseudonymContext context, INamespaceRepository nam
             );
         }
 
-        return new NamespaceServiceGetResponse
-        {
-            Namespace = new Namespace
-            {
-                Name = @namespace.Name,
-                Description = @namespace.Description,
-                PseudonymGenerationMethod = @namespace.PseudonymGenerationMethod,
-                PseudonymLength = @namespace.PseudonymLength,
-                PseudonymPrefix = @namespace.PseudonymPrefix,
-                PseudonymSuffix = @namespace.PseudonymSuffix,
-                Meta = new Meta
-                {
-                    CreatedAt = Timestamp.FromDateTimeOffset(@namespace.CreatedAt),
-                    LastUpdatedAt = Timestamp.FromDateTimeOffset(@namespace.LastUpdatedAt),
-                },
-            },
-        };
+        return new NamespaceServiceGetResponse { Namespace = ToProto(@namespace) };
     }
 
     /// <inheritdoc/>
@@ -156,29 +129,30 @@ public class NamespaceService(PseudonymContext context, INamespaceRepository nam
         ServerCallContext context
     )
     {
-        var namespaces = await Context
-            .Namespaces.AsNoTracking()
-            // TODO: should really use auto-mapper or some other even a custom Namespace.FromDto() method.
-            .Select(n => new Namespace
-            {
-                Description = n.Description,
-                Name = n.Name,
-                PseudonymGenerationMethod = n.PseudonymGenerationMethod,
-                PseudonymLength = n.PseudonymLength,
-                PseudonymPrefix = n.PseudonymPrefix,
-                PseudonymSuffix = n.PseudonymSuffix,
-                Meta = new Meta
-                {
-                    CreatedAt = Timestamp.FromDateTimeOffset(n.CreatedAt),
-                    LastUpdatedAt = Timestamp.FromDateTimeOffset(n.LastUpdatedAt),
-                },
-            })
-            .ToListAsync(context.CancellationToken);
+        var namespaces = await namespaceAppService.GetAllAsync(
+            context.GetUser(),
+            context.CancellationToken
+        );
 
         var response = new NamespaceServiceGetAllResponse();
-
-        response.Namespaces.AddRange(namespaces);
+        response.Namespaces.AddRange(namespaces.Select(ToProto));
 
         return response;
     }
+
+    private static Namespace ToProto(Data.Models.Namespace @namespace) =>
+        new()
+        {
+            Name = @namespace.Name,
+            Description = @namespace.Description,
+            PseudonymGenerationMethod = @namespace.PseudonymGenerationMethod,
+            PseudonymLength = @namespace.PseudonymLength,
+            PseudonymPrefix = @namespace.PseudonymPrefix,
+            PseudonymSuffix = @namespace.PseudonymSuffix,
+            Meta = new Meta
+            {
+                CreatedAt = Timestamp.FromDateTimeOffset(@namespace.CreatedAt),
+                LastUpdatedAt = Timestamp.FromDateTimeOffset(@namespace.LastUpdatedAt),
+            },
+        };
 }

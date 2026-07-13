@@ -17,7 +17,7 @@ namespace Vfps.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "7.0.0")
+                .HasAnnotation("ProductVersion", "10.0.9")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -59,7 +59,7 @@ namespace Vfps.Migrations
                     b.HasKey("Name")
                         .HasName("pk_namespaces");
 
-                    b.ToTable("namespaces");
+                    b.ToTable("namespaces", (string)null);
                 });
 
             modelBuilder.Entity("Vfps.Data.Models.Pseudonym", b =>
@@ -88,7 +88,97 @@ namespace Vfps.Migrations
                     b.HasKey("NamespaceName", "OriginalValue")
                         .HasName("pk_pseudonyms");
 
-                    b.ToTable("pseudonyms");
+                    b.HasIndex("NamespaceName", "PseudonymValue")
+                        .HasDatabaseName("ix_pseudonyms_namespace_name_pseudonym_value")
+                        .HasAnnotation("Npgsql:CreatedConcurrently", true);
+
+                    b.HasIndex("NamespaceName", "CreatedAt", "OriginalValue")
+                        .HasDatabaseName("ix_pseudonyms_namespace_name_created_at_original_value")
+                        .HasAnnotation("Npgsql:CreatedConcurrently", true);
+
+                    b.ToTable("pseudonyms", (string)null);
+                });
+
+            modelBuilder.Entity("Vfps.Data.Models.PseudonymizationJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<long>("BytesProcessed")
+                        .HasColumnType("bigint")
+                        .HasColumnName("bytes_processed");
+
+                    b.Property<string>("ColumnMappings")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("column_mappings");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Delimiter")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("delimiter");
+
+                    b.Property<int>("Direction")
+                        .HasColumnType("integer")
+                        .HasColumnName("direction");
+
+                    b.Property<string>("Encoding")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("encoding");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasColumnType("text")
+                        .HasColumnName("error_message");
+
+                    b.Property<string>("HangfireJobId")
+                        .HasColumnType("text")
+                        .HasColumnName("hangfire_job_id");
+
+                    b.Property<bool>("HasHeaderRow")
+                        .HasColumnType("boolean")
+                        .HasColumnName("has_header_row");
+
+                    b.Property<string>("InputObjectKey")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("input_object_key");
+
+                    b.Property<DateTimeOffset>("LastUpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_updated_at");
+
+                    b.Property<string>("OutputObjectKey")
+                        .HasColumnType("text")
+                        .HasColumnName("output_object_key");
+
+                    b.Property<long>("RowsProcessed")
+                        .HasColumnType("bigint")
+                        .HasColumnName("rows_processed");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<long>("TotalBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_bytes");
+
+                    b.HasKey("Id")
+                        .HasName("pk_pseudonymization_jobs");
+
+                    b.ToTable("pseudonymization_jobs", (string)null);
                 });
 
             modelBuilder.Entity("Vfps.Data.Models.Pseudonym", b =>

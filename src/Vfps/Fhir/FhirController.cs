@@ -55,7 +55,11 @@ public class FhirController(
         var namespaceName = parametersResource.GetSingleValue<FhirString>("namespace")?.Value;
         var originalValue = parametersResource.GetSingleValue<FhirString>("originalValue")?.Value;
 
-        if (namespaceName is null || originalValue is null)
+        if (
+            namespaceName is null
+            || originalValue is null
+            || string.IsNullOrWhiteSpace(originalValue)
+        )
         {
             var outcome = new OperationOutcome();
             outcome.Issue.Add(
@@ -64,7 +68,7 @@ public class FhirController(
                     Severity = OperationOutcome.IssueSeverity.Error,
                     Code = OperationOutcome.IssueType.Processing,
                     Diagnostics =
-                        "namespace and/or originalValue are missing in the Parameters request object",
+                        "namespace and/or originalValue are missing or blank in the Parameters request object",
                 }
             );
             return BadRequest(outcome);
@@ -85,15 +89,17 @@ public class FhirController(
             return NotFound(outcome);
         }
 
-        var generator = Lookup[@namespace.PseudonymGenerationMethod];
-
         var pseudonymValue = string.Empty;
 
         using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
         {
-            activity?.SetTag("Method", generator.GetType().Name);
+            activity?.SetTag("Method", @namespace.PseudonymGenerationMethod.ToString());
 
-            pseudonymValue = generator.GeneratePseudonym(originalValue, @namespace.PseudonymLength);
+            pseudonymValue = Lookup.Generate(
+                @namespace.PseudonymGenerationMethod,
+                originalValue,
+                @namespace.PseudonymLength
+            );
             pseudonymValue =
                 $"{@namespace.PseudonymPrefix}{pseudonymValue}{@namespace.PseudonymSuffix}";
         }

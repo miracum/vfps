@@ -1,0 +1,45 @@
+@using Microsoft.Extensions.Options
+@using Vfps.Config
+@inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
+
+<Router AppAssembly="typeof(Program).Assembly">
+    <Found Context="routeData">
+        @if (AuthorizationConfigOptions.Value.IsEnabled)
+        {
+            // Gates every UI page behind login when Authorization is enabled - no anonymous
+            // viewing of any page, not just the individual write/reverse-lookup actions already
+            // gated deeper in the app-service layer. Deliberately does this via the AuthorizeView
+            // *component* (a pure rendering-time check) rather than an [Authorize] attribute on
+            // each page: attributes get picked up as endpoint metadata by MapRazorComponents and
+            // enforced unconditionally by ASP.NET Core's own authorization middleware - before
+            // this IsEnabled check even runs - which crashes with "No DefaultChallengeScheme"
+            // whenever IsEnabled=false, since no authentication scheme is registered in that
+            // case. AuthorizeView has no such endpoint-level side effect, so this @if is the only
+            // thing that actually decides whether login is required, matching the "off by
+            // default, fully open" behavior documented in the README.
+            <LayoutView Layout="typeof(MainLayout)">
+                <AuthorizeView>
+                    <Authorized>
+                        <DynamicComponent
+                            Type="routeData.PageType"
+                            Parameters="@(routeData.RouteValues.ToDictionary(kv => kv.Key, kv => kv.Value!))"
+                        />
+                    </Authorized>
+                    <NotAuthorized>
+                        <RedirectToLogin />
+                    </NotAuthorized>
+                </AuthorizeView>
+            </LayoutView>
+        }
+        else
+        {
+            <RouteView RouteData="routeData" DefaultLayout="typeof(MainLayout)" />
+        }
+        <FocusOnNavigate RouteData="routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="typeof(MainLayout)">
+            <p role="alert">Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>

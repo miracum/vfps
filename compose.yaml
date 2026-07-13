@@ -19,8 +19,12 @@ services:
     ports:
       - "127.0.0.1:35432:5432"
 
+  # Jaeger v2 - a single OpenTelemetry Collector distribution that speaks OTLP natively (the
+  # legacy Jaeger agent/Thrift protocol used by v1 is gone), so this is the ingestion endpoint
+  # Tracing:Otlp:Endpoint points at, not a proprietary Jaeger exporter.
+  # https://www.jaegertracing.io/docs/2.19/getting-started/
   jaeger:
-    image: docker.io/jaegertracing/all-in-one:1.76.0@sha256:ab6f1a1f0fb49ea08bcd19f6b84f6081d0d44b364b6de148e1798eb5816bacac
+    image: docker.io/jaegertracing/jaeger:2.19.0@sha256:ede4864215be4cd85bd8c3129a2fea6c5713c5653c7282c429dba123014bc68b
     restart: unless-stopped
     deploy:
       resources:
@@ -37,11 +41,81 @@ services:
     profiles:
       - jaeger
     ports:
-      - "6831:6831/udp"
+      - "127.0.0.1:4317:4317"
       - "127.0.0.1:16686:16686"
 
+  # Local OIDC provider for testing Authorization:IsEnabled=true. Imports tests/keycloak/vfps-realm.json,
+  # which pre-configures the "vfps-web" client and two users: admin/admin (realm role vfps-admin) and
+  # reader/reader (realm role vfps-ns-development-read). Not started by default - requires the
+  # "keycloak" compose profile.
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.0
+    restart: unless-stopped
+    command: start-dev --import-realm
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 1g
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    environment:
+      KEYCLOAK_ADMIN: admin
+      # kics-scan ignore-line
+      KEYCLOAK_ADMIN_PASSWORD: admin
+    volumes:
+      - ./tests/keycloak/vfps-realm.json:/opt/keycloak/data/import/vfps-realm.json:ro
+    profiles:
+      - keycloak
+    ports:
+      - "127.0.0.1:8180:8080"
+
+  # Local S3-compatible object storage for testing S3__IsEnabled=true (CSV pseudonymization
+  # jobs). Not started by default - requires the "s3" compose profile.
+  minio:
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 512m
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    environment:
+      MINIO_ROOT_USER: vfps
+      # kics-scan ignore-line
+      MINIO_ROOT_PASSWORD: vfps-minio-secret
+    profiles:
+      - s3
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+
+  # One-shot sidecar that creates the "vfps-csv-jobs" bucket vfps uploads/downloads CSV job
+  # files to/from, then exits - MinIO itself doesn't auto-create buckets.
+  minio-create-bucket:
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 vfps vfps-minio-secret; do sleep 1; done;
+      mc mb --ignore-existing local/vfps-csv-jobs;
+      "
+    profiles:
+      - s3
+
   vfps:
-    image: ghcr.io/miracum/vfps:${VFPS_IMAGE_TAG:-v1.3.8} # x-release-please-version
+    # image: ghcr.io/miracum/vfps:pr-228 # ghcr.io/miracum/vfps:${VFPS_IMAGE_TAG:-v1.3.7} # x-release-please-version
+    build:
+      context: .
+      dockerfile: Dockerfile
     restart: unless-stopped
     deploy:
       resources:
@@ -67,6 +141,21 @@ services:
       PGUSER: postgres
       # kics-scan ignore-line
       PGPASSWORD: postgres
+      Authorization__Authority: "http://keycloak:8080/realms/vfps"
+      Authorization__ClientId: "vfps-web"
+      # kics-scan ignore-line
+      Authorization__ClientSecret: "vfps-web-secret"
+      Authorization__AdminRoles__0: "vfps-admin"
+      Authorization__NamespaceRules__0__Namespace: "development"
+      Authorization__NamespaceRules__0__ReadRoles__0: "vfps-ns-development-read"
+      # requires externally-reachable minio. host.docker-internal doesnt quite work.
+      #S3__IsEnabled: "true"
+      S3__ServiceUrl: "http://host.docker.internal:9000"
+      S3__AccessKey: "vfps"
+      # kics-scan ignore-line
+      S3__SecretKey: "vfps-minio-secret"
+      S3__Bucket: "vfps-csv-jobs"
+      S3__ForcePathStyle: "true"
     ports:
       # Http1, Http2, Http3
       - "127.0.0.1:8080:8080"

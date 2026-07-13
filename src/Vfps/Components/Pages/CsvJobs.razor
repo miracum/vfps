@@ -1,0 +1,598 @@
+@page "/csv-jobs"
+@rendermode InteractiveServer
+@implements IAsyncDisposable
+@using System.Security.Claims
+@using Microsoft.Extensions.DependencyInjection
+@using Microsoft.Extensions.Options
+@using Vfps.Config
+@using Vfps.Data.Models
+@inject IOptions<S3Config> S3ConfigOptions
+@inject IServiceProvider ServiceProvider
+@inject INamespaceAppService NamespaceAppService
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+<PageTitle>CSV pseudonymization</PageTitle>
+
+@if (!S3ConfigOptions.Value.IsEnabled)
+{
+    <div class="mx-auto max-w-5xl">
+        <BbAlert Variant="AlertVariant.Warning">
+            <BbAlertTitle>CSV pseudonymization is disabled</BbAlertTitle>
+            <BbAlertDescription>
+                Set <code>S3__IsEnabled=true</code> (and the other <code>S3__*</code> settings) to
+                enable this feature - it requires S3-compatible object storage.
+            </BbAlertDescription>
+        </BbAlert>
+    </div>
+}
+else
+{
+    <div class="mx-auto max-w-5xl space-y-6">
+        <div class="flex items-center gap-2">
+            <LucideIcon Name="file-spreadsheet" Size="24" Class="text-primary" />
+            <h1 class="text-2xl font-semibold tracking-tight">CSV pseudonymization</h1>
+        </div>
+
+        @if (S3ConfigOptions.Value.ObjectRetentionDays > 0)
+        {
+            <BbAlert Variant="AlertVariant.Info">
+                <BbAlertDescription>
+                    Uploaded input files and their pseudonymized output are automatically deleted
+                    from object storage @S3ConfigOptions.Value.ObjectRetentionDays day@(S3ConfigOptions.Value.ObjectRetentionDays == 1 ? "" : "s") after upload. Download output you need to keep before then.
+                </BbAlertDescription>
+            </BbAlert>
+        }
+
+        @if (_createError is not null)
+        {
+            <BbAlert Variant="AlertVariant.Danger">
+                <BbAlertTitle>Could not create job</BbAlertTitle>
+                <BbAlertDescription>@_createError</BbAlertDescription>
+            </BbAlert>
+        }
+
+        <BbCard>
+            <BbCardHeader>
+                <BbCardTitle>New job</BbCardTitle>
+                <BbCardDescription>
+                    Bytes go straight from your browser to object storage and back - the file
+                    never passes through this server's request pipeline.
+                </BbCardDescription>
+            </BbCardHeader>
+            <BbCardContent Class="space-y-6">
+                <div class="grid gap-4 sm:grid-cols-3">
+                    <BbField Class="sm:col-span-3">
+                        <BbFieldLabel For="direction">Direction</BbFieldLabel>
+                        <BbFieldContent>
+                            <select
+                                @bind="_direction"
+                                id="direction"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                <option value="@nameof(PseudonymizationJobDirection.Pseudonymize)">
+                                    Pseudonymize - replace original values with pseudonyms
+                                </option>
+                                <option value="@nameof(PseudonymizationJobDirection.Depseudonymize)">
+                                    De-pseudonymize - replace pseudonyms with original values
+                                </option>
+                            </select>
+                        </BbFieldContent>
+                    </BbField>
+                    @if (_direction == nameof(PseudonymizationJobDirection.Depseudonymize))
+                    {
+                        <BbAlert Variant="AlertVariant.Warning" Class="sm:col-span-3">
+                            <BbAlertDescription>
+                                This reveals original values into the output file - requires
+                                reverse-lookup access to every namespace used below, same as the
+                                reverse lookup on a namespace's pseudonym list.
+                            </BbAlertDescription>
+                        </BbAlert>
+                    }
+                    <BbField Class="sm:col-span-3">
+                        <BbFieldLabel For="csvFileInput">CSV file</BbFieldLabel>
+                        <BbFieldContent>
+                            <input
+                                type="file"
+                                id="csvFileInput"
+                                accept=".csv,text/csv"
+                                @onchange="DetectColumnsAsync"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
+                            />
+                        </BbFieldContent>
+                    </BbField>
+
+                    <BbField>
+                        <BbFieldLabel For="encoding">Encoding</BbFieldLabel>
+                        <BbFieldContent>
+                            <BbInput @bind-Value="_encoding" Id="encoding" />
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="delimiter">Delimiter</BbFieldLabel>
+                        <BbFieldContent>
+                            <BbInput
+                                @bind-Value="_delimiter"
+                                @bind-Value:after="DetectColumnsAsync"
+                                Id="delimiter"
+                            />
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="hasHeaderRow">Header row</BbFieldLabel>
+                        <BbFieldContent>
+                            <div class="flex h-10 items-center gap-2">
+                                <BbCheckbox
+                                    Checked="_hasHeaderRow"
+                                    CheckedChanged="OnHasHeaderRowChangedAsync"
+                                    Id="hasHeaderRow"
+                                />
+                                <label for="hasHeaderRow" class="text-sm">File has a header row</label>
+                            </div>
+                        </BbFieldContent>
+                    </BbField>
+                </div>
+
+                <div>
+                    <h3 class="text-sm font-medium">Column mappings</h3>
+                    <p class="mt-1 text-sm text-muted-foreground">
+                        @if (_direction == nameof(PseudonymizationJobDirection.Depseudonymize))
+                        {
+                            <text>
+                                Each row replaces a source column's pseudonym with its original
+                                value in the given namespace - either in place, or into a new
+                                appended column (leave "target column" empty to replace in place).
+                                A pseudonym with no match in that namespace is left unchanged.
+                            </text>
+                        }
+                        else
+                        {
+                            <text>
+                                Each row replaces a source column's value with its pseudonym in
+                                the given namespace - either in place, or into a new appended
+                                column (leave "target column" empty to replace in place).
+                            </text>
+                        }
+                        Pick a CSV file above with "File has a header row" checked to select
+                        source columns by name instead of typing them.
+                    </p>
+
+                    <div class="mt-3 space-y-3">
+                        @foreach (var row in _columnMappings)
+                        {
+                            <div class="flex flex-wrap items-end gap-2 rounded-lg border p-3">
+                                <BbField Class="w-48">
+                                    <BbFieldLabel For="@row.SourceColumnId">
+                                        Source column
+                                    </BbFieldLabel>
+                                    <BbFieldContent>
+                                        @if (_detectedColumns.Count > 0)
+                                        {
+                                            <select
+                                                @bind="row.SourceColumn"
+                                                id="@row.SourceColumnId"
+                                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <option value="">Select a column</option>
+                                                @foreach (var col in _detectedColumns)
+                                                {
+                                                    <option value="@col">@col</option>
+                                                }
+                                            </select>
+                                        }
+                                        else
+                                        {
+                                            <BbInput
+                                                @bind-Value="row.SourceColumn"
+                                                Id="@row.SourceColumnId"
+                                                Placeholder="name or 0-based index"
+                                            />
+                                        }
+                                    </BbFieldContent>
+                                </BbField>
+                                <BbField Class="w-48">
+                                    <BbFieldLabel For="@row.TargetColumnId">
+                                        Target column
+                                    </BbFieldLabel>
+                                    <BbFieldContent>
+                                        <BbInput
+                                            @bind-Value="row.TargetColumn"
+                                            Id="@row.TargetColumnId"
+                                            Placeholder="empty = replace in place"
+                                        />
+                                    </BbFieldContent>
+                                </BbField>
+                                <BbField Class="w-48">
+                                    <BbFieldLabel For="@row.NamespaceId">Namespace</BbFieldLabel>
+                                    <BbFieldContent>
+                                        <select
+                                            @bind="row.Namespace"
+                                            id="@row.NamespaceId"
+                                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            <option value="">Select a namespace</option>
+                                            @foreach (var ns in _namespaces)
+                                            {
+                                                <option value="@ns.Name">@ns.Name</option>
+                                            }
+                                        </select>
+                                    </BbFieldContent>
+                                </BbField>
+                                <BbButton
+                                    Variant="ButtonVariant.Ghost"
+                                    Size="ButtonSize.Icon"
+                                    OnClick="() => RemoveMappingRow(row)"
+                                    Disabled="@(_columnMappings.Count == 1)"
+                                    AriaLabel="Remove mapping"
+                                >
+                                    <LucideIcon Name="x" Size="16" />
+                                </BbButton>
+                            </div>
+                        }
+                    </div>
+
+                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="AddMappingRow" Class="mt-3">
+                        <LucideIcon Name="plus" Size="16" />
+                        Add column mapping
+                    </BbButton>
+                </div>
+
+                <BbButton OnClick="CreateJobAsync" Loading="_isCreating">
+                    Upload and process
+                </BbButton>
+            </BbCardContent>
+        </BbCard>
+
+        <BbCard>
+            <BbCardHeader>
+                <BbCardTitle>Jobs</BbCardTitle>
+            </BbCardHeader>
+            <BbCardContent>
+                <BbDataGrid Items="@_jobs" ShowPagination="false">
+                    <Columns>
+                        <BbDataGridTemplateColumn Title="Id">
+                            <ChildContent Context="j">
+                                <code class="text-xs">@j.Id.ToString()[..8]</code>
+                            </ChildContent>
+                        </BbDataGridTemplateColumn>
+                        <BbDataGridTemplateColumn Title="Direction">
+                            <ChildContent Context="j">
+                                @(j.Direction == PseudonymizationJobDirection.Depseudonymize
+                                    ? "De-pseudonymize"
+                                    : "Pseudonymize")
+                            </ChildContent>
+                        </BbDataGridTemplateColumn>
+                        <BbDataGridTemplateColumn Title="Status">
+                            <ChildContent Context="j">
+                                <BbBadge Variant="@BadgeVariantFor(j.Status)" Class="@BadgeClassFor(j.Status)">
+                                    @j.Status
+                                </BbBadge>
+                            </ChildContent>
+                        </BbDataGridTemplateColumn>
+                        <BbDataGridTemplateColumn Title="Progress">
+                            <ChildContent Context="j">
+                                @if (j.TotalBytes > 0)
+                                {
+                                    <div class="flex items-center gap-2">
+                                        <BbProgress Value="@(100.0 * j.BytesProcessed / j.TotalBytes)" Class="w-24" />
+                                        <span class="text-xs text-muted-foreground">@j.RowsProcessed rows</span>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <span class="text-xs text-muted-foreground">@j.RowsProcessed rows</span>
+                                }
+                            </ChildContent>
+                        </BbDataGridTemplateColumn>
+                        <BbDataGridPropertyColumn
+                            Property="@(j => j.CreatedAt)"
+                            Title="Created at"
+                            Format="yyyy-MM-dd HH:mm:ss"
+                        />
+                        <BbDataGridTemplateColumn Title="Error">
+                            <ChildContent Context="j">
+                                @if (j.Status == PseudonymizationJobStatus.Failed && j.ErrorMessage is not null)
+                                {
+                                    <div
+                                        class="flex max-w-xs items-start gap-1.5 text-xs text-destructive"
+                                        title="@j.ErrorMessage"
+                                    >
+                                        <LucideIcon
+                                            Name="triangle-alert"
+                                            Size="14"
+                                            Class="mt-0.5 shrink-0"
+                                        />
+                                        <span class="truncate">@j.ErrorMessage</span>
+                                    </div>
+                                }
+                            </ChildContent>
+                        </BbDataGridTemplateColumn>
+                        <BbDataGridTemplateColumn Title="Actions">
+                            <ChildContent Context="j">
+                                <div class="flex items-center gap-2">
+                                    @if (j.Status == PseudonymizationJobStatus.Completed)
+                                    {
+                                        <BbButton
+                                            Variant="ButtonVariant.Outline"
+                                            Size="ButtonSize.Small"
+                                            OnClick="() => DownloadAsync(j.Id)"
+                                        >
+                                            Download
+                                        </BbButton>
+                                    }
+                                    @if (
+                                        j.Status is PseudonymizationJobStatus.AwaitingUpload
+                                            or PseudonymizationJobStatus.Queued
+                                            or PseudonymizationJobStatus.Running
+                                    )
+                                    {
+                                        <BbButton
+                                            Variant="ButtonVariant.Outline"
+                                            Size="ButtonSize.Small"
+                                            OnClick="() => CancelJobAsync(j.Id)"
+                                        >
+                                            Cancel
+                                        </BbButton>
+                                    }
+                                </div>
+                            </ChildContent>
+                        </BbDataGridTemplateColumn>
+                    </Columns>
+                </BbDataGrid>
+            </BbCardContent>
+        </BbCard>
+    </div>
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private IPseudonymizationJobAppService? _jobAppService;
+    private IReadOnlyList<Namespace> _namespaces = [];
+    private readonly List<ColumnMappingRow> _columnMappings = [new()];
+    private string _direction = nameof(PseudonymizationJobDirection.Pseudonymize);
+    private string _encoding = "utf-8";
+    private string _delimiter = ",";
+    private bool _hasHeaderRow = true;
+    private IReadOnlyList<string> _detectedColumns = [];
+    private bool _isCreating;
+    private string? _createError;
+    private IReadOnlyList<PseudonymizationJob> _jobs = [];
+
+    private CancellationTokenSource? _pollCts;
+    private Task? _pollTask;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!S3ConfigOptions.Value.IsEnabled)
+        {
+            return;
+        }
+
+        _jobAppService = ServiceProvider.GetRequiredService<IPseudonymizationJobAppService>();
+
+        var user = await GetUserAsync();
+        _namespaces = await NamespaceAppService.GetAllAsync(user, CancellationToken.None);
+
+        await ReloadJobsAsync();
+
+        _pollCts = new CancellationTokenSource();
+        _pollTask = PollLoopAsync(_pollCts.Token);
+    }
+
+    private async Task PollLoopAsync(CancellationToken cancellationToken)
+    {
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
+        try
+        {
+            while (await timer.WaitForNextTickAsync(cancellationToken))
+            {
+                await ReloadJobsAsync();
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // expected on dispose
+        }
+    }
+
+    private async Task<ClaimsPrincipal> GetUserAsync() =>
+        AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
+
+    private async Task ReloadJobsAsync()
+    {
+        if (_jobAppService is null)
+        {
+            return;
+        }
+
+        var user = await GetUserAsync();
+        _jobs = await _jobAppService.ListAsync(user, CancellationToken.None);
+    }
+
+    private static BadgeVariant BadgeVariantFor(PseudonymizationJobStatus status) =>
+        status switch
+        {
+            PseudonymizationJobStatus.Failed => BadgeVariant.Destructive,
+            PseudonymizationJobStatus.Cancelled => BadgeVariant.Outline,
+            PseudonymizationJobStatus.Completed => BadgeVariant.Default,
+            _ => BadgeVariant.Secondary,
+        };
+
+    private static string? BadgeClassFor(PseudonymizationJobStatus status) =>
+        status == PseudonymizationJobStatus.Completed
+            ? "border-transparent bg-green-600 text-white hover:bg-green-700"
+            : null;
+
+    private async Task OnHasHeaderRowChangedAsync(bool value)
+    {
+        _hasHeaderRow = value;
+        await DetectColumnsAsync();
+    }
+
+    private async Task DetectColumnsAsync()
+    {
+        if (!_hasHeaderRow)
+        {
+            _detectedColumns = [];
+            return;
+        }
+
+        try
+        {
+            _detectedColumns = await JS.InvokeAsync<string[]>(
+                "vfpsCsvUpload.readHeaderRow",
+                "csvFileInput",
+                _delimiter
+            );
+        }
+        catch (Microsoft.JSInterop.JSException)
+        {
+            _detectedColumns = [];
+        }
+    }
+
+    private void AddMappingRow() => _columnMappings.Add(new ColumnMappingRow());
+
+    private void RemoveMappingRow(ColumnMappingRow row) => _columnMappings.Remove(row);
+
+    private async Task CreateJobAsync()
+    {
+        if (_jobAppService is null)
+        {
+            return;
+        }
+
+        // Guards against re-entrant invocation - see the identical comment on
+        // Namespaces.razor's CreateNamespaceAsync for why this matters under Blazor Server.
+        if (_isCreating)
+        {
+            return;
+        }
+
+        _isCreating = true;
+        _createError = null;
+        try
+        {
+            var mappings = _columnMappings
+                .Where(m =>
+                    !string.IsNullOrWhiteSpace(m.SourceColumn)
+                    && !string.IsNullOrWhiteSpace(m.Namespace)
+                )
+                .Select(m => new ColumnMapping
+                {
+                    SourceColumn = m.SourceColumn,
+                    TargetColumn = string.IsNullOrWhiteSpace(m.TargetColumn)
+                        ? null
+                        : m.TargetColumn,
+                    Namespace = m.Namespace,
+                })
+                .ToList();
+
+            if (mappings.Count == 0)
+            {
+                _createError =
+                    "At least one column mapping with a source column and namespace is required.";
+                return;
+            }
+
+            var user = await GetUserAsync();
+            var request = new CreateCsvJobRequest(
+                _encoding,
+                _delimiter,
+                _hasHeaderRow,
+                mappings,
+                Enum.Parse<PseudonymizationJobDirection>(_direction)
+            );
+            var (job, uploadUrl) = await _jobAppService.CreateJobAsync(
+                request,
+                user,
+                CancellationToken.None
+            );
+
+            await JS.InvokeVoidAsync("vfpsCsvUpload.uploadFile", "csvFileInput", uploadUrl);
+            await _jobAppService.MarkUploadCompleteAsync(job.Id, user, CancellationToken.None);
+
+            _columnMappings.Clear();
+            _columnMappings.Add(new ColumnMappingRow());
+            _detectedColumns = [];
+            await ReloadJobsAsync();
+        }
+        catch (ForbiddenException ex)
+        {
+            _createError = ex.Message;
+        }
+        catch (InvalidOperationException ex)
+        {
+            _createError = ex.Message;
+        }
+        catch (Microsoft.JSInterop.JSException ex)
+        {
+            _createError = $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            _isCreating = false;
+        }
+    }
+
+    private async Task CancelJobAsync(Guid jobId)
+    {
+        if (_jobAppService is null)
+        {
+            return;
+        }
+
+        var user = await GetUserAsync();
+        await _jobAppService.CancelAsync(jobId, user, CancellationToken.None);
+        await ReloadJobsAsync();
+    }
+
+    private async Task DownloadAsync(Guid jobId)
+    {
+        if (_jobAppService is null)
+        {
+            return;
+        }
+
+        var user = await GetUserAsync();
+        var url = await _jobAppService.GetDownloadUrlAsync(jobId, user, CancellationToken.None);
+        await JS.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _pollCts?.Cancel();
+        if (_pollTask is not null)
+        {
+            try
+            {
+                await _pollTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // expected
+            }
+        }
+
+        _pollCts?.Dispose();
+    }
+
+    private sealed class ColumnMappingRow
+    {
+        // A stable per-row id, distinct from list position - looping with a mutable index
+        // variable and using it inside nested components' Id parameters isn't safe here, since
+        // those parameters are captured by reference in the surrounding ChildContent closures.
+        private readonly string _id = Guid.NewGuid().ToString("N");
+
+        public string SourceColumnId => $"sourceColumn-{_id}";
+        public string TargetColumnId => $"targetColumn-{_id}";
+        public string NamespaceId => $"namespace-{_id}";
+
+        public string SourceColumn { get; set; } = string.Empty;
+        public string? TargetColumn { get; set; }
+        public string Namespace { get; set; } = string.Empty;
+    }
+}

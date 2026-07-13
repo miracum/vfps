@@ -15,7 +15,8 @@ DISABLE_LINTERS:
   - JSON_V8R
   - YAML_V8R
   - CSHARP_DOTNET_FORMAT
-  # disabled in favor of trivy for now; also doesn't support nuget
+  - JAVASCRIPT_STANDARD
+  # disabled in favor of trivy for now; also doesn't support NuGet
   - REPOSITORY_OSV_SCANNER
 
 SHOW_ELAPSED_TIME: true

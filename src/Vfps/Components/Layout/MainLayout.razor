@@ -1,0 +1,128 @@
+@inherits LayoutComponentBase
+@using Microsoft.Extensions.Options
+@using Vfps.Config
+@inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
+@inject IOptions<S3Config> S3ConfigOptions
+@inject NavigationManager NavigationManager
+
+<BbResponsiveNavProvider>
+    <header class="flex h-16 shrink-0 items-center gap-4 border-b bg-background px-4 md:px-6">
+        <a href="/ui" class="flex shrink-0 items-center gap-2 font-semibold">
+            <LucideIcon Name="shield-check" Size="22" Class="text-primary" />
+            <span>Vfps</span>
+        </a>
+
+        <BbResponsiveNavItems Items="@_navItems" />
+
+        <div class="ml-auto flex items-center gap-3">
+            <button
+                type="button"
+                onclick="vfpsToggleDarkMode()"
+                aria-label="Toggle dark mode"
+                class="inline-flex h-10 w-10 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+            >
+                <LucideIcon Name="moon" Size="18" Class="dark:hidden" />
+                <LucideIcon Name="sun" Size="18" Class="hidden dark:block" />
+            </button>
+
+            @if (AuthorizationConfigOptions.Value.IsEnabled)
+            {
+                <AuthorizeView>
+                    <Authorized>
+                        <div class="flex items-center gap-2">
+                            <span title="@BuildUserTooltip(context.User)">
+                                <BbAvatar Size="AvatarSize.Small">
+                                    <BbAvatarFallback>@Initials(context.User.Identity?.Name)</BbAvatarFallback>
+                                </BbAvatar>
+                            </span>
+                            <span class="hidden text-sm text-muted-foreground sm:inline">
+                                @context.User.Identity?.Name
+                            </span>
+                            <form
+                                action="/ui/authentication/logout"
+                                method="post"
+                                @formname="logout"
+                            >
+                                <AntiforgeryToken />
+                                <BbButton
+                                    Type="ButtonType.Submit"
+                                    Variant="ButtonVariant.Ghost"
+                                    Size="ButtonSize.Small"
+                                >
+                                    Sign out
+                                </BbButton>
+                            </form>
+                        </div>
+                    </Authorized>
+                    <NotAuthorized>
+                        <BbButton
+                            Variant="ButtonVariant.Outline"
+                            Size="ButtonSize.Small"
+                            Href="@LoginUrl"
+                        >
+                            Sign in
+                        </BbButton>
+                    </NotAuthorized>
+                </AuthorizeView>
+            }
+        </div>
+
+        <BbResponsiveNavTrigger />
+    </header>
+
+    <main class="flex-1 overflow-auto p-6 md:p-8">
+        @Body
+    </main>
+</BbResponsiveNavProvider>
+
+<BbToastProvider Position="ToastPosition.BottomRight" />
+<BbDialogProvider />
+<BbPortalHost />
+
+@code {
+    private IReadOnlyList<NavItemDefinition> _navItems = [];
+
+    protected override void OnInitialized()
+    {
+        var items = new List<NavItemDefinition>
+        {
+            new() { Text = "Namespaces", Href = "/ui/namespaces" },
+        };
+
+        if (S3ConfigOptions.Value.IsEnabled)
+        {
+            items.Add(new NavItemDefinition { Text = "CSV Processing", Href = "/ui/csv-jobs" });
+        }
+
+        _navItems = items;
+    }
+
+    private string LoginUrl => NavigationManager.BuildLoginUrl();
+
+    private string BuildUserTooltip(ClaimsPrincipal user)
+    {
+        var name = user.Identity?.Name ?? "unknown";
+        var roles = user.FindAll(AuthorizationConfigOptions.Value.RoleClaimType)
+            .Select(c => c.Value)
+            .ToList();
+        var rolesText = roles.Count > 0 ? string.Join(", ", roles) : "none";
+
+        return $"{name}\nRoles: {rolesText}";
+    }
+
+    private static string Initials(string? name)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            return "?";
+        }
+
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length switch
+        {
+            0 => "?",
+            1 => parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant(),
+            _ => $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant(),
+        };
+    }
+}

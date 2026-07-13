@@ -1,7 +1,3 @@
-# iter8 requires access to secrets
-AVD-KSV-0041
-KSV041
-
 # OK, already covered by hadolint
 AVD-DS-0002
 
@@ -10,3 +6,6 @@ CVE-2023-4911
 
 # false positive, also covered by hadolint
 AVD-DS-0017
+
+# only dev
+CVE-2025-6965

@@ -1,0 +1,267 @@
+@page "/namespaces"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Vfps.Data.Models
+@using Vfps.PseudonymGenerators
+@inject INamespaceAppService NamespaceAppService
+@inject NavigationManager NavigationManager
+@inject PseudonymizationMethodsLookup MethodsLookup
+
+<PageTitle>Namespaces</PageTitle>
+
+<div class="mx-auto max-w-5xl space-y-6">
+    <div class="flex items-center gap-2">
+        <LucideIcon Name="database" Size="24" Class="text-primary" />
+        <h1 class="text-2xl font-semibold tracking-tight">Namespaces</h1>
+    </div>
+
+    @if (_errorMessage is not null)
+    {
+        <BbAlert Variant="AlertVariant.Danger">
+            <BbAlertTitle>Could not create namespace</BbAlertTitle>
+            <BbAlertDescription>@_errorMessage</BbAlertDescription>
+        </BbAlert>
+    }
+
+    <BbCard>
+        <BbCardHeader>
+            <BbCardTitle>Create namespace</BbCardTitle>
+            <BbCardDescription>
+                Namespaces are immutable once created - delete and re-create instead of editing.
+            </BbCardDescription>
+        </BbCardHeader>
+        <BbCardContent>
+            <EditForm
+                Model="_newNamespace"
+                FormName="create-namespace"
+                OnValidSubmit="CreateNamespaceAsync"
+            >
+                <DataAnnotationsValidator />
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <BbField>
+                        <BbFieldLabel For="name">Name</BbFieldLabel>
+                        <BbFieldContent>
+                            <BbInput @bind-Value="_newNamespace.Name" Id="name" Required="true" />
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="description">Description</BbFieldLabel>
+                        <BbFieldContent>
+                            <BbInput @bind-Value="_newNamespace.Description" Id="description" />
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="method">Pseudonym generation method</BbFieldLabel>
+                        <BbFieldContent>
+                            <select
+                                @bind="_selectedMethod"
+                                @bind:after="OnMethodChanged"
+                                id="method"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                @foreach (var method in SelectablePseudonymGenerationMethods)
+                                {
+                                    <option value="@method">@FriendlyMethodName(method)</option>
+                                }
+                            </select>
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="length">Pseudonym length</BbFieldLabel>
+                        <BbFieldContent>
+                            <BbNumericInput
+                                @bind-Value="_newNamespace.PseudonymLength"
+                                Id="length"
+                                Min="1"
+                                TValue="uint"
+                                Disabled="@FixedPseudonymLength.HasValue"
+                            />
+                            @if (FixedPseudonymLength is not null)
+                            {
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    Fixed at @FixedPseudonymLength for this generation method.
+                                </p>
+                            }
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="prefix">Prefix</BbFieldLabel>
+                        <BbFieldContent>
+                            <BbInput @bind-Value="_newNamespace.PseudonymPrefix" Id="prefix" />
+                        </BbFieldContent>
+                    </BbField>
+                    <BbField>
+                        <BbFieldLabel For="suffix">Suffix</BbFieldLabel>
+                        <BbFieldContent>
+                            <BbInput @bind-Value="_newNamespace.PseudonymSuffix" Id="suffix" />
+                        </BbFieldContent>
+                    </BbField>
+                </div>
+                <BbButton Type="ButtonType.Submit" Loading="_isCreating" Class="mt-4">
+                    Create
+                </BbButton>
+            </EditForm>
+        </BbCardContent>
+    </BbCard>
+
+    <BbCard>
+        <BbCardHeader>
+            <BbCardTitle>All namespaces</BbCardTitle>
+        </BbCardHeader>
+        <BbCardContent>
+            <BbDataGrid Items="@_namespaces" ShowPagination="false">
+                <Columns>
+                    <BbDataGridPropertyColumn Property="@(n => n.Name)" Title="Name" />
+                    <BbDataGridPropertyColumn Property="@(n => n.Description)" Title="Description" />
+                    <BbDataGridPropertyColumn
+                        Property="@(n => n.PseudonymGenerationMethod)"
+                        Title="Generation method"
+                    />
+                    <BbDataGridPropertyColumn Property="@(n => n.PseudonymLength)" Title="Length" />
+                    <BbDataGridPropertyColumn Property="@(n => n.PseudonymPrefix)" Title="Prefix" />
+                    <BbDataGridPropertyColumn Property="@(n => n.PseudonymSuffix)" Title="Suffix" />
+                    <BbDataGridTemplateColumn Title="Pseudonyms">
+                        <ChildContent Context="n">
+                            <BbButton
+                                Variant="ButtonVariant.Outline"
+                                Size="ButtonSize.Small"
+                                Href="@($"/ui/namespaces/{Uri.EscapeDataString(n.Name)}/pseudonyms")"
+                            >
+                                Browse
+                            </BbButton>
+                        </ChildContent>
+                    </BbDataGridTemplateColumn>
+                </Columns>
+            </BbDataGrid>
+        </BbCardContent>
+    </BbCard>
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private IReadOnlyList<Namespace> _namespaces = [];
+    private NewNamespaceModel _newNamespace = new();
+    private string _selectedMethod = Vfps
+        .Protos
+        .PseudonymGenerationMethod
+        .SecureRandomBase64UrlEncoded.ToString();
+    private string? _errorMessage;
+    private bool _isCreating;
+
+    // Null for a freely-configurable method - non-null (e.g. Uuid4's 36) means the length field
+    // is locked to this value, since the generator itself has no length concept to configure.
+    private uint? FixedPseudonymLength =>
+        MethodsLookup.GetFixedPseudonymLength(
+            Enum.Parse<Vfps.Protos.PseudonymGenerationMethod>(_selectedMethod)
+        );
+
+    // Derived from the enum itself, rather than a hand-maintained list, so a newly-added
+    // PseudonymGenerationMethod can't be forgotten here the way UUIDv7 previously was.
+    private static readonly IReadOnlyList<Vfps.Protos.PseudonymGenerationMethod> SelectablePseudonymGenerationMethods =
+        Enum.GetValues<Vfps.Protos.PseudonymGenerationMethod>()
+            .Where(method => method != Vfps.Protos.PseudonymGenerationMethod.Unspecified)
+            .ToArray();
+
+    private static string FriendlyMethodName(Vfps.Protos.PseudonymGenerationMethod method) =>
+        method switch
+        {
+            Vfps.Protos.PseudonymGenerationMethod.SecureRandomBase64UrlEncoded =>
+                "Secure random (base64url)",
+            Vfps.Protos.PseudonymGenerationMethod.Sha256HexEncoded => "SHA-256 (hex)",
+            Vfps.Protos.PseudonymGenerationMethod.Uuid4 => "UUIDv4",
+            Vfps.Protos.PseudonymGenerationMethod.Uuid7 => "UUIDv7",
+            Vfps.Protos.PseudonymGenerationMethod.FullRandomHexEncoded => "Full random (hex)",
+            Vfps.Protos.PseudonymGenerationMethod.FullRandomBase62Encoded => "Full random (Base62)",
+            _ => method.ToString(),
+        };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ReloadAsync();
+    }
+
+    private void OnMethodChanged()
+    {
+        if (FixedPseudonymLength is { } fixedLength)
+        {
+            _newNamespace.PseudonymLength = fixedLength;
+        }
+    }
+
+    private async Task<ClaimsPrincipal> GetUserAsync() =>
+        AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
+
+    private async Task ReloadAsync()
+    {
+        var user = await GetUserAsync();
+        _namespaces = await NamespaceAppService.GetAllAsync(user, CancellationToken.None);
+    }
+
+    private async Task CreateNamespaceAsync()
+    {
+        // Guards against re-entrant invocation: Blazor Server dispatches each click as a
+        // separate event, and if a second click arrives before this method's first `await`
+        // suspends and the resulting "disabled" render reaches the client, both invocations
+        // would run concurrently against the same circuit-scoped DbContext, which isn't
+        // thread-safe (surfaces as an EF "already being tracked" exception for a shared name).
+        if (_isCreating)
+        {
+            return;
+        }
+
+        _isCreating = true;
+        _errorMessage = null;
+        try
+        {
+            var user = await GetUserAsync();
+            await NamespaceAppService.CreateAsync(
+                new Namespace
+                {
+                    Name = _newNamespace.Name,
+                    Description = _newNamespace.Description,
+                    PseudonymGenerationMethod = Enum.Parse<Vfps.Protos.PseudonymGenerationMethod>(
+                        _selectedMethod
+                    ),
+                    PseudonymLength = _newNamespace.PseudonymLength,
+                    PseudonymPrefix = _newNamespace.PseudonymPrefix,
+                    PseudonymSuffix = _newNamespace.PseudonymSuffix,
+                },
+                user,
+                CancellationToken.None
+            );
+
+            _newNamespace = new NewNamespaceModel();
+            await ReloadAsync();
+        }
+        catch (NamespaceAlreadyExistsException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch (ForbiddenException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        finally
+        {
+            _isCreating = false;
+        }
+    }
+
+    private sealed class NewNamespaceModel
+    {
+        [Required]
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+
+        [Range(1, int.MaxValue)]
+        public uint PseudonymLength { get; set; } = 16;
+        public string? PseudonymPrefix { get; set; }
+        public string? PseudonymSuffix { get; set; }
+    }
+}

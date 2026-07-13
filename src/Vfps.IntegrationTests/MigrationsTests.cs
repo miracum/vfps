@@ -20,7 +20,9 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
     {
         this.output = output;
 
-        postgresqlContainer = new PostgreSqlBuilder()
+        postgresqlContainer = new PostgreSqlBuilder(
+            "docker.io/library/postgres:18.4@sha256:22c89fe0d0f507606260237fd55e51f6137f58b2d5bcf6152242b96d9fe8f9a4"
+        )
             .WithDatabase("vfps")
             .WithUsername("postgres")
             .WithPassword("postgres")
@@ -36,8 +38,7 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
         var migrationsImageTag = Environment.GetEnvironmentVariable("VFPS_IMAGE_TAG") ?? "latest";
         this.migrationsImage = $"ghcr.io/miracum/vfps:{migrationsImageTag}";
 
-        migrationsContainerBuilder = new ContainerBuilder()
-            .WithImage(migrationsImage)
+        migrationsContainerBuilder = new ContainerBuilder(migrationsImage)
             .WithName("migrations")
             .WithNetwork(networkFixture.Network.Name)
             .WithEntrypoint("/opt/vfps/efbundle")

@@ -1,38 +1,32 @@
-using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
-using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.EntityFrameworkCore;
-using Vfps.Data;
+using Vfps.AppServices;
+using Vfps.Authorization;
 using Vfps.Protos;
-using Vfps.PseudonymGenerators;
 
 namespace Vfps.Services;
 
 /// <inheritdoc/>
-/// <inheritdoc/>
-public class PseudonymService(
-    PseudonymContext context,
-    PseudonymizationMethodsLookup lookup,
-    INamespaceRepository namespaceRepository,
-    IPseudonymRepository pseudonymRepository
-) : Protos.PseudonymService.PseudonymServiceBase
+public class PseudonymService(IPseudonymAppService pseudonymAppService)
+    : Protos.PseudonymService.PseudonymServiceBase
 {
-    private PseudonymContext Context { get; } = context;
-
     /// <inheritdoc/>
     public override async Task<PseudonymServiceCreateResponse> Create(
         PseudonymServiceCreateRequest request,
         ServerCallContext context
     )
     {
-        var now = DateTimeOffset.UtcNow;
-
-        var @namespace = await namespaceRepository.FindAsync(
-            request.Namespace,
-            context.CancellationToken
-        );
-        if (@namespace is null)
+        Data.Models.Pseudonym upsertedPseudonym;
+        try
+        {
+            upsertedPseudonym = await pseudonymAppService.CreateAsync(
+                request.Namespace,
+                request.OriginalValue,
+                context.GetUser(),
+                context.CancellationToken
+            );
+        }
+        catch (NamespaceNotFoundException)
         {
             var metadata = new Metadata { { "Namespace", request.Namespace } };
 
@@ -44,46 +38,19 @@ public class PseudonymService(
                 metadata
             );
         }
-
-        var generator = lookup[@namespace.PseudonymGenerationMethod];
-        var pseudonymValue = string.Empty;
-
-        using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
+        catch (ForbiddenException ex)
         {
-            activity?.SetTag("Method", generator.GetType().Name);
-
-            pseudonymValue = generator.GeneratePseudonym(
-                request.OriginalValue,
-                @namespace.PseudonymLength
-            );
-            pseudonymValue =
-                @namespace.PseudonymPrefix + pseudonymValue + @namespace.PseudonymSuffix;
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
         }
-
-        var pseudonym = new Data.Models.Pseudonym()
+        catch (ArgumentException ex)
         {
-            CreatedAt = now,
-            LastUpdatedAt = now,
-            NamespaceName = @namespace.Name,
-            OriginalValue = request.OriginalValue,
-            PseudonymValue = pseudonymValue,
-        };
-
-        Data.Models.Pseudonym? upsertedPseudonym = await pseudonymRepository.CreateIfNotExist(
-            pseudonym
-        );
-
-        if (upsertedPseudonym is null)
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
+        catch (PseudonymUpsertFailedException ex)
         {
             var metadata = new Metadata { { "Namespace", request.Namespace } };
 
-            throw new RpcException(
-                new Status(
-                    StatusCode.Internal,
-                    "Failed to upsert the pseudonym after several retries."
-                ),
-                metadata
-            );
+            throw new RpcException(new Status(StatusCode.Internal, ex.Message), metadata);
         }
 
         return new PseudonymServiceCreateResponse
@@ -108,11 +75,21 @@ public class PseudonymService(
         ServerCallContext context
     )
     {
-        var pseudonym = await Context
-            .Pseudonyms.Where(p =>
-                p.NamespaceName == request.Namespace && p.PseudonymValue == request.PseudonymValue
-            )
-            .FirstOrDefaultAsync();
+        Data.Models.Pseudonym? pseudonym;
+        try
+        {
+            pseudonym = await pseudonymAppService.ReverseLookupAsync(
+                request.Namespace,
+                request.PseudonymValue,
+                context.GetUser(),
+                context.CancellationToken
+            );
+        }
+        catch (ForbiddenException ex)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
+        }
+
         if (pseudonym is null)
         {
             var metadata = new Metadata
@@ -152,7 +129,19 @@ public class PseudonymService(
         ServerCallContext context
     )
     {
-        if (!Context.Namespaces.Where(n => n.Name == request.Namespace).Any())
+        PseudonymPageDto page;
+        try
+        {
+            page = await pseudonymAppService.ListAsync(
+                request.Namespace,
+                request.PageSize,
+                request.PageToken,
+                request.IncludeTotalSize,
+                context.GetUser(),
+                context.CancellationToken
+            );
+        }
+        catch (NamespaceNotFoundException)
         {
             var metadata = new Metadata { { "Namespace", request.Namespace } };
 
@@ -164,64 +153,35 @@ public class PseudonymService(
                 metadata
             );
         }
-
-        var requestPaginationToken = new PseudonymListPaginationToken();
-        if (!string.IsNullOrEmpty(request.PageToken))
+        catch (ForbiddenException ex)
         {
-            var decoded = WebEncoders.Base64UrlDecode(request.PageToken);
-            requestPaginationToken.MergeFrom(decoded);
-        }
-
-        var createdOnOrBefore =
-            requestPaginationToken.PseudonymsCreatedOnOrBefore?.ToDateTimeOffset()
-            ?? DateTimeOffset.UtcNow;
-        var pageSize = request.PageSize <= 0 ? 25 : request.PageSize;
-        var offset = requestPaginationToken.Offset;
-
-        var pseudonyms = await Context
-            .Pseudonyms.Where(pseudonym => pseudonym.NamespaceName == request.Namespace)
-            .Where(pseudonym => pseudonym.CreatedAt <= createdOnOrBefore)
-            .OrderByDescending(pseudonym => pseudonym.CreatedAt)
-            .Skip(offset)
-            .Take(pageSize)
-            .Select(pseudonym => new Pseudonym
-            {
-                Namespace = pseudonym.NamespaceName,
-                OriginalValue = pseudonym.OriginalValue,
-                PseudonymValue = pseudonym.PseudonymValue,
-                Meta = new Meta
-                {
-                    CreatedAt = Timestamp.FromDateTimeOffset(pseudonym.CreatedAt),
-                    LastUpdatedAt = Timestamp.FromDateTimeOffset(pseudonym.LastUpdatedAt),
-                },
-            })
-            .ToListAsync();
-
-        var paginationToken = new PseudonymListPaginationToken
-        {
-            Offset = offset + pageSize,
-            PseudonymsCreatedOnOrBefore = Timestamp.FromDateTimeOffset(createdOnOrBefore),
-        };
-        var opaqueToken = WebEncoders.Base64UrlEncode(paginationToken.ToByteArray());
-
-        if (pseudonyms.Count < pageSize)
-        {
-            opaqueToken = string.Empty;
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
         }
 
         var response = new PseudonymServiceListResponse
         {
             Namespace = request.Namespace,
-            NextPageToken = opaqueToken,
+            NextPageToken = page.NextPageToken ?? string.Empty,
         };
 
-        response.Pseudonyms.AddRange(pseudonyms);
+        // OriginalValue is intentionally never set here - List never exposes it, by design.
+        // See PseudonymAppService.ListAsync / PseudonymSummaryDto.
+        response.Pseudonyms.AddRange(
+            page.Items.Select(p => new Pseudonym
+            {
+                Namespace = p.NamespaceName,
+                PseudonymValue = p.PseudonymValue,
+                Meta = new Meta
+                {
+                    CreatedAt = Timestamp.FromDateTimeOffset(p.CreatedAt),
+                    LastUpdatedAt = Timestamp.FromDateTimeOffset(p.LastUpdatedAt),
+                },
+            })
+        );
 
-        if (request.IncludeTotalSize)
+        if (page.TotalSize.HasValue)
         {
-            response.TotalSize = await Context
-                .Pseudonyms.Where(n => n.NamespaceName == request.Namespace)
-                .LongCountAsync();
+            response.TotalSize = page.TotalSize.Value;
         }
 
         return response;

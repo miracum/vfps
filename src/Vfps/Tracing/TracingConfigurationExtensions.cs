@@ -1,6 +1,5 @@
 using System.Reflection;
 using Npgsql;
-using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
 using OpenTelemetry.Trace;
@@ -13,9 +12,6 @@ namespace Vfps.Tracing
         {
             var assembly = Assembly.GetExecutingAssembly().GetName();
             var assemblyVersion = assembly.Version?.ToString() ?? "unknown";
-            var tracingExporter =
-                builder.Configuration.GetValue<string>("Tracing:Exporter")?.ToLowerInvariant()
-                ?? "jaeger";
             var serviceName =
                 builder.Configuration.GetValue("Tracing:ServiceName", assembly.Name) ?? "vfps";
 
@@ -59,24 +55,17 @@ namespace Vfps.Tracing
                             };
                         });
 
-                    switch (tracingExporter)
+                    var endpoint = builder.Configuration.GetValue<string>("Tracing:Otlp:Endpoint");
+                    tracingBuilder.AddOtlpExporter(otlpOptions =>
                     {
-                        case "jaeger":
-                            tracingBuilder.AddJaegerExporter();
-                            builder.Services.Configure<JaegerExporterOptions>(
-                                builder.Configuration.GetSection("Tracing:Jaeger")
-                            );
-                            break;
-
-                        case "otlp":
-                            var endpoint =
-                                builder.Configuration.GetValue<string>("Tracing:Otlp:Endpoint")
-                                ?? "";
-                            tracingBuilder.AddOtlpExporter(otlpOptions =>
-                                otlpOptions.Endpoint = new Uri(endpoint)
-                            );
-                            break;
-                    }
+                        // Leave the SDK's own default (http://localhost:4317) in place when
+                        // unset, rather than failing outright - Uri's constructor throws on an
+                        // empty string.
+                        if (!string.IsNullOrEmpty(endpoint))
+                        {
+                            otlpOptions.Endpoint = new Uri(endpoint);
+                        }
+                    });
                 });
 
             return builder;

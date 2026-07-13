@@ -23,7 +23,8 @@ service PseudonymService {
     option (google.api.http) = {get: "/v1/namespaces/{namespace}/pseudonyms/{pseudonym_value}"};
   }
 
-  // list all pseudonyms in the given namespace
+  // list all pseudonyms in the given namespace. Unlike Get, this never returns original_value -
+  // reverse lookup of a specific pseudonym is a separate, single-record operation by design.
   rpc List(PseudonymServiceListRequest) returns (PseudonymServiceListResponse) {
     option (google.api.http) = {get: "/v1/namespaces/{namespace}/pseudonyms"};
   }
@@ -56,12 +57,16 @@ message PseudonymServiceListResponse {
   repeated Pseudonym pseudonyms = 4;
 }
 
-// contents of the PseudonymServiceList pagination token
+// contents of the PseudonymServiceList pagination token: the position of the last-seen
+// pseudonym in the (created_at desc, original_value desc) ordering, used for keyset/seek
+// pagination rather than an offset - this scales to hundreds of millions of rows per
+// namespace, where an offset-based token would degrade linearly with page depth.
 message PseudonymListPaginationToken {
-  // return only pseudonyms that were created on or before this date
-  google.protobuf.Timestamp pseudonyms_created_on_or_before = 1;
-  // how deep inside the list of pseudonyms we currently are
-  int32 offset = 2;
+  // created_at of the last-seen pseudonym in the previous page
+  google.protobuf.Timestamp created_at = 1;
+  // original_value of the last-seen pseudonym in the previous page - tie-breaker for
+  // pseudonyms sharing the same created_at
+  string original_value = 2;
 }
 
 // message to fetch details for a given pseudonym
@@ -98,8 +103,9 @@ message Pseudonym {
   Meta meta = 1;
   // the namespace of the pseudonym
   string namespace = 2;
-  // the original value that was pseudonymized
-  string original_value = 3;
+  // the original value that was pseudonymized. Only ever populated by Create and the dedicated
+  // reverse-lookup operation - List never sets this, by design.
+  optional string original_value = 3;
   // the pseudonym created for the original value
   string pseudonym_value = 4;
 }

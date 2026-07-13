@@ -1,0 +1,32 @@
+@using Microsoft.AspNetCore.Components.Web
+<!DOCTYPE html>
+<html lang="en" data-base-color="zinc" data-primary-color="blue">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/ui/"/>
+    <link rel="stylesheet" href="_content/BlazorBlueprint.Components/css/themes.css" />
+    <link rel="stylesheet" href="_content/BlazorBlueprint.Components/blazorblueprint.css" />
+    <link rel="stylesheet" href="app.css" />
+    <script>
+        function vfpsApplyTheme() {
+            var stored = localStorage.getItem("vfps-dark-mode");
+            var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+            document.documentElement.classList.toggle(
+                "dark",
+                stored === "1" || (stored === null && prefersDark)
+            );
+        }
+
+        // Applied before first paint to avoid a flash of the wrong theme.
+        vfpsApplyTheme();
+    </script>
+    <HeadOutlet />
+</head>
+<body>
+    <Routes />
+    <script src="/ui/_framework/blazor.web.js"></script>
+    <script src="/ui/js/csvUpload.js"></script>
+    <script src="/ui/js/themeToggle.js"></script>
+</body>
+</html>

@@ -13,7 +13,6 @@ trim_trailing_whitespace = true
 
 # Code files
 [*.{cs,csx,vb,vbx}]
-indent_size = 4
 dotnet_diagnostic.CS1591.severity = none
 
 # XML project files
@@ -27,6 +26,10 @@ indent_size = 2
 # JSON files
 [*.json]
 indent_size = 2
+
+[packages.lock.json]
+insert_final_newline = unset
+trim_trailing_whitespace = unset
 
 # Powershell files
 [*.ps1]
