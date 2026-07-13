@@ -17,25 +17,24 @@ public class PseudonymGeneratorBenchmarks
 
     [Benchmark]
     public string CryptoRandomBase64UrlEncodedGenerator() =>
-        crbase64Generator.GeneratePseudonym("test", 64);
+        crbase64Generator.GeneratePseudonym(64);
 
     [Benchmark]
     public string HexEncodedSha256HashGenerator() =>
         sha256HashGenerator.GeneratePseudonym("test", 64);
 
     [Benchmark]
-    public string Uuid4Generator() => uuid4Generator.GeneratePseudonym("test", 36);
+    public string Uuid4Generator() => uuid4Generator.GeneratePseudonym(36);
 
     [Benchmark]
-    public string Uuid7Generator() => uuid7Generator.GeneratePseudonym("test", 36);
+    public string Uuid7Generator() => uuid7Generator.GeneratePseudonym(36);
 
     [Benchmark]
-    public string FullRandomHexEncodedGenerator() =>
-        fullRandomHexGenerator.GeneratePseudonym("test", 64);
+    public string FullRandomHexEncodedGenerator() => fullRandomHexGenerator.GeneratePseudonym(64);
 
     [Benchmark]
     public string FullRandomBase62EncodedGenerator() =>
-        fullRandomBase62Generator.GeneratePseudonym("test", 64);
+        fullRandomBase62Generator.GeneratePseudonym(64);
 }
 
 public static class Program

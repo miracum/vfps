@@ -33,6 +33,17 @@ namespace Vfps.Data
         Task<long> CountByNamespaceAsync(string namespaceName, CancellationToken cancellationToken);
 
         /// <summary>
+        /// Counts all pseudonyms, grouped by namespace, in one query. Same full-scan-class cost
+        /// as <see cref="CountByNamespaceAsync"/> (across every namespace instead of one) - only
+        /// called by <see cref="PseudonymCountMetricsBackgroundService"/>'s periodic metrics
+        /// refresh, never on a request path. A namespace with zero pseudonyms is simply absent
+        /// from the result rather than present with a zero count.
+        /// </summary>
+        Task<IReadOnlyDictionary<string, long>> CountAllGroupedByNamespaceAsync(
+            CancellationToken cancellationToken
+        );
+
+        /// <summary>
         /// Reverse lookup: finds a pseudonym by its pseudonym_value (revealing original_value).
         /// Backed by the (namespace_name, pseudonym_value) index - see
         /// AddPseudonymKeysetAndReverseLookupIndexes.

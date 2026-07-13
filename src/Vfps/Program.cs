@@ -155,6 +155,7 @@ builder.Services.AddScoped<INamespaceAppService, NamespaceAppService>();
 builder.Services.AddScoped<IPseudonymAppService, PseudonymAppService>();
 
 builder.Services.AddHostedService<InitNamespacesBackgroundService>();
+builder.Services.AddHostedService<PseudonymCountMetricsBackgroundService>();
 
 // Authorization: fully declarative, off by default (see Config/AuthorizationConfig.cs) - matches
 // the existing Tracing/Pseudonymization:Caching:*:IsEnabled idiom in this codebase.

@@ -55,12 +55,15 @@ public class PseudonymAppService(
         var @namespace =
             await namespaceRepository.FindAsync(namespaceName, cancellationToken)
             ?? throw new NamespaceNotFoundException(namespaceName);
-        var generator = methodsLookup[@namespace.PseudonymGenerationMethod];
         string pseudonymValue;
         using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
         {
-            activity?.SetTag("Method", generator.GetType().Name);
-            pseudonymValue = generator.GeneratePseudonym(originalValue, @namespace.PseudonymLength);
+            activity?.SetTag("Method", @namespace.PseudonymGenerationMethod.ToString());
+            pseudonymValue = methodsLookup.Generate(
+                @namespace.PseudonymGenerationMethod,
+                originalValue,
+                @namespace.PseudonymLength
+            );
         }
         pseudonymValue = @namespace.PseudonymPrefix + pseudonymValue + @namespace.PseudonymSuffix;
 

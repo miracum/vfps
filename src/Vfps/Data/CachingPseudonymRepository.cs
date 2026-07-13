@@ -58,6 +58,16 @@ public class CachingPseudonymRepository(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<string, long>> CountAllGroupedByNamespaceAsync(
+        CancellationToken cancellationToken
+    )
+    {
+        // Not cached: called once every few minutes by a background service, not a
+        // per-request/per-key lookup this cache is designed for.
+        return await Repository.CountAllGroupedByNamespaceAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<Pseudonym?> FindByPseudonymValueAsync(
         string namespaceName,
         string pseudonymValue,

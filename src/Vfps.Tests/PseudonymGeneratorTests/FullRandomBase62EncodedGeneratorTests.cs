@@ -16,7 +16,7 @@ public partial class FullRandomBase62EncodedGeneratorTests
         uint pseudonymLength
     )
     {
-        var generated = sut.GeneratePseudonym("test", pseudonymLength);
+        var generated = sut.GeneratePseudonym(pseudonymLength);
 
         generated.Should().HaveLength((int)pseudonymLength);
         Base62Characters().IsMatch(generated).Should().BeTrue();
@@ -25,8 +25,8 @@ public partial class FullRandomBase62EncodedGeneratorTests
     [Fact]
     public void GeneratePseudonym_CalledTwice_ShouldGenerateDifferentValues()
     {
-        var first = sut.GeneratePseudonym("test", 64);
-        var second = sut.GeneratePseudonym("test", 64);
+        var first = sut.GeneratePseudonym(64);
+        var second = sut.GeneratePseudonym(64);
 
         first.Should().NotBe(second);
     }

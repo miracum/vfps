@@ -7,13 +7,11 @@ public class CryptoRandomBase64UrlEncodedGeneratorTests
     private readonly CryptoRandomBase64UrlEncodedGenerator sut = new();
 
     [Fact]
-    public void GeneratePseudonym_ShouldGenerateExpectedPseudonyms()
+    public void GeneratePseudonym_CalledTwice_ShouldGenerateDifferentValues()
     {
-        var input = "test";
-        var generated = sut.GeneratePseudonym(input, 32);
+        var first = sut.GeneratePseudonym(32);
+        var second = sut.GeneratePseudonym(32);
 
-        // difficult to assert anything else here given the nature of
-        // random values and the base64url-encoding.
-        generated.Should().NotBe(input);
+        first.Should().NotBe(second);
     }
 }

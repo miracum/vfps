@@ -172,6 +172,18 @@ public class PseudonymRepository : IPseudonymRepository
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyDictionary<string, long>> CountAllGroupedByNamespaceAsync(
+        CancellationToken cancellationToken
+    )
+    {
+        return await Context
+            .Pseudonyms.AsNoTracking()
+            .GroupBy(p => p.NamespaceName)
+            .Select(g => new { Namespace = g.Key, Count = g.LongCount() })
+            .ToDictionaryAsync(x => x.Namespace, x => x.Count, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<Pseudonym?> FindByPseudonymValueAsync(
         string namespaceName,
         string pseudonymValue,

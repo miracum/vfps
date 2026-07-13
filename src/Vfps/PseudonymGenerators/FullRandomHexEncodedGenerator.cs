@@ -4,7 +4,7 @@ namespace Vfps.PseudonymGenerators;
 
 public class FullRandomHexEncodedGenerator : IPseudonymGenerator
 {
-    public string GeneratePseudonym(string originalValue, uint length = 32)
+    public string GeneratePseudonym(uint length = 32)
     {
         int byteCount = ((int)length + 1) / 2; // each byte yields 2 hex digits; round up for odd lengths
 

@@ -3,7 +3,7 @@ using System.Text;
 
 namespace Vfps.PseudonymGenerators;
 
-public class HexEncodedSha256HashGenerator : IPseudonymGenerator
+public class HexEncodedSha256HashGenerator : IDeterministicPseudonymGenerator
 {
     public string GeneratePseudonym(string originalValue, uint pseudonymLength = 32)
     {

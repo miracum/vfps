@@ -89,15 +89,17 @@ public class FhirController(
             return NotFound(outcome);
         }
 
-        var generator = Lookup[@namespace.PseudonymGenerationMethod];
-
         var pseudonymValue = string.Empty;
 
         using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
         {
-            activity?.SetTag("Method", generator.GetType().Name);
+            activity?.SetTag("Method", @namespace.PseudonymGenerationMethod.ToString());
 
-            pseudonymValue = generator.GeneratePseudonym(originalValue, @namespace.PseudonymLength);
+            pseudonymValue = Lookup.Generate(
+                @namespace.PseudonymGenerationMethod,
+                originalValue,
+                @namespace.PseudonymLength
+            );
             pseudonymValue =
                 $"{@namespace.PseudonymPrefix}{pseudonymValue}{@namespace.PseudonymSuffix}";
         }
