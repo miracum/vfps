@@ -325,7 +325,7 @@ public class CsvPseudonymizationJobRunnerTests
         );
         FakeFindJob(job);
         A.CallTo(() => namespaceRepository.FindAsync("does-not-exist", A<CancellationToken>._))
-            .Returns((Data.Models.Namespace?)null);
+            .Returns(null);
         FakeInputObject(job, "id,value\n1,secret\n");
 
         var sut = CreateSut();
