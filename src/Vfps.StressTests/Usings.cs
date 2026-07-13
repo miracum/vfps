@@ -1,4 +1,4 @@
-global using FluentAssertions;
+global using AwesomeAssertions;
 global using Grpc.Core;
 global using Grpc.Net.Client;
 global using Grpc.Net.Client.Configuration;
