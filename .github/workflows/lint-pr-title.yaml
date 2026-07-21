@@ -40,3 +40,4 @@ jobs:
             unit
             e2e
             master
+            ui

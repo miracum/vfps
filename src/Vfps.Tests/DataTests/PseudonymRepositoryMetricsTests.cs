@@ -129,14 +129,17 @@ public class PseudonymRepositoryMetricsTests : ServiceTests.ServiceTestBase
         for (var i = 0; i < 50; i++)
         {
             using var stream = new MemoryStream();
-            await Metrics.DefaultRegistry.CollectAndExportAsTextAsync(stream);
+            await Metrics.DefaultRegistry.CollectAndExportAsTextAsync(
+                stream,
+                TestContext.Current.CancellationToken
+            );
             exported = System.Text.Encoding.UTF8.GetString(stream.ToArray());
             if (exported.Contains($"vfps_pseudonyms{{namespace=\"{namespaceName}\"}}"))
             {
                 break;
             }
 
-            await Task.Delay(20);
+            await Task.Delay(20, TestContext.Current.CancellationToken);
         }
         await sut.StopAsync(CancellationToken.None);
 

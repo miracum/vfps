@@ -37,7 +37,7 @@ public class CachingPseudonymRepositoryTests : ServiceTests.ServiceTestBase
                 p.PseudonymValue == "cachedPseudonymValue"
             )
         );
-        await InMemoryPseudonymContext.SaveChangesAsync();
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var second = await sut.CreateIfNotExist(pseudonym);
 

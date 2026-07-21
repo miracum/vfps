@@ -36,7 +36,10 @@ public class NamespaceServiceTests : ServiceTestBase
     {
         var request = new NamespaceServiceGetRequest { Name = "existingNamespace" };
 
-        var response = await sut.Get(request, TestServerCallContext.Create());
+        var response = await sut.Get(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         response.Namespace.Name.Should().Be(request.Name);
     }
@@ -46,7 +49,10 @@ public class NamespaceServiceTests : ServiceTestBase
     {
         var request = new NamespaceServiceGetAllRequest();
 
-        var response = await sut.GetAll(request, TestServerCallContext.Create());
+        var response = await sut.GetAll(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         response.Namespaces.Should().HaveSameCount(InMemoryPseudonymContext.Namespaces);
     }
@@ -71,7 +77,10 @@ public class NamespaceServiceTests : ServiceTestBase
             PseudonymLength = 16,
         };
 
-        var response = await sut.Create(request, TestServerCallContext.Create());
+        var response = await sut.Create(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         response.Namespace.Name.Should().Be(request.Name);
 
@@ -102,11 +111,17 @@ public class NamespaceServiceTests : ServiceTestBase
             PseudonymLength = 16,
         };
 
-        await sut.Create(createRequest, TestServerCallContext.Create());
+        await sut.Create(
+            createRequest,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         var deleteRequest = new NamespaceServiceDeleteRequest { Name = "toBeDeleted" };
 
-        await sut.Delete(deleteRequest, TestServerCallContext.Create());
+        await sut.Delete(
+            deleteRequest,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         InMemoryPseudonymContext.Namespaces.Should().NotContain(n => n.Name == deleteRequest.Name);
     }
@@ -122,7 +137,10 @@ public class NamespaceServiceTests : ServiceTestBase
             PseudonymLength = 16,
         };
 
-        await sut.Create(createRequest, TestServerCallContext.Create());
+        await sut.Create(
+            createRequest,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
         var namespaceRepositoryForPseudonymService = new NamespaceRepository(
@@ -144,19 +162,27 @@ public class NamespaceServiceTests : ServiceTestBase
                     ) + i,
             };
 
-            await pseudonymService.Create(createPseudonymRequest, TestServerCallContext.Create());
+            await pseudonymService.Create(
+                createPseudonymRequest,
+                TestServerCallContext.Create(
+                    cancellationToken: TestContext.Current.CancellationToken
+                )
+            );
         }
 
         var pseudonymCount = await InMemoryPseudonymContext
             .Pseudonyms.AsNoTracking()
             .Where(p => p.NamespaceName == createRequest.Name)
-            .CountAsync();
+            .CountAsync(TestContext.Current.CancellationToken);
 
         pseudonymCount.Should().Be(pseudonymsToCreateCount);
 
         var deleteRequest = new NamespaceServiceDeleteRequest { Name = createRequest.Name };
 
-        await sut.Delete(deleteRequest, TestServerCallContext.Create());
+        await sut.Delete(
+            deleteRequest,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         InMemoryPseudonymContext
             .Namespaces.AsNoTracking()

@@ -61,7 +61,7 @@ public class CachingNamespaceRepositoryTests : ServiceTests.ServiceTestBase
         InMemoryPseudonymContext.Namespaces.Remove(
             InMemoryPseudonymContext.Namespaces.Single(n => n.Name == "existingNamespace")
         );
-        await InMemoryPseudonymContext.SaveChangesAsync();
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         var second = await sut.FindAsync("existingNamespace", CancellationToken.None);
 

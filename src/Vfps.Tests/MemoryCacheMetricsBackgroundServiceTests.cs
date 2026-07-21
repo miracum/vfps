@@ -21,7 +21,10 @@ public class MemoryCacheMetricsBackgroundServiceTests
         await sut.StopAsync(cancelToken);
 
         var memoryStream = new MemoryStream();
-        await Metrics.DefaultRegistry.CollectAndExportAsTextAsync(memoryStream);
+        await Metrics.DefaultRegistry.CollectAndExportAsTextAsync(
+            memoryStream,
+            TestContext.Current.CancellationToken
+        );
 
         var text = Encoding.UTF8.GetString(memoryStream.ToArray());
         text.Should().NotBeEmpty();
