@@ -23,8 +23,6 @@ docker compose -f compose.yaml --profile=test up
 
 Visit <http://localhost:8080/> to view the OpenAPI specification of the Vfps API:
 
-![Screenshot of the OpenAPI specification](docs/img/openapi.png)
-
 You can use the JSON-transcoded REST API described via OpenAPI or interact with the service using gRPC.
 For example, using [grpcurl](https://github.com/fullstorydev/grpcurl) to create a new namespace:
 
@@ -49,6 +47,27 @@ grpcurl \
   127.0.0.1:8081 \
   vfps.api.v1.PseudonymService/Create
 ```
+
+## Admin UI
+
+vfps ships with a web-based admin UI, served at `/ui`, for creating and browsing namespaces and running CSV pseudonymization jobs.
+
+![Vfps admin UI home page](docs/img/ui-home.png)
+
+### Namespaces
+
+Create namespaces and browse or delete existing ones.
+
+<p>
+  <img src="docs/img/ui-namespaces.png" alt="Namespaces page in dark mode" width="49%" />
+  <img src="docs/img/ui-namespaces-light.png" alt="Namespaces page in light mode" width="49%" />
+</p>
+
+### CSV Processing
+
+Upload a CSV file to pseudonymize or de-pseudonymize one or more columns as a background job. Files are streamed directly to and from S3-compatible object storage.
+
+![CSV pseudonymization jobs page](docs/img/ui-jobs.png)
 
 ## Production-grade deployment
 

@@ -32,6 +32,18 @@ public interface INamespaceAppService
         ClaimsPrincipal user,
         CancellationToken cancellationToken
     );
+
+    /// <summary>
+    /// Deletes a namespace and every pseudonym it contains. Requires admin access - there's no
+    /// existing namespace-scoped write grant to check once it's gone, same reasoning as
+    /// <see cref="CreateAsync"/>.
+    /// </summary>
+    /// <exception cref="NamespaceNotFoundException">No namespace named <paramref name="namespaceName"/> exists.</exception>
+    Task DeleteAsync(
+        string namespaceName,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
 }
 
 /// <summary>

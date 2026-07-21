@@ -67,4 +67,18 @@ public class CachingNamespaceRepositoryTests : ServiceTests.ServiceTestBase
 
         second.Should().NotBeNull();
     }
+
+    [Fact]
+    public async Task DeleteAsync_WithPreviouslyCachedHit_ShouldEvictItSoFindAsyncSeesTheDeletion()
+    {
+        var sut = CreateSut();
+
+        var beforeDelete = await sut.FindAsync("existingNamespace", CancellationToken.None);
+        beforeDelete.Should().NotBeNull();
+
+        await sut.DeleteAsync("existingNamespace", CancellationToken.None);
+
+        var afterDelete = await sut.FindAsync("existingNamespace", CancellationToken.None);
+        afterDelete.Should().BeNull();
+    }
 }

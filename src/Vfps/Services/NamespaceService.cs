@@ -10,13 +10,10 @@ namespace Vfps.Services;
 /// <inheritdoc/>
 /// <inheritdoc/>
 public class NamespaceService(
-    PseudonymContext context,
     INamespaceRepository namespaceRepository,
     INamespaceAppService namespaceAppService
 ) : Protos.NamespaceService.NamespaceServiceBase
 {
-    private PseudonymContext Context { get; } = context;
-
     /// <inheritdoc/>
     public override async Task<NamespaceServiceCreateResponse> Create(
         NamespaceServiceCreateRequest request,
@@ -98,11 +95,15 @@ public class NamespaceService(
         ServerCallContext context
     )
     {
-        var @namespace = await Context.Namespaces.FindAsync(
-            request.Name,
-            context.CancellationToken
-        );
-        if (@namespace is null)
+        try
+        {
+            await namespaceAppService.DeleteAsync(
+                request.Name,
+                context.GetUser(),
+                context.CancellationToken
+            );
+        }
+        catch (NamespaceNotFoundException)
         {
             var metadata = new Metadata { { "Namespace", request.Name } };
 
@@ -114,11 +115,10 @@ public class NamespaceService(
                 metadata
             );
         }
-
-        // the onDelete-behavior for the Namespace-Pseudonym relationship is set to cascade, so
-        // deleting the namespace will automatically delete all pseudonyms contained within.
-        Context.Namespaces.Remove(@namespace);
-        await Context.SaveChangesAsync(context.CancellationToken);
+        catch (ForbiddenException ex)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
+        }
 
         return new NamespaceServiceDeleteResponse();
     }

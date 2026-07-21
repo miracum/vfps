@@ -1,0 +1,79 @@
+/*
+ * Overrides BlazorBlueprint.Components' default (zinc) CSS custom properties with a custom
+ * "Midnight" theme (exported from https://blazorblueprintui.com/docs/playground, itself backed
+ * by the tweakcn.com shadcn/ui theme registry). Loaded after themes.css in App.razor so these
+ * :root/.dark declarations win by source order - same specificity as the [data-base-color="..."]
+ * rules they replace, and the same .dark class this app's dark-mode toggle already applies (see
+ * wwwroot/js/themeToggle.js), so no other wiring is needed.
+ */
+
+:root {
+  --background: oklch(100% 0 0deg);
+  --foreground: oklch(14.5% 0 0deg);
+  --card: oklch(100% 0 0deg);
+  --card-foreground: oklch(14.5% 0 0deg);
+  --popover: oklch(100% 0 0deg);
+  --popover-foreground: oklch(14.5% 0 0deg);
+  --primary: oklch(20.5% 0 0deg);
+  --primary-foreground: oklch(98.5% 0 0deg);
+  --secondary: oklch(97% 0 0deg);
+  --secondary-foreground: oklch(20.5% 0 0deg);
+  --muted: oklch(97% 0 0deg);
+  --muted-foreground: oklch(55.6% 0 0deg);
+  --accent: oklch(97% 0 0deg);
+  --accent-foreground: oklch(20.5% 0 0deg);
+  --destructive: oklch(57.7% 0.2450 27.3250deg);
+  --destructive-foreground: oklch(100% 0 0deg);
+  --border: oklch(92.2% 0 0deg);
+  --input: oklch(92.2% 0 0deg);
+  --ring: oklch(70.8% 0 0deg);
+  --chart-1: oklch(85% 0 0deg);
+  --chart-2: oklch(70% 0 0deg);
+  --chart-3: oklch(55% 0 0deg);
+  --chart-4: oklch(40% 0 0deg);
+  --chart-5: oklch(25% 0 0deg);
+  --sidebar: oklch(98.5% 0 0deg);
+  --sidebar-foreground: oklch(14.5% 0 0deg);
+  --sidebar-primary: oklch(20.5% 0 0deg);
+  --sidebar-primary-foreground: oklch(98.5% 0 0deg);
+  --sidebar-accent: oklch(97% 0 0deg);
+  --sidebar-accent-foreground: oklch(20.5% 0 0deg);
+  --sidebar-border: oklch(92.2% 0 0deg);
+  --sidebar-ring: oklch(70.8% 0 0deg);
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: oklch(14.5% 0 0deg);
+  --foreground: oklch(98.5% 0 0deg);
+  --card: oklch(20.5% 0 0deg);
+  --card-foreground: oklch(98.5% 0 0deg);
+  --popover: oklch(26.9% 0 0deg);
+  --popover-foreground: oklch(98.5% 0 0deg);
+  --primary: oklch(92.2% 0 0deg);
+  --primary-foreground: oklch(20.5% 0 0deg);
+  --secondary: oklch(26.9% 0 0deg);
+  --secondary-foreground: oklch(98.5% 0 0deg);
+  --muted: oklch(26.9% 0 0deg);
+  --muted-foreground: oklch(70.8% 0 0deg);
+  --accent: oklch(37.1% 0 0deg);
+  --accent-foreground: oklch(98.5% 0 0deg);
+  --destructive: oklch(70.4% 0.1910 22.2160deg);
+  --destructive-foreground: oklch(98.5% 0 0deg);
+  --border: oklch(27.5% 0 0deg);
+  --input: oklch(32.5% 0 0deg);
+  --ring: oklch(55.6% 0 0deg);
+  --chart-1: oklch(85% 0 0deg);
+  --chart-2: oklch(70% 0 0deg);
+  --chart-3: oklch(55% 0 0deg);
+  --chart-4: oklch(40% 0 0deg);
+  --chart-5: oklch(25% 0 0deg);
+  --sidebar: oklch(20.5% 0 0deg);
+  --sidebar-foreground: oklch(98.5% 0 0deg);
+  --sidebar-primary: oklch(92.2% 0 0deg);
+  --sidebar-primary-foreground: oklch(20.5% 0 0deg);
+  --sidebar-accent: oklch(26.9% 0 0deg);
+  --sidebar-accent-foreground: oklch(98.5% 0 0deg);
+  --sidebar-border: oklch(27.5% 0 0deg);
+  --sidebar-ring: oklch(55.6% 0 0deg);
+}

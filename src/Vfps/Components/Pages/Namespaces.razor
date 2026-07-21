@@ -23,6 +23,51 @@
         </BbAlert>
     }
 
+    @if (_deleteErrorMessage is not null)
+    {
+        <BbAlert Variant="AlertVariant.Danger">
+            <BbAlertTitle>Could not delete namespace</BbAlertTitle>
+            <BbAlertDescription>@_deleteErrorMessage</BbAlertDescription>
+        </BbAlert>
+    }
+
+    @if (_pendingDelete is not null)
+    {
+        <BbAlert Variant="AlertVariant.Danger">
+            <BbAlertTitle>Delete namespace "@_pendingDelete.Name"?</BbAlertTitle>
+            <BbAlertDescription>
+                <p class="mb-3">
+                    This permanently deletes the namespace and every pseudonym it contains. This
+                    cannot be undone. Type <strong>@_pendingDelete.Name</strong> below to confirm.
+                </p>
+                <div class="flex flex-wrap items-end gap-2">
+                    <BbField Class="w-64">
+                        <BbFieldContent>
+                            <BbInput
+                                @bind-Value="_deleteConfirmationText"
+                                UpdateTiming="UpdateTiming.Immediate"
+                                Id="confirmDeleteNamespaceName"
+                                Placeholder="@_pendingDelete.Name"
+                            />
+                        </BbFieldContent>
+                    </BbField>
+                    <BbButton
+                        id="confirmDeleteNamespaceButton"
+                        Variant="ButtonVariant.Destructive"
+                        Disabled="@(!IsDeleteConfirmed)"
+                        Loading="_isDeleting"
+                        OnClick="ConfirmDeleteNamespaceAsync"
+                    >
+                        Delete
+                    </BbButton>
+                    <BbButton Variant="ButtonVariant.Outline" OnClick="CancelDeleteNamespace">
+                        Cancel
+                    </BbButton>
+                </div>
+            </BbAlertDescription>
+        </BbAlert>
+    }
+
     <BbCard>
         <BbCardHeader>
             <BbCardTitle>Create namespace</BbCardTitle>
@@ -131,6 +176,18 @@
                             </BbButton>
                         </ChildContent>
                     </BbDataGridTemplateColumn>
+                    <BbDataGridTemplateColumn Title="Actions">
+                        <ChildContent Context="n">
+                            <BbButton
+                                id="@($"delete-namespace-{n.Name}")"
+                                Variant="ButtonVariant.Destructive"
+                                Size="ButtonSize.Small"
+                                OnClick="() => StartDeleteNamespace(n)"
+                            >
+                                Delete
+                            </BbButton>
+                        </ChildContent>
+                    </BbDataGridTemplateColumn>
                 </Columns>
             </BbDataGrid>
         </BbCardContent>
@@ -148,7 +205,19 @@
         .PseudonymGenerationMethod
         .SecureRandomBase64UrlEncoded.ToString();
     private string? _errorMessage;
+    private string? _deleteErrorMessage;
     private bool _isCreating;
+    private bool _isDeleting;
+
+    // Set when a row's "Delete" button is clicked, cleared on cancel/confirm - drives the inline
+    // confirmation panel rendered above the tables. Deliberately not a modal dialog (see
+    // ConfirmDeleteNamespaceAsync's comment on DeleteNamespaceDialog.razor's removal).
+    private Namespace? _pendingDelete;
+    private string _deleteConfirmationText = string.Empty;
+
+    private bool IsDeleteConfirmed =>
+        _pendingDelete is not null
+        && string.Equals(_deleteConfirmationText, _pendingDelete.Name, StringComparison.Ordinal);
 
     // Null for a freely-configurable method - non-null (e.g. Uuid4's 36) means the length field
     // is locked to this value, since the generator itself has no length concept to configure.
@@ -250,6 +319,60 @@
         finally
         {
             _isCreating = false;
+        }
+    }
+
+    private void StartDeleteNamespace(Namespace namespaceToDelete)
+    {
+        _pendingDelete = namespaceToDelete;
+        _deleteConfirmationText = string.Empty;
+        _deleteErrorMessage = null;
+    }
+
+    private void CancelDeleteNamespace()
+    {
+        _pendingDelete = null;
+        _deleteConfirmationText = string.Empty;
+    }
+
+    private async Task ConfirmDeleteNamespaceAsync()
+    {
+        // Same re-entrancy guard as CreateNamespaceAsync, and belt-and-suspenders alongside the
+        // button's own Disabled="@(!IsDeleteConfirmed)" - re-checked here since Blazor Server
+        // dispatches each click as a separate event, so a click that raced ahead of the render
+        // that would've disabled the button must still be rejected server-side.
+        if (_isDeleting || _pendingDelete is null || !IsDeleteConfirmed)
+        {
+            return;
+        }
+
+        var namespaceToDelete = _pendingDelete;
+        _isDeleting = true;
+        _deleteErrorMessage = null;
+        try
+        {
+            var user = await GetUserAsync();
+            await NamespaceAppService.DeleteAsync(
+                namespaceToDelete.Name,
+                user,
+                CancellationToken.None
+            );
+
+            _pendingDelete = null;
+            _deleteConfirmationText = string.Empty;
+            await ReloadAsync();
+        }
+        catch (NamespaceNotFoundException ex)
+        {
+            _deleteErrorMessage = ex.Message;
+        }
+        catch (ForbiddenException ex)
+        {
+            _deleteErrorMessage = ex.Message;
+        }
+        finally
+        {
+            _isDeleting = false;
         }
     }
 
