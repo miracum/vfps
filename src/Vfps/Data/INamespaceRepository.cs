@@ -30,4 +30,12 @@ public interface INamespaceRepository
     /// </summary>
     /// <param name="cancellationToken">A cancellation token to abort the action</param>
     Task<IReadOnlyList<Models.Namespace>> GetAllAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes a namespace and, via the database's own ON DELETE CASCADE foreign key
+    /// constraint, every pseudonym it contains. A no-op if the namespace doesn't exist.
+    /// </summary>
+    /// <param name="namespaceName">The name of the namespace to delete.</param>
+    /// <param name="cancellationToken">A cancellation token to abort the action</param>
+    Task DeleteAsync(string namespaceName, CancellationToken cancellationToken);
 }

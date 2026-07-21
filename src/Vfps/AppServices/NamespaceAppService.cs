@@ -79,4 +79,26 @@ public class NamespaceAppService(
         // the caller's resolved rules instead.
         return [.. namespaces.Where(n => permissionChecker.HasReadAccess(user, n.Name))];
     }
+
+    /// <inheritdoc/>
+    public async Task DeleteAsync(
+        string namespaceName,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        // Same reasoning as CreateAsync - once the namespace is gone there's no per-namespace
+        // write grant left to check, so this is gated by admin access only.
+        if (!permissionChecker.IsAdmin(user))
+        {
+            throw new ForbiddenException("Deleting a namespace requires admin access.");
+        }
+
+        if (await namespaceRepository.FindAsync(namespaceName, cancellationToken) is null)
+        {
+            throw new NamespaceNotFoundException(namespaceName);
+        }
+
+        await namespaceRepository.DeleteAsync(namespaceName, cancellationToken);
+    }
 }

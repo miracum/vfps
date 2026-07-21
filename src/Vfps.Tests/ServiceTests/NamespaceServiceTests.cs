@@ -11,7 +11,6 @@ public class NamespaceServiceTests : ServiceTestBase
     {
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
         sut = new Services.NamespaceService(
-            InMemoryPseudonymContext,
             namespaceRepository,
             CreateNamespaceAppService(namespaceRepository)
         );

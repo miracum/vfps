@@ -54,4 +54,16 @@ public class NamespaceRepository(PseudonymContext context) : INamespaceRepositor
     {
         return await context.Namespaces.AsNoTracking().ToListAsync(cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task DeleteAsync(string namespaceName, CancellationToken cancellationToken)
+    {
+        // A direct bulk delete, not a load-then-Remove-then-SaveChanges round trip - the
+        // database's own ON DELETE CASCADE foreign key constraint (see the Pseudonym/Namespace
+        // relationship configuration) takes care of the contained pseudonyms without EF ever
+        // needing to load or track them.
+        await context
+            .Namespaces.Where(n => n.Name == namespaceName)
+            .ExecuteDeleteAsync(cancellationToken);
+    }
 }

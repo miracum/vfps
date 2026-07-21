@@ -42,7 +42,9 @@ public class CachingNamespaceRepository(
         // CreateAsync) would otherwise poison this key for the full cache lifetime, making a
         // namespace that visibly exists (GetAllAsync isn't cached) invisible to every
         // single-namespace lookup - which is exactly what Create/List/Browse use - until
-        // expiry. Namespaces are immutable once created, so a hit never goes stale.
+        // expiry. A hit never goes stale from an edit (namespaces are immutable once created),
+        // only from a deletion - which is why DeleteAsync below explicitly evicts this key
+        // rather than relying on it to expire naturally.
         if (found is not null)
         {
             memoryCache.Set(
@@ -63,5 +65,17 @@ public class CachingNamespaceRepository(
         // Not cached: namespace cardinality is low and this isn't on a hot path the way
         // single-namespace lookups (used on every pseudonym Create/List) are.
         return await NamespaceRepository.GetAllAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteAsync(string namespaceName, CancellationToken cancellationToken)
+    {
+        await NamespaceRepository.DeleteAsync(namespaceName, cancellationToken);
+
+        // Evict rather than leave the deleted namespace's cached hit to expire naturally -
+        // otherwise every FindAsync call (Create/List/Browse's write- and read-access checks
+        // included) would keep seeing a namespace that no longer exists until the cache entry's
+        // absolute expiration passes.
+        memoryCache.Remove($"namespaces.{namespaceName}");
     }
 }

@@ -116,4 +116,54 @@ public class NamespaceAppServiceTests : ServiceTestBase
         result.Should().ContainSingle(n => n.Name == "existingNamespace");
         result.Should().NotContain(n => n.Name == "emptyNamespace");
     }
+
+    [Fact]
+    public async Task DeleteAsync_WithAuthorizationEnabledAndNonAdminUser_ShouldThrowForbidden()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(
+            namespaceRepository,
+            new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
+        );
+
+        var act = () =>
+            sut.DeleteAsync(
+                "existingNamespace",
+                UserWithRoles("some-other-role"),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        (await namespaceRepository.FindAsync("existingNamespace", CancellationToken.None))
+            .Should()
+            .NotBeNull();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithAuthorizationEnabledAndAdminUser_ShouldDeleteNamespace()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(
+            namespaceRepository,
+            new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
+        );
+
+        await sut.DeleteAsync("existingNamespace", UserWithRoles("admin"), CancellationToken.None);
+
+        (await namespaceRepository.FindAsync("existingNamespace", CancellationToken.None))
+            .Should()
+            .BeNull();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithNonExistingNamespace_ShouldThrowNamespaceNotFoundException()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var act = () =>
+            sut.DeleteAsync("notExisting", new ClaimsPrincipal(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<NamespaceNotFoundException>();
+    }
 }
