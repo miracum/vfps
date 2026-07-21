@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784651903829,
+  "lastUpdate": 1784669328359,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -4542,6 +4542,66 @@ window.BENCHMARK_DATA = {
             "value": 1357.1264011676494,
             "unit": "ns",
             "range": "± 3.415600355810127"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5b47b4b162fa9a217de14f06e1ecd8f8479015d4",
+          "message": "feat: allow deleting namespaces via the UI (#250)\n\n* feat: support deleting namesapces via UI\n\n* nicer theme\n\n* stylelint\n\n* build: revert buildkit cache\n\n* docs update\n\n---------\n\nCo-authored-by: chgl <5307555+chgl@users.noreply.github.com>",
+          "timestamp": "2026-07-21T23:25:53+02:00",
+          "tree_id": "6be8e8a147efa6e4f480c7d4fec388bf9b42cac5",
+          "url": "https://github.com/miracum/vfps/commit/5b47b4b162fa9a217de14f06e1ecd8f8479015d4"
+        },
+        "date": 1784669327701,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1218.375571030837,
+            "unit": "ns",
+            "range": "± 5.071853940866415"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 705.4739952768598,
+            "unit": "ns",
+            "range": "± 1.7667929519471295"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 731.864799635751,
+            "unit": "ns",
+            "range": "± 0.7132814787158877"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 754.9777381079538,
+            "unit": "ns",
+            "range": "± 1.9155970523667996"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 1149.8611409505208,
+            "unit": "ns",
+            "range": "± 5.850159876578919"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1352.266651593722,
+            "unit": "ns",
+            "range": "± 1.407619275021694"
           }
         ]
       }
