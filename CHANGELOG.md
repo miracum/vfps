@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.5.0](https://github.com/miracum/vfps/compare/v1.4.4...v1.5.0) (2026-07-21)
+
+
+### Features
+
+* allow deleting namespaces via the UI ([#250](https://github.com/miracum/vfps/issues/250)) ([5b47b4b](https://github.com/miracum/vfps/commit/5b47b4b162fa9a217de14f06e1ecd8f8479015d4))
+
 ## [1.4.4](https://github.com/miracum/vfps/compare/v1.4.3...v1.4.4) (2026-07-21)
 
 
