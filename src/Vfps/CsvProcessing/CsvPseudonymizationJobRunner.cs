@@ -109,6 +109,17 @@ public class CsvPseudonymizationJobRunner(
         {
             Delimiter = job.Delimiter,
             HasHeaderRecord = job.HasHeaderRow,
+            // Real-world exports sometimes contain a stray, unescaped '"' inside an otherwise
+            // unquoted field (e.g. a free-text column with an inch mark). CsvHelper treats that as
+            // malformed CSV and throws by default. Since fields here are opaque values to relocate
+            // rather than data to interpret, keep the raw field content as-is and move on instead
+            // of failing the whole job over one row. Never log the raw field/record - only the row
+            // number - since that value is exactly what this service exists to protect.
+            BadDataFound = args =>
+                logger.LogWarning(
+                    "Ignoring malformed CSV data on parser row {Row}",
+                    args.Context.Parser?.Row
+                ),
         };
 
         using var getResponse = await s3.GetObjectAsync(s3Config.Value.Bucket, job.InputObjectKey);
