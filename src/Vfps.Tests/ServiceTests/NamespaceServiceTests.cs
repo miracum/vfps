@@ -168,7 +168,7 @@ public class NamespaceServiceTests : ServiceTestBase
         pseudonymCount = await InMemoryPseudonymContext
             .Pseudonyms.AsNoTracking()
             .Where(p => p.NamespaceName == createRequest.Name)
-            .CountAsync();
+            .CountAsync(TestContext.Current.CancellationToken);
 
         pseudonymCount.Should().Be(0);
     }

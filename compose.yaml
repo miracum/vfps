@@ -156,6 +156,7 @@ services:
       S3__SecretKey: "vfps-minio-secret"
       S3__Bucket: "vfps-csv-jobs"
       S3__ForcePathStyle: "true"
+      S3__AllowedOrigins__0: "http://localhost:8080"
     ports:
       # Http1, Http2, Http3
       - "127.0.0.1:8080:8080"

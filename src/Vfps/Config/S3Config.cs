@@ -33,4 +33,15 @@ public class S3Config
     /// bucket forever. Set to 0 to leave the bucket's lifecycle configuration untouched.
     /// </summary>
     public int ObjectRetentionDays { get; set; } = 30;
+
+    /// <summary>
+    /// Origins allowed to PUT/GET objects directly against the bucket via the presigned URLs
+    /// handed out for CSV upload/download (see wwwroot/js/csvUpload.js). The browser talks to
+    /// the bucket on a different origin than vfps itself is served from, so without this applied
+    /// as an S3 bucket CORS rule on startup, the browser blocks the upload (preflighted because
+    /// csvUpload.js sets a Content-Type header) before it ever reaches the bucket. Empty (the
+    /// default) leaves the bucket's CORS configuration untouched - set this to the origin(s) the
+    /// CSV upload UI is served from (e.g. "https://vfps.example.org") to enable it.
+    /// </summary>
+    public List<string> AllowedOrigins { get; set; } = [];
 }

@@ -302,7 +302,7 @@ if (s3Config.IsEnabled)
     builder.Services.AddScoped<IPseudonymizationJobRepository, PseudonymizationJobRepository>();
     builder.Services.AddScoped<IPseudonymizationJobAppService, PseudonymizationJobAppService>();
     builder.Services.AddScoped<ICsvPseudonymizationJobRunner, CsvPseudonymizationJobRunner>();
-    builder.Services.AddHostedService<S3LifecyclePolicyBackgroundService>();
+    builder.Services.AddHostedService<S3BucketConfigurationBackgroundService>();
 
     var postgresConnectionString =
         builder.Configuration.GetConnectionString("PostgreSQL")

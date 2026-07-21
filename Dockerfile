@@ -1,21 +1,32 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.301-resolute@sha256:fe81f048c2ff6cdbcc16ad4c1690c5a4f383edab8fdabdf02b3b782591b656c5 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.302-resolute@sha256:45401dde65ffc706a65841120ffdf827805eefe16852d6de1086a876c421de2e AS build
+# Multi-platform builds (linux/amd64 + linux/arm64, see ci.yaml) run this --platform=$BUILDPLATFORM
+# stage once per target platform, and those instances race on any cache mount that shares the
+# same id - even with sharing=locked, one platform's build step has ended up unable to see
+# packages an earlier RUN in the *same* stage instance had already restored into
+# /root/.nuget/packages (a known upstream issue: dotnet/dotnet-docker#3353). Scoping the id to
+# $TARGETARCH gives each platform its own cache instead of a shared one, which avoids that
+# cross-platform contention entirely.
+ARG TARGETARCH
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    NUGET_XMLDOC_MODE=skip \
     PATH="/root/.dotnet/tools:${PATH}"
 
 COPY .config/ .
 
-RUN dotnet tool restore
+RUN --mount=type=cache,target=/root/.nuget/packages,id=nuget-packages-${TARGETARCH},sharing=locked \
+    dotnet tool restore
 
 COPY src/Directory.Build.props src/
 COPY src/Vfps/Vfps.csproj src/Vfps/
 COPY src/Vfps/packages.lock.json src/Vfps/
 
-RUN dotnet restore --locked-mode src/Vfps/Vfps.csproj
+RUN --mount=type=cache,target=/root/.nuget/packages,id=nuget-packages-${TARGETARCH},sharing=locked \
+    dotnet restore --locked-mode src/Vfps/Vfps.csproj
 
 COPY . .
 
-RUN <<EOF
+RUN --mount=type=cache,target=/root/.nuget/packages,id=nuget-packages-${TARGETARCH},sharing=locked <<EOF
 dotnet build src/Vfps/Vfps.csproj \
     --no-restore \
     --configuration=Release
@@ -57,8 +68,10 @@ ASPNETCORE_ENVIRONMENT=Production DOTNET_ENVIRONMENT=Production dotnet ef migrat
 EOF
 
 FROM build AS build-test
+ARG TARGETARCH
 WORKDIR /build/src/Vfps.Tests
-RUN dotnet test \
+RUN --mount=type=cache,target=/root/.nuget/packages,id=nuget-packages-${TARGETARCH},sharing=locked \
+    dotnet test \
     --configuration=Release \
     --results-directory=./coverage \
     -- --coverage \
@@ -72,8 +85,9 @@ COPY --from=build-test /build/src/Vfps.Tests/coverage .
 ENTRYPOINT [ "true" ]
 
 FROM build AS build-stress-test
+ARG TARGETARCH
 WORKDIR /build/src/Vfps.StressTests
-RUN <<EOF
+RUN --mount=type=cache,target=/root/.nuget/packages,id=nuget-packages-${TARGETARCH},sharing=locked <<EOF
 dotnet build \
     --configuration=Release
 
