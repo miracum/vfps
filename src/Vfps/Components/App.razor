@@ -1,6 +1,6 @@
 @using Microsoft.AspNetCore.Components.Web
 <!DOCTYPE html>
-<html lang="en" data-base-color="zinc" data-primary-color="blue">
+<html lang="en">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,6 +8,9 @@
     <link rel="stylesheet" href="_content/BlazorBlueprint.Components/css/themes.css" />
     <link rel="stylesheet" href="_content/BlazorBlueprint.Components/blazorblueprint.css" />
     <link rel="stylesheet" href="app.css" />
+    <!-- Overrides the data-base-color/data-primary-color-scoped rules from themes.css above with
+         a single, always-on custom theme - see css/theme-midnight.css for provenance. -->
+    <link rel="stylesheet" href="css/theme-midnight.css" />
     <script>
         function vfpsApplyTheme() {
             var stored = localStorage.getItem("vfps-dark-mode");
