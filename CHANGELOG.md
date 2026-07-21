@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.4.4](https://github.com/miracum/vfps/compare/v1.4.3...v1.4.4) (2026-07-21)
+
+
+### Bug Fixes
+
+* set CORS policy on CSV upload bucket ([#249](https://github.com/miracum/vfps/issues/249)) ([2d6cbfd](https://github.com/miracum/vfps/commit/2d6cbfdd88aafa25041f4ae53264229ae3baa5b3))
+
+
+### Miscellaneous Chores
+
+* **deps:** update arduino/setup-task action to v3 ([#246](https://github.com/miracum/vfps/issues/246)) ([81fdab4](https://github.com/miracum/vfps/commit/81fdab421a13dde09586b2605cc384f811066297))
+* **deps:** update github-actions ([#245](https://github.com/miracum/vfps/issues/245)) ([08c4ffd](https://github.com/miracum/vfps/commit/08c4ffd32cbc04464744ad99a17e2881763c6972))
+* **deps:** update mcr.microsoft.com/dotnet/aspnet docker tag to v10.0.10 ([#248](https://github.com/miracum/vfps/issues/248)) ([21bb35d](https://github.com/miracum/vfps/commit/21bb35d1b893613d35c0258f515255eb42e9b7ed))
+
 ## [1.4.3](https://github.com/miracum/vfps/compare/v1.4.2...v1.4.3) (2026-07-13)
 
 
