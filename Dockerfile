@@ -1,32 +1,23 @@
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.302-resolute@sha256:45401dde65ffc706a65841120ffdf827805eefe16852d6de1086a876c421de2e AS build
-# Multi-platform builds (linux/amd64 + linux/arm64, see ci.yaml) run this --platform=$BUILDPLATFORM
-# stage once per target platform, and those instances race on any cache mount that shares the
-# same id - even with sharing=locked, one platform's build step has ended up unable to see
-# packages an earlier RUN in the *same* stage instance had already restored into
-# /root/.nuget/packages (a known upstream issue: dotnet/dotnet-docker#3353). Scoping the id to
-# $TARGETARCH gives each platform its own cache instead of a shared one, which avoids that
-# cross-platform contention entirely.
-ARG TARGETARCH
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
-    NUGET_XMLDOC_MODE=skip \
-    PATH="/root/.dotnet/tools:${PATH}"
+    PATH="/root/.dotnet/tools:${PATH}" \
+    ASPNETCORE_ENVIRONMENT="Production" \
+    DOTNET_ENVIRONMENT="Production"
 
 COPY .config/ .
 
-RUN --mount=type=cache,target=/root/.nuget/packages,id=nuget-packages-${TARGETARCH},sharing=locked \
-    dotnet tool restore
+RUN dotnet tool restore
 
 COPY src/Directory.Build.props src/
 COPY src/Vfps/Vfps.csproj src/Vfps/
 COPY src/Vfps/packages.lock.json src/Vfps/
 
-RUN --mount=type=cache,target=/root/.nuget/packages,id=nuget-packages-${TARGETARCH},sharing=locked \
-    dotnet restore --locked-mode src/Vfps/Vfps.csproj
+RUN dotnet restore --locked-mode src/Vfps/Vfps.csproj
 
 COPY . .
 
-RUN --mount=type=cache,target=/root/.nuget/packages,id=nuget-packages-${TARGETARCH},sharing=locked <<EOF
+RUN <<EOF
 dotnet build src/Vfps/Vfps.csproj \
     --no-restore \
     --configuration=Release
@@ -50,7 +41,7 @@ dotnet publish src/Vfps/Vfps.csproj \
 # --runtime/--target-runtime pin this to the same linux-x64 RID as the restore/build/publish
 # steps above - without it, dotnet-ef's own internal project evaluation resolves no RID at all,
 # which conflicts with the RID-specific packages.lock.json section under RestoreLockedMode.
-ASPNETCORE_ENVIRONMENT=Production DOTNET_ENVIRONMENT=Production dotnet ef migrations bundle \
+dotnet ef migrations bundle \
     --project=src/Vfps/Vfps.csproj \
     --startup-project=src/Vfps/Vfps.csproj \
     --context=PseudonymContext \
@@ -58,7 +49,7 @@ ASPNETCORE_ENVIRONMENT=Production DOTNET_ENVIRONMENT=Production dotnet ef migrat
     --verbose \
     -o /build/efbundle
 
-ASPNETCORE_ENVIRONMENT=Production DOTNET_ENVIRONMENT=Production dotnet ef migrations bundle \
+dotnet ef migrations bundle \
     --project=src/Vfps/Vfps.csproj \
     --startup-project=src/Vfps/Vfps.csproj \
     --context=DataProtectionKeyContext \
@@ -68,10 +59,8 @@ ASPNETCORE_ENVIRONMENT=Production DOTNET_ENVIRONMENT=Production dotnet ef migrat
 EOF
 
 FROM build AS build-test
-ARG TARGETARCH
 WORKDIR /build/src/Vfps.Tests
-RUN --mount=type=cache,target=/root/.nuget/packages,id=nuget-packages-${TARGETARCH},sharing=locked \
-    dotnet test \
+RUN dotnet test \
     --configuration=Release \
     --results-directory=./coverage \
     -- --coverage \
@@ -85,9 +74,8 @@ COPY --from=build-test /build/src/Vfps.Tests/coverage .
 ENTRYPOINT [ "true" ]
 
 FROM build AS build-stress-test
-ARG TARGETARCH
 WORKDIR /build/src/Vfps.StressTests
-RUN --mount=type=cache,target=/root/.nuget/packages,id=nuget-packages-${TARGETARCH},sharing=locked <<EOF
+RUN <<EOF
 dotnet build \
     --configuration=Release
 
