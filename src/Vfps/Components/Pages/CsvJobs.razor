@@ -303,6 +303,17 @@ else
                                             Class="mt-0.5 shrink-0"
                                         />
                                         <span class="truncate">@j.ErrorMessage</span>
+                                        @if (j.HangfireJobId is not null)
+                                        {
+                                            <a
+                                                href="@HangfireJobDetailsUrl(j.HangfireJobId)"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="shrink-0 whitespace-nowrap underline"
+                                            >
+                                                Details
+                                            </a>
+                                        }
                                     </div>
                                 }
                             </ChildContent>
@@ -411,6 +422,12 @@ else
         var user = await GetUserAsync();
         _jobs = await _jobAppService.ListAsync(user, CancellationToken.None);
     }
+
+    // NavigationManager.BaseUri already includes the "/ui/" path base (App.razor's <base href>),
+    // so appending the dashboard's own relative route gives an absolute link to the Hangfire
+    // dashboard's job details page without hardcoding host/port or the "/ui" prefix.
+    private string HangfireJobDetailsUrl(string hangfireJobId) =>
+        $"{NavigationManager.BaseUri}hangfire/jobs/details/{Uri.EscapeDataString(hangfireJobId)}";
 
     private static BadgeVariant BadgeVariantFor(PseudonymizationJobStatus status) =>
         status switch
