@@ -1,21 +1,24 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.301-resolute@sha256:fe81f048c2ff6cdbcc16ad4c1690c5a4f383edab8fdabdf02b3b782591b656c5 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.302-resolute@sha256:45401dde65ffc706a65841120ffdf827805eefe16852d6de1086a876c421de2e AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
+    NUGET_XMLDOC_MODE=skip \
     PATH="/root/.dotnet/tools:${PATH}"
 
 COPY .config/ .
 
-RUN dotnet tool restore
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
+    dotnet tool restore
 
 COPY src/Directory.Build.props src/
 COPY src/Vfps/Vfps.csproj src/Vfps/
 COPY src/Vfps/packages.lock.json src/Vfps/
 
-RUN dotnet restore --locked-mode src/Vfps/Vfps.csproj
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
+    dotnet restore --locked-mode src/Vfps/Vfps.csproj
 
 COPY . .
 
-RUN <<EOF
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked <<EOF
 dotnet build src/Vfps/Vfps.csproj \
     --no-restore \
     --configuration=Release
@@ -58,7 +61,8 @@ EOF
 
 FROM build AS build-test
 WORKDIR /build/src/Vfps.Tests
-RUN dotnet test \
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked \
+    dotnet test \
     --configuration=Release \
     --results-directory=./coverage \
     -- --coverage \
@@ -73,7 +77,7 @@ ENTRYPOINT [ "true" ]
 
 FROM build AS build-stress-test
 WORKDIR /build/src/Vfps.StressTests
-RUN <<EOF
+RUN --mount=type=cache,target=/root/.nuget/packages,sharing=locked <<EOF
 dotnet build \
     --configuration=Release
 
