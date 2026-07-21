@@ -24,8 +24,8 @@ public class PseudonymizationJobAppService(
 {
     /// <summary>
     /// Shared by <see cref="CsvPseudonymizationJobRunner"/> (which writes the output object
-    /// under this prefix) and <see cref="S3LifecyclePolicyBackgroundService"/> (which scopes the
-    /// bucket's expiration rule to it), so all three stay in sync on a single literal.
+    /// under this prefix) and <see cref="S3BucketConfigurationBackgroundService"/> (which scopes
+    /// the bucket's expiration rule to it), so all three stay in sync on a single literal.
     /// </summary>
     public const string S3ObjectKeyPrefix = "csv-jobs/";
 

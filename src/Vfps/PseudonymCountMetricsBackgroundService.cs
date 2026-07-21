@@ -59,7 +59,7 @@ public class PseudonymCountMetricsBackgroundService(
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Best-effort: a transient DB issue here shouldn't crash the whole host over a
-            // metrics refresh - see the identical reasoning on S3LifecyclePolicyBackgroundService.
+            // metrics refresh - see the identical reasoning on S3BucketConfigurationBackgroundService.
             logger.LogError(ex, "Failed to refresh the per-namespace pseudonym count metric.");
         }
     }
