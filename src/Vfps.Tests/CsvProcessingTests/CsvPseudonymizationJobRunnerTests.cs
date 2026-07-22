@@ -88,26 +88,56 @@ public class CsvPseudonymizationJobRunnerTests
     private void FakeFindJob(PseudonymizationJob job) =>
         A.CallTo(() => jobRepository.FindAsync(job.Id, A<CancellationToken>._)).Returns(job);
 
-    private void FakePseudonymize(
-        string namespaceName,
-        string originalValue,
-        string pseudonymValue
-    ) =>
+    // Backs the CreateTrustedBatchAsync fake below - CsvPseudonymizationJobRunner's Pseudonymize
+    // path resolves a whole chunk via one batched call rather than one CreateTrustedAsync call
+    // per value (see FlushChunkPseudonymizeAsync), so FakePseudonymize registers known
+    // (namespace, originalValue) -> pseudonymValue mappings here instead of stubbing individual
+    // calls directly.
+    private readonly Dictionary<
+        (string Namespace, string OriginalValue),
+        string
+    > knownPseudonymValues = [];
+    private bool batchPseudonymizeFakeConfigured;
+
+    private void FakePseudonymize(string namespaceName, string originalValue, string pseudonymValue)
+    {
+        knownPseudonymValues[(namespaceName, originalValue)] = pseudonymValue;
+
+        if (batchPseudonymizeFakeConfigured)
+        {
+            return;
+        }
+
+        batchPseudonymizeFakeConfigured = true;
         A.CallTo(() =>
-                pseudonymAppService.CreateTrustedAsync(
-                    A<Data.Models.Namespace>.That.Matches(n => n.Name == namespaceName),
-                    originalValue,
+                pseudonymAppService.CreateTrustedBatchAsync(
+                    A<IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>>._,
                     A<CancellationToken>._
                 )
             )
-            .Returns(
-                new Data.Models.Pseudonym
+            .ReturnsLazily(call =>
+            {
+                var requests = call.GetArgument<
+                    IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>
+                >(0)!;
+
+                var result = new Dictionary<(string, string), Data.Models.Pseudonym>();
+                foreach (var (ns, originalValue) in requests)
                 {
-                    NamespaceName = namespaceName,
-                    OriginalValue = originalValue,
-                    PseudonymValue = pseudonymValue,
+                    var key = (ns.Name, originalValue);
+                    result[key] = new Data.Models.Pseudonym
+                    {
+                        NamespaceName = ns.Name,
+                        OriginalValue = originalValue,
+                        PseudonymValue = knownPseudonymValues[key],
+                    };
                 }
-            );
+
+                return Task.FromResult(
+                    (IReadOnlyDictionary<(string, string), Data.Models.Pseudonym>)result
+                );
+            });
+    }
 
     private void FakeDepseudonymize(
         string namespaceName,
@@ -149,9 +179,12 @@ public class CsvPseudonymizationJobRunnerTests
         await sut.RunAsync(job.Id, CreateCancellationToken());
 
         A.CallTo(() =>
-                pseudonymAppService.CreateTrustedAsync(
-                    A<Data.Models.Namespace>.That.Matches(n => n.Name == "ns"),
-                    "secret",
+                pseudonymAppService.CreateTrustedBatchAsync(
+                    A<
+                        IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>
+                    >.That.Matches(reqs =>
+                        reqs.Any(r => r.Namespace.Name == "ns" && r.OriginalValue == "secret")
+                    ),
                     A<CancellationToken>._
                 )
             )
@@ -190,9 +223,12 @@ public class CsvPseudonymizationJobRunnerTests
         await sut.RunAsync(job.Id, CreateCancellationToken());
 
         A.CallTo(() =>
-                pseudonymAppService.CreateTrustedAsync(
-                    A<Data.Models.Namespace>.That.Matches(n => n.Name == "ns"),
-                    "se\"cret",
+                pseudonymAppService.CreateTrustedBatchAsync(
+                    A<
+                        IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>
+                    >.That.Matches(reqs =>
+                        reqs.Any(r => r.Namespace.Name == "ns" && r.OriginalValue == "se\"cret")
+                    ),
                     A<CancellationToken>._
                 )
             )
@@ -275,9 +311,10 @@ public class CsvPseudonymizationJobRunnerTests
         await sut.RunAsync(job.Id, CreateCancellationToken());
 
         A.CallTo(() =>
-                pseudonymAppService.CreateTrustedAsync(
-                    A<Data.Models.Namespace>._,
-                    "secret",
+                pseudonymAppService.CreateTrustedBatchAsync(
+                    A<
+                        IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>
+                    >.That.Matches(reqs => reqs.Any(r => r.OriginalValue == "secret")),
                     A<CancellationToken>._
                 )
             )
@@ -311,9 +348,12 @@ public class CsvPseudonymizationJobRunnerTests
         // The last row (index 24) is only reachable if the trailing partial chunk (rows 20-24)
         // actually got flushed - a bug that dropped it would still process the first full chunk.
         A.CallTo(() =>
-                pseudonymAppService.CreateTrustedAsync(
-                    A<Data.Models.Namespace>._,
-                    $"value{rowCount - 1}",
+                pseudonymAppService.CreateTrustedBatchAsync(
+                    A<
+                        IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>
+                    >.That.Matches(reqs =>
+                        reqs.Any(r => r.OriginalValue == $"value{rowCount - 1}")
+                    ),
                     A<CancellationToken>._
                 )
             )
@@ -463,9 +503,12 @@ public class CsvPseudonymizationJobRunnerTests
             .MustNotHaveHappened();
         // Processing stopped at the row-200 checkpoint - row 399 must never have been reached.
         A.CallTo(() =>
-                pseudonymAppService.CreateTrustedAsync(
-                    A<Data.Models.Namespace>._,
-                    $"value{rowCount - 1}",
+                pseudonymAppService.CreateTrustedBatchAsync(
+                    A<
+                        IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>
+                    >.That.Matches(reqs =>
+                        reqs.Any(r => r.OriginalValue == $"value{rowCount - 1}")
+                    ),
                     A<CancellationToken>._
                 )
             )

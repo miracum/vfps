@@ -54,6 +54,26 @@ public interface IPseudonymAppService
     );
 
     /// <summary>
+    /// Same trust boundary as <see cref="CreateTrustedAsync(Namespace, string, CancellationToken)"/>,
+    /// batched into a single database round trip for many values at once - only for the CSV job
+    /// runner, whose dominant cost was one upsert round trip per field per row. Not exposed via
+    /// gRPC/REST; <paramref name="requests"/> may span multiple namespaces (a chunk's column
+    /// mappings can reference different namespaces), all resolved in one round trip regardless.
+    /// </summary>
+    /// <returns>
+    /// One entry per distinct (Namespace.Name, OriginalValue) pair in <paramref name="requests"/>
+    /// - duplicates within <paramref name="requests"/> collapse onto the same entry rather than
+    /// being generated/upserted twice.
+    /// </returns>
+    /// <exception cref="ArgumentException">Any request's original value is blank.</exception>
+    Task<
+        IReadOnlyDictionary<(string Namespace, string OriginalValue), Pseudonym>
+    > CreateTrustedBatchAsync(
+        IReadOnlyList<(Namespace Namespace, string OriginalValue)> requests,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Lists pseudonyms in a namespace, keyset-paginated. Deliberately returns
     /// <see cref="PseudonymSummaryDto"/> rather than a type carrying the original value - this
     /// is the read path that a UI renders in bulk, and the original value must never cross into

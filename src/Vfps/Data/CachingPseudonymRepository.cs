@@ -31,6 +31,20 @@ public class CachingPseudonymRepository(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Pseudonym>> CreateIfNotExistBatchAsync(
+        IReadOnlyList<Pseudonym> pseudonyms,
+        CancellationToken cancellationToken
+    )
+    {
+        // Not cached: this per-key MemoryCache is designed around single-key lookups from
+        // CreateIfNotExist above, and it costs the batch's whole point (one round trip) to split
+        // it back into a per-key cache check. CsvPseudonymizationJobRunner (the only caller of
+        // the batched path) already bypasses this cache entirely for the same reason CreateAsync
+        // does - see PseudonymAppService.CreateTrustedBatchAsync's own fresh, pooled DbContext.
+        return await Repository.CreateIfNotExistBatchAsync(pseudonyms, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Pseudonym>> ListByNamespaceAsync(
         string namespaceName,
         PseudonymPageCursor? cursor,

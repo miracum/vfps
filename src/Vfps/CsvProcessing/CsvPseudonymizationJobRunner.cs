@@ -309,13 +309,117 @@ public class CsvPseudonymizationJobRunner(
     }
 
     /// <summary>
-    /// Resolves every field of every row in <paramref name="chunk"/> concurrently (each call
-    /// uses its own pooled DbContext under the hood - see PseudonymAppService's trusted methods),
-    /// then writes the rows out in their original order once every result is ready. Order is
-    /// preserved even though resolution completes out of order, since writing only starts after
-    /// the whole chunk's <see cref="Task.WhenAll(Task[])"/> has completed.
+    /// Writes out every row in <paramref name="chunk"/>, resolving each field first. Pseudonymize
+    /// and Depseudonymize deliberately take different paths here (see
+    /// <see cref="FlushChunkPseudonymizeAsync"/> and <see cref="FlushChunkDepseudonymizeAsync"/>)
+    /// rather than a single generic one - only Pseudonymize's per-value operation (an upsert) can
+    /// be batched into one round trip; Depseudonymize's (a lookup) cannot use the same batched SQL
+    /// shape, so it keeps the one-DB-call-per-value-but-concurrent-across-the-chunk approach.
     /// </summary>
     private async Task FlushChunkAsync(
+        List<BufferedRow> chunk,
+        PseudonymizationJobDirection direction,
+        Dictionary<int, Namespace> inPlaceBySourceIndex,
+        List<(int SourceIndex, string TargetColumn, Namespace Namespace)> appended,
+        CsvWriter csvWriter
+    )
+    {
+        if (direction == PseudonymizationJobDirection.Pseudonymize)
+        {
+            await FlushChunkPseudonymizeAsync(chunk, inPlaceBySourceIndex, appended, csvWriter);
+        }
+        else
+        {
+            await FlushChunkDepseudonymizeAsync(
+                chunk,
+                direction,
+                inPlaceBySourceIndex,
+                appended,
+                csvWriter
+            );
+        }
+    }
+
+    /// <summary>
+    /// Pseudonymize fast path: every field needing a pseudonym across the whole chunk - every row,
+    /// every in-place and appended mapping, regardless of how many distinct namespaces are
+    /// involved - is collected into one list and resolved via a single
+    /// <see cref="IPseudonymAppService.CreateTrustedBatchAsync"/> round trip, rather than one
+    /// upsert round trip per field per row. That per-value round trip was the dominant cost of
+    /// processing a CSV job; concurrency across a chunk (the previous approach, still used by
+    /// <see cref="FlushChunkDepseudonymizeAsync"/>) only overlaps that cost, batching removes most
+    /// of it outright.
+    /// </summary>
+    private async Task FlushChunkPseudonymizeAsync(
+        List<BufferedRow> chunk,
+        Dictionary<int, Namespace> inPlaceBySourceIndex,
+        List<(int SourceIndex, string TargetColumn, Namespace Namespace)> appended,
+        CsvWriter csvWriter
+    )
+    {
+        var requests = new List<(Namespace Namespace, string OriginalValue)>();
+        foreach (var row in chunk)
+        {
+            foreach (var (sourceIndex, ns) in inPlaceBySourceIndex)
+            {
+                requests.Add((ns, row.RawFields[sourceIndex] ?? string.Empty));
+            }
+
+            foreach (var mapping in appended)
+            {
+                var raw =
+                    mapping.SourceIndex < row.RawFields.Length
+                        ? row.RawFields[mapping.SourceIndex] ?? string.Empty
+                        : string.Empty;
+                requests.Add((mapping.Namespace, raw));
+            }
+        }
+
+        var resolved =
+            requests.Count == 0
+                ? new Dictionary<(string, string), Pseudonym>()
+                : await pseudonymAppService.CreateTrustedBatchAsync(
+                    requests,
+                    CancellationToken.None
+                );
+
+        foreach (var row in chunk)
+        {
+            for (var i = 0; i < row.RawFields.Length; i++)
+            {
+                if (inPlaceBySourceIndex.TryGetValue(i, out var ns))
+                {
+                    var raw = row.RawFields[i] ?? string.Empty;
+                    csvWriter.WriteField(resolved[(ns.Name, raw)].PseudonymValue);
+                }
+                else
+                {
+                    csvWriter.WriteField(row.RawFields[i] ?? string.Empty);
+                }
+            }
+
+            foreach (var mapping in appended)
+            {
+                var raw =
+                    mapping.SourceIndex < row.RawFields.Length
+                        ? row.RawFields[mapping.SourceIndex] ?? string.Empty
+                        : string.Empty;
+                csvWriter.WriteField(resolved[(mapping.Namespace.Name, raw)].PseudonymValue);
+            }
+
+            await csvWriter.NextRecordAsync();
+        }
+    }
+
+    /// <summary>
+    /// Depseudonymize path (unchanged from before batching was introduced): resolves every field
+    /// of every row in <paramref name="chunk"/> concurrently (each call uses its own pooled
+    /// DbContext under the hood - see PseudonymAppService's trusted methods), then writes the rows
+    /// out in their original order once every result is ready. Order is preserved even though
+    /// resolution completes out of order, since writing only starts after the whole chunk's
+    /// <see cref="Task.WhenAll(Task[])"/> has completed.
+    /// </summary>
+    private async Task FlushChunkDepseudonymizeAsync(
         List<BufferedRow> chunk,
         PseudonymizationJobDirection direction,
         Dictionary<int, Namespace> inPlaceBySourceIndex,
