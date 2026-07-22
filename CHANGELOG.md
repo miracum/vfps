@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.1](https://github.com/miracum/vfps/compare/v1.6.0...v1.6.1) (2026-07-22)
+
+
+### Bug Fixes
+
+* handle longer postgres fail(over) and show the source csv in the UI ([#256](https://github.com/miracum/vfps/issues/256)) ([a7b4143](https://github.com/miracum/vfps/commit/a7b41432dcca32d188f6c44f76022ca488bd8814))
+
 ## [1.6.0](https://github.com/miracum/vfps/compare/v1.5.0...v1.6.0) (2026-07-22)
 
 
