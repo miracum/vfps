@@ -26,7 +26,7 @@ public class FhirControllerTests : ServiceTestBase
     {
         var p = new Parameters();
 
-        var response = await sut.CreatePseudonym(p);
+        var response = await sut.CreatePseudonym(p, TestContext.Current.CancellationToken);
 
         response
             .Should()
@@ -38,7 +38,7 @@ public class FhirControllerTests : ServiceTestBase
     [Fact]
     public async Task CreatePseudonym_WithNull_ShouldReturnErrorOutcome()
     {
-        var response = await sut.CreatePseudonym(null);
+        var response = await sut.CreatePseudonym(null, TestContext.Current.CancellationToken);
 
         response
             .Should()
@@ -59,7 +59,7 @@ public class FhirControllerTests : ServiceTestBase
             },
         };
 
-        var response = await sut.CreatePseudonym(p);
+        var response = await sut.CreatePseudonym(p, TestContext.Current.CancellationToken);
 
         response
             .Should()
@@ -80,7 +80,7 @@ public class FhirControllerTests : ServiceTestBase
             },
         };
 
-        var response = await sut.CreatePseudonym(p);
+        var response = await sut.CreatePseudonym(p, TestContext.Current.CancellationToken);
 
         var parameterResponse = response
             .Should()

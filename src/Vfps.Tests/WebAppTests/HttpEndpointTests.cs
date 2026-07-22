@@ -17,7 +17,7 @@ public class HttpEndpointTests(IntegrationTestFactory<Program, PseudonymContext>
     {
         var client = factory.CreateClient();
 
-        var response = await client.GetAsync(endpoint);
+        var response = await client.GetAsync(endpoint, TestContext.Current.CancellationToken);
         response.EnsureSuccessStatusCode();
 
         response.Content.Should().NotBeNull();

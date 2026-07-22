@@ -39,7 +39,10 @@ public class PseudonymServiceTests : ServiceTestBase
             PseudonymValue = "existingPseudonym",
         };
 
-        var response = await sut.Get(request, TestServerCallContext.Create());
+        var response = await sut.Get(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         response.Pseudonym.PseudonymValue.Should().Be(request.PseudonymValue);
         response.Pseudonym.OriginalValue.Should().Be("an original value");
@@ -54,7 +57,10 @@ public class PseudonymServiceTests : ServiceTestBase
             OriginalValue = nameof(Create_ShouldSaveNewPseudonym),
         };
 
-        var response = await sut.Create(request, TestServerCallContext.Create());
+        var response = await sut.Create(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         response.Pseudonym.Namespace.Should().Be(request.Namespace);
         response.Pseudonym.OriginalValue.Should().Be(request.OriginalValue);
@@ -108,21 +114,30 @@ public class PseudonymServiceTests : ServiceTestBase
             ),
         };
 
-        var response = await sut.Create(request, TestServerCallContext.Create());
+        var response = await sut.Create(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
         var firstCreatedPseudonym = response.Pseudonym.PseudonymValue;
         InMemoryPseudonymContext
             .Pseudonyms.Where(p => p.NamespaceName == request.Namespace)
             .Should()
             .HaveCount(1);
 
-        response = await sut.Create(request, TestServerCallContext.Create());
+        response = await sut.Create(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
         response.Pseudonym.PseudonymValue.Should().Be(firstCreatedPseudonym);
         InMemoryPseudonymContext
             .Pseudonyms.Where(p => p.NamespaceName == request.Namespace)
             .Should()
             .HaveCount(1);
 
-        response = await sut.Create(request, TestServerCallContext.Create());
+        response = await sut.Create(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
         response.Pseudonym.PseudonymValue.Should().Be(firstCreatedPseudonym);
         InMemoryPseudonymContext
             .Pseudonyms.Where(p => p.NamespaceName == request.Namespace)
@@ -135,7 +150,10 @@ public class PseudonymServiceTests : ServiceTestBase
     {
         var request = new PseudonymServiceListRequest { Namespace = "emptyNamespace" };
 
-        var response = await sut.List(request, TestServerCallContext.Create());
+        var response = await sut.List(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         response.Namespace.Should().Be(request.Namespace);
         response.Pseudonyms.Should().BeEmpty();
@@ -157,7 +175,10 @@ public class PseudonymServiceTests : ServiceTestBase
     {
         var request = new PseudonymServiceListRequest { Namespace = "existingNamespace" };
 
-        var response = await sut.List(request, TestServerCallContext.Create());
+        var response = await sut.List(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         response.Pseudonyms.Should().HaveSameCount(InMemoryPseudonymContext.Pseudonyms);
     }
@@ -172,7 +193,10 @@ public class PseudonymServiceTests : ServiceTestBase
         // getter returns "" rather than null when the optional field is unset.
         var request = new PseudonymServiceListRequest { Namespace = "existingNamespace" };
 
-        var response = await sut.List(request, TestServerCallContext.Create());
+        var response = await sut.List(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         response.Pseudonyms.Should().NotBeEmpty();
         response.Pseudonyms.Should().OnlyContain(p => !p.HasOriginalValue);
@@ -193,7 +217,12 @@ public class PseudonymServiceTests : ServiceTestBase
                     nameof(List_WithMoreItemsThanPageSize_ShouldReturnAllPseudonymsViaPaging) + i,
             };
 
-            await sut.Create(createRequest, TestServerCallContext.Create());
+            await sut.Create(
+                createRequest,
+                TestServerCallContext.Create(
+                    cancellationToken: TestContext.Current.CancellationToken
+                )
+            );
         }
 
         InMemoryPseudonymContext
@@ -209,7 +238,10 @@ public class PseudonymServiceTests : ServiceTestBase
             PageSize = 5,
         };
 
-        var response = await sut.List(request, TestServerCallContext.Create());
+        var response = await sut.List(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         var allPseudonyms = new List<Pseudonym>();
 
@@ -222,7 +254,12 @@ public class PseudonymServiceTests : ServiceTestBase
         {
             request.PageToken = response.NextPageToken;
 
-            response = await sut.List(request, TestServerCallContext.Create());
+            response = await sut.List(
+                request,
+                TestServerCallContext.Create(
+                    cancellationToken: TestContext.Current.CancellationToken
+                )
+            );
 
             allPseudonyms.AddRange(response.Pseudonyms);
         }
