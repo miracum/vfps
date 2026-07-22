@@ -49,6 +49,17 @@ jobs:
           tool: "benchmarkdotnet"
           output-file-path: BenchmarkDotNet.Artifacts/results/Vfps.Benchmarks.PseudonymGeneratorBenchmarks-report-full-compressed.json
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          # Without this, a merge_group run fails with "No commit found for SHA:
+          # refs/heads/gh-readonly-queue/master/pr-<n>-<sha>". The action's own commit-lookup
+          # (dist/src/extract.js's getCommit()) only special-cases the push event's head_commit
+          # payload and the pull_request event's pull_request payload; merge_group has neither, so
+          # it falls back to a GitHub API call using github.context.ref - which for a merge_group
+          # run is that gh-readonly-queue ref string, not a resolvable commit reference. Passing
+          # this `ref` input short-circuits that fallback with the real commit SHA instead (a
+          # merge_group run's github.sha is the actual, API-resolvable temporary merge commit).
+          # A no-op for push/pull_request runs - getCommit() never reaches this input for those,
+          # since the head_commit/pull_request payload checks return first.
+          ref: ${{ github.sha }}
           # Explicit allow-list, not "!= pull_request" - a merge_group run validates a speculative
           # merge commit before it actually lands, so it shouldn't push benchmark data either.
           auto-push: ${{ github.event_name == 'push' }}
