@@ -77,6 +77,14 @@ public class PseudonymizationJob : TracksCreationAndUpdates
     public long RowsProcessed { get; set; }
 
     /// <summary>
+    /// Rows CsvHelper flagged as malformed (e.g. a stray, unescaped quote inside an unquoted
+    /// field) but recovered from rather than failing the job - see CsvPseudonymizationJobRunner's
+    /// BadDataFound handler. The affected field's raw content is kept as-is; this is purely a
+    /// count so the UI can flag "N rows had malformed data" without ever storing the data itself.
+    /// </summary>
+    public int BadDataRowCount { get; set; }
+
+    /// <summary>
     /// Sanitized failure message only - never raw row content or a raw exception string, since
     /// this service's entire purpose is protecting the values that would otherwise leak here.
     /// </summary>

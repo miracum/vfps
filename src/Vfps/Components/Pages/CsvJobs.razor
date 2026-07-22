@@ -11,6 +11,7 @@
 @inject INamespaceAppService NamespaceAppService
 @inject IJSRuntime JS
 @inject NavigationManager NavigationManager
+@inject ILogger<CsvJobs> Logger
 
 <PageTitle>CSV pseudonymization</PageTitle>
 
@@ -282,6 +283,17 @@ else
                                 {
                                     <span class="text-xs text-muted-foreground">@j.RowsProcessed rows</span>
                                 }
+                                @if (j.BadDataRowCount > 0)
+                                {
+                                    <div
+                                        class="mt-1"
+                                        title="These rows contained malformed CSV data (e.g. an unescaped quote) - the affected value was kept as-is rather than failing the job."
+                                    >
+                                        <BbBadge Variant="BadgeVariant.Outline" Class="border-amber-300 bg-amber-50 text-amber-800">
+                                            @j.BadDataRowCount warning@(j.BadDataRowCount == 1 ? "" : "s")
+                                        </BbBadge>
+                                    </div>
+                                }
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridPropertyColumn
@@ -303,6 +315,17 @@ else
                                             Class="mt-0.5 shrink-0"
                                         />
                                         <span class="truncate">@j.ErrorMessage</span>
+                                        @if (j.HangfireJobId is not null)
+                                        {
+                                            <a
+                                                href="@HangfireJobDetailsUrl(j.HangfireJobId)"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                class="shrink-0 whitespace-nowrap underline"
+                                            >
+                                                Details
+                                            </a>
+                                        }
                                     </div>
                                 }
                             </ChildContent>
@@ -388,8 +411,19 @@ else
         {
             while (await timer.WaitForNextTickAsync(cancellationToken))
             {
-                await ReloadJobsAsync();
-                await InvokeAsync(StateHasChanged);
+                try
+                {
+                    await ReloadJobsAsync();
+                    await InvokeAsync(StateHasChanged);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    // A transient failure here (e.g. a momentary DB hiccup) must not silently
+                    // kill the loop for the rest of the circuit's lifetime - without this, the
+                    // grid would stop live-updating until the user does a full page reload
+                    // (which spins up a fresh component/loop). Log and retry on the next tick.
+                    Logger.LogWarning(ex, "Failed to refresh the CSV jobs list, will retry");
+                }
             }
         }
         catch (OperationCanceledException)
@@ -403,14 +437,33 @@ else
 
     private async Task ReloadJobsAsync()
     {
-        if (_jobAppService is null)
+        if (!S3ConfigOptions.Value.IsEnabled)
         {
             return;
         }
 
+        // A fresh scope (and thus a fresh PseudonymContext) per call, rather than reusing
+        // _jobAppService's long-lived one - this method is called from a background
+        // PeriodicTimer loop that runs for as long as the component is alive, concurrently with
+        // whatever DB calls the interactive handlers below (CreateJobAsync, CancelJobAsync, ...)
+        // make through the shared _jobAppService/its underlying scoped DbContext. Two concurrent
+        // operations against the same DbContext instance throw "A second operation was started
+        // on this context before a previous operation completed" - which used to surface here
+        // (e.g. while a user-triggered upload was still in flight when a poll tick landed) and,
+        // uncaught, permanently stopped this loop from ever updating the grid again.
+        using var scope = ServiceProvider.CreateScope();
+        var jobAppService =
+            scope.ServiceProvider.GetRequiredService<IPseudonymizationJobAppService>();
+
         var user = await GetUserAsync();
-        _jobs = await _jobAppService.ListAsync(user, CancellationToken.None);
+        _jobs = await jobAppService.ListAsync(user, CancellationToken.None);
     }
+
+    // NavigationManager.BaseUri already includes the "/ui/" path base (App.razor's <base href>),
+    // so appending the dashboard's own relative route gives an absolute link to the Hangfire
+    // dashboard's job details page without hardcoding host/port or the "/ui" prefix.
+    private string HangfireJobDetailsUrl(string hangfireJobId) =>
+        $"{NavigationManager.BaseUri}hangfire/jobs/details/{Uri.EscapeDataString(hangfireJobId)}";
 
     private static BadgeVariant BadgeVariantFor(PseudonymizationJobStatus status) =>
         status switch
