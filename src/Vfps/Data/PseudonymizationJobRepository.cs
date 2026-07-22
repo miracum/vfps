@@ -56,6 +56,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
         Guid id,
         long bytesProcessed,
         long rowsProcessed,
+        int badDataRowCount,
         CancellationToken cancellationToken
     )
     {
@@ -65,6 +66,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
                 s =>
                     s.SetProperty(j => j.BytesProcessed, bytesProcessed)
                         .SetProperty(j => j.RowsProcessed, rowsProcessed)
+                        .SetProperty(j => j.BadDataRowCount, badDataRowCount)
                         .SetProperty(j => j.LastUpdatedAt, DateTimeOffset.UtcNow),
                 cancellationToken
             );

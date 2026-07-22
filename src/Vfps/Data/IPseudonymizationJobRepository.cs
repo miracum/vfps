@@ -32,6 +32,7 @@ public interface IPseudonymizationJobRepository
         Guid id,
         long bytesProcessed,
         long rowsProcessed,
+        int badDataRowCount,
         CancellationToken cancellationToken
     );
 

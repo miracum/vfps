@@ -170,6 +170,42 @@ public class CsvPseudonymizationJobRunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_WithMalformedCsvField_ShouldReportBadDataRowCountAndStillComplete()
+    {
+        // A stray, unescaped quote mid-field (e.g. an inch mark in free text) is malformed per
+        // strict CSV, but CsvPseudonymizationJobRunner's BadDataFound handler recovers from it -
+        // see CsvPseudonymizationJobRunner.ProcessAsync. The row must still be processed (with the
+        // literal field content, quote included) and counted, not silently dropped or failed.
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,se\"cret\n");
+        FakePseudonymize("ns", "se\"cret", "pseudonym-of-secret");
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, CreateCancellationToken());
+
+        A.CallTo(() =>
+                pseudonymAppService.CreateTrustedAsync(
+                    A<Data.Models.Namespace>.That.Matches(n => n.Name == "ns"),
+                    "se\"cret",
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+        A.CallTo(() =>
+                jobRepository.UpdateProgressAsync(job.Id, A<long>._, 1, 1, A<CancellationToken>._)
+            )
+            .MustHaveHappenedOnceExactly();
+        A.CallTo(() => jobRepository.CompleteAsync(job.Id, A<string>._, 1, A<CancellationToken>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
     public async Task RunAsync_WithDepseudonymizeDirection_ShouldReverseLookupEachRowValue()
     {
         var job = CreateJob(

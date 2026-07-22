@@ -105,6 +105,7 @@ public class CsvPseudonymizationJobRunner(
         var outputObjectKey =
             $"{PseudonymizationJobAppService.S3ObjectKeyPrefix}{job.Id}/output.csv";
         var encoding = Encoding.GetEncoding(job.Encoding);
+        var badDataCounter = new BadDataCounter();
         var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
             Delimiter = job.Delimiter,
@@ -114,12 +115,16 @@ public class CsvPseudonymizationJobRunner(
             // malformed CSV and throws by default. Since fields here are opaque values to relocate
             // rather than data to interpret, keep the raw field content as-is and move on instead
             // of failing the whole job over one row. Never log the raw field/record - only the row
-            // number - since that value is exactly what this service exists to protect.
+            // number - since that value is exactly what this service exists to protect. The count
+            // is surfaced on the job itself (see BadDataCounter) so the UI can flag it.
             BadDataFound = args =>
+            {
+                badDataCounter.Count++;
                 logger.LogWarning(
                     "Ignoring malformed CSV data on parser row {Row}",
                     args.Context.Parser?.Row
-                ),
+                );
+            },
         };
 
         using var getResponse = await s3.GetObjectAsync(s3Config.Value.Bucket, job.InputObjectKey);
@@ -133,6 +138,7 @@ public class CsvPseudonymizationJobRunner(
             encoding,
             csvConfig,
             pipe.Writer,
+            badDataCounter,
             cancellationToken
         );
         using var transferUtility = new TransferUtility(s3);
@@ -160,6 +166,7 @@ public class CsvPseudonymizationJobRunner(
         Encoding encoding,
         CsvConfiguration csvConfig,
         System.IO.Pipelines.PipeWriter pipeWriter,
+        BadDataCounter badDataCounter,
         IJobCancellationToken cancellationToken
     )
     {
@@ -262,6 +269,7 @@ public class CsvPseudonymizationJobRunner(
                         job.Id,
                         countingStream,
                         rows,
+                        badDataCounter.Count,
                         sinceLastUpdate
                     )
                 )
@@ -286,6 +294,7 @@ public class CsvPseudonymizationJobRunner(
                 job.Id,
                 countingStream.BytesRead,
                 rows,
+                badDataCounter.Count,
                 CancellationToken.None
             );
 
@@ -375,6 +384,7 @@ public class CsvPseudonymizationJobRunner(
         Guid jobId,
         ByteCountingStream countingStream,
         long rows,
+        int badDataRowCount,
         Stopwatch sinceLastUpdate
     )
     {
@@ -390,6 +400,7 @@ public class CsvPseudonymizationJobRunner(
             jobId,
             countingStream.BytesRead,
             rows,
+            badDataRowCount,
             CancellationToken.None
         );
         sinceLastUpdate.Restart();
@@ -403,6 +414,13 @@ public class CsvPseudonymizationJobRunner(
         public string?[] RawFields { get; } = rawFields;
         public Task<string>?[] InPlaceResults { get; set; } = [];
         public Task<string>[] AppendedResults { get; set; } = [];
+    }
+
+    // A plain int can't be mutated from inside the BadDataFound closure and observed by the
+    // progress-reporting code further down without boxing it in a reference type.
+    private sealed class BadDataCounter
+    {
+        public int Count { get; set; }
     }
 
     /// <summary>
