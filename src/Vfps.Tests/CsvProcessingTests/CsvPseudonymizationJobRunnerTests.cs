@@ -44,13 +44,19 @@ public class CsvPseudonymizationJobRunnerTests
         return token;
     }
 
-    private CsvPseudonymizationJobRunner CreateSut() =>
+    // Defaults to 20 (not CsvProcessingConfig's own production default of 1000) so existing tests
+    // exercising "a full chunk plus a trailing partial one" stay meaningful without needing
+    // hundreds of rows - pass an explicit value to test PseudonymizeBatchSize-specific behavior.
+    private CsvPseudonymizationJobRunner CreateSut(int pseudonymizeBatchSize = 20) =>
         new(
             jobRepository,
             pseudonymAppService,
             namespaceRepository,
             s3,
             Options.Create(new S3Config { Bucket = Bucket }),
+            Options.Create(
+                new CsvProcessingConfig { PseudonymizeBatchSize = pseudonymizeBatchSize }
+            ),
             NullLogger<CsvPseudonymizationJobRunner>.Instance
         );
 
@@ -324,7 +330,8 @@ public class CsvPseudonymizationJobRunnerTests
     [Fact]
     public async Task RunAsync_WithRowCountNotMultipleOfChunkSize_ShouldStillProcessTrailingPartialChunk()
     {
-        // ConcurrencyChunkSize is 20 - 25 rows exercises one full chunk plus a trailing partial one.
+        // CreateSut's default PseudonymizeBatchSize is 20 - 25 rows exercises one full batch plus
+        // a trailing partial one.
         const int rowCount = 25;
         var job = CreateJob(
             PseudonymizationJobDirection.Pseudonymize,
@@ -509,6 +516,64 @@ public class CsvPseudonymizationJobRunnerTests
                     >.That.Matches(reqs =>
                         reqs.Any(r => r.OriginalValue == $"value{rowCount - 1}")
                     ),
+                    A<CancellationToken>._
+                )
+            )
+            .MustNotHaveHappened();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithBatchSizeLargerThanProgressInterval_ShouldStillNoticeCancellationBeforeEndOfFile()
+    {
+        // PseudonymizeBatchSize (1000 in production) can be much larger than
+        // ProgressUpdateRowInterval (200) - this proves the cancellation check isn't tied to the
+        // batch/flush boundary. With a 400-row file and a batch size of 1000, nothing would ever
+        // flush before EOF if the check only fired on flush - here it must fire independently,
+        // at the row-200 mark, before a single batch (let alone the trailing one at EOF) is ever
+        // sent, so CreateTrustedBatchAsync must never be called at all.
+        const int rowCount = 400;
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        var cancelledJob = new PseudonymizationJob
+        {
+            Id = job.Id,
+            Status = PseudonymizationJobStatus.Cancelled,
+            Direction = job.Direction,
+            CreatedBy = job.CreatedBy,
+            InputObjectKey = job.InputObjectKey,
+            ColumnMappings = job.ColumnMappings,
+        };
+        var findCallCount = 0;
+        A.CallTo(() => jobRepository.FindAsync(job.Id, A<CancellationToken>._))
+            .ReturnsLazily(() => findCallCount++ == 0 ? job : cancelledJob);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+
+        var csv = new StringBuilder("id,value\n");
+        for (var i = 0; i < rowCount; i++)
+        {
+            csv.Append(i).Append(',').Append("value").Append(i).Append('\n');
+            FakePseudonymize("ns", $"value{i}", $"pseudonym{i}");
+        }
+        FakeInputObject(job, csv.ToString());
+
+        var sut = CreateSut(pseudonymizeBatchSize: 1000);
+        await sut.RunAsync(job.Id, CreateCancellationToken());
+
+        A.CallTo(() =>
+                pseudonymAppService.CreateTrustedBatchAsync(
+                    A<IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>>._,
+                    A<CancellationToken>._
+                )
+            )
+            .MustNotHaveHappened();
+        A.CallTo(() =>
+                jobRepository.CompleteAsync(
+                    A<Guid>._,
+                    A<string>._,
+                    A<long>._,
                     A<CancellationToken>._
                 )
             )

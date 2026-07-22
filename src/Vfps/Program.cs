@@ -277,6 +277,8 @@ builder.Services.Configure<S3Config>(builder.Configuration.GetSection("S3"));
 var s3Config = new S3Config();
 builder.Configuration.GetSection("S3").Bind(s3Config);
 
+builder.Services.Configure<CsvProcessingConfig>(builder.Configuration.GetSection("CsvProcessing"));
+
 if (s3Config.IsEnabled)
 {
     builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
