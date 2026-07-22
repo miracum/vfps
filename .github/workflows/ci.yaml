@@ -353,6 +353,21 @@ jobs:
       enable-verify-base-image-signature: false
       enable-validate-gradle-wrapper: false
       codeql-languages: '["csharp"]'
-      enable-codeql: true
+      # merge_group runs fail at the upload-sarif step with "Error: ref
+      # 'refs/heads/gh-readonly-queue/master/pr-<n>-<sha>' not found in this repository" - CodeQL
+      # code scanning results can only be associated with a persistent ref (a branch or PR ref),
+      # and the merge queue's gh-readonly-queue ref is ephemeral. This is a genuine, still-open
+      # upstream limitation acknowledged by GitHub - see
+      # https://github.com/github/codeql-action/issues/1572 (open since 2023, no fix as of the
+      # last activity in Feb 2025) - not something fixable via workflow inputs the way the
+      # benchmarks.yaml `ref` input works around github-action-benchmark's own merge_group gap.
+      # standard-lint.yaml's codeql-analyze job itself has no event-based `if:` to add this to
+      # from here (unlike its zizmor/dependency-review/megalinter jobs, which are already
+      # `if: github.event_name == 'pull_request'` for the same reason), so disabling it via this
+      # input for merge_group specifically is the only caller-side lever available. The
+      # pull_request-triggered run (before a PR enters the queue) and the push-triggered run
+      # (right after it merges) both still run CodeQL normally - only the merge queue's redundant
+      # re-validation pass is skipped.
+      enable-codeql: ${{ github.event_name != 'merge_group' }}
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
