@@ -6,6 +6,7 @@ using Amazon.S3.Transfer;
 using CsvHelper;
 using CsvHelper.Configuration;
 using Hangfire;
+using Hangfire.Server;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vfps.AppServices;
@@ -42,7 +43,11 @@ public class CsvPseudonymizationJobRunner(
     private const int DepseudonymizeConcurrencyChunkSize = 20;
 
     /// <inheritdoc/>
-    public async Task RunAsync(Guid jobId, IJobCancellationToken cancellationToken)
+    public async Task RunAsync(
+        Guid jobId,
+        IJobCancellationToken cancellationToken,
+        PerformContext? context = null
+    )
     {
         var job =
             await jobRepository.FindAsync(jobId, CancellationToken.None)
@@ -63,6 +68,11 @@ public class CsvPseudonymizationJobRunner(
             return;
         }
 
+        // Visible on this job's own Hangfire Dashboard page (under "Parameters") - lets an
+        // operator see which S3 objects a stuck/failed job was reading from and writing to
+        // without needing separate access to vfps's own database.
+        context?.SetJobParameter("InputObjectKey", job.InputObjectKey);
+
         await jobRepository.UpdateStatusAsync(
             jobId,
             PseudonymizationJobStatus.Running,
@@ -72,12 +82,23 @@ public class CsvPseudonymizationJobRunner(
 
         try
         {
-            var (outputObjectKey, rowsProcessed) = await ProcessAsync(job, cancellationToken);
+            var (outputObjectKey, rowsProcessed) = await ProcessAsync(
+                job,
+                cancellationToken,
+                context
+            );
 
             // A cooperative cancel may have landed while the last chunk was still uploading -
-            // don't overwrite Cancelled with Completed.
+            // don't overwrite Cancelled with Completed. Same for Failed: StalledPseudonymizationJobWatchdogService
+            // runs independently of this runner and can mark a job Failed (e.g. a false positive -
+            // this job looked stalled but was actually still alive) at any point, including while
+            // ProcessAsync above was still finishing up - that verdict shouldn't be silently
+            // overwritten by a late success either.
             var current = await jobRepository.FindAsync(jobId, CancellationToken.None);
-            if (current?.Status != PseudonymizationJobStatus.Cancelled)
+            if (
+                current?.Status
+                is not (PseudonymizationJobStatus.Cancelled or PseudonymizationJobStatus.Failed)
+            )
             {
                 await jobRepository.CompleteAsync(
                     jobId,
@@ -104,11 +125,16 @@ public class CsvPseudonymizationJobRunner(
 
     private async Task<(string OutputObjectKey, long RowsProcessed)> ProcessAsync(
         PseudonymizationJob job,
-        IJobCancellationToken cancellationToken
+        IJobCancellationToken cancellationToken,
+        PerformContext? context
     )
     {
         var outputObjectKey =
             $"{PseudonymizationJobAppService.S3ObjectKeyPrefix}{job.Id}/output.csv";
+        // Set as soon as the (deterministic, jobId-derived) path is known, not only on success -
+        // this is the path the runner is writing to/intends to write to, not a "job is done"
+        // signal (that's what the job's own Status is for).
+        context?.SetJobParameter("OutputObjectKey", outputObjectKey);
         var encoding = Encoding.GetEncoding(job.Encoding);
         var badDataCounter = new BadDataCounter();
         var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)

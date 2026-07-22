@@ -52,6 +52,23 @@ public class PseudonymizationJobRepository(PseudonymContext context)
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Guid>> FindStalledRunningJobIdsAsync(
+        TimeSpan staleAfter,
+        CancellationToken cancellationToken
+    )
+    {
+        var threshold = DateTimeOffset.UtcNow - staleAfter;
+
+        return await context
+            .PseudonymizationJobs.AsNoTracking()
+            .Where(j =>
+                j.Status == PseudonymizationJobStatus.Running && j.LastUpdatedAt < threshold
+            )
+            .Select(j => j.Id)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task UpdateProgressAsync(
         Guid id,
         long bytesProcessed,

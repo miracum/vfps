@@ -67,6 +67,16 @@ public class PseudonymizationJob : TracksCreationAndUpdates
     public required string InputObjectKey { get; set; }
     public string? OutputObjectKey { get; set; }
 
+    /// <summary>
+    /// The uploaded file's original browser-side name (e.g. "patients_2026.csv") - display only,
+    /// so the jobs list is recognizable at a glance instead of showing only <see cref="Id"/>.
+    /// Never used to derive <see cref="InputObjectKey"/> or any other path - that's always the
+    /// deterministic "csv-jobs/{Id}/input.csv" pattern, regardless of what this is. Null for jobs
+    /// created before this field existed, or if the browser-side lookup failed for any reason -
+    /// treat as optional everywhere.
+    /// </summary>
+    public string? OriginalFileName { get; set; }
+
     public string Encoding { get; set; } = "utf-8";
     public string Delimiter { get; set; } = ",";
     public bool HasHeaderRow { get; set; } = true;

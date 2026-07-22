@@ -3,6 +3,8 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using FakeItEasy;
 using Hangfire;
+using Hangfire.Server;
+using Hangfire.Storage;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Vfps.AppServices;
@@ -42,6 +44,17 @@ public class CsvPseudonymizationJobRunnerTests
         var token = A.Fake<IJobCancellationToken>();
         A.CallTo(() => token.ShutdownToken).Returns(CancellationToken.None);
         return token;
+    }
+
+    // A real PerformContext, not a FakeItEasy fake - PerformContext is a concrete class whose
+    // SetJobParameter isn't virtual, but it only ever delegates to Connection.SetJobParameter
+    // (IStorageConnection, an interface), so faking that one dependency and constructing the
+    // context for real lets tests verify what CsvPseudonymizationJobRunner actually sets.
+    private static PerformContext CreatePerformContext(out IStorageConnection connection)
+    {
+        connection = A.Fake<IStorageConnection>();
+        var backgroundJob = new BackgroundJob("test-hangfire-job-id", null, DateTime.UtcNow);
+        return new PerformContext(null, connection, backgroundJob, CreateCancellationToken());
     }
 
     // Defaults to 20 (not CsvProcessingConfig's own production default of 1000) so existing tests
@@ -206,6 +219,90 @@ public class CsvPseudonymizationJobRunnerTests
                 )
             )
             .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithPerformContext_ShouldSetInputAndOutputObjectKeyAsJobParameters()
+    {
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,secret\n");
+        FakePseudonymize("ns", "secret", "pseudonym-of-secret");
+        var context = CreatePerformContext(out var storageConnection);
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, CreateCancellationToken(), context);
+
+        A.CallTo(() =>
+                storageConnection.SetJobParameter(
+                    context.BackgroundJob.Id,
+                    "InputObjectKey",
+                    A<string>.That.Contains(job.InputObjectKey)
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+        A.CallTo(() =>
+                storageConnection.SetJobParameter(
+                    context.BackgroundJob.Id,
+                    "OutputObjectKey",
+                    A<string>.That.Contains(job.Id.ToString())
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Theory]
+    [InlineData(PseudonymizationJobStatus.Cancelled)]
+    [InlineData(PseudonymizationJobStatus.Failed)]
+    public async Task RunAsync_WithStatusChangedByAnotherActorRightAfterProcessing_ShouldNotOverwriteItWithCompleted(
+        PseudonymizationJobStatus externallySetStatus
+    )
+    {
+        // Something else - a user's Cancel click, or StalledPseudonymizationJobWatchdogService
+        // flagging a false-positive stall - can change the job's status between ProcessAsync
+        // finishing and RunAsync's own final status check. Whichever terminal status got there
+        // first must win; a late, otherwise-successful finish must not silently overwrite it.
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        var externallyChangedJob = new PseudonymizationJob
+        {
+            Id = job.Id,
+            Status = externallySetStatus,
+            Direction = job.Direction,
+            CreatedBy = job.CreatedBy,
+            InputObjectKey = job.InputObjectKey,
+            ColumnMappings = job.ColumnMappings,
+        };
+        // Only the initial status-guard FindAsync call (the very first one in RunAsync) should
+        // see the original, non-terminal job - every call after that, including the final "did
+        // this change while we were processing" check, must see the externally-changed one.
+        var findCallCount = 0;
+        A.CallTo(() => jobRepository.FindAsync(job.Id, A<CancellationToken>._))
+            .ReturnsLazily(() => findCallCount++ == 0 ? job : externallyChangedJob);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,secret\n");
+        FakePseudonymize("ns", "secret", "pseudonym-of-secret");
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, CreateCancellationToken());
+
+        A.CallTo(() =>
+                jobRepository.CompleteAsync(
+                    A<Guid>._,
+                    A<string>._,
+                    A<long>._,
+                    A<CancellationToken>._
+                )
+            )
+            .MustNotHaveHappened();
     }
 
     [Fact]

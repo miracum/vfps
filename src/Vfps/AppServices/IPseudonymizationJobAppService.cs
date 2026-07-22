@@ -67,7 +67,8 @@ public record CreateCsvJobRequest(
     string Delimiter,
     bool HasHeaderRow,
     IReadOnlyList<ColumnMapping> ColumnMappings,
-    PseudonymizationJobDirection Direction = PseudonymizationJobDirection.Pseudonymize
+    PseudonymizationJobDirection Direction = PseudonymizationJobDirection.Pseudonymize,
+    string? OriginalFileName = null
 );
 
 public class PseudonymizationJobNotFoundException(Guid jobId)

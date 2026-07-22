@@ -80,6 +80,7 @@ public class PseudonymizationJobAppService(
             Direction = request.Direction,
             CreatedBy = user.GetSubject(),
             InputObjectKey = $"{S3ObjectKeyPrefix}{jobId}/input.csv",
+            OriginalFileName = request.OriginalFileName,
             Encoding = request.Encoding,
             Delimiter = request.Delimiter,
             HasHeaderRow = request.HasHeaderRow,

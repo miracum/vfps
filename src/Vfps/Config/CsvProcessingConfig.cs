@@ -27,4 +27,17 @@ public class CsvProcessingConfig
     /// much larger batch (e.g. 5000) would buy.
     /// </summary>
     public int PseudonymizeBatchSize { get; set; } = 1000;
+
+    /// <summary>
+    /// How long a job can sit in <see cref="Data.Models.PseudonymizationJobStatus.Running"/>
+    /// with no progress update before <see cref="CsvProcessing.StalledPseudonymizationJobWatchdogService"/>
+    /// marks it Failed. A healthy job updates its progress at least every ~2s/200 rows (see
+    /// CsvPseudonymizationJobRunner), so this exists to catch a runner that crashed, was killed,
+    /// or hit a database outage long enough to exhaust its own retries (see
+    /// EnableRetryOnFailure in Program.cs) without ever getting to record its own failure -
+    /// otherwise that job would show as "Running" in the UI forever. Kept comfortably above the
+    /// retry budget there (worst case a few minutes) to avoid flagging a job that's still
+    /// legitimately retrying through a transient outage.
+    /// </summary>
+    public TimeSpan StalledJobThreshold { get; set; } = TimeSpan.FromMinutes(10);
 }
