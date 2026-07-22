@@ -1,3 +1,4 @@
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using Prometheus;
 using Vfps.Data.Models;
@@ -10,6 +11,11 @@ public class PseudonymRepository : IPseudonymRepository
     private static readonly Histogram UpsertDuration = Metrics.CreateHistogram(
         "vfps_upsert_duration_seconds",
         "Histogram of the durations for upserting a pseudonym into the backend database."
+    );
+
+    private static readonly Histogram BatchUpsertDuration = Metrics.CreateHistogram(
+        "vfps_batch_upsert_duration_seconds",
+        "Histogram of the durations for upserting a batch of pseudonyms into the backend database in a single round trip."
     );
 
     // we can't yet use FlexLabs.Upsert and avoid manual SQL due to
@@ -89,6 +95,138 @@ public class PseudonymRepository : IPseudonymRepository
         }
 
         return upsertedPseudonym;
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Pseudonym>> CreateIfNotExistBatchAsync(
+        IReadOnlyList<Pseudonym> pseudonyms,
+        CancellationToken cancellationToken
+    )
+    {
+        if (pseudonyms.Count == 0)
+        {
+            return [];
+        }
+
+        List<Pseudonym> upserted;
+        using (BatchUpsertDuration.NewTimer())
+        {
+            if (Context.Database.IsNpgsql())
+            {
+                var sql = BuildBatchUpsertSql(pseudonyms, out var parameters);
+                upserted = await Context
+                    .Pseudonyms.FromSqlRaw(sql, parameters)
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+            }
+            else
+            {
+                // SQLite is test-only (never production scale - see ListByNamespaceAsync above),
+                // so a plain loop over the already-proven single-row upsert is simpler than
+                // maintaining a second batched SQL dialect purely for test scaffolding.
+                upserted = await SequentialFallbackAsync(pseudonyms);
+            }
+        }
+
+        // The batched round trip is expected to cover every requested key. It can fall short only
+        // if a concurrent writer (a different Hangfire job, or another connection entirely)
+        // inserts the exact same key between this statement's INSERT and its own fallback SELECT
+        // - the same rare race CreateIfNotExist's retry loop above exists to handle. Reuse that
+        // proven, single-row retry logic here instead of duplicating it for the batch case.
+        if (upserted.Count < pseudonyms.Count)
+        {
+            var covered = upserted.Select(p => (p.NamespaceName, p.OriginalValue)).ToHashSet();
+            foreach (
+                var missing in pseudonyms.Where(p =>
+                    !covered.Contains((p.NamespaceName, p.OriginalValue))
+                )
+            )
+            {
+                var single = await CreateIfNotExist(missing);
+                if (single is not null)
+                {
+                    upserted.Add(single);
+                }
+            }
+        }
+
+        return upserted;
+    }
+
+    private async Task<List<Pseudonym>> SequentialFallbackAsync(IReadOnlyList<Pseudonym> pseudonyms)
+    {
+        var results = new List<Pseudonym>(pseudonyms.Count);
+        foreach (var pseudonym in pseudonyms)
+        {
+            var single = await CreateIfNotExist(pseudonym);
+            if (single is not null)
+            {
+                results.Add(single);
+            }
+        }
+
+        return results;
+    }
+
+    /// <summary>
+    /// Builds one combined "insert whatever's missing, then return every requested row" query
+    /// for the whole batch - the same shape as <see cref="PostgreSQLInsertCommand"/>, generalized
+    /// from one row to N. A single multi-row INSERT ... ON CONFLICT DO NOTHING tolerates the same
+    /// key appearing more than once in <paramref name="pseudonyms"/> (Postgres resolves the
+    /// conflict against rows already inserted earlier in the same statement), and the closing
+    /// UNION (not UNION ALL) dedupes the resulting rows - so this is correct even without the
+    /// caller enforcing the "already deduped" precondition, it just costs an extra row on the wire.
+    /// </summary>
+    private static string BuildBatchUpsertSql(
+        IReadOnlyList<Pseudonym> pseudonyms,
+        out object[] parameters
+    )
+    {
+        var values = new StringBuilder();
+        parameters = new object[pseudonyms.Count * 3];
+        for (var i = 0; i < pseudonyms.Count; i++)
+        {
+            if (i > 0)
+            {
+                values.Append(", ");
+            }
+
+            var baseIndex = i * 3;
+            values
+                .Append('(')
+                .Append('{')
+                .Append(baseIndex)
+                .Append("}, {")
+                .Append(baseIndex + 1)
+                .Append("}, {")
+                .Append(baseIndex + 2)
+                .Append("})");
+
+            parameters[baseIndex] = pseudonyms[i].NamespaceName;
+            parameters[baseIndex + 1] = pseudonyms[i].OriginalValue;
+            parameters[baseIndex + 2] = pseudonyms[i].PseudonymValue;
+        }
+
+        return $"""
+            WITH
+                input (namespace_name, original_value, pseudonym_value) AS (
+                    VALUES {values}
+                ),
+                inserted AS (
+                    INSERT INTO
+                        pseudonyms (namespace_name, original_value, pseudonym_value, created_at, last_updated_at)
+                    SELECT namespace_name, original_value, pseudonym_value, NOW(), NOW()
+                    FROM input
+                    ON CONFLICT (namespace_name, original_value) DO NOTHING
+                    RETURNING *
+                )
+            SELECT *
+            FROM inserted
+            UNION
+            SELECT p.*
+            FROM pseudonyms p
+            JOIN input i ON p.namespace_name = i.namespace_name AND p.original_value = i.original_value
+            """;
     }
 
     /// <inheritdoc/>

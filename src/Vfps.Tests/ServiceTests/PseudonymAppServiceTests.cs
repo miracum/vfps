@@ -93,6 +93,98 @@ public class PseudonymAppServiceTests : ServiceTestBase
         results.Select(r => r.PseudonymValue).Distinct().Should().HaveCount(20);
     }
 
+    [Fact]
+    public async Task CreateTrustedBatchAsync_WithMultipleNamespacesAndDuplicates_ShouldResolveAllInOneBatch()
+    {
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var namespaceA = new Data.Models.Namespace
+        {
+            Name = "existingNamespace",
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+        };
+        var namespaceB = new Data.Models.Namespace
+        {
+            Name = "emptyNamespace",
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+        };
+
+        var result = await sut.CreateTrustedBatchAsync(
+            [
+                (namespaceA, "value1"),
+                (namespaceB, "value1"),
+                // A duplicate (namespace, originalValue) pair within the same batch must not be
+                // generated/stored twice, and both occurrences must resolve to the same pseudonym.
+                (namespaceA, "value1"),
+                (namespaceA, "value2"),
+            ],
+            CancellationToken.None
+        );
+
+        result.Should().HaveCount(3);
+        result[("existingNamespace", "value1")]
+            .PseudonymValue.Should()
+            .Be(result[("existingNamespace", "value1")].PseudonymValue);
+        result[("existingNamespace", "value1")]
+            .PseudonymValue.Should()
+            .NotBe(result[("emptyNamespace", "value1")].PseudonymValue);
+        result[("existingNamespace", "value2")]
+            .PseudonymValue.Should()
+            .NotBe(result[("existingNamespace", "value1")].PseudonymValue);
+
+        // Idempotent across separate calls too - same as CreateTrustedAsync's upsert semantics.
+        var second = await sut.CreateTrustedBatchAsync(
+            [(namespaceA, "value1")],
+            CancellationToken.None
+        );
+        second[("existingNamespace", "value1")]
+            .PseudonymValue.Should()
+            .Be(result[("existingNamespace", "value1")].PseudonymValue);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateTrustedBatchAsync_WithBlankOriginalValue_ShouldThrowArgumentException(
+        string blankValue
+    )
+    {
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "existingNamespace",
+            PseudonymLength = 16,
+        };
+
+        var act = () =>
+            sut.CreateTrustedBatchAsync([(@namespace, blankValue)], CancellationToken.None);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task CreateTrustedBatchAsync_WithEmptyRequestList_ShouldReturnEmptyResult()
+    {
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+
+        var result = await sut.CreateTrustedBatchAsync([], CancellationToken.None);
+
+        result.Should().BeEmpty();
+    }
+
     [Theory]
     [InlineData("")]
     [InlineData("   ")]

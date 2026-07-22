@@ -15,6 +15,24 @@ namespace Vfps.Data
         Task<Pseudonym?> CreateIfNotExist(Pseudonym pseudonym);
 
         /// <summary>
+        /// Same as <see cref="CreateIfNotExist"/>, batched into a single round trip for many
+        /// pseudonyms at once - CsvPseudonymizationJobRunner's dominant cost was one upsert round
+        /// trip per field per row, which this collapses to one round trip per chunk. Callers must
+        /// dedupe <paramref name="pseudonyms"/> by (NamespaceName, OriginalValue) first - passing
+        /// the same key twice wastes a row rather than causing incorrect results.
+        /// </summary>
+        /// <returns>
+        /// One entry per distinct (NamespaceName, OriginalValue) in <paramref name="pseudonyms"/>.
+        /// Always fully covers the input - falls back to <see cref="CreateIfNotExist"/> one at a
+        /// time for any key the batched round trip didn't return a row for (expected to be rare:
+        /// only a concurrent writer racing the same key at the same instant).
+        /// </returns>
+        Task<IReadOnlyList<Pseudonym>> CreateIfNotExistBatchAsync(
+            IReadOnlyList<Pseudonym> pseudonyms,
+            CancellationToken cancellationToken
+        );
+
+        /// <summary>
         /// Lists pseudonyms in a namespace via keyset/seek pagination, ordered by
         /// (created_at DESC, original_value DESC). Pass the last item of the previous page as
         /// <paramref name="cursor"/> to get the next page, or null to get the first page.

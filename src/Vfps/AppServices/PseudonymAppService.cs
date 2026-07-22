@@ -97,6 +97,78 @@ public class PseudonymAppService(
     }
 
     /// <inheritdoc/>
+    public async Task<
+        IReadOnlyDictionary<(string Namespace, string OriginalValue), Data.Models.Pseudonym>
+    > CreateTrustedBatchAsync(
+        IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)> requests,
+        CancellationToken cancellationToken
+    )
+    {
+        if (requests.Count == 0)
+        {
+            return new Dictionary<(string, string), Data.Models.Pseudonym>();
+        }
+
+        // Dedupe up front - a CSV chunk routinely repeats the same value (e.g. a patient ID
+        // column), and there's no reason to generate a candidate pseudonym or send a duplicate
+        // row over the wire more than once per chunk. The first candidate generated for a given
+        // key wins; duplicates just look it up once resolved below.
+        var distinctByKey =
+            new Dictionary<(string Namespace, string OriginalValue), Data.Models.Pseudonym>();
+        foreach (var (@namespace, originalValue) in requests)
+        {
+            if (string.IsNullOrWhiteSpace(originalValue))
+            {
+                throw new ArgumentException(
+                    "The original value must not be blank.",
+                    nameof(requests)
+                );
+            }
+
+            var key = (@namespace.Name, originalValue);
+            if (distinctByKey.ContainsKey(key))
+            {
+                continue;
+            }
+
+            string pseudonymValue;
+            using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
+            {
+                activity?.SetTag("Method", @namespace.PseudonymGenerationMethod.ToString());
+                pseudonymValue = methodsLookup.Generate(
+                    @namespace.PseudonymGenerationMethod,
+                    originalValue,
+                    @namespace.PseudonymLength
+                );
+            }
+            pseudonymValue =
+                @namespace.PseudonymPrefix + pseudonymValue + @namespace.PseudonymSuffix;
+
+            distinctByKey[key] = new Data.Models.Pseudonym
+            {
+                NamespaceName = @namespace.Name,
+                OriginalValue = originalValue,
+                PseudonymValue = pseudonymValue,
+            };
+        }
+
+        // Same fresh, pooled DbContext reasoning as CreateTrustedAsync(Namespace, ...) above.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var upserted = await new PseudonymRepository(context).CreateIfNotExistBatchAsync(
+            [.. distinctByKey.Values],
+            cancellationToken
+        );
+
+        var result = new Dictionary<(string, string), Data.Models.Pseudonym>();
+        foreach (var pseudonym in upserted)
+        {
+            result[(pseudonym.NamespaceName, pseudonym.OriginalValue)] = pseudonym;
+        }
+
+        return result;
+    }
+
+    /// <inheritdoc/>
     public async Task<PseudonymPageDto> ListAsync(
         string namespaceName,
         int pageSize,
