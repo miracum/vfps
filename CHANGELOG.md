@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.6.0](https://github.com/miracum/vfps/compare/v1.5.0...v1.6.0) (2026-07-22)
+
+
+### Features
+
+* batch upserts ([#255](https://github.com/miracum/vfps/issues/255)) ([7d0d2d6](https://github.com/miracum/vfps/commit/7d0d2d6dffc43cc4c5babdf7a3495e4120c19053))
+* display bad csv data in the UI during processing ([#253](https://github.com/miracum/vfps/issues/253)) ([b142e2c](https://github.com/miracum/vfps/commit/b142e2cd948a1a220b5834c20e84bea0d8fffde5))
+
 ## [1.5.0](https://github.com/miracum/vfps/compare/v1.4.4...v1.5.0) (2026-07-21)
 
 
