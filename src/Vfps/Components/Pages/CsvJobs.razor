@@ -97,7 +97,7 @@ else
                                 type="file"
                                 id="csvFileInput"
                                 accept=".csv,text/csv"
-                                @onchange="DetectColumnsAsync"
+                                @onchange="OnFileSelectedAsync"
                                 class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
                             />
                         </BbFieldContent>
@@ -256,6 +256,13 @@ else
                                 <code class="text-xs">@j.Id.ToString()[..8]</code>
                             </ChildContent>
                         </BbDataGridTemplateColumn>
+                        <BbDataGridTemplateColumn Title="File">
+                            <ChildContent Context="j">
+                                <div class="max-w-40 truncate text-xs" title="@j.OriginalFileName">
+                                    @(j.OriginalFileName ?? "—")
+                                </div>
+                            </ChildContent>
+                        </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="Direction">
                             <ChildContent Context="j">
                                 @(j.Direction == PseudonymizationJobDirection.Depseudonymize
@@ -378,6 +385,7 @@ else
     private string _encoding = "utf-8";
     private string _delimiter = ",";
     private bool _hasHeaderRow = true;
+    private string? _fileName;
     private IReadOnlyList<string> _detectedColumns = [];
     private bool _isCreating;
     private string? _createError;
@@ -485,6 +493,25 @@ else
         await DetectColumnsAsync();
     }
 
+    // Runs on every file selection, regardless of _hasHeaderRow - the filename is purely a
+    // display label for the jobs list, unrelated to column detection.
+    private async Task OnFileSelectedAsync()
+    {
+        try
+        {
+            _fileName = await JS.InvokeAsync<string?>(
+                "vfpsCsvUpload.getSelectedFileName",
+                "csvFileInput"
+            );
+        }
+        catch (Microsoft.JSInterop.JSException)
+        {
+            _fileName = null;
+        }
+
+        await DetectColumnsAsync();
+    }
+
     private async Task DetectColumnsAsync()
     {
         if (!_hasHeaderRow)
@@ -557,7 +584,8 @@ else
                 _delimiter,
                 _hasHeaderRow,
                 mappings,
-                Enum.Parse<PseudonymizationJobDirection>(_direction)
+                Enum.Parse<PseudonymizationJobDirection>(_direction),
+                _fileName
             );
             var (job, uploadUrl) = await _jobAppService.CreateJobAsync(
                 request,
@@ -571,6 +599,7 @@ else
             _columnMappings.Clear();
             _columnMappings.Add(new ColumnMappingRow());
             _detectedColumns = [];
+            _fileName = null;
             await ReloadJobsAsync();
         }
         catch (ForbiddenException ex)

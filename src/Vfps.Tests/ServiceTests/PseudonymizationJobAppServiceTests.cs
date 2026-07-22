@@ -113,6 +113,49 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task CreateJobAsync_WithOriginalFileName_ShouldStoreItOnTheJob()
+    {
+        var (sut, _, _, _) = CreateSut();
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
+            OriginalFileName: "patients_2026.csv"
+        );
+
+        var (job, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+
+        job.OriginalFileName.Should().Be("patients_2026.csv");
+    }
+
+    [Fact]
+    public async Task CreateJobAsync_WithoutOriginalFileName_ShouldStoreNull()
+    {
+        var (sut, _, _, _) = CreateSut();
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
+        );
+
+        var (job, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+
+        job.OriginalFileName.Should().BeNull();
+    }
+
+    [Fact]
     public async Task CreateJobAsync_DepseudonymizeWithWriteAccessButNotReverseLookupAccess_ShouldThrowForbidden()
     {
         // Depseudonymize reveals original values, so it must be gated on reverse-lookup access,

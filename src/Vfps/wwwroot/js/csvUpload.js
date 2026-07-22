@@ -35,6 +35,11 @@ function parseCsvLine(line, delimiter) {
 }
 
 window.vfpsCsvUpload = {
+    getSelectedFileName: function (inputElementId) {
+        const input = document.getElementById(inputElementId);
+        return input && input.files && input.files.length > 0 ? input.files[0].name : null;
+    },
+
     readHeaderRow: async function (inputElementId, delimiter) {
         const input = document.getElementById(inputElementId);
         if (!input || !input.files || input.files.length === 0) {

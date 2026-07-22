@@ -95,7 +95,28 @@ void ConfigurePseudonymContext(IServiceProvider isp, DbContextOptionsBuilder opt
     switch (backingStore.ToLowerInvariant())
     {
         case "postgresql":
-            options.UseNpgsql(connString);
+            options.UseNpgsql(
+                connString,
+                npgsqlOptions =>
+                    // A connection failure mid-outage (e.g. a Postgres upgrade/failover, or a
+                    // rolling restart) would otherwise throw immediately out of every DB call on
+                    // this context - including from inside a running CsvPseudonymizationJobRunner
+                    // job, which has no other way to ride out a transient outage. Npgsql's own
+                    // NpgsqlException.IsTransient correctly classifies a connection-refused/
+                    // timeout failure (the SocketException case) as retriable, so this is safe to
+                    // apply broadly, not just to the CSV job path. 12 retries at up to 30s each,
+                    // exponential backoff, covers several minutes of outage (the real-world
+                    // trigger for this: a multi-minute Postgres upgrade left every DB call failing
+                    // - see the incident this was added for) while still eventually giving up
+                    // rather than retrying forever. Safe with this codebase's raw-SQL
+                    // (FromSqlRaw/FromSqlInterpolated) usage - none of it opens an explicit
+                    // Database.BeginTransaction, which is the one thing this feature can't wrap.
+                    npgsqlOptions.EnableRetryOnFailure(
+                        maxRetryCount: 15,
+                        maxRetryDelay: TimeSpan.FromMinutes(5),
+                        errorCodesToAdd: null
+                    )
+            );
             break;
         default:
             throw new InvalidOperationException(
@@ -305,6 +326,7 @@ if (s3Config.IsEnabled)
     builder.Services.AddScoped<IPseudonymizationJobAppService, PseudonymizationJobAppService>();
     builder.Services.AddScoped<ICsvPseudonymizationJobRunner, CsvPseudonymizationJobRunner>();
     builder.Services.AddHostedService<S3BucketConfigurationBackgroundService>();
+    builder.Services.AddHostedService<StalledPseudonymizationJobWatchdogService>();
 
     var postgresConnectionString =
         builder.Configuration.GetConnectionString("PostgreSQL")

@@ -25,6 +25,20 @@ public interface IPseudonymizationJobRepository
     );
 
     /// <summary>
+    /// IDs of jobs stuck in <see cref="PseudonymizationJobStatus.Running"/> with no progress
+    /// update in over <paramref name="staleAfter"/> - see
+    /// <see cref="CsvProcessing.StalledPseudonymizationJobWatchdogService"/>, the only caller.
+    /// A healthy running job's LastUpdatedAt moves at least every ~2s/200 rows (see
+    /// CsvPseudonymizationJobRunner's ProgressUpdateInterval/ProgressUpdateRowInterval), so this
+    /// only ever finds jobs whose runner crashed, was killed, or exhausted every retry against an
+    /// extended database outage without ever getting to record its own failure.
+    /// </summary>
+    Task<IReadOnlyList<Guid>> FindStalledRunningJobIdsAsync(
+        TimeSpan staleAfter,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Bulk-updates progress counters without loading/tracking the entity - called frequently
     /// from the job runner, so avoiding EF change-tracking overhead matters here.
     /// </summary>
