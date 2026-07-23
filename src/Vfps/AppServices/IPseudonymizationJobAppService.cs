@@ -63,11 +63,10 @@ public interface IPseudonymizationJobAppService
 
     /// <summary>
     /// Deletes every job of the caller's own in a terminal state (Completed, Failed, Cancelled,
-    /// Stalled),
-    /// or every such job for admins - matching <see cref="ListAsync"/>'s own scoping. Their input
-    /// and output objects in S3 are left alone; the bucket's own retention/lifecycle rule (see
-    /// <see cref="CsvProcessing.S3BucketConfigurationBackgroundService"/>) expires those
-    /// independently of whether a DB row still references them. Returns the number of jobs
+    /// Stalled), or every such job for admins - matching <see cref="ListAsync"/>'s own scoping.
+    /// Their input and output objects in S3 are left alone; the bucket's own retention/lifecycle
+    /// rule (see <see cref="CsvProcessing.S3BucketConfigurationBackgroundService"/>) expires
+    /// those independently of whether a DB row still references them. Returns the number of jobs
     /// deleted.
     /// </summary>
     Task<int> ClearFinishedAsync(ClaimsPrincipal user, CancellationToken cancellationToken);
