@@ -362,7 +362,7 @@ else
                                 )
                                 {
                                     <div
-                                        class="flex max-w-xs items-start gap-1.5 text-xs @(j.Status == PseudonymizationJobStatus.Stalled ? "text-amber-700" : "text-destructive")"
+                                        class="flex max-w-xs items-start gap-1.5 text-xs @(j.Status == PseudonymizationJobStatus.Stalled ? "issue-text-stalled" : "text-destructive")"
                                         title="@j.ErrorMessage"
                                     >
                                         <LucideIcon
@@ -585,12 +585,13 @@ else
             _ => BadgeVariant.Secondary,
         };
 
+    // Plain, global CSS classes (wwwroot/app.css), not Tailwind utilities - see that file's own
+    // comment for why arbitrary Tailwind classes (and Blazor CSS isolation) don't work here.
     private static string? BadgeClassFor(PseudonymizationJobStatus status) =>
         status switch
         {
-            PseudonymizationJobStatus.Completed =>
-                "border-transparent bg-green-600 text-white hover:bg-green-700",
-            PseudonymizationJobStatus.Stalled => "border-amber-300 bg-amber-50 text-amber-800",
+            PseudonymizationJobStatus.Completed => "badge-completed",
+            PseudonymizationJobStatus.Stalled => "badge-stalled",
             _ => null,
         };
 
