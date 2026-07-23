@@ -486,4 +486,174 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
 
         await act.Should().ThrowAsync<InvalidOperationException>();
     }
+
+    [Fact]
+    public async Task MarkUploadCompleteAsync_WithOriginalFileName_ShouldEnqueueJobWithDirectionAndFileNameLabel()
+    {
+        var (sut, _, _, backgroundJobClient) = CreateSut();
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
+            OriginalFileName: "patients_2026.csv"
+        );
+        var (job, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+
+        Job? enqueuedJob = null;
+        A.CallTo(() => backgroundJobClient.Create(A<Job>._, A<IState>._))
+            .Invokes((Job j, IState _) => enqueuedJob = j)
+            .Returns("hangfire-job-id");
+
+        await sut.MarkUploadCompleteAsync(job.Id, UserWithSubject("alice"), CancellationToken.None);
+
+        enqueuedJob.Should().NotBeNull();
+        enqueuedJob!.Args[1].Should().Be("Pseudonymize - patients_2026.csv");
+    }
+
+    [Fact]
+    public async Task MarkUploadCompleteAsync_WithoutOriginalFileName_ShouldEnqueueJobWithDirectionOnlyLabel()
+    {
+        var (sut, _, _, backgroundJobClient) = CreateSut();
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
+        );
+        var (job, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+
+        Job? enqueuedJob = null;
+        A.CallTo(() => backgroundJobClient.Create(A<Job>._, A<IState>._))
+            .Invokes((Job j, IState _) => enqueuedJob = j)
+            .Returns("hangfire-job-id");
+
+        await sut.MarkUploadCompleteAsync(job.Id, UserWithSubject("alice"), CancellationToken.None);
+
+        enqueuedJob.Should().NotBeNull();
+        enqueuedJob!.Args[1].Should().Be("Pseudonymize");
+    }
+
+    [Fact]
+    public async Task GetDownloadUrlAsync_WithPseudonymizeDirection_ShouldNameFileAfterInputPlusSuffix()
+    {
+        var (sut, repository, s3, _) = CreateSut();
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
+            OriginalFileName: "patients_2026.csv"
+        );
+        var (job, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+        await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
+
+        GetPreSignedUrlRequest? presignedRequest = null;
+        A.CallTo(() => s3.GetPreSignedURLAsync(A<GetPreSignedUrlRequest>._))
+            .Invokes((GetPreSignedUrlRequest r) => presignedRequest = r)
+            .Returns("https://example.invalid/presigned");
+
+        await sut.GetDownloadUrlAsync(job.Id, UserWithSubject("alice"), CancellationToken.None);
+
+        presignedRequest.Should().NotBeNull();
+        presignedRequest!
+            .ResponseHeaderOverrides.ContentDisposition.Should()
+            .Contain("patients_2026-pseudonymized.csv");
+    }
+
+    [Fact]
+    public async Task GetDownloadUrlAsync_WithDepseudonymizeDirection_ShouldNameFileAfterInputPlusSuffix()
+    {
+        var (sut, repository, s3, _) = CreateSut(
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        ReverseLookupRoles = ["can-reverse-lookup"],
+                    },
+                ],
+            }
+        );
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
+            PseudonymizationJobDirection.Depseudonymize,
+            OriginalFileName: "patients_2026.csv"
+        );
+        var (job, _) = await sut.CreateJobAsync(
+            request,
+            UserWithRoles("can-reverse-lookup"),
+            CancellationToken.None
+        );
+        await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
+
+        GetPreSignedUrlRequest? presignedRequest = null;
+        A.CallTo(() => s3.GetPreSignedURLAsync(A<GetPreSignedUrlRequest>._))
+            .Invokes((GetPreSignedUrlRequest r) => presignedRequest = r)
+            .Returns("https://example.invalid/presigned");
+
+        await sut.GetDownloadUrlAsync(
+            job.Id,
+            UserWithRoles("can-reverse-lookup"),
+            CancellationToken.None
+        );
+
+        presignedRequest.Should().NotBeNull();
+        presignedRequest!
+            .ResponseHeaderOverrides.ContentDisposition.Should()
+            .Contain("patients_2026-de-pseudonymized.csv");
+    }
+
+    [Fact]
+    public async Task GetDownloadUrlAsync_WithoutOriginalFileName_ShouldFallBackToJobId()
+    {
+        var (sut, repository, s3, _) = CreateSut();
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
+        );
+        var (job, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+        await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
+
+        GetPreSignedUrlRequest? presignedRequest = null;
+        A.CallTo(() => s3.GetPreSignedURLAsync(A<GetPreSignedUrlRequest>._))
+            .Invokes((GetPreSignedUrlRequest r) => presignedRequest = r)
+            .Returns("https://example.invalid/presigned");
+
+        await sut.GetDownloadUrlAsync(job.Id, UserWithSubject("alice"), CancellationToken.None);
+
+        presignedRequest.Should().NotBeNull();
+        presignedRequest!
+            .ResponseHeaderOverrides.ContentDisposition.Should()
+            .Contain($"{job.Id}-pseudonymized.csv");
+    }
 }
