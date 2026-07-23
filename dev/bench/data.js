@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784842920361,
+  "lastUpdate": 1784847210915,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -5562,6 +5562,66 @@ window.BENCHMARK_DATA = {
             "value": 1430.2874285834175,
             "unit": "ns",
             "range": "± 4.57707612576535"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "312aac7da14ce9fb5c311ce3b466ac94904113af",
+          "message": "fix: auth fixes and refactors (#267)\n\n* fix: badge color\n\n* refactor: clanup and auth fixes\n\n* test: increased code coverage\n\n* Potential fix for pull request finding 'CodeQL / Missing Dispose call on local IDisposable'\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>\n\n---------\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>",
+          "timestamp": "2026-07-24T00:50:29+02:00",
+          "tree_id": "de7a50d048c62dd78195944e533d8b7238964201",
+          "url": "https://github.com/miracum/vfps/commit/312aac7da14ce9fb5c311ce3b466ac94904113af"
+        },
+        "date": 1784847210556,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 740.6842221577962,
+            "unit": "ns",
+            "range": "± 11.587411908521625"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 483.7867757678032,
+            "unit": "ns",
+            "range": "± 8.50677479678767"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 367.38206662450517,
+            "unit": "ns",
+            "range": "± 5.177752450714287"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 390.0854091008504,
+            "unit": "ns",
+            "range": "± 2.658287013009641"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 677.6549833297729,
+            "unit": "ns",
+            "range": "± 4.4343425691323155"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 765.5017355510166,
+            "unit": "ns",
+            "range": "± 1.9299839403616563"
           }
         ]
       }
