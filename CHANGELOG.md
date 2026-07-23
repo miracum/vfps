@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.0](https://github.com/miracum/vfps/compare/v1.7.0...v1.8.0) (2026-07-23)
+
+
+### Features
+
+* **ui:** version footer and job clearing and display fixes ([#261](https://github.com/miracum/vfps/issues/261)) ([32dc1de](https://github.com/miracum/vfps/commit/32dc1deb908327d7c863c6d4e3d62c85e1f12b31))
+
 ## [1.7.0](https://github.com/miracum/vfps/compare/v1.6.1...v1.7.0) (2026-07-23)
 
 
