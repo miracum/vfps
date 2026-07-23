@@ -274,22 +274,25 @@ if (authConfig.IsEnabled)
     builder.Services.AddAuthorization(options =>
         options.AddPolicy("HangfireDashboard", policy => policy.RequireAuthenticatedUser())
     );
+}
 
-    // Blazor Server keeps one process per replica but many circuits/cookies across replicas -
-    // the Data Protection key ring that encrypts auth cookies/antiforgery tokens needs to be
-    // shared so a request landing on a different replica than the one that issued the cookie
-    // can still decrypt it (relevant even with ingress session affinity, e.g. right after a
-    // scaling event). Persisted to Postgres (the same database vfps already depends on) rather
-    // than a separate Redis instance - sticky sessions themselves are an ingress-level concern,
-    // documented in the README, not implemented here.
-    var dataProtectionConnectionString = builder.Configuration.GetConnectionString("PostgreSQL");
-    if (!string.IsNullOrEmpty(dataProtectionConnectionString))
-    {
-        builder.Services.AddDbContext<DataProtectionKeyContext>(options =>
-            options.UseNpgsql(dataProtectionConnectionString)
-        );
-        builder.Services.AddDataProtection().PersistKeysToDbContext<DataProtectionKeyContext>();
-    }
+// Blazor Server keeps one process per replica but many circuits/cookies across replicas - the
+// Data Protection key ring that encrypts auth cookies/antiforgery tokens needs to be shared so a
+// request landing on a different replica than the one that issued the cookie can still decrypt it
+// (relevant even with ingress session affinity, e.g. right after a scaling event). This must not
+// be scoped to Authorization:IsEnabled - app.UseAntiforgery() below is unconditional (Blazor
+// Server's own circuit handshake relies on it regardless of whether OIDC auth is on), so even an
+// auth-disabled deployment needs a shared key ring across replicas, not just a single-process
+// fallback. Persisted to Postgres (the same database vfps already depends on) rather than a
+// separate Redis instance - sticky sessions themselves are an ingress-level concern, documented in
+// the README, not implemented here.
+var dataProtectionConnectionString = builder.Configuration.GetConnectionString("PostgreSQL");
+if (!string.IsNullOrEmpty(dataProtectionConnectionString))
+{
+    builder.Services.AddDbContext<DataProtectionKeyContext>(options =>
+        options.UseNpgsql(dataProtectionConnectionString)
+    );
+    builder.Services.AddDataProtection().PersistKeysToDbContext<DataProtectionKeyContext>();
 }
 
 // CSV pseudonymization jobs: off by default, matching this codebase's optional-feature idiom.
@@ -492,7 +495,7 @@ if (shouldRunDatabaseMigrations)
     var db = scope.ServiceProvider.GetRequiredService<PseudonymContext>();
     db.Database.Migrate();
 
-    // Only registered when Authorization:IsEnabled and a connection string are set - see the
+    // Only registered when a PostgreSQL connection string is set - see the
     // AddDbContext<DataProtectionKeyContext> call above.
     var dataProtectionDb = scope.ServiceProvider.GetService<DataProtectionKeyContext>();
     dataProtectionDb?.Database.Migrate();
