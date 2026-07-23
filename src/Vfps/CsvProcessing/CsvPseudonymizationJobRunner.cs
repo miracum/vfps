@@ -118,7 +118,8 @@ public class CsvPseudonymizationJobRunner(
                 );
             }
         }
-        catch (OperationCanceledException) when (cancellationToken.ShutdownToken.IsCancellationRequested)
+        catch (OperationCanceledException)
+            when (cancellationToken.ShutdownToken.IsCancellationRequested)
         {
             // The Hangfire *server* is shutting down (e.g. a pod restart/rolling upgrade,
             // resource-limit change, or a rollout) - ThrowIfCancellationRequested() throws this
