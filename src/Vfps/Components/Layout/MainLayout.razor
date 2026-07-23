@@ -73,6 +73,10 @@
     <main class="flex-1 overflow-auto p-6 md:p-8">
         @Body
     </main>
+
+    <footer class="shrink-0 border-t px-4 py-3 text-center text-xs text-muted-foreground md:px-6">
+        Vfps v@(AppVersion)
+    </footer>
 </BbResponsiveNavProvider>
 
 <BbToastProvider Position="ToastPosition.BottomRight" />
@@ -80,6 +84,18 @@
 <BbPortalHost />
 
 @code {
+    // Major.Minor.Build only - Assembly.GetName().Version is a 4-part System.Version whose
+    // trailing Revision is always 0 for the <Version> MSBuild sets in Directory.Build.props, so
+    // dropping it here avoids a stray ".0" in the displayed version (e.g. "1.7.0", not "1.7.0.0").
+    private static string AppVersion
+    {
+        get
+        {
+            var version = typeof(MainLayout).Assembly.GetName().Version;
+            return version is null ? "unknown" : $"{version.Major}.{version.Minor}.{version.Build}";
+        }
+    }
+
     private IReadOnlyList<NavItemDefinition> _navItems = [];
 
     protected override void OnInitialized()
