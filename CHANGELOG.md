@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.8.1](https://github.com/miracum/vfps/compare/v1.8.0...v1.8.1) (2026-07-23)
+
+
+### Bug Fixes
+
+* **ui:** improve ui display for job labels and badges ([#263](https://github.com/miracum/vfps/issues/263)) ([ee1c3a8](https://github.com/miracum/vfps/commit/ee1c3a885f662c15ff4c02ea7a2fb70b9b2c6911))
+
 ## [1.8.0](https://github.com/miracum/vfps/compare/v1.7.0...v1.8.0) (2026-07-23)
 
 
