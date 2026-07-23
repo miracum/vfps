@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.7.0](https://github.com/miracum/vfps/compare/v1.6.1...v1.7.0) (2026-07-23)
+
+
+### Features
+
+* **ui:** show throughput in CSV jobs ([#260](https://github.com/miracum/vfps/issues/260)) ([2cca303](https://github.com/miracum/vfps/commit/2cca3039a8e5d4f8f18874f4d8194da98f365ae4))
+
+
+### CI/CD
+
+* fix ci on pushes to master ([#258](https://github.com/miracum/vfps/issues/258)) ([2833c48](https://github.com/miracum/vfps/commit/2833c4835bf087a5bab9cc0bb934e03f5c045b57))
+
 ## [1.6.1](https://github.com/miracum/vfps/compare/v1.6.0...v1.6.1) (2026-07-22)
 
 
