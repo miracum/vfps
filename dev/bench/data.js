@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784804332419,
+  "lastUpdate": 1784826183824,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -5322,6 +5322,66 @@ window.BENCHMARK_DATA = {
             "value": 1292.447637117826,
             "unit": "ns",
             "range": "± 4.124133388375093"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ee1c3a885f662c15ff4c02ea7a2fb70b9b2c6911",
+          "message": "fix(ui): improve ui display for job labels and badges (#263)\n\n* fix(ui): display color for status badge\n\n* fix(ui): correct badge color\n\n* feat: nice job names and download files",
+          "timestamp": "2026-07-23T19:00:05+02:00",
+          "tree_id": "2f273209ced22d22ea02e1aa5e6b68fac2177d5d",
+          "url": "https://github.com/miracum/vfps/commit/ee1c3a885f662c15ff4c02ea7a2fb70b9b2c6911"
+        },
+        "date": 1784826183588,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1324.8885609763008,
+            "unit": "ns",
+            "range": "± 1.9728922469829413"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 707.9028395244053,
+            "unit": "ns",
+            "range": "± 1.9004593257635873"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 737.1287720543997,
+            "unit": "ns",
+            "range": "± 0.8191571974713467"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 755.9368518829345,
+            "unit": "ns",
+            "range": "± 1.0668466920175252"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 1237.7187451680502,
+            "unit": "ns",
+            "range": "± 5.552521548086005"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1291.2850824991863,
+            "unit": "ns",
+            "range": "± 3.1759513174806115"
           }
         ]
       }
