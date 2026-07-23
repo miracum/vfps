@@ -81,6 +81,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
         var completed = CreateJob(PseudonymizationJobStatus.Completed, now);
         var failed = CreateJob(PseudonymizationJobStatus.Failed, now);
         var cancelled = CreateJob(PseudonymizationJobStatus.Cancelled, now);
+        var stalled = CreateJob(PseudonymizationJobStatus.Stalled, now);
         var running = CreateJob(PseudonymizationJobStatus.Running, now);
         var queued = CreateJob(PseudonymizationJobStatus.Queued, now);
         var awaitingUpload = CreateJob(PseudonymizationJobStatus.AwaitingUpload, now);
@@ -89,6 +90,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
             completed,
             failed,
             cancelled,
+            stalled,
             running,
             queued,
             awaitingUpload
@@ -103,7 +105,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
             TestContext.Current.CancellationToken
         );
 
-        deletedCount.Should().Be(3);
+        deletedCount.Should().Be(4);
         var remainingIds = await InMemoryPseudonymContext
             .PseudonymizationJobs.Select(j => j.Id)
             .ToListAsync(TestContext.Current.CancellationToken);

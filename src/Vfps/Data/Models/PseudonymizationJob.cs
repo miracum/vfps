@@ -13,6 +13,18 @@ public enum PseudonymizationJobStatus
     Completed,
     Failed,
     Cancelled,
+
+    /// <summary>
+    /// Set only by <see cref="CsvProcessing.StalledPseudonymizationJobWatchdogService"/>: a
+    /// Running job with no progress update in over its configured threshold, most often because
+    /// its worker crashed, lost its database connection, or was killed mid-processing (e.g. by an
+    /// app restart/upgrade) - never set by <see cref="CsvProcessing.CsvPseudonymizationJobRunner"/>
+    /// itself. Kept distinct from <see cref="Failed"/> (a run that itself hit an exception) since
+    /// this is a heuristic guess rather than a confirmed failure - occasionally the job was still
+    /// alive and actually finishes shortly after being marked Stalled. Appended at the end, not
+    /// inserted, so existing stored integer values keep their meaning.
+    /// </summary>
+    Stalled,
 }
 
 /// <summary>

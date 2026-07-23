@@ -172,6 +172,7 @@ public class PseudonymizationJobAppService(
             is PseudonymizationJobStatus.Completed
                 or PseudonymizationJobStatus.Failed
                 or PseudonymizationJobStatus.Cancelled
+                or PseudonymizationJobStatus.Stalled
         )
         {
             return;

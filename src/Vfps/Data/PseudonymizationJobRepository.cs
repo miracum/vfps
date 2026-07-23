@@ -169,6 +169,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
             j.Status == PseudonymizationJobStatus.Completed
             || j.Status == PseudonymizationJobStatus.Failed
             || j.Status == PseudonymizationJobStatus.Cancelled
+            || j.Status == PseudonymizationJobStatus.Stalled
         );
 
         if (createdBy is not null)

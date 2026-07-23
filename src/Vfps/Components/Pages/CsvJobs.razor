@@ -353,16 +353,20 @@ else
                             Title="Created at"
                             Format="yyyy-MM-dd HH:mm:ss"
                         />
-                        <BbDataGridTemplateColumn Title="Error">
+                        <BbDataGridTemplateColumn Title="Issue">
                             <ChildContent Context="j">
-                                @if (j.Status == PseudonymizationJobStatus.Failed && j.ErrorMessage is not null)
+                                @if (
+                                    (j.Status == PseudonymizationJobStatus.Failed
+                                        || j.Status == PseudonymizationJobStatus.Stalled)
+                                    && j.ErrorMessage is not null
+                                )
                                 {
                                     <div
-                                        class="flex max-w-xs items-start gap-1.5 text-xs text-destructive"
+                                        class="flex max-w-xs items-start gap-1.5 text-xs @(j.Status == PseudonymizationJobStatus.Stalled ? "text-amber-700" : "text-destructive")"
                                         title="@j.ErrorMessage"
                                     >
                                         <LucideIcon
-                                            Name="triangle-alert"
+                                            Name="@(j.Status == PseudonymizationJobStatus.Stalled ? "clock-alert" : "triangle-alert")"
                                             Size="14"
                                             Class="mt-0.5 shrink-0"
                                         />
@@ -573,15 +577,22 @@ else
         status switch
         {
             PseudonymizationJobStatus.Failed => BadgeVariant.Destructive,
+            // Outline, not Destructive - Stalled is only ever a heuristic guess (see the enum's
+            // own doc comment), so the badge shouldn't read as confidently as a confirmed Failed.
+            PseudonymizationJobStatus.Stalled => BadgeVariant.Outline,
             PseudonymizationJobStatus.Cancelled => BadgeVariant.Outline,
             PseudonymizationJobStatus.Completed => BadgeVariant.Default,
             _ => BadgeVariant.Secondary,
         };
 
     private static string? BadgeClassFor(PseudonymizationJobStatus status) =>
-        status == PseudonymizationJobStatus.Completed
-            ? "border-transparent bg-green-600 text-white hover:bg-green-700"
-            : null;
+        status switch
+        {
+            PseudonymizationJobStatus.Completed =>
+                "border-transparent bg-green-600 text-white hover:bg-green-700",
+            PseudonymizationJobStatus.Stalled => "border-amber-300 bg-amber-50 text-amber-800",
+            _ => null,
+        };
 
     private async Task OnHasHeaderRowChangedAsync(bool value)
     {
@@ -744,7 +755,8 @@ else
         status
             is PseudonymizationJobStatus.Completed
                 or PseudonymizationJobStatus.Failed
-                or PseudonymizationJobStatus.Cancelled;
+                or PseudonymizationJobStatus.Cancelled
+                or PseudonymizationJobStatus.Stalled;
 
     private async Task ConfirmClearFinishedJobsAsync()
     {

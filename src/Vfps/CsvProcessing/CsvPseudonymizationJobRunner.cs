@@ -57,12 +57,16 @@ public class CsvPseudonymizationJobRunner(
 
         // Guards against a manual re-run (e.g. via the Hangfire dashboard) of a job that's
         // already reached a terminal state - automatic retries are disabled (see Program.cs),
-        // but nothing stops an operator from clicking "Retry" there directly.
+        // but nothing stops an operator from clicking "Retry" there directly. Stalled counts as
+        // terminal here too - StalledPseudonymizationJobWatchdogService only ever applies it to a
+        // job whose own runner invocation is presumed dead, so a fresh RunAsync call finding it
+        // already Stalled means the watchdog beat this one to a verdict, not the other way round.
         if (
             job.Status
             is PseudonymizationJobStatus.Cancelled
                 or PseudonymizationJobStatus.Completed
                 or PseudonymizationJobStatus.Failed
+                or PseudonymizationJobStatus.Stalled
         )
         {
             return;
@@ -89,15 +93,20 @@ public class CsvPseudonymizationJobRunner(
             );
 
             // A cooperative cancel may have landed while the last chunk was still uploading -
-            // don't overwrite Cancelled with Completed. Same for Failed: StalledPseudonymizationJobWatchdogService
-            // runs independently of this runner and can mark a job Failed (e.g. a false positive -
-            // this job looked stalled but was actually still alive) at any point, including while
-            // ProcessAsync above was still finishing up - that verdict shouldn't be silently
-            // overwritten by a late success either.
+            // don't overwrite Cancelled with Completed. Same for Stalled:
+            // StalledPseudonymizationJobWatchdogService runs independently of this runner and can
+            // mark a job Stalled (a heuristic guess, occasionally a false positive - this job
+            // looked dead but was actually still alive) at any point, including while ProcessAsync
+            // above was still finishing up - that verdict shouldn't be silently overwritten by a
+            // late success either, so the discrepancy stays visible instead of being hidden.
             var current = await jobRepository.FindAsync(jobId, CancellationToken.None);
             if (
                 current?.Status
-                is not (PseudonymizationJobStatus.Cancelled or PseudonymizationJobStatus.Failed)
+                is not (
+                    PseudonymizationJobStatus.Cancelled
+                    or PseudonymizationJobStatus.Failed
+                    or PseudonymizationJobStatus.Stalled
+                )
             )
             {
                 await jobRepository.CompleteAsync(

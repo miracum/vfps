@@ -62,7 +62,8 @@ public interface IPseudonymizationJobAppService
     );
 
     /// <summary>
-    /// Deletes every job of the caller's own in a terminal state (Completed, Failed, Cancelled),
+    /// Deletes every job of the caller's own in a terminal state (Completed, Failed, Cancelled,
+    /// Stalled),
     /// or every such job for admins - matching <see cref="ListAsync"/>'s own scoping. Their input
     /// and output objects in S3 are left alone; the bucket's own retention/lifecycle rule (see
     /// <see cref="CsvProcessing.S3BucketConfigurationBackgroundService"/>) expires those
