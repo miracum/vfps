@@ -259,6 +259,7 @@ public class CsvPseudonymizationJobRunnerTests
     [Theory]
     [InlineData(PseudonymizationJobStatus.Cancelled)]
     [InlineData(PseudonymizationJobStatus.Failed)]
+    [InlineData(PseudonymizationJobStatus.Stalled)]
     public async Task RunAsync_WithStatusChangedByAnotherActorRightAfterProcessing_ShouldNotOverwriteItWithCompleted(
         PseudonymizationJobStatus externallySetStatus
     )
@@ -528,6 +529,7 @@ public class CsvPseudonymizationJobRunnerTests
     [InlineData(PseudonymizationJobStatus.Completed)]
     [InlineData(PseudonymizationJobStatus.Failed)]
     [InlineData(PseudonymizationJobStatus.Cancelled)]
+    [InlineData(PseudonymizationJobStatus.Stalled)]
     public async Task RunAsync_WithJobAlreadyInTerminalState_ShouldBeNoOp(
         PseudonymizationJobStatus status
     )

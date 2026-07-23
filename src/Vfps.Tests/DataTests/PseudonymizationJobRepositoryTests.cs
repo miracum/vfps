@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Vfps.Data;
 using Vfps.Data.Models;
 
@@ -7,7 +8,8 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
 {
     private static PseudonymizationJob CreateJob(
         PseudonymizationJobStatus status,
-        DateTimeOffset lastUpdatedAt
+        DateTimeOffset lastUpdatedAt,
+        string createdBy = "test-user"
     )
     {
         var now = DateTimeOffset.UtcNow;
@@ -15,7 +17,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
         {
             Id = Guid.NewGuid(),
             Status = status,
-            CreatedBy = "test-user",
+            CreatedBy = createdBy,
             InputObjectKey = "csv-jobs/input.csv",
             CreatedAt = now,
             LastUpdatedAt = lastUpdatedAt,
@@ -70,5 +72,68 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
         );
 
         stalledIds.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task DeleteFinishedAsync_WithoutCreatedByFilter_ShouldOnlyDeleteTerminalJobs()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var completed = CreateJob(PseudonymizationJobStatus.Completed, now);
+        var failed = CreateJob(PseudonymizationJobStatus.Failed, now);
+        var cancelled = CreateJob(PseudonymizationJobStatus.Cancelled, now);
+        var stalled = CreateJob(PseudonymizationJobStatus.Stalled, now);
+        var running = CreateJob(PseudonymizationJobStatus.Running, now);
+        var queued = CreateJob(PseudonymizationJobStatus.Queued, now);
+        var awaitingUpload = CreateJob(PseudonymizationJobStatus.AwaitingUpload, now);
+
+        InMemoryPseudonymContext.PseudonymizationJobs.AddRange(
+            completed,
+            failed,
+            cancelled,
+            stalled,
+            running,
+            queued,
+            awaitingUpload
+        );
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+
+        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+
+        var deletedCount = await sut.DeleteFinishedAsync(
+            null,
+            TestContext.Current.CancellationToken
+        );
+
+        deletedCount.Should().Be(4);
+        var remainingIds = await InMemoryPseudonymContext
+            .PseudonymizationJobs.Select(j => j.Id)
+            .ToListAsync(TestContext.Current.CancellationToken);
+        remainingIds.Should().BeEquivalentTo([running.Id, queued.Id, awaitingUpload.Id]);
+    }
+
+    [Fact]
+    public async Task DeleteFinishedAsync_WithCreatedByFilter_ShouldOnlyDeleteThatUsersJobs()
+    {
+        var now = DateTimeOffset.UtcNow;
+        var aliceCompleted = CreateJob(PseudonymizationJobStatus.Completed, now, "alice");
+        var bobCompleted = CreateJob(PseudonymizationJobStatus.Completed, now, "bob");
+
+        InMemoryPseudonymContext.PseudonymizationJobs.AddRange(aliceCompleted, bobCompleted);
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+
+        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+
+        var deletedCount = await sut.DeleteFinishedAsync(
+            "alice",
+            TestContext.Current.CancellationToken
+        );
+
+        deletedCount.Should().Be(1);
+        var remaining = await InMemoryPseudonymContext.PseudonymizationJobs.ToListAsync(
+            TestContext.Current.CancellationToken
+        );
+        remaining.Should().ContainSingle().Which.CreatedBy.Should().Be("bob");
     }
 }

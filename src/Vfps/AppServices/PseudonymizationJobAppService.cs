@@ -172,6 +172,7 @@ public class PseudonymizationJobAppService(
             is PseudonymizationJobStatus.Completed
                 or PseudonymizationJobStatus.Failed
                 or PseudonymizationJobStatus.Cancelled
+                or PseudonymizationJobStatus.Stalled
         )
         {
             return;
@@ -218,6 +219,16 @@ public class PseudonymizationJobAppService(
                 Expires = DateTime.UtcNow.Add(Config.PresignedUrlExpiry),
             }
         );
+    }
+
+    /// <inheritdoc/>
+    public async Task<int> ClearFinishedAsync(
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        var createdBy = permissionChecker.IsAdmin(user) ? null : user.GetSubject();
+        return await jobRepository.DeleteFinishedAsync(createdBy, cancellationToken);
     }
 
     private async Task<PseudonymizationJob> GetOwnedJobAsync(

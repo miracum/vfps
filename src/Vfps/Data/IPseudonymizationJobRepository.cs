@@ -68,4 +68,13 @@ public interface IPseudonymizationJobRepository
         long rowsProcessed,
         CancellationToken cancellationToken
     );
+
+    /// <summary>
+    /// Deletes every job in a terminal state (Completed, Failed, Cancelled, Stalled) - Running/Queued/
+    /// AwaitingUpload jobs are never touched, so an in-progress job can't be deleted out from
+    /// under its own runner. Scoped to <paramref name="createdBy"/>, or every such job when null
+    /// (admin callers - see <see cref="AppServices.IPseudonymizationJobAppService"/>). Returns the
+    /// number of jobs deleted.
+    /// </summary>
+    Task<int> DeleteFinishedAsync(string? createdBy, CancellationToken cancellationToken);
 }
