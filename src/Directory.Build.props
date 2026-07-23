@@ -9,7 +9,7 @@
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
     <RestoreLockedMode>true</RestoreLockedMode>
     <!-- x-release-please-start-version -->
-    <Version>1.8.0</Version>
+    <Version>1.8.1</Version>
     <!-- x-release-please-end -->
     <Company>miracum.org</Company>
     <Description>A very fast and resource-efficient pseudonym service.</Description>
