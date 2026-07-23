@@ -10,10 +10,9 @@ public class CachingPseudonymRepository(
     CacheConfig cacheConfig
 ) : IPseudonymRepository
 {
-    public IMemoryCache MemoryCache { get; } = memoryCache;
-    public CacheConfig CacheConfig { get; } = cacheConfig;
-    public PseudonymContext Context { get; } = context;
-    public PseudonymRepository Repository { get; } = new PseudonymRepository(context);
+    private IMemoryCache MemoryCache { get; } = memoryCache;
+    private CacheConfig CacheConfig { get; } = cacheConfig;
+    private PseudonymRepository Repository { get; } = new PseudonymRepository(context);
 
     public async Task<Pseudonym?> CreateIfNotExist(Pseudonym pseudonym)
     {

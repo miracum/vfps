@@ -81,6 +81,27 @@ public class NamespaceAppService(
     }
 
     /// <inheritdoc/>
+    public async Task<Namespace> GetAsync(
+        string namespaceName,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        var @namespace =
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            ?? throw new NamespaceNotFoundException(namespaceName);
+
+        if (!permissionChecker.HasReadAccess(user, namespaceName))
+        {
+            throw new ForbiddenException(
+                $"Read access to namespace '{namespaceName}' is required."
+            );
+        }
+
+        return @namespace;
+    }
+
+    /// <inheritdoc/>
     public async Task DeleteAsync(
         string namespaceName,
         ClaimsPrincipal user,

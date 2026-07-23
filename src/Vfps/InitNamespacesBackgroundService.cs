@@ -1,8 +1,5 @@
 using EntityFramework.Exceptions.Common;
 using Vfps.Data;
-using Vfps.Protos;
-using Vfps.Services;
-using NamespaceService = Vfps.Services.NamespaceService;
 
 namespace Vfps;
 
@@ -46,7 +43,7 @@ public class InitNamespacesBackgroundService(
                     "A namespace with the same name {NamespaceName} already exists. Will not be overridden.",
                     @namespace.Name
                 );
-                return;
+                continue;
             }
 
             logger.LogInformation(

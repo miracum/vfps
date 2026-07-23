@@ -1,8 +1,8 @@
 using System.Globalization;
 using Hl7.Fhir.Model;
 using Microsoft.AspNetCore.Mvc;
-using Vfps.Data;
-using Vfps.PseudonymGenerators;
+using Vfps.AppServices;
+using Vfps.Authorization;
 
 namespace Vfps.Fhir;
 
@@ -15,12 +15,9 @@ namespace Vfps.Fhir;
 [Consumes("application/fhir+json", "application/json")]
 public class FhirController(
     ILogger<FhirController> logger,
-    INamespaceRepository namespaceRepository,
-    IPseudonymRepository pseudonymRepository
+    IPseudonymAppService pseudonymAppService
 ) : ControllerBase
 {
-    private PseudonymizationMethodsLookup Lookup { get; } = new PseudonymizationMethodsLookup();
-
     /// <summary>
     /// Create a pseudonym for an original value in the given namespace.
     /// </summary>
@@ -30,6 +27,7 @@ public class FhirController(
     [HttpPost("$create-pseudonym")]
     [ProducesResponseType(typeof(Parameters), 200)]
     [ProducesResponseType(typeof(OperationOutcome), 400)]
+    [ProducesResponseType(typeof(OperationOutcome), 403)]
     [ProducesResponseType(typeof(OperationOutcome), 404)]
     [ProducesResponseType(typeof(OperationOutcome), 500)]
     public async Task<ObjectResult> CreatePseudonym(
@@ -74,8 +72,20 @@ public class FhirController(
             return BadRequest(outcome);
         }
 
-        var @namespace = await namespaceRepository.FindAsync(namespaceName, cancellationToken);
-        if (@namespace is null)
+        // Goes through the same app service (and therefore the same namespace-scoped write-access
+        // check and pseudonym generation logic) as the gRPC/Blazor path - this facade must not
+        // have its own, weaker copy of either.
+        Data.Models.Pseudonym upsertedPseudonym;
+        try
+        {
+            upsertedPseudonym = await pseudonymAppService.CreateAsync(
+                namespaceName,
+                originalValue,
+                User,
+                cancellationToken
+            );
+        }
+        catch (NamespaceNotFoundException)
         {
             var outcome = new OperationOutcome();
             outcome.Issue.Add(
@@ -88,37 +98,35 @@ public class FhirController(
             );
             return NotFound(outcome);
         }
-
-        var pseudonymValue = string.Empty;
-
-        using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
+        catch (ForbiddenException ex)
         {
-            activity?.SetTag("Method", @namespace.PseudonymGenerationMethod.ToString());
-
-            pseudonymValue = Lookup.Generate(
-                @namespace.PseudonymGenerationMethod,
-                originalValue,
-                @namespace.PseudonymLength
+            var outcome = new OperationOutcome();
+            outcome.Issue.Add(
+                new OperationOutcome.IssueComponent
+                {
+                    Severity = OperationOutcome.IssueSeverity.Error,
+                    Code = OperationOutcome.IssueType.Forbidden,
+                    Diagnostics = ex.Message,
+                }
             );
-            pseudonymValue =
-                $"{@namespace.PseudonymPrefix}{pseudonymValue}{@namespace.PseudonymSuffix}";
+            return StatusCode(403, outcome);
         }
-
-        var now = DateTimeOffset.UtcNow;
-        var pseudonym = new Data.Models.Pseudonym()
+        catch (ArgumentException)
         {
-            CreatedAt = now,
-            LastUpdatedAt = now,
-            NamespaceName = @namespace.Name,
-            OriginalValue = originalValue,
-            PseudonymValue = pseudonymValue,
-        };
-
-        Data.Models.Pseudonym? upsertedPseudonym = await pseudonymRepository.CreateIfNotExist(
-            pseudonym
-        );
-
-        if (upsertedPseudonym is null)
+            // Defense in depth - the blank-originalValue case above already returns BadRequest
+            // before this point is ever reached in practice.
+            var outcome = new OperationOutcome();
+            outcome.Issue.Add(
+                new OperationOutcome.IssueComponent
+                {
+                    Severity = OperationOutcome.IssueSeverity.Error,
+                    Code = OperationOutcome.IssueType.Processing,
+                    Diagnostics = "originalValue must not be blank.",
+                }
+            );
+            return BadRequest(outcome);
+        }
+        catch (PseudonymUpsertFailedException)
         {
             var outcome = new OperationOutcome();
             outcome.Issue.Add(

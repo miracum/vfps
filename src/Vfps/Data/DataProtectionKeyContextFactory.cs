@@ -6,10 +6,12 @@ namespace Vfps.Data;
 
 /// <summary>
 /// Lets `dotnet ef` construct <see cref="DataProtectionKeyContext"/> at design time. The
-/// context is only registered in the app's DI container when Authorization:IsEnabled is set
-/// (see Program.cs), so `dotnet ef` - which builds the app host to discover DbContexts - can't
-/// find it under default config. This factory bypasses that by reading the connection string
-/// directly, independent of the conditional runtime registration.
+/// context is only registered in the app's DI container when ConnectionStrings:PostgreSQL is
+/// set (see Program.cs - independent of Authorization:IsEnabled, since the Data Protection key
+/// ring is needed regardless of whether OIDC auth is on), so `dotnet ef` - which builds the app
+/// host to discover DbContexts - can't find it under default config. This factory bypasses that
+/// by reading the connection string directly, independent of the conditional runtime
+/// registration.
 /// </summary>
 public class DataProtectionKeyContextFactory : IDesignTimeDbContextFactory<DataProtectionKeyContext>
 {

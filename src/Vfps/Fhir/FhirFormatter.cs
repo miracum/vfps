@@ -41,7 +41,7 @@ public class FhirOutputFormatter : TextOutputFormatter
         catch (Exception exc)
         {
             var serviceProvider = httpContext.RequestServices;
-            var logger = serviceProvider.GetRequiredService<ILogger<FhirInputFormatter>>();
+            var logger = serviceProvider.GetRequiredService<ILogger<FhirOutputFormatter>>();
             logger.LogError(exc, "Failed to serialize FHIR resource");
 
             throw;

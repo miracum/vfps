@@ -1,5 +1,6 @@
 using Grpc.Core;
 using Microsoft.EntityFrameworkCore;
+using Vfps.Config;
 
 namespace Vfps.Tests.ServiceTests;
 
@@ -10,10 +11,7 @@ public class NamespaceServiceTests : ServiceTestBase
     public NamespaceServiceTests()
     {
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
-        sut = new Services.NamespaceService(
-            namespaceRepository,
-            CreateNamespaceAppService(namespaceRepository)
-        );
+        sut = new Services.NamespaceService(CreateNamespaceAppService(namespaceRepository));
     }
 
     [Fact]
@@ -42,6 +40,41 @@ public class NamespaceServiceTests : ServiceTestBase
         );
 
         response.Namespace.Name.Should().Be(request.Name);
+    }
+
+    [Fact]
+    public async Task Get_WithAuthorizationEnabledAndNoReadAccess_ShouldThrowPermissionDenied()
+    {
+        // Regression test: NamespaceService.Get used to call INamespaceRepository directly,
+        // bypassing INamespaceAppService (and therefore every permission check) entirely - any
+        // caller could read any namespace's metadata regardless of read access. This is the
+        // gRPC-layer half of NamespaceAppServiceTests' GetAsync coverage; TestServerCallContext
+        // has no HttpContext, so ServerCallContextExtensions.GetUser() always resolves to an
+        // anonymous principal here, which is sufficient to exercise the denied path.
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var restrictedSut = new Services.NamespaceService(
+            CreateNamespaceAppService(
+                namespaceRepository,
+                new AuthorizationConfig
+                {
+                    IsEnabled = true,
+                    NamespaceRules =
+                    [
+                        new NamespaceRule
+                        {
+                            Namespace = "existingNamespace",
+                            ReadRoles = ["can-read-existing"],
+                        },
+                    ],
+                }
+            )
+        );
+        var request = new NamespaceServiceGetRequest { Name = "existingNamespace" };
+
+        var act = () => restrictedSut.Get(request, TestServerCallContext.Create());
+
+        var result = await act.Should().ThrowAsync<RpcException>();
+        result.Which.StatusCode.Should().Be(StatusCode.PermissionDenied);
     }
 
     [Fact]
