@@ -195,7 +195,7 @@ public class CsvPseudonymizationJobRunnerTests
         FakePseudonymize("ns", "secret", "pseudonym-of-secret");
 
         var sut = CreateSut();
-        await sut.RunAsync(job.Id, CreateCancellationToken());
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         A.CallTo(() =>
                 pseudonymAppService.CreateTrustedBatchAsync(
@@ -236,7 +236,7 @@ public class CsvPseudonymizationJobRunnerTests
         var context = CreatePerformContext(out var storageConnection);
 
         var sut = CreateSut();
-        await sut.RunAsync(job.Id, CreateCancellationToken(), context);
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken(), context);
 
         A.CallTo(() =>
                 storageConnection.SetJobParameter(
@@ -293,7 +293,7 @@ public class CsvPseudonymizationJobRunnerTests
         FakePseudonymize("ns", "secret", "pseudonym-of-secret");
 
         var sut = CreateSut();
-        await sut.RunAsync(job.Id, CreateCancellationToken());
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         A.CallTo(() =>
                 jobRepository.CompleteAsync(
@@ -324,7 +324,7 @@ public class CsvPseudonymizationJobRunnerTests
         FakePseudonymize("ns", "se\"cret", "pseudonym-of-secret");
 
         var sut = CreateSut();
-        await sut.RunAsync(job.Id, CreateCancellationToken());
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         A.CallTo(() =>
                 pseudonymAppService.CreateTrustedBatchAsync(
@@ -359,7 +359,7 @@ public class CsvPseudonymizationJobRunnerTests
         FakeDepseudonymize("ns", "pseudonym-of-secret", "secret");
 
         var sut = CreateSut();
-        await sut.RunAsync(job.Id, CreateCancellationToken());
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         A.CallTo(() =>
                 pseudonymAppService.ReverseLookupTrustedAsync(
@@ -391,7 +391,7 @@ public class CsvPseudonymizationJobRunnerTests
         FakeDepseudonymize("ns", "not-a-known-pseudonym", null);
 
         var sut = CreateSut();
-        await sut.RunAsync(job.Id, CreateCancellationToken());
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         A.CallTo(() => jobRepository.CompleteAsync(job.Id, A<string>._, 1, A<CancellationToken>._))
             .MustHaveHappenedOnceExactly();
@@ -412,7 +412,7 @@ public class CsvPseudonymizationJobRunnerTests
         FakePseudonymize("ns", "secret", "pseudonym-of-secret");
 
         var sut = CreateSut();
-        await sut.RunAsync(job.Id, CreateCancellationToken());
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         A.CallTo(() =>
                 pseudonymAppService.CreateTrustedBatchAsync(
@@ -448,7 +448,7 @@ public class CsvPseudonymizationJobRunnerTests
         FakeInputObject(job, csv.ToString());
 
         var sut = CreateSut();
-        await sut.RunAsync(job.Id, CreateCancellationToken());
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         // The last row (index 24) is only reachable if the trailing partial chunk (rows 20-24)
         // actually got flushed - a bug that dropped it would still process the first full chunk.
@@ -482,7 +482,7 @@ public class CsvPseudonymizationJobRunnerTests
         FakeInputObject(job, "id,value\n1,secret\n");
 
         var sut = CreateSut();
-        var act = () => sut.RunAsync(job.Id, CreateCancellationToken());
+        var act = () => sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         await act.Should().ThrowAsync<InvalidOperationException>();
 
@@ -510,7 +510,7 @@ public class CsvPseudonymizationJobRunnerTests
         FakeInputObject(job, "id,value\n1,secret\n");
 
         var sut = CreateSut();
-        var act = () => sut.RunAsync(job.Id, CreateCancellationToken());
+        var act = () => sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         await act.Should().ThrowAsync<InvalidOperationException>();
 
@@ -542,7 +542,7 @@ public class CsvPseudonymizationJobRunnerTests
         FakeFindJob(job);
 
         var sut = CreateSut();
-        await sut.RunAsync(job.Id, CreateCancellationToken());
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         A.CallTo(() =>
                 jobRepository.UpdateStatusAsync(
@@ -596,7 +596,7 @@ public class CsvPseudonymizationJobRunnerTests
         FakeInputObject(job, csv.ToString());
 
         var sut = CreateSut();
-        await sut.RunAsync(job.Id, CreateCancellationToken());
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         A.CallTo(() =>
                 jobRepository.CompleteAsync(
@@ -659,7 +659,7 @@ public class CsvPseudonymizationJobRunnerTests
         FakeInputObject(job, csv.ToString());
 
         var sut = CreateSut(pseudonymizeBatchSize: 1000);
-        await sut.RunAsync(job.Id, CreateCancellationToken());
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         A.CallTo(() =>
                 pseudonymAppService.CreateTrustedBatchAsync(

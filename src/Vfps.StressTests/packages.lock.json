@@ -69,24 +69,24 @@
       },
       "AWSSDK.Core": {
         "type": "Transitive",
-        "resolved": "4.0.100.3",
-        "contentHash": "KU+8IlwHqh68J82FXvsNgehAuG0Z++Ul62oD5sg5Iyj4RgSdUKer3nbLBJbW31DAM7mgEuckhsEcJW+2wYpSVA=="
+        "resolved": "4.0.100.8",
+        "contentHash": "xnuBVLQBmYQXsDZJ9mq2UDSFZm3xgO5oUb4/UR8p0UO7tG6heDhsLLI1NzZhIVAKyfW0tXg9hn9a/ek018TOVw=="
       },
       "AWSSDK.S3": {
         "type": "Transitive",
-        "resolved": "4.0.100.3",
-        "contentHash": "bHe+BZRyC/TnyPw3/l6N96V/hqtBHyjtXINVrVxVl8LTYx2fxNI1HTwknm0jslSkOiOKeHRZ/oduxMcJXBbtsg==",
+        "resolved": "4.0.101.4",
+        "contentHash": "TYFuatWECzCbj/Lu1SsANucgpU/Br5YJ5Padl3YEdNJGfZqAcx3QemJw2BUopAsYTJ3e7TFpWhpNWha3dB9/dw==",
         "dependencies": {
-          "AWSSDK.Core": "[4.0.100.3, 5.0.0)"
+          "AWSSDK.Core": "[4.0.100.8, 5.0.0)"
         }
       },
       "BlazorBlueprint.Components": {
         "type": "Transitive",
-        "resolved": "3.13.0",
-        "contentHash": "k2Ko7j4GObHbjawD3IjiNH8KXCdsuq3EZsV8ccFloXIfyzCNSUYGzwgWYU/O7N5W9pnulfULieB+KeyGKwF3ug==",
+        "resolved": "3.14.1",
+        "contentHash": "zGqNr4DSxU8rI5jzV0IPhMicJDIzD4Qhj02IQ5cZQDeSrIN0vG+GxCHAEuJn3AVIOnjIpgbFArujawJfkgAXow==",
         "dependencies": {
           "BlazorBlueprint.Icons.Lucide": "2.0.0",
-          "BlazorBlueprint.Primitives": "3.13.0",
+          "BlazorBlueprint.Primitives": "3.14.1",
           "HtmlSanitizer": "9.0.892",
           "Markdig": "0.37.0",
           "Microsoft.AspNetCore.Components.Web": "8.0.14",
@@ -95,16 +95,16 @@
       },
       "BlazorBlueprint.Icons.Lucide": {
         "type": "Transitive",
-        "resolved": "2.0.0",
-        "contentHash": "DWr5VUhebPN7EP9T3DYe0aAK5pfETRSdv48dWPqApip8/X3gs64yhPCXrmuvOHy80eKDfblL8mv9UFM3qmDbwA==",
+        "resolved": "2.0.2",
+        "contentHash": "TB3wfgtZW4ST+LbQkgO9Tc96gBLD7CDTvYM9U8cw1Z4HaYLFpxlcMQRHK23G6NZ9uDv+tTdu1Nx+BPeb6qTvdA==",
         "dependencies": {
           "Microsoft.AspNetCore.Components.Web": "8.0.14"
         }
       },
       "BlazorBlueprint.Primitives": {
         "type": "Transitive",
-        "resolved": "3.13.0",
-        "contentHash": "RBwplbJJMYQb5/DrQOyVXmHYyMzqkLJGK49LZLpJsE2Gapet16N9VQLhO8JV4R5PwlGrZiB6FVjjCx4XdkmtAw==",
+        "resolved": "3.14.1",
+        "contentHash": "C7ld8+/jmS74bixY73R5dPpkHwOtdjqg5T34JeVhVRtoENvhF63it2iOLovb7SXwNpb2XPvEYv7JbPai4KJTHQ==",
         "dependencies": {
           "Microsoft.AspNetCore.Components.Web": "8.0.14"
         }
@@ -1425,9 +1425,9 @@
       "vfps": {
         "type": "Project",
         "dependencies": {
-          "AWSSDK.S3": "[4.0.100.3, )",
-          "BlazorBlueprint.Components": "[3.13.0, )",
-          "BlazorBlueprint.Icons.Lucide": "[2.0.0, )",
+          "AWSSDK.S3": "[4.0.101.4, )",
+          "BlazorBlueprint.Components": "[3.14.1, )",
+          "BlazorBlueprint.Icons.Lucide": "[2.0.2, )",
           "CsvHelper": "[33.1.0, )",
           "EFCore.NamingConventions": "[10.0.1, )",
           "EntityFrameworkCore.Exceptions.PostgreSQL": "[10.0.1, )",

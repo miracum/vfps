@@ -5,3 +5,44 @@ html, body {
 body {
     margin: 0;
 }
+
+/*
+ * Plain, global CSS (not Tailwind utility classes) for a couple of specific badge/text colors
+ * used on the CSV Jobs page (see Components/Pages/CsvJobs.razor's BadgeClassFor). Tailwind
+ * classes don't work here: blazorblueprint.css (linked above) is a pre-built Tailwind bundle
+ * shipped by the BlazorBlueprint.Components NuGet package that only contains the utility classes
+ * *that library's own components* reference internally - confirmed upstream by the maintainer,
+ * https://github.com/blazorblueprintui/ui/issues/212#issuecomment-3467593659 ("The shipped CSS
+ * only contains utilities actually used by our components"). This project has no Tailwind build
+ * of its own, so any other Tailwind-looking class used directly in our own markup has no matching
+ * rule and silently does nothing - worse, passing one as BbBadge's Class parameter can even
+ * evict that badge variant's own (real) classes, since BbBadge's internal class-merging still
+ * recognizes the unmatched class as a same-category Tailwind utility and drops the original.
+ *
+ * Blazor CSS isolation (a component-scoped *.razor.css file) can't fix this either: the scope
+ * attribute it relies on is only ever added to elements/components authored directly in this
+ * project - it does not propagate onto BbBadge's own rendered root element, since BbBadge is a
+ * compiled component from a separate assembly the Razor compiler has no visibility into. BbBadge
+ * also has no Style parameter or catch-all AdditionalAttributes to set an inline style through
+ * either - Class is the only styling hook it exposes. Plain global CSS is the only thing that
+ * reliably reaches the actual rendered element here.
+ */
+.badge-completed {
+    border-color: transparent;
+    background-color: #16a34a; /* Tailwind green-600 */
+    color: #fff;
+}
+
+.badge-completed:hover {
+    background-color: #15803d; /* Tailwind green-700 */
+}
+
+.badge-stalled {
+    border-color: #fcd34d; /* Tailwind amber-300 */
+    background-color: #fffbeb; /* Tailwind amber-50 */
+    color: #92400e; /* Tailwind amber-800 */
+}
+
+.issue-text-stalled {
+    color: #b45309; /* Tailwind amber-700 */
+}

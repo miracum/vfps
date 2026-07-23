@@ -45,6 +45,7 @@ public class CsvPseudonymizationJobRunner(
     /// <inheritdoc/>
     public async Task RunAsync(
         Guid jobId,
+        string jobLabel,
         IJobCancellationToken cancellationToken,
         PerformContext? context = null
     )

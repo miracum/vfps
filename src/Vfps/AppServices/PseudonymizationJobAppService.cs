@@ -1,5 +1,6 @@
 using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Security.Claims;
 using Amazon.S3;
 using Amazon.S3.Model;
@@ -136,9 +137,20 @@ public class PseudonymizationJobAppService(
         await jobRepository.MarkQueuedAsync(jobId, totalBytes, cancellationToken);
 
         var hangfireJobId = backgroundJobClient.Enqueue<ICsvPseudonymizationJobRunner>(runner =>
-            runner.RunAsync(jobId, JobCancellationToken.Null)
+            runner.RunAsync(jobId, BuildJobLabel(job), JobCancellationToken.Null)
         );
         await jobRepository.SetHangfireJobIdAsync(jobId, hangfireJobId, cancellationToken);
+    }
+
+    // Matches the wording of CsvJobs.razor's own Direction column, so the same job reads
+    // consistently whether you're looking at it in vfps's UI or in the Hangfire dashboard.
+    private static string BuildJobLabel(PseudonymizationJob job)
+    {
+        var direction =
+            job.Direction == PseudonymizationJobDirection.Depseudonymize
+                ? "De-pseudonymize"
+                : "Pseudonymize";
+        return job.OriginalFileName is null ? direction : $"{direction} - {job.OriginalFileName}";
     }
 
     /// <inheritdoc/>
@@ -217,8 +229,34 @@ public class PseudonymizationJobAppService(
                 Verb = HttpVerb.GET,
                 Protocol = PresignedUrlProtocol,
                 Expires = DateTime.UtcNow.Add(Config.PresignedUrlExpiry),
+                // The object itself always lives at the fixed, deterministic
+                // "csv-jobs/{jobId}/output.csv" key (see CsvPseudonymizationJobRunner) regardless
+                // of the input's name - this only controls what the browser offers to save the
+                // download as, via a signed "response-content-disposition" query parameter S3
+                // honors for presigned GET URLs.
+                ResponseHeaderOverrides = new ResponseHeaderOverrides
+                {
+                    ContentDisposition = new ContentDisposition
+                    {
+                        FileName = BuildOutputFileName(job),
+                    }.ToString(),
+                },
             }
         );
+    }
+
+    // The original upload's own extension is discarded, not preserved - the output is always a
+    // CSV regardless of what the input happened to be named/extended as.
+    private static string BuildOutputFileName(PseudonymizationJob job)
+    {
+        var baseName = job.OriginalFileName is null
+            ? job.Id.ToString()
+            : Path.GetFileNameWithoutExtension(job.OriginalFileName);
+        var suffix =
+            job.Direction == PseudonymizationJobDirection.Depseudonymize
+                ? "de-pseudonymized"
+                : "pseudonymized";
+        return $"{baseName}-{suffix}.csv";
     }
 
     /// <inheritdoc/>
