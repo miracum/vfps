@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.8.2](https://github.com/miracum/vfps/compare/v1.8.1...v1.8.2) (2026-07-23)
+
+
+### Bug Fixes
+
+* auth fixes and refactors ([#267](https://github.com/miracum/vfps/issues/267)) ([312aac7](https://github.com/miracum/vfps/commit/312aac7da14ce9fb5c311ce3b466ac94904113af))
+* handle job cancellations due to server shutdown/restart ([#265](https://github.com/miracum/vfps/issues/265)) ([54fc17b](https://github.com/miracum/vfps/commit/54fc17b7fe4a471803fa24f07da9a0066362a3ea))
+
 ## [1.8.1](https://github.com/miracum/vfps/compare/v1.8.0...v1.8.1) (2026-07-23)
 
 
