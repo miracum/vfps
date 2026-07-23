@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784791048567,
+  "lastUpdate": 1784803308735,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -5142,6 +5142,66 @@ window.BENCHMARK_DATA = {
             "value": 1267.0997873033796,
             "unit": "ns",
             "range": "± 1.038128939294085"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "32dc1deb908327d7c863c6d4e3d62c85e1f12b31",
+          "message": "feat(ui): version footer and job clearing and display fixes (#261)\n\n* feat(ui): added version to footer\n\n* fix(ui): throughput display\n\n* fix: always register the data protection context if the DB is enabled\n\n* feat: allow clearing finished jobs\n\n* fix(ui): next to each other\n\n* feat(ui): added stalled status\n\n* feat(ui): hangfire job link for all jobs",
+          "timestamp": "2026-07-23T12:39:18+02:00",
+          "tree_id": "46187b898405d3428a709b9ce7cdd9debdc73ab6",
+          "url": "https://github.com/miracum/vfps/commit/32dc1deb908327d7c863c6d4e3d62c85e1f12b31"
+        },
+        "date": 1784803308053,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1060.9668689455305,
+            "unit": "ns",
+            "range": "± 1.6576440228225502"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 676.3947338104248,
+            "unit": "ns",
+            "range": "± 2.2796085611703667"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 450.09176874160767,
+            "unit": "ns",
+            "range": "± 1.0288843992929142"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 479.67667212853064,
+            "unit": "ns",
+            "range": "± 0.21651205878489552"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 967.5940106709799,
+            "unit": "ns",
+            "range": "± 1.6978810773497677"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1091.5896899883564,
+            "unit": "ns",
+            "range": "± 1.6817380822336747"
           }
         ]
       }
