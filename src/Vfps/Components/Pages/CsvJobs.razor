@@ -284,14 +284,14 @@ else
                                     <div class="flex items-center gap-2">
                                         <BbProgress Value="@(100.0 * j.BytesProcessed / j.TotalBytes)" Class="w-24" />
                                         <span class="text-xs text-muted-foreground">
-                                            @j.RowsProcessed rows@ThroughputSuffixFor(j)
+                                            @j.RowsProcessed rows@(ThroughputSuffixFor(j))
                                         </span>
                                     </div>
                                 }
                                 else
                                 {
                                     <span class="text-xs text-muted-foreground">
-                                        @j.RowsProcessed rows@ThroughputSuffixFor(j)
+                                        @j.RowsProcessed rows@(ThroughputSuffixFor(j))
                                     </span>
                                 }
                                 @if (j.BadDataRowCount > 0)
