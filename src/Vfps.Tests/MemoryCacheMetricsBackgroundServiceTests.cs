@@ -37,7 +37,7 @@ public class MemoryCacheMetricsBackgroundServiceTests
         // ExecuteAsync's loop body run before cancelling - this uses a short injectable interval
         // (see the constructor's own comment) to actually observe one, and asserts the gauges it
         // sets rather than just that *something* got exported.
-        var memoryCache = new MemoryCache(
+        using var memoryCache = new MemoryCache(
             new MemoryCacheOptions { TrackStatistics = true, SizeLimit = 32 }
         );
         memoryCache.Set("key", "value", new MemoryCacheEntryOptions().SetSize(1));
