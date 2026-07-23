@@ -247,8 +247,49 @@ else
         <BbCard>
             <BbCardHeader>
                 <BbCardTitle>Jobs</BbCardTitle>
+                @if (_jobs.Any(j => IsFinished(j.Status)))
+                {
+                    <BbCardAction>
+                        <BbButton
+                            Variant="ButtonVariant.Outline"
+                            Size="ButtonSize.Small"
+                            OnClick="() => _showClearFinishedConfirm = true"
+                        >
+                            Clear finished jobs
+                        </BbButton>
+                    </BbCardAction>
+                }
             </BbCardHeader>
             <BbCardContent>
+                @if (_showClearFinishedConfirm)
+                {
+                    <BbAlert Variant="AlertVariant.Warning" Class="mb-4">
+                        <BbAlertTitle>Clear finished jobs?</BbAlertTitle>
+                        <BbAlertDescription>
+                            <p class="mb-3">
+                                This permanently deletes every completed, failed, and cancelled job
+                                shown below from the list and the database - this cannot be undone.
+                                Their input/output files in object storage are unaffected and
+                                expire on their own schedule.
+                            </p>
+                            <div class="flex items-center gap-2">
+                                <BbButton
+                                    Variant="ButtonVariant.Destructive"
+                                    Loading="_isClearingFinished"
+                                    OnClick="ConfirmClearFinishedJobsAsync"
+                                >
+                                    Clear
+                                </BbButton>
+                                <BbButton
+                                    Variant="ButtonVariant.Outline"
+                                    OnClick="() => _showClearFinishedConfirm = false"
+                                >
+                                    Cancel
+                                </BbButton>
+                            </div>
+                        </BbAlertDescription>
+                    </BbAlert>
+                }
                 <BbDataGrid Items="@_jobs" ShowPagination="false">
                     <Columns>
                         <BbDataGridTemplateColumn Title="Id">
@@ -394,6 +435,8 @@ else
     private bool _isCreating;
     private string? _createError;
     private IReadOnlyList<PseudonymizationJob> _jobs = [];
+    private bool _showClearFinishedConfirm;
+    private bool _isClearingFinished;
 
     // Rows/s per job, derived client-side from consecutive polls rather than stored server-side -
     // see UpdateThroughput. Keyed by job id; entries are dropped once the job stops appearing in
@@ -695,6 +738,35 @@ else
         var user = await GetUserAsync();
         var url = await _jobAppService.GetDownloadUrlAsync(jobId, user, CancellationToken.None);
         await JS.InvokeVoidAsync("open", url, "_blank");
+    }
+
+    private static bool IsFinished(PseudonymizationJobStatus status) =>
+        status
+            is PseudonymizationJobStatus.Completed
+                or PseudonymizationJobStatus.Failed
+                or PseudonymizationJobStatus.Cancelled;
+
+    private async Task ConfirmClearFinishedJobsAsync()
+    {
+        // Guards against re-entrant invocation - see the identical comment on
+        // Namespaces.razor's CreateNamespaceAsync for why this matters under Blazor Server.
+        if (_jobAppService is null || _isClearingFinished)
+        {
+            return;
+        }
+
+        _isClearingFinished = true;
+        try
+        {
+            var user = await GetUserAsync();
+            await _jobAppService.ClearFinishedAsync(user, CancellationToken.None);
+            _showClearFinishedConfirm = false;
+            await ReloadJobsAsync();
+        }
+        finally
+        {
+            _isClearingFinished = false;
+        }
     }
 
     public async ValueTask DisposeAsync()

@@ -220,6 +220,16 @@ public class PseudonymizationJobAppService(
         );
     }
 
+    /// <inheritdoc/>
+    public async Task<int> ClearFinishedAsync(
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        var createdBy = permissionChecker.IsAdmin(user) ? null : user.GetSubject();
+        return await jobRepository.DeleteFinishedAsync(createdBy, cancellationToken);
+    }
+
     private async Task<PseudonymizationJob> GetOwnedJobAsync(
         Guid jobId,
         ClaimsPrincipal user,

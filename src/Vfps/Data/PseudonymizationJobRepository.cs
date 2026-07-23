@@ -158,4 +158,24 @@ public class PseudonymizationJobRepository(PseudonymContext context)
                 cancellationToken
             );
     }
+
+    /// <inheritdoc/>
+    public async Task<int> DeleteFinishedAsync(
+        string? createdBy,
+        CancellationToken cancellationToken
+    )
+    {
+        var query = context.PseudonymizationJobs.Where(j =>
+            j.Status == PseudonymizationJobStatus.Completed
+            || j.Status == PseudonymizationJobStatus.Failed
+            || j.Status == PseudonymizationJobStatus.Cancelled
+        );
+
+        if (createdBy is not null)
+        {
+            query = query.Where(j => j.CreatedBy == createdBy);
+        }
+
+        return await query.ExecuteDeleteAsync(cancellationToken);
+    }
 }

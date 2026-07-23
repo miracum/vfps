@@ -328,6 +328,143 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task ClearFinishedAsync_AsNonAdmin_ShouldOnlyDeleteOwnFinishedJobs()
+    {
+        var (sut, repository, _, _) = CreateSut(
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        WriteRoles = ["can-write"],
+                    },
+                ],
+            }
+        );
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
+        );
+        var (aliceJob, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("alice", "can-write"),
+            CancellationToken.None
+        );
+        var (bobJob, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("bob", "can-write"),
+            CancellationToken.None
+        );
+        await sut.CancelAsync(
+            aliceJob.Id,
+            UserWithSubject("alice", "can-write"),
+            CancellationToken.None
+        );
+        await sut.CancelAsync(
+            bobJob.Id,
+            UserWithSubject("bob", "can-write"),
+            CancellationToken.None
+        );
+
+        var deletedCount = await sut.ClearFinishedAsync(
+            UserWithSubject("alice", "can-write"),
+            CancellationToken.None
+        );
+
+        deletedCount.Should().Be(1);
+        (await repository.FindAsync(aliceJob.Id, CancellationToken.None)).Should().BeNull();
+        (await repository.FindAsync(bobJob.Id, CancellationToken.None)).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ClearFinishedAsync_AsAdmin_ShouldDeleteEveryonesFinishedJobs()
+    {
+        var (sut, repository, _, _) = CreateSut(
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                AdminRoles = ["admin"],
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        WriteRoles = ["can-write"],
+                    },
+                ],
+            }
+        );
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
+        );
+        var (aliceJob, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("alice", "can-write"),
+            CancellationToken.None
+        );
+        var (bobJob, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("bob", "can-write"),
+            CancellationToken.None
+        );
+        await sut.CancelAsync(
+            aliceJob.Id,
+            UserWithSubject("alice", "can-write"),
+            CancellationToken.None
+        );
+        await sut.CancelAsync(
+            bobJob.Id,
+            UserWithSubject("bob", "can-write"),
+            CancellationToken.None
+        );
+
+        var deletedCount = await sut.ClearFinishedAsync(
+            UserWithSubject("admin-user", "admin"),
+            CancellationToken.None
+        );
+
+        deletedCount.Should().Be(2);
+        (await repository.FindAsync(aliceJob.Id, CancellationToken.None)).Should().BeNull();
+        (await repository.FindAsync(bobJob.Id, CancellationToken.None)).Should().BeNull();
+    }
+
+    [Fact]
+    public async Task ClearFinishedAsync_ShouldNotDeleteJobsStillInProgress()
+    {
+        var (sut, repository, _, _) = CreateSut();
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
+        );
+        var (job, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+
+        var deletedCount = await sut.ClearFinishedAsync(
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+
+        deletedCount.Should().Be(0);
+        (await repository.FindAsync(job.Id, CancellationToken.None)).Should().NotBeNull();
+    }
+
+    [Fact]
     public async Task GetDownloadUrlAsync_OnNonCompletedJob_ShouldThrow()
     {
         var (sut, _, _, _) = CreateSut();
