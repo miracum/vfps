@@ -118,6 +118,29 @@ public class CsvPseudonymizationJobRunner(
                 );
             }
         }
+        catch (OperationCanceledException)
+            when (cancellationToken.ShutdownToken.IsCancellationRequested)
+        {
+            // The Hangfire *server* is shutting down (e.g. a pod restart/rolling upgrade,
+            // resource-limit change, or a rollout) - ThrowIfCancellationRequested() throws this
+            // the moment that happens, mid-row. This is not a genuine processing failure, so
+            // don't mark the job Failed here: leave its Status as Running (already set above) so
+            // Hangfire's own dead-server recovery re-dispatches this same job once a server is
+            // available again, and RunAsync's own terminal-state guard doesn't turn that
+            // re-dispatch into a silent no-op. Marking it Failed here was the actual root cause of
+            // a real incident - the job kept running server-side right up to the restart, Hangfire
+            // itself never counted this as a failure (it has this exact same special case
+            // internally) and later re-ran the job, which then immediately no-opped against the
+            // Failed status this catch used to set and reported back to Hangfire as "Succeeded" -
+            // while vfps's own UI kept showing Failed, and the job's real output was incomplete.
+            logger.LogWarning(
+                "CSV pseudonymization job {JobId} was interrupted by a server shutdown mid-"
+                    + "processing - it will be reprocessed once a Hangfire server is available "
+                    + "again.",
+                jobId
+            );
+            throw;
+        }
         catch (Exception ex)
         {
             // Never persist raw row content or the raw exception string here - this service's

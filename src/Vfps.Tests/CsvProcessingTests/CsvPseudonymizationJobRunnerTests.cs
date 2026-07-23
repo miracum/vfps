@@ -525,6 +525,49 @@ public class CsvPseudonymizationJobRunnerTests
             .MustHaveHappenedOnceExactly();
     }
 
+    [Fact]
+    public async Task RunAsync_WhenServerShutsDownMidProcessing_ShouldNotMarkJobFailed()
+    {
+        // Regression test for a real incident: a Kubernetes pod restart (e.g. a resource-limit
+        // change) mid-job used to leave the job marked Failed in vfps's own UI while Hangfire's
+        // own dashboard showed it as Succeeded, because a later, silent re-dispatch of the same
+        // job immediately no-op'd against the Failed status this exact scenario used to set - see
+        // the catch clause in CsvPseudonymizationJobRunner.RunAsync this now exercises.
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,secret\n");
+        FakePseudonymize("ns", "secret", "pseudonym-of-secret");
+
+        // A Hangfire server shutting down cancels ShutdownToken and ThrowIfCancellationRequested()
+        // throws as a result - simulated directly here rather than by racing a real shutdown.
+        using var shutdownTokenSource = new CancellationTokenSource();
+        await shutdownTokenSource.CancelAsync();
+        var cancellationToken = A.Fake<IJobCancellationToken>();
+        A.CallTo(() => cancellationToken.ShutdownToken).Returns(shutdownTokenSource.Token);
+        A.CallTo(() => cancellationToken.ThrowIfCancellationRequested())
+            .Throws(() => new OperationCanceledException(shutdownTokenSource.Token));
+
+        var sut = CreateSut();
+        var act = () => sut.RunAsync(job.Id, "test-label", cancellationToken);
+
+        await act.Should().ThrowAsync<OperationCanceledException>();
+
+        A.CallTo(() =>
+                jobRepository.UpdateStatusAsync(
+                    job.Id,
+                    PseudonymizationJobStatus.Failed,
+                    A<string>._,
+                    A<CancellationToken>._
+                )
+            )
+            .MustNotHaveHappened();
+    }
+
     [Theory]
     [InlineData(PseudonymizationJobStatus.Completed)]
     [InlineData(PseudonymizationJobStatus.Failed)]
