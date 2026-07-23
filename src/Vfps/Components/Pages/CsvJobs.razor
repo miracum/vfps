@@ -371,17 +371,6 @@ else
                                             Class="mt-0.5 shrink-0"
                                         />
                                         <span class="truncate">@j.ErrorMessage</span>
-                                        @if (j.HangfireJobId is not null)
-                                        {
-                                            <a
-                                                href="@HangfireJobDetailsUrl(j.HangfireJobId)"
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                class="shrink-0 whitespace-nowrap underline"
-                                            >
-                                                Details
-                                            </a>
-                                        }
                                     </div>
                                 }
                             </ChildContent>
@@ -411,6 +400,17 @@ else
                                             OnClick="() => CancelJobAsync(j.Id)"
                                         >
                                             Cancel
+                                        </BbButton>
+                                    }
+                                    @if (j.HangfireJobId is not null)
+                                    {
+                                        <BbButton
+                                            Variant="ButtonVariant.Outline"
+                                            Size="ButtonSize.Small"
+                                            Href="@HangfireJobDetailsUrl(j.HangfireJobId)"
+                                            Target="_blank"
+                                        >
+                                            Hangfire
                                         </BbButton>
                                     }
                                 </div>
