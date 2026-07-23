@@ -283,12 +283,16 @@ else
                                 {
                                     <div class="flex items-center gap-2">
                                         <BbProgress Value="@(100.0 * j.BytesProcessed / j.TotalBytes)" Class="w-24" />
-                                        <span class="text-xs text-muted-foreground">@j.RowsProcessed rows</span>
+                                        <span class="text-xs text-muted-foreground">
+                                            @j.RowsProcessed rows@ThroughputSuffixFor(j)
+                                        </span>
                                     </div>
                                 }
                                 else
                                 {
-                                    <span class="text-xs text-muted-foreground">@j.RowsProcessed rows</span>
+                                    <span class="text-xs text-muted-foreground">
+                                        @j.RowsProcessed rows@ThroughputSuffixFor(j)
+                                    </span>
                                 }
                                 @if (j.BadDataRowCount > 0)
                                 {
@@ -391,6 +395,12 @@ else
     private string? _createError;
     private IReadOnlyList<PseudonymizationJob> _jobs = [];
 
+    // Rows/s per job, derived client-side from consecutive polls rather than stored server-side -
+    // see UpdateThroughput. Keyed by job id; entries are dropped once the job stops appearing in
+    // _jobs (see the prune step there).
+    private readonly Dictionary<Guid, (long Rows, DateTimeOffset At)> _lastProgressSnapshot = [];
+    private readonly Dictionary<Guid, double> _throughputByJobId = [];
+
     private CancellationTokenSource? _pollCts;
     private Task? _pollTask;
 
@@ -465,7 +475,50 @@ else
 
         var user = await GetUserAsync();
         _jobs = await jobAppService.ListAsync(user, CancellationToken.None);
+        UpdateThroughput(_jobs);
     }
+
+    // Computes each job's rows/s from the delta against its previous snapshot, using the
+    // server-recorded LastUpdatedAt (set by UpdateProgressAsync) rather than the client's own
+    // poll time - that way the rate reflects the runner's actual wall-clock progress, unaffected
+    // by polling jitter or how long this call itself took.
+    private void UpdateThroughput(IReadOnlyList<PseudonymizationJob> jobs)
+    {
+        var seen = new HashSet<Guid>(jobs.Count);
+        foreach (var job in jobs)
+        {
+            seen.Add(job.Id);
+
+            if (
+                _lastProgressSnapshot.TryGetValue(job.Id, out var previous)
+                && job.LastUpdatedAt > previous.At
+            )
+            {
+                var elapsedSeconds = (job.LastUpdatedAt - previous.At).TotalSeconds;
+                var rowDelta = job.RowsProcessed - previous.Rows;
+                if (rowDelta > 0)
+                {
+                    _throughputByJobId[job.Id] = rowDelta / elapsedSeconds;
+                }
+            }
+
+            _lastProgressSnapshot[job.Id] = (job.RowsProcessed, job.LastUpdatedAt);
+        }
+
+        // Drop tracking for jobs no longer in the list, so long-lived circuits that create many
+        // jobs over time don't grow these dictionaries unbounded.
+        foreach (var staleId in _lastProgressSnapshot.Keys.Where(id => !seen.Contains(id)).ToList())
+        {
+            _lastProgressSnapshot.Remove(staleId);
+            _throughputByJobId.Remove(staleId);
+        }
+    }
+
+    private string ThroughputSuffixFor(PseudonymizationJob job) =>
+        job.Status == PseudonymizationJobStatus.Running
+        && _throughputByJobId.TryGetValue(job.Id, out var rowsPerSecond)
+            ? $" ({rowsPerSecond.ToString("N0")} rows/s)"
+            : string.Empty;
 
     // NavigationManager.BaseUri already includes the "/ui/" path base (App.razor's <base href>),
     // so appending the dashboard's own relative route gives an absolute link to the Hangfire
