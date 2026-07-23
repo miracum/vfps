@@ -33,6 +33,14 @@ public interface INamespaceAppService
         CancellationToken cancellationToken
     );
 
+    /// <summary>Gets a single namespace by name. Requires read access to that namespace.</summary>
+    /// <exception cref="NamespaceNotFoundException">No namespace named <paramref name="namespaceName"/> exists.</exception>
+    Task<Namespace> GetAsync(
+        string namespaceName,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
     /// <summary>
     /// Deletes a namespace and every pseudonym it contains. Requires admin access - there's no
     /// existing namespace-scoped write grant to check once it's gone, same reasoning as

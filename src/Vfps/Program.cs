@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Security.Claims;
+using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
 using BlazorBlueprint.Components;
@@ -312,6 +313,11 @@ if (s3Config.IsEnabled)
         {
             ServiceURL = s3Config.ServiceUrl,
             ForcePathStyle = s3Config.ForcePathStyle,
+            // Not just cosmetic even against a non-AWS endpoint: the region is part of the
+            // SigV4 credential scope embedded in every signed request/presigned URL, independent
+            // of ServiceURL. Previously never set here at all, so every deployment silently
+            // signed as "us-east-1" (the SDK's own fallback) regardless of this setting.
+            RegionEndpoint = RegionEndpoint.GetBySystemName(s3Config.Region),
             // AWSSDK doesn't infer the scheme from ServiceURL for presigned URLs - without this,
             // a plain-HTTP endpoint (e.g. local MinIO) still gets signed as "https://", which the
             // browser then fails to load against a server not actually listening for TLS there.

@@ -177,7 +177,13 @@ public class PseudonymRepository : IPseudonymRepository
     /// UNION (not UNION ALL) dedupes the resulting rows - so this is correct even without the
     /// caller enforcing the "already deduped" precondition, it just costs an extra row on the wire.
     /// </summary>
-    private static string BuildBatchUpsertSql(
+    // Internal, not private: this is the one piece of CreateIfNotExistBatchAsync unit tests can
+    // never otherwise exercise, since ServiceTestBase always runs against SQLite (see
+    // CreateIfNotExistBatchAsync's own comment on why) - only ever hit for real against Postgres
+    // in production. Exposed (via InternalsVisibleTo) so PseudonymRepositoryTests can verify the
+    // generated SQL/parameter shape directly, as a pure function, without needing a real Postgres
+    // connection.
+    internal static string BuildBatchUpsertSql(
         IReadOnlyList<Pseudonym> pseudonyms,
         out object[] parameters
     )

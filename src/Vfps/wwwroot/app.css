@@ -37,7 +37,9 @@ body {
     background-color: #15803d; /* Tailwind green-700 */
 }
 
-.badge-stalled {
+/* Shared by the Stalled status badge and the "N malformed rows" warning badge - both are the
+   same amber "heads up, not necessarily broken" look. */
+.badge-warning-amber {
     border-color: #fcd34d; /* Tailwind amber-300 */
     background-color: #fffbeb; /* Tailwind amber-50 */
     color: #92400e; /* Tailwind amber-800 */

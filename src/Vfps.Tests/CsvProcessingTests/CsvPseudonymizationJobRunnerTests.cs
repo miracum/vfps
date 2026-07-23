@@ -498,6 +498,35 @@ public class CsvPseudonymizationJobRunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_WithNoHeaderRowAndNonNumericSourceColumn_ShouldFailJobWithSanitizedErrorMessage()
+    {
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "not-a-number", Namespace = "ns" }
+        );
+        job.HasHeaderRow = false;
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "1,secret\n");
+
+        var sut = CreateSut();
+        var act = () => sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+
+        A.CallTo(() =>
+                jobRepository.UpdateStatusAsync(
+                    job.Id,
+                    PseudonymizationJobStatus.Failed,
+                    "Processing failed - see server logs for details.",
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
     public async Task RunAsync_WithColumnMappingReferencingUnknownNamespace_ShouldFailJob()
     {
         var job = CreateJob(

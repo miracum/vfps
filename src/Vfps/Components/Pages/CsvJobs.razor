@@ -341,7 +341,7 @@ else
                                         class="mt-1"
                                         title="These rows contained malformed CSV data (e.g. an unescaped quote) - the affected value was kept as-is rather than failing the job."
                                     >
-                                        <BbBadge Variant="BadgeVariant.Outline" Class="border-amber-300 bg-amber-50 text-amber-800">
+                                        <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
                                             @j.BadDataRowCount warning@(j.BadDataRowCount == 1 ? "" : "s")
                                         </BbBadge>
                                     </div>
@@ -591,7 +591,7 @@ else
         status switch
         {
             PseudonymizationJobStatus.Completed => "badge-completed",
-            PseudonymizationJobStatus.Stalled => "badge-stalled",
+            PseudonymizationJobStatus.Stalled => "badge-warning-amber",
             _ => null,
         };
 

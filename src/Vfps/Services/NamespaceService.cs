@@ -2,17 +2,13 @@ using Google.Protobuf.WellKnownTypes;
 using Grpc.Core;
 using Vfps.AppServices;
 using Vfps.Authorization;
-using Vfps.Data;
 using Vfps.Protos;
 
 namespace Vfps.Services;
 
 /// <inheritdoc/>
-/// <inheritdoc/>
-public class NamespaceService(
-    INamespaceRepository namespaceRepository,
-    INamespaceAppService namespaceAppService
-) : Protos.NamespaceService.NamespaceServiceBase
+public class NamespaceService(INamespaceAppService namespaceAppService)
+    : Protos.NamespaceService.NamespaceServiceBase
 {
     /// <inheritdoc/>
     public override async Task<NamespaceServiceCreateResponse> Create(
@@ -69,11 +65,16 @@ public class NamespaceService(
         ServerCallContext context
     )
     {
-        var @namespace = await namespaceRepository.FindAsync(
-            request.Name,
-            context.CancellationToken
-        );
-        if (@namespace is null)
+        Data.Models.Namespace @namespace;
+        try
+        {
+            @namespace = await namespaceAppService.GetAsync(
+                request.Name,
+                context.GetUser(),
+                context.CancellationToken
+            );
+        }
+        catch (NamespaceNotFoundException)
         {
             var metadata = new Metadata { { "Namespace", request.Name } };
 
@@ -84,6 +85,10 @@ public class NamespaceService(
                 ),
                 metadata
             );
+        }
+        catch (ForbiddenException ex)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
         }
 
         return new NamespaceServiceGetResponse { Namespace = ToProto(@namespace) };

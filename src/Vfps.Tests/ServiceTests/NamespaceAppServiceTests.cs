@@ -118,6 +118,76 @@ public class NamespaceAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task GetAsync_WithAuthorizationEnabledAndNoReadAccess_ShouldThrowForbidden()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(
+            namespaceRepository,
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        ReadRoles = ["can-read-existing"],
+                    },
+                ],
+            }
+        );
+
+        var act = () =>
+            sut.GetAsync(
+                "existingNamespace",
+                UserWithRoles("some-other-role"),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task GetAsync_WithAuthorizationEnabledAndReadAccess_ShouldReturnNamespace()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(
+            namespaceRepository,
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        ReadRoles = ["can-read-existing"],
+                    },
+                ],
+            }
+        );
+
+        var result = await sut.GetAsync(
+            "existingNamespace",
+            UserWithRoles("can-read-existing"),
+            CancellationToken.None
+        );
+
+        result.Name.Should().Be("existingNamespace");
+    }
+
+    [Fact]
+    public async Task GetAsync_WithNonExistingNamespace_ShouldThrowNamespaceNotFoundException()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var act = () => sut.GetAsync("notExisting", new ClaimsPrincipal(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<NamespaceNotFoundException>();
+    }
+
+    [Fact]
     public async Task DeleteAsync_WithAuthorizationEnabledAndNonAdminUser_ShouldThrowForbidden()
     {
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);

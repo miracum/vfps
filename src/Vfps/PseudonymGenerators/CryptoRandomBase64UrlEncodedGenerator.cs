@@ -10,8 +10,6 @@ public class CryptoRandomBase64UrlEncodedGenerator : IPseudonymGenerator
         Encoding.UTF8.GetBytes(Environment.MachineName)
     );
 
-    public CryptoRandomBase64UrlEncodedGenerator() { }
-
     public string GeneratePseudonym(uint pseudonymLength = 32)
     {
         var hashedMachineName = hashedMachineNameBytes.AsSpan(0, 4);
