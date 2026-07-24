@@ -256,6 +256,9 @@ if (authConfig.IsEnabled)
             options.MapInboundClaims = false;
             options.TokenValidationParameters.NameClaimType = "preferred_username";
             options.TokenValidationParameters.RoleClaimType = authConfig.RoleClaimType;
+            options.PushedAuthorizationBehavior = authConfig.UsePushedAuthorizationRequests
+                ? PushedAuthorizationBehavior.UseIfAvailable
+                : PushedAuthorizationBehavior.Disable;
         })
         .AddJwtBearer(options =>
         {
