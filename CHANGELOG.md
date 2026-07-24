@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.0](https://github.com/miracum/vfps/compare/v1.8.2...v1.9.0) (2026-07-24)
+
+
+### Features
+
+* **ui:** acl view and nicer user popover ([#268](https://github.com/miracum/vfps/issues/268)) ([af29650](https://github.com/miracum/vfps/commit/af29650a1bfe17cece4341537fbc901b84ced272))
+
 ## [1.8.2](https://github.com/miracum/vfps/compare/v1.8.1...v1.8.2) (2026-07-23)
 
 
