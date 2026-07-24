@@ -1,0 +1,188 @@
+@page "/access-control"
+@rendermode InteractiveServer
+@using Microsoft.Extensions.Options
+@using Vfps.Config
+@using Vfps.Data.Models
+@inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
+@inject INamespacePermissionChecker PermissionChecker
+@inject INamespaceAppService NamespaceAppService
+
+<PageTitle>Access Control</PageTitle>
+
+@{
+    RenderFragment<IReadOnlyList<string>> RoleBadges = roles =>
+        @<div class="flex flex-wrap gap-1">
+            @if (roles.Count == 0)
+            {
+                <span class="text-xs text-muted-foreground">—</span>
+            }
+            else
+            {
+                @foreach (var role in roles)
+                {
+                    <BbBadge Variant="BadgeVariant.Outline">@role</BbBadge>
+                }
+            }
+        </div>;
+}
+
+<div class="mx-auto max-w-5xl space-y-6">
+    <div class="flex items-center gap-2">
+        <LucideIcon Name="shield" Size="24" Class="text-primary" />
+        <h1 class="text-2xl font-semibold tracking-tight">Access Control</h1>
+    </div>
+
+    @if (!AuthorizationConfigOptions.Value.IsEnabled)
+    {
+        <BbAlert Variant="AlertVariant.Info">
+            <BbAlertTitle>Authorization is disabled</BbAlertTitle>
+            <BbAlertDescription>
+                <code>Authorization__IsEnabled</code> is <code>false</code>, so every request has
+                full read, write, and reverse-lookup access to every namespace regardless of role.
+            </BbAlertDescription>
+        </BbAlert>
+    }
+    else if (!_isAdmin)
+    {
+        <BbAlert Variant="AlertVariant.Danger">
+            <BbAlertTitle>Admins only</BbAlertTitle>
+            <BbAlertDescription>
+                Viewing namespace access rules requires one of the configured admin roles.
+            </BbAlertDescription>
+        </BbAlert>
+    }
+    else
+    {
+        <BbCard>
+            <BbCardHeader>
+                <BbCardTitle>Admin roles</BbCardTitle>
+                <BbCardDescription>
+                    Full access to every namespace, including namespace create/delete.
+                </BbCardDescription>
+            </BbCardHeader>
+            <BbCardContent>
+                @RoleBadges(AuthorizationConfigOptions.Value.AdminRoles)
+            </BbCardContent>
+        </BbCard>
+
+        <BbCard>
+            <BbCardHeader>
+                <BbCardTitle>Configured namespace rules</BbCardTitle>
+                <BbCardDescription>
+                    Raw <code>Authorization:NamespaceRules</code> entries. A namespace of
+                    <code>*</code> applies to every namespace, in addition to any rule specific to it.
+                </BbCardDescription>
+            </BbCardHeader>
+            <BbCardContent>
+                @if (AuthorizationConfigOptions.Value.NamespaceRules.Count == 0)
+                {
+                    <p class="text-sm text-muted-foreground">
+                        No namespace rules configured - only admins have any access.
+                    </p>
+                }
+                else
+                {
+                    <BbDataGrid
+                        Items="@AuthorizationConfigOptions.Value.NamespaceRules"
+                        ShowPagination="false"
+                    >
+                        <Columns>
+                            <BbDataGridTemplateColumn Title="Namespace">
+                                <ChildContent Context="rule">
+                                    @(rule.Namespace == "*" ? "All namespaces (*)" : rule.Namespace)
+                                </ChildContent>
+                            </BbDataGridTemplateColumn>
+                            <BbDataGridTemplateColumn Title="Read">
+                                <ChildContent Context="rule">@RoleBadges(rule.ReadRoles)</ChildContent>
+                            </BbDataGridTemplateColumn>
+                            <BbDataGridTemplateColumn Title="Write">
+                                <ChildContent Context="rule">@RoleBadges(rule.WriteRoles)</ChildContent>
+                            </BbDataGridTemplateColumn>
+                            <BbDataGridTemplateColumn Title="Reverse lookup">
+                                <ChildContent Context="rule">
+                                    @RoleBadges(rule.ReverseLookupRoles)
+                                </ChildContent>
+                            </BbDataGridTemplateColumn>
+                        </Columns>
+                    </BbDataGrid>
+                }
+            </BbCardContent>
+        </BbCard>
+
+        <BbCard>
+            <BbCardHeader>
+                <BbCardTitle>Effective access per namespace</BbCardTitle>
+                <BbCardDescription>
+                    Resolved roles for each existing namespace - the union of any rule specific to
+                    it and the wildcard rule above, the same resolution namespace/pseudonym access
+                    checks use.
+                </BbCardDescription>
+            </BbCardHeader>
+            <BbCardContent>
+                @if (_namespaces.Count == 0)
+                {
+                    <p class="text-sm text-muted-foreground">No namespaces exist yet.</p>
+                }
+                else
+                {
+                    <BbDataGrid Items="@_namespaces" ShowPagination="false">
+                        <Columns>
+                            <BbDataGridPropertyColumn Property="@(n => n.Name)" Title="Namespace" />
+                            <BbDataGridTemplateColumn Title="Read">
+                                <ChildContent Context="n">
+                                    @RoleBadges(ResolvedRoles(n.Name, r => r.ReadRoles))
+                                </ChildContent>
+                            </BbDataGridTemplateColumn>
+                            <BbDataGridTemplateColumn Title="Write">
+                                <ChildContent Context="n">
+                                    @RoleBadges(ResolvedRoles(n.Name, r => r.WriteRoles))
+                                </ChildContent>
+                            </BbDataGridTemplateColumn>
+                            <BbDataGridTemplateColumn Title="Reverse lookup">
+                                <ChildContent Context="n">
+                                    @RoleBadges(ResolvedRoles(n.Name, r => r.ReverseLookupRoles))
+                                </ChildContent>
+                            </BbDataGridTemplateColumn>
+                        </Columns>
+                    </BbDataGrid>
+                }
+            </BbCardContent>
+        </BbCard>
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private bool _isAdmin;
+    private IReadOnlyList<Namespace> _namespaces = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        var user =
+            AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
+        _isAdmin = PermissionChecker.IsAdmin(user);
+
+        // Only an admin's own listing is guaranteed to be the full set - GetAllAsync filters to
+        // what the caller can read, and a non-admin has already been turned away above.
+        if (AuthorizationConfigOptions.Value.IsEnabled && _isAdmin)
+        {
+            _namespaces = await NamespaceAppService.GetAllAsync(user, CancellationToken.None);
+        }
+    }
+
+    private List<string> ResolvedRoles(
+        string namespaceName,
+        Func<NamespaceRule, List<string>> roleSelector
+    ) =>
+        [
+            .. AuthorizationConfigOptions
+                .Value.NamespaceRules.Where(r =>
+                    r.Namespace == "*" || r.Namespace == namespaceName
+                )
+                .SelectMany(roleSelector)
+                .Distinct()
+                .OrderBy(r => r, StringComparer.Ordinal),
+        ];
+}

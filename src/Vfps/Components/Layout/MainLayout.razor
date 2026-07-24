@@ -1,8 +1,10 @@
 @inherits LayoutComponentBase
+@using PopoverAlign = BlazorBlueprint.Primitives.PopoverAlign
 @using Microsoft.Extensions.Options
 @using Vfps.Config
 @inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
 @inject IOptions<S3Config> S3ConfigOptions
+@inject INamespacePermissionChecker PermissionChecker
 @inject NavigationManager NavigationManager
 
 <BbResponsiveNavProvider>
@@ -30,11 +32,56 @@
                 <AuthorizeView>
                     <Authorized>
                         <div class="flex items-center gap-2">
-                            <span title="@BuildUserTooltip(context.User)">
-                                <BbAvatar Size="AvatarSize.Small">
-                                    <BbAvatarFallback>@Initials(context.User.Identity?.Name)</BbAvatarFallback>
-                                </BbAvatar>
-                            </span>
+                            <BbPopover>
+                                <BbPopoverTrigger AsChild="false" class="rounded-full cursor-pointer">
+                                    <BbAvatar Size="AvatarSize.Small">
+                                        <BbAvatarFallback>@Initials(context.User.Identity?.Name)</BbAvatarFallback>
+                                    </BbAvatar>
+                                </BbPopoverTrigger>
+                                <BbPopoverContent Align="PopoverAlign.End">
+                                    @{
+                                        var displayName = DisplayName(context.User);
+                                        var username = context.User.Identity?.Name;
+                                        var email = Email(context.User);
+                                        var roles = Roles(context.User);
+                                    }
+                                    <div class="space-y-3">
+                                        <div>
+                                            <p class="text-sm font-medium">
+                                                @(displayName ?? username ?? "Unknown user")
+                                            </p>
+                                            @if (displayName is not null && username is not null)
+                                            {
+                                                <p class="text-xs text-muted-foreground">@username</p>
+                                            }
+                                        </div>
+                                        <dl class="space-y-1.5 text-xs">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <dt class="text-muted-foreground">Email</dt>
+                                                <dd class="truncate">@(email ?? "—")</dd>
+                                            </div>
+                                            <div>
+                                                <dt class="text-muted-foreground">Roles</dt>
+                                                <dd class="mt-1 flex flex-wrap gap-1">
+                                                    @if (roles.Count == 0)
+                                                    {
+                                                        <span class="text-muted-foreground">none</span>
+                                                    }
+                                                    else
+                                                    {
+                                                        @foreach (var role in roles)
+                                                        {
+                                                            <BbBadge Variant="BadgeVariant.Secondary">
+                                                                @role
+                                                            </BbBadge>
+                                                        }
+                                                    }
+                                                </dd>
+                                            </div>
+                                        </dl>
+                                    </div>
+                                </BbPopoverContent>
+                            </BbPopover>
                             <span class="hidden text-sm text-muted-foreground sm:inline">
                                 @context.User.Identity?.Name
                             </span>
@@ -96,9 +143,12 @@
         }
     }
 
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
     private IReadOnlyList<NavItemDefinition> _navItems = [];
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         var items = new List<NavItemDefinition>
         {
@@ -110,21 +160,35 @@
             items.Add(new NavItemDefinition { Text = "CSV Processing", Href = "/ui/csv-jobs" });
         }
 
+        // Only meaningful - and only shown - when there are actual role-based rules to display:
+        // with authorization disabled everyone already has full access, and a non-admin can't
+        // view the page anyway (see AccessControl.razor's own admin check).
+        if (AuthorizationConfigOptions.Value.IsEnabled)
+        {
+            var user =
+                AuthenticationState is null
+                    ? new ClaimsPrincipal()
+                    : (await AuthenticationState).User;
+            if (PermissionChecker.IsAdmin(user))
+            {
+                items.Add(new NavItemDefinition { Text = "Access Control", Href = "/ui/access-control" });
+            }
+        }
+
         _navItems = items;
     }
 
     private string LoginUrl => NavigationManager.BuildLoginUrl();
 
-    private string BuildUserTooltip(ClaimsPrincipal user)
-    {
-        var name = user.Identity?.Name ?? "unknown";
-        var roles = user.FindAll(AuthorizationConfigOptions.Value.RoleClaimType)
-            .Select(c => c.Value)
-            .ToList();
-        var rolesText = roles.Count > 0 ? string.Join(", ", roles) : "none";
+    // "name"/"email" are the standard OIDC claim types - not run through .NET's ClaimTypes.*
+    // mapping since AddOpenIdConnect sets MapInboundClaims = false (see Program.cs), so these
+    // literal strings are what the IdP's token/userinfo claims actually arrive as.
+    private static string? DisplayName(ClaimsPrincipal user) => user.FindFirstValue("name");
 
-        return $"{name}\nRoles: {rolesText}";
-    }
+    private static string? Email(ClaimsPrincipal user) => user.FindFirstValue("email");
+
+    private IReadOnlyList<string> Roles(ClaimsPrincipal user) =>
+        user.FindAll(AuthorizationConfigOptions.Value.RoleClaimType).Select(c => c.Value).ToList();
 
     private static string Initials(string? name)
     {
