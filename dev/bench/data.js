@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784847689038,
+  "lastUpdate": 1784910872432,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -5742,6 +5742,66 @@ window.BENCHMARK_DATA = {
             "value": 1361.3019379207067,
             "unit": "ns",
             "range": "± 3.348885079379363"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "af29650a1bfe17cece4341537fbc901b84ced272",
+          "message": "feat(ui): acl view and nicer user popover (#268)\n\n* fix: support for disabling Pushed Authorization Requests\n\n* feat(ui): acl view and nicer user popover",
+          "timestamp": "2026-07-24T18:31:42+02:00",
+          "tree_id": "240f16f3c201d35a15725673172ec3b5a15ba6e5",
+          "url": "https://github.com/miracum/vfps/commit/af29650a1bfe17cece4341537fbc901b84ced272"
+        },
+        "date": 1784910871799,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1198.3137903947097,
+            "unit": "ns",
+            "range": "± 2.879264375366643"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 593.391663142613,
+            "unit": "ns",
+            "range": "± 0.9048838824928159"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 723.7317558016096,
+            "unit": "ns",
+            "range": "± 0.3991751032216693"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 746.3205669109637,
+            "unit": "ns",
+            "range": "± 0.8700806638767553"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 1151.6704318706807,
+            "unit": "ns",
+            "range": "± 1.806438965759112"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1263.3489069620769,
+            "unit": "ns",
+            "range": "± 1.4373485850934544"
           }
         ]
       }
