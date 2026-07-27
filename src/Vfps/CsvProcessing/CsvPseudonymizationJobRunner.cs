@@ -57,17 +57,27 @@ public class CsvPseudonymizationJobRunner(
             );
 
         // Guards against a manual re-run (e.g. via the Hangfire dashboard) of a job that's
-        // already reached a terminal state - automatic retries are disabled (see Program.cs),
-        // but nothing stops an operator from clicking "Retry" there directly. Stalled counts as
-        // terminal here too - StalledPseudonymizationJobWatchdogService only ever applies it to a
-        // job whose own runner invocation is presumed dead, so a fresh RunAsync call finding it
-        // already Stalled means the watchdog beat this one to a verdict, not the other way round.
+        // already reached a genuinely terminal state - automatic exception-triggered retries are
+        // disabled (see Program.cs), but nothing stops an operator from clicking "Retry" there
+        // directly.
+        //
+        // Stalled is deliberately NOT included here, even though it looks terminal in the UI.
+        // StalledPseudonymizationJobWatchdogService sets it purely on a stale-LastUpdatedAt
+        // heuristic - the runner that was processing this job is presumed dead (e.g. its pod
+        // crashed). The actual recovery for that is Hangfire's own dead-server detection, a
+        // separate mechanism with its own independent timeout, which re-dispatches the same
+        // underlying Hangfire job to a live server once it notices. That dead-server timeout and
+        // this job's stalled threshold (CsvProcessingConfig.StalledJobThreshold) aren't
+        // coordinated, so there's no guarantee which fires first. Treating Stalled as terminal
+        // here would mean: whenever the stall watchdog happens to win that race, Hangfire's
+        // legitimate re-dispatch arrives to find the job already "terminal" and silently no-ops -
+        // permanently stranding it with no automatic recovery at all, and no path forward short of
+        // an operator noticing and submitting a brand new job.
         if (
             job.Status
             is PseudonymizationJobStatus.Cancelled
                 or PseudonymizationJobStatus.Completed
                 or PseudonymizationJobStatus.Failed
-                or PseudonymizationJobStatus.Stalled
         )
         {
             return;

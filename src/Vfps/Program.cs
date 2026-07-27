@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Security.Claims;
-using Amazon;
 using Amazon.Runtime;
 using Amazon.S3;
 using BlazorBlueprint.Components;
@@ -13,6 +12,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -320,7 +320,15 @@ if (s3Config.IsEnabled)
             // SigV4 credential scope embedded in every signed request/presigned URL, independent
             // of ServiceURL. Previously never set here at all, so every deployment silently
             // signed as "us-east-1" (the SDK's own fallback) regardless of this setting.
-            RegionEndpoint = RegionEndpoint.GetBySystemName(s3Config.Region),
+            //
+            // Must be AuthenticationRegion (a plain string), not RegionEndpoint: the two are
+            // mutually exclusive on AmazonS3Config, and whichever is assigned *last* wins -
+            // setting RegionEndpoint here previously clobbered ServiceURL back to null, silently
+            // redirecting every request to the real AWS endpoint for that region instead of this
+            // configured S3-compatible one. That surfaced as "The AWS Access Key Id you provided
+            // does not exist in our records" - a real error, just from the wrong server, since AWS
+            // itself has no record of a MinIO/Ceph-issued key.
+            AuthenticationRegion = s3Config.Region,
             // AWSSDK doesn't infer the scheme from ServiceURL for presigned URLs - without this,
             // a plain-HTTP endpoint (e.g. local MinIO) still gets signed as "https://", which the
             // browser then fails to load against a server not actually listening for TLS there.
@@ -377,6 +385,26 @@ if (isTracingEnabled)
 }
 
 var app = builder.Build();
+
+// The bundled Helm chart's ingress (Traefik) terminates TLS and forwards plain HTTP to this pod,
+// so without this, Kestrel - and therefore the OIDC handler building redirect_uri - only ever
+// sees "http" as the request scheme, producing an http:// redirect_uri that the IdP correctly
+// rejects since the client is registered for https://. Must run before anything that reads the
+// request scheme/host (UsePathBase, authentication, and any HTTPS redirection). KnownNetworks/
+// KnownProxies are cleared because the actual proxy is a Kubernetes ingress pod, not the loopback
+// address ASP.NET Core trusts by default - only cluster-internal traffic can reach this pod
+// directly, so trusting the header unconditionally here doesn't extend that trust to the public
+// internet.
+var forwardedHeadersOptions = new ForwardedHeadersOptions
+{
+    ForwardedHeaders =
+        ForwardedHeaders.XForwardedFor
+        | ForwardedHeaders.XForwardedProto
+        | ForwardedHeaders.XForwardedHost,
+};
+forwardedHeadersOptions.KnownIPNetworks.Clear();
+forwardedHeadersOptions.KnownProxies.Clear();
+app.UseForwardedHeaders(forwardedHeadersOptions);
 
 if (!authConfig.IsEnabled)
 {

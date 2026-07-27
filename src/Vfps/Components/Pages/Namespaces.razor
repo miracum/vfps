@@ -6,6 +6,7 @@
 @inject INamespaceAppService NamespaceAppService
 @inject NavigationManager NavigationManager
 @inject PseudonymizationMethodsLookup MethodsLookup
+@inject INamespacePermissionChecker PermissionChecker
 
 <PageTitle>Namespaces</PageTitle>
 
@@ -76,75 +77,94 @@
             </BbCardDescription>
         </BbCardHeader>
         <BbCardContent>
+            @if (!_canCreateNamespace)
+            {
+                <BbAlert Variant="AlertVariant.Warning" Class="mb-4">
+                    <BbAlertTitle>You don't have permission to create namespaces</BbAlertTitle>
+                    <BbAlertDescription>
+                        Creating a namespace requires admin access. Contact an administrator if
+                        you need a new one.
+                    </BbAlertDescription>
+                </BbAlert>
+            }
             <EditForm
                 Model="_newNamespace"
                 FormName="create-namespace"
                 OnValidSubmit="CreateNamespaceAsync"
             >
                 <DataAnnotationsValidator />
-                <div class="grid gap-4 sm:grid-cols-2">
-                    <BbField>
-                        <BbFieldLabel For="name">Name</BbFieldLabel>
-                        <BbFieldContent>
-                            <BbInput @bind-Value="_newNamespace.Name" Id="name" Required="true" />
-                        </BbFieldContent>
-                    </BbField>
-                    <BbField>
-                        <BbFieldLabel For="description">Description</BbFieldLabel>
-                        <BbFieldContent>
-                            <BbInput @bind-Value="_newNamespace.Description" Id="description" />
-                        </BbFieldContent>
-                    </BbField>
-                    <BbField>
-                        <BbFieldLabel For="method">Pseudonym generation method</BbFieldLabel>
-                        <BbFieldContent>
-                            <select
-                                @bind="_selectedMethod"
-                                @bind:after="OnMethodChanged"
-                                id="method"
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                @foreach (var method in SelectablePseudonymGenerationMethods)
+                <fieldset disabled="@(!_canCreateNamespace)" class="contents">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <BbField>
+                            <BbFieldLabel For="name">Name</BbFieldLabel>
+                            <BbFieldContent>
+                                <BbInput
+                                    @bind-Value="_newNamespace.Name"
+                                    Id="name"
+                                    Required="true"
+                                />
+                            </BbFieldContent>
+                        </BbField>
+                        <BbField>
+                            <BbFieldLabel For="description">Description</BbFieldLabel>
+                            <BbFieldContent>
+                                <BbInput
+                                    @bind-Value="_newNamespace.Description"
+                                    Id="description"
+                                />
+                            </BbFieldContent>
+                        </BbField>
+                        <BbField>
+                            <BbFieldLabel For="method">Pseudonym generation method</BbFieldLabel>
+                            <BbFieldContent>
+                                <select
+                                    @bind="_selectedMethod"
+                                    @bind:after="OnMethodChanged"
+                                    id="method"
+                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    @foreach (var method in SelectablePseudonymGenerationMethods)
+                                    {
+                                        <option value="@method">@FriendlyMethodName(method)</option>
+                                    }
+                                </select>
+                            </BbFieldContent>
+                        </BbField>
+                        <BbField>
+                            <BbFieldLabel For="length">Pseudonym length</BbFieldLabel>
+                            <BbFieldContent>
+                                <BbNumericInput
+                                    @bind-Value="_newNamespace.PseudonymLength"
+                                    Id="length"
+                                    Min="1"
+                                    TValue="uint"
+                                    Disabled="@FixedPseudonymLength.HasValue"
+                                />
+                                @if (FixedPseudonymLength is not null)
                                 {
-                                    <option value="@method">@FriendlyMethodName(method)</option>
+                                    <p class="mt-1 text-xs text-muted-foreground">
+                                        Fixed at @FixedPseudonymLength for this generation method.
+                                    </p>
                                 }
-                            </select>
-                        </BbFieldContent>
-                    </BbField>
-                    <BbField>
-                        <BbFieldLabel For="length">Pseudonym length</BbFieldLabel>
-                        <BbFieldContent>
-                            <BbNumericInput
-                                @bind-Value="_newNamespace.PseudonymLength"
-                                Id="length"
-                                Min="1"
-                                TValue="uint"
-                                Disabled="@FixedPseudonymLength.HasValue"
-                            />
-                            @if (FixedPseudonymLength is not null)
-                            {
-                                <p class="mt-1 text-xs text-muted-foreground">
-                                    Fixed at @FixedPseudonymLength for this generation method.
-                                </p>
-                            }
-                        </BbFieldContent>
-                    </BbField>
-                    <BbField>
-                        <BbFieldLabel For="prefix">Prefix</BbFieldLabel>
-                        <BbFieldContent>
-                            <BbInput @bind-Value="_newNamespace.PseudonymPrefix" Id="prefix" />
-                        </BbFieldContent>
-                    </BbField>
-                    <BbField>
-                        <BbFieldLabel For="suffix">Suffix</BbFieldLabel>
-                        <BbFieldContent>
-                            <BbInput @bind-Value="_newNamespace.PseudonymSuffix" Id="suffix" />
-                        </BbFieldContent>
-                    </BbField>
-                </div>
-                <BbButton Type="ButtonType.Submit" Loading="_isCreating" Class="mt-4">
-                    Create
-                </BbButton>
+                            </BbFieldContent>
+                        </BbField>
+                        <BbField>
+                            <BbFieldLabel For="prefix">Prefix</BbFieldLabel>
+                            <BbFieldContent>
+                                <BbInput @bind-Value="_newNamespace.PseudonymPrefix" Id="prefix" />
+                            </BbFieldContent>
+                        </BbField>
+                        <BbField>
+                            <BbFieldLabel For="suffix">Suffix</BbFieldLabel>
+                            <BbFieldContent>
+                                <BbInput @bind-Value="_newNamespace.PseudonymSuffix" Id="suffix" />
+                            </BbFieldContent>
+                        </BbField>
+                    </div>
+                    <BbButton Type="ButtonType.Submit" Loading="_isCreating" Class="mt-4">
+                        Create
+                    </BbButton>
+                </fieldset>
             </EditForm>
         </BbCardContent>
     </BbCard>
@@ -208,6 +228,7 @@
     private string? _deleteErrorMessage;
     private bool _isCreating;
     private bool _isDeleting;
+    private bool _canCreateNamespace;
 
     // Set when a row's "Delete" button is clicked, cleared on cancel/confirm - drives the inline
     // confirmation panel rendered above the tables. Deliberately not a modal dialog (see
@@ -248,6 +269,11 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Namespace creation has no existing namespace to scope a read/write grant to, so
+        // NamespaceAppService.CreateAsync itself gates it on admin access only - mirrored here to
+        // grey out the form instead of letting a non-admin fill it in only to hit a Forbidden
+        // error on submit.
+        _canCreateNamespace = PermissionChecker.IsAdmin(await GetUserAsync());
         await ReloadAsync();
     }
 

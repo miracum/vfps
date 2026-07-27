@@ -601,7 +601,6 @@ public class CsvPseudonymizationJobRunnerTests
     [InlineData(PseudonymizationJobStatus.Completed)]
     [InlineData(PseudonymizationJobStatus.Failed)]
     [InlineData(PseudonymizationJobStatus.Cancelled)]
-    [InlineData(PseudonymizationJobStatus.Stalled)]
     public async Task RunAsync_WithJobAlreadyInTerminalState_ShouldBeNoOp(
         PseudonymizationJobStatus status
     )
@@ -627,6 +626,55 @@ public class CsvPseudonymizationJobRunnerTests
             .MustNotHaveHappened();
         A.CallTo(() => s3.GetObjectAsync(A<string>._, A<string>._, A<CancellationToken>._))
             .MustNotHaveHappened();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithJobStalled_ShouldReprocessAndCompleteInsteadOfNoOp()
+    {
+        // Unlike Completed/Failed/Cancelled above, Stalled is a heuristic guess by
+        // StalledPseudonymizationJobWatchdogService, not a confirmed terminal outcome - a fresh
+        // RunAsync call (e.g. Hangfire's own dead-server recovery re-dispatching this job to a
+        // live server after its previous runner crashed) must still be able to reprocess it from
+        // scratch and reach Completed, or a crashed job would be stuck Stalled forever with no
+        // automatic recovery path at all.
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        job.Status = PseudonymizationJobStatus.Stalled;
+        FakeFindJob(job);
+        // RunAsync re-fetches the job after ProcessAsync finishes to check for a status change
+        // that raced with it (see the runner's own comment on that check) - the real repository
+        // would report the Running status set below, so the fake must mirror that mutation for
+        // this second read to see anything other than the stale Stalled this test starts with.
+        A.CallTo(() =>
+                jobRepository.UpdateStatusAsync(
+                    job.Id,
+                    A<PseudonymizationJobStatus>._,
+                    A<string?>._,
+                    A<CancellationToken>._
+                )
+            )
+            .Invokes(call => job.Status = call.GetArgument<PseudonymizationJobStatus>(1));
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,secret\n");
+        FakePseudonymize("ns", "secret", "pseudonym-of-secret");
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        A.CallTo(() =>
+                jobRepository.UpdateStatusAsync(
+                    job.Id,
+                    PseudonymizationJobStatus.Running,
+                    null,
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+        A.CallTo(() => jobRepository.CompleteAsync(job.Id, A<string>._!, 1, A<CancellationToken>._))
+            .MustHaveHappenedOnceExactly();
     }
 
     [Fact]
