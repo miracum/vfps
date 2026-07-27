@@ -203,8 +203,10 @@ dotnet restore
 dotnet run -c Debug --project=src/Vfps
 ```
 
-Open <https://localhost:8080/> to see the OpenAPI UI for the JSON-transcoded gRPC services.
-You can also use [grpcurl](https://github.com/fullstorydev/grpcurl) to interact with the API:
+Open <https://localhost:8080/ui> to see the admin UI, and
+<https://localhost:8080/swagger> to see the OpenAPI UI for the JSON-transcoded
+gRPC services. You can use [grpcurl](https://github.com/fullstorydev/grpcurl)
+to interact with the API:
 
 > **Note**
 > In development mode gRPC reflection is enabled and used by grpcurl by default.
