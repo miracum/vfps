@@ -16,6 +16,11 @@ namespace Vfps.CsvProcessing;
 /// (10 attempts) in the version this app uses, so a multi-minute outage can leave a job with no
 /// party left trying to update it at all - this periodic sweep is the backstop that eventually
 /// notices and fixes the display.
+///
+/// Marking a job Stalled here is not the end of its story: <see cref="CsvPseudonymizationJobRunner"/>
+/// deliberately doesn't treat Stalled as terminal, so if Hangfire's own (separately-timed)
+/// dead-server detection later re-dispatches this same job to a live server, it still gets
+/// reprocessed from scratch and can reach Completed normally.
 /// </summary>
 public class StalledPseudonymizationJobWatchdogService(
     IServiceProvider serviceProvider,
