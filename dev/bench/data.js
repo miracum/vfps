@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1784911345268,
+  "lastUpdate": 1785183566940,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -5922,6 +5922,66 @@ window.BENCHMARK_DATA = {
             "value": 1353.5500087738037,
             "unit": "ns",
             "range": "± 3.25013479616393"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9b91dc4812c88b8ad3e717fb538eb608fdc25a94",
+          "message": "fix: respect x-forwarded-proto headers to set the correct oidc redirect_uri (#270)\n\n* fix: respect x-forwarded-proto headers to set the correct oidc redirect_uri\n\n* log s3 config\n\n* fmt\n\n* fix: s3 error\n\n* fmt\n\n* fix admin ui\n\n* fix namespace showing\n\n* shorter link\n\n* added swagger link\n\n* api docs\n\n* wathcdog\n\n* log errors",
+          "timestamp": "2026-07-27T22:16:34+02:00",
+          "tree_id": "f961c981829f50ce9f43bd0130b2b182acfc5f48",
+          "url": "https://github.com/miracum/vfps/commit/9b91dc4812c88b8ad3e717fb538eb608fdc25a94"
+        },
+        "date": 1785183566655,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1368.4717241014753,
+            "unit": "ns",
+            "range": "± 6.312975940592504"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 590.5058670043945,
+            "unit": "ns",
+            "range": "± 2.0711142653939745"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 949.1024525324503,
+            "unit": "ns",
+            "range": "± 2.922555082011584"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 963.2241467695969,
+            "unit": "ns",
+            "range": "± 1.6706670959441843"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 1287.8713553292412,
+            "unit": "ns",
+            "range": "± 1.4090346268540046"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1429.2236366271973,
+            "unit": "ns",
+            "range": "± 1.5666164974697099"
           }
         ]
       }
