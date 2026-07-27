@@ -91,6 +91,25 @@ public class S3BucketConfigurationBackgroundService(
                 stoppingToken
             );
         }
+        catch (AmazonS3Exception ex)
+        {
+            // Best-effort - see the generic catch below for why this must not crash the host.
+            // Logged separately (rather than falling into that one) because AmazonS3Exception's
+            // own Message/ToString() is sometimes empty or unhelpful - e.g. when the server (or
+            // something in front of it, like a proxy) returns a response AWSSDK can't parse into
+            // a normal S3 <Error> document - while ErrorCode/StatusCode/RequestId are always
+            // populated directly from the response and are what actually identifies the problem.
+            logger.LogError(
+                ex,
+                "Failed to apply the S3 lifecycle rule for {Prefix} - uploaded/processed CSV "
+                    + "files will not be automatically deleted until this is resolved. "
+                    + "S3 ErrorCode={ErrorCode}, HTTP StatusCode={StatusCode}, RequestId={RequestId}",
+                PseudonymizationJobAppService.S3ObjectKeyPrefix,
+                ex.ErrorCode,
+                ex.StatusCode,
+                ex.RequestId
+            );
+        }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Best-effort: an unhandled exception here would otherwise crash the entire host (an
@@ -150,6 +169,21 @@ public class S3BucketConfigurationBackgroundService(
                     },
                 },
                 stoppingToken
+            );
+        }
+        catch (AmazonS3Exception ex)
+        {
+            // Same rationale as ApplyLifecyclePolicyAsync's identical split - ErrorCode/
+            // StatusCode/RequestId are always populated from the response even when Message/
+            // ToString() aren't.
+            logger.LogError(
+                ex,
+                "Failed to apply the S3 CORS configuration - browser uploads/downloads via "
+                    + "presigned URLs will be blocked by CORS until this is resolved. "
+                    + "S3 ErrorCode={ErrorCode}, HTTP StatusCode={StatusCode}, RequestId={RequestId}",
+                ex.ErrorCode,
+                ex.StatusCode,
+                ex.RequestId
             );
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
