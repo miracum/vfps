@@ -405,6 +405,25 @@ if (!authConfig.IsEnabled)
     );
 }
 
+if (s3Config.IsEnabled)
+{
+    app.Logger.LogInformation(
+        "S3 configuration: ServiceUrl={ServiceUrl}, Bucket={Bucket}, Region={Region}, "
+            + "ForcePathStyle={ForcePathStyle}, AllowedOrigins=[{AllowedOrigins}], "
+            + "AccessKeyLength={AccessKeyLength}, AccessKeyTrimmedLength={AccessKeyTrimmedLength}, "
+            + "SecretKeyLength={SecretKeyLength}, SecretKeyTrimmedLength={SecretKeyTrimmedLength}",
+        s3Config.ServiceUrl,
+        s3Config.Bucket,
+        s3Config.Region,
+        s3Config.ForcePathStyle,
+        string.Join(", ", s3Config.AllowedOrigins),
+        s3Config.AccessKey.Length,
+        s3Config.AccessKey.Trim().Length,
+        s3Config.SecretKey.Length,
+        s3Config.SecretKey.Trim().Length
+    );
+}
+
 app.UsePathBase("/ui");
 app.UseRouting();
 
