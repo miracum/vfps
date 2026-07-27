@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.1](https://github.com/miracum/vfps/compare/v1.9.0...v1.9.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* respect x-forwarded-proto headers to set the correct oidc redirect_uri ([#270](https://github.com/miracum/vfps/issues/270)) ([9b91dc4](https://github.com/miracum/vfps/commit/9b91dc4812c88b8ad3e717fb538eb608fdc25a94))
+
 ## [1.9.0](https://github.com/miracum/vfps/compare/v1.8.2...v1.9.0) (2026-07-24)
 
 
