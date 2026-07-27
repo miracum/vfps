@@ -386,7 +386,7 @@ Status code distribution:
 
 ### Resource efficiency
 
-The sample deployment described in [docker-compose.yaml](docker-compose.yaml) sets strict resource
+The sample deployment described in [compose.yaml](compose.yaml) sets strict resource
 limits for both the CPU (1 CPU) and memory (max 128MiB). Even under these constraints > 1k RPS are
 possible, although with significantly increased P99 latencies:
 

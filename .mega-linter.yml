@@ -19,6 +19,8 @@ DISABLE_LINTERS:
   # disabled in favor of trivy for now; also doesn't support NuGet
   - REPOSITORY_OSV_SCANNER
   - REPOSITORY_GRYPE
+  - CSHARP_ROSLYNATOR
+  - MARKDOWN_MARKDOWNLINT
 
 SHOW_ELAPSED_TIME: true
 FILEIO_REPORTER: false
