@@ -16,16 +16,6 @@
 
         <BbResponsiveNavItems Items="@_navItems" />
 
-        <a
-            href="/swagger"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="hidden md:inline-flex h-10 w-max items-center justify-center gap-1.5 rounded-md bg-background px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground outline-none focus:bg-accent focus:text-accent-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-        >
-            API Docs
-            <LucideIcon Name="external-link" Size="14" />
-        </a>
-
         <div class="ml-auto flex items-center gap-3">
             <button
                 type="button"
@@ -184,6 +174,8 @@
                 items.Add(new NavItemDefinition { Text = "Access Control", Href = "/ui/access-control" });
             }
         }
+
+        items.Add(new() { Text = "API Docs", Href = "/swagger" });
 
         _navItems = items;
     }
