@@ -355,13 +355,6 @@ else
                                 }
                             </ChildContent>
                         </BbDataGridTemplateColumn>
-                        <BbDataGridTemplateColumn Title="Created by">
-                            <ChildContent Context="j">
-                                <div class="max-w-32 truncate text-xs" title="@j.CreatedBy">
-                                    @j.CreatedBy
-                                </div>
-                            </ChildContent>
-                        </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="Created at">
                             <ChildContent Context="j">
                                 @TimeZoneInfo.ConvertTime(j.CreatedAt, _browserTimeZone).ToString(
