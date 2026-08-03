@@ -102,7 +102,7 @@ USER 0:0
 ENTRYPOINT ["dotnet"]
 CMD ["/opt/vfps-stress/Vfps.StressTests.dll", "-reporter", "verbose"]
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.10-resolute-chiseled@sha256:22467e5e67c226c1acbc8783e15ebecb3b0c0d8176c6c73109a630b1f4d87e33 AS runtime
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.10-resolute-chiseled-extra@sha256:4762b78e42e22a325e4a6492a5ac5dd55449ba744088842a1a1ea239d16e1027 AS runtime
 WORKDIR /opt/vfps
 EXPOSE 8080/tcp 8081/tcp 8082/tcp
 USER 65534:65534
