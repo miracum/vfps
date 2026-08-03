@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.0](https://github.com/miracum/vfps/compare/v1.9.1...v1.10.0) (2026-08-03)
+
+
+### Features
+
+* smaller UI fixes ([#272](https://github.com/miracum/vfps/issues/272)) ([8f2f5ad](https://github.com/miracum/vfps/commit/8f2f5ad3b357f443ca3ec5f0cc4db9b644a3545e))
+
 ## [1.9.1](https://github.com/miracum/vfps/compare/v1.9.0...v1.9.1) (2026-07-27)
 
 
