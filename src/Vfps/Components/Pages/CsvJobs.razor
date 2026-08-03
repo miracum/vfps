@@ -12,6 +12,7 @@
 @inject IJSRuntime JS
 @inject NavigationManager NavigationManager
 @inject ILogger<CsvJobs> Logger
+@inject ToastService Toast
 
 <PageTitle>CSV pseudonymization</PageTitle>
 
@@ -325,15 +326,21 @@ else
                                     <div class="flex items-center gap-2">
                                         <BbProgress Value="@(100.0 * j.BytesProcessed / j.TotalBytes)" Class="w-24" />
                                         <span class="text-xs text-muted-foreground">
-                                            @j.RowsProcessed rows@(ThroughputSuffixFor(j))
+                                            @j.RowsProcessed rows
                                         </span>
                                     </div>
                                 }
                                 else
                                 {
                                     <span class="text-xs text-muted-foreground">
-                                        @j.RowsProcessed rows@(ThroughputSuffixFor(j))
+                                        @j.RowsProcessed rows
                                     </span>
+                                }
+                                @if (ThroughputTextFor(j) is { } throughputText)
+                                {
+                                    <div class="mt-1 text-xs text-muted-foreground">
+                                        @throughputText
+                                    </div>
                                 }
                                 @if (j.BadDataRowCount > 0)
                                 {
@@ -348,11 +355,13 @@ else
                                 }
                             </ChildContent>
                         </BbDataGridTemplateColumn>
-                        <BbDataGridPropertyColumn
-                            Property="@(j => j.CreatedAt)"
-                            Title="Created at"
-                            Format="yyyy-MM-dd HH:mm:ss"
-                        />
+                        <BbDataGridTemplateColumn Title="Created at">
+                            <ChildContent Context="j">
+                                @TimeZoneInfo.ConvertTime(j.CreatedAt, _browserTimeZone).ToString(
+                                    "yyyy-MM-dd HH:mm:ss"
+                                )
+                            </ChildContent>
+                        </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="Issue">
                             <ChildContent Context="j">
                                 @if (
@@ -410,7 +419,7 @@ else
                                             Href="@HangfireJobDetailsUrl(j.HangfireJobId)"
                                             Target="_blank"
                                         >
-                                            Open in Dashboard
+                                            Show Job Dashboard
                                         </BbButton>
                                     }
                                 </div>
@@ -451,6 +460,12 @@ else
     private CancellationTokenSource? _pollCts;
     private Task? _pollTask;
 
+    // Blazor Server renders on the server, so "Created at" starts out shown in UTC until this
+    // JS round-trip (OnAfterRenderAsync below) resolves the browser's own IANA time zone name -
+    // a brief flash of UTC on first render is an accepted trade-off here, same as the dark-mode
+    // theme detection in wwwroot/js/themeToggle.js.
+    private TimeZoneInfo _browserTimeZone = TimeZoneInfo.Utc;
+
     protected override async Task OnInitializedAsync()
     {
         if (!S3ConfigOptions.Value.IsEnabled)
@@ -467,6 +482,29 @@ else
 
         _pollCts = new CancellationTokenSource();
         _pollTask = PollLoopAsync(_pollCts.Token);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || !S3ConfigOptions.Value.IsEnabled)
+        {
+            return;
+        }
+
+        try
+        {
+            var ianaId = await JS.InvokeAsync<string>("vfpsTimeZone.get");
+            _browserTimeZone = TimeZoneInfo.FindSystemTimeZoneById(ianaId);
+        }
+        catch (Exception ex)
+            when (ex is Microsoft.JSInterop.JSException or TimeZoneNotFoundException)
+        {
+            // Falls back to the UTC already set as _browserTimeZone's default - a missing/
+            // unrecognized zone shouldn't break the page, just leave timestamps in UTC.
+            Logger.LogWarning(ex, "Failed to resolve the browser's time zone, defaulting to UTC");
+        }
+
+        StateHasChanged();
     }
 
     private async Task PollLoopAsync(CancellationToken cancellationToken)
@@ -561,11 +599,11 @@ else
         }
     }
 
-    private string ThroughputSuffixFor(PseudonymizationJob job) =>
+    private string? ThroughputTextFor(PseudonymizationJob job) =>
         job.Status == PseudonymizationJobStatus.Running
         && _throughputByJobId.TryGetValue(job.Id, out var rowsPerSecond)
-            ? $" ({rowsPerSecond.ToString("N0")} rows/s)"
-            : string.Empty;
+            ? $"{rowsPerSecond:N0} rows/s"
+            : null;
 
     // NavigationManager.BaseUri already includes the "/ui/" path base (App.razor's <base href>),
     // so appending the dashboard's own relative route gives an absolute link to the Hangfire
@@ -703,6 +741,13 @@ else
 
             await JS.InvokeVoidAsync("vfpsCsvUpload.uploadFile", "csvFileInput", uploadUrl);
             await _jobAppService.MarkUploadCompleteAsync(job.Id, user, CancellationToken.None);
+
+            Toast.Success(
+                job.OriginalFileName is null
+                    ? "Uploaded and queued for processing."
+                    : $"\"{job.OriginalFileName}\" was uploaded and queued for processing.",
+                "Job created"
+            );
 
             _columnMappings.Clear();
             _columnMappings.Add(new ColumnMappingRow());
