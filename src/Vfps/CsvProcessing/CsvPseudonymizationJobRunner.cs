@@ -681,18 +681,20 @@ public class CsvPseudonymizationJobRunner(
         return current?.Status == PseudonymizationJobStatus.Cancelled;
     }
 
-    // Common "there's no value here" conventions besides a truly blank/whitespace-only cell -
-    // "NA" (R/pandas) and "NULL" (typical SQL export), matched case-insensitively and trimmed so
-    // stray surrounding whitespace doesn't defeat the match. Deliberately not a longer list (e.g.
-    // "N/A", "NaN", "-") - these two are what prompted this, and a value this permissive already
-    // trades a little precision (a dataset where "NA" is coincidentally a real value would have
-    // it silently passed through unpseudonymized) for not failing real-world exports outright.
-    private static bool IsMissingValue(string raw)
+    // A truly blank/whitespace-only cell is always "no value here", regardless of configuration.
+    // CsvProcessingConfig.MissingValuePlaceholders (default "NA"/"NULL") adds named placeholder
+    // conventions real-world exports commonly use instead - matched case-insensitively and
+    // trimmed so stray surrounding whitespace doesn't defeat the match. Permissive by design: a
+    // dataset where a configured placeholder is coincidentally a real value would have it
+    // silently passed through unpseudonymized, traded for not failing real-world exports
+    // outright - operators who hit that collision can narrow/clear the list.
+    private bool IsMissingValue(string raw)
     {
         var trimmed = raw.Trim();
         return trimmed.Length == 0
-            || trimmed.Equals("NA", StringComparison.OrdinalIgnoreCase)
-            || trimmed.Equals("NULL", StringComparison.OrdinalIgnoreCase);
+            || csvProcessingConfig.Value.MissingValuePlaceholders.Any(placeholder =>
+                trimmed.Equals(placeholder, StringComparison.OrdinalIgnoreCase)
+            );
     }
 
     private sealed class BufferedRow(string?[] rawFields)

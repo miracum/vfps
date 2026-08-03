@@ -60,7 +60,13 @@ public class CsvPseudonymizationJobRunnerTests
     // Defaults to 20 (not CsvProcessingConfig's own production default of 1000) so existing tests
     // exercising "a full chunk plus a trailing partial one" stay meaningful without needing
     // hundreds of rows - pass an explicit value to test PseudonymizeBatchSize-specific behavior.
-    private CsvPseudonymizationJobRunner CreateSut(int pseudonymizeBatchSize = 20) =>
+    // missingValuePlaceholders defaults to CsvProcessingConfig's own production default ("NA"/
+    // "NULL") rather than null/empty, so existing tests that don't care about this setting still
+    // exercise the same behavior a real deployment would see out of the box.
+    private CsvPseudonymizationJobRunner CreateSut(
+        int pseudonymizeBatchSize = 20,
+        List<string>? missingValuePlaceholders = null
+    ) =>
         new(
             jobRepository,
             pseudonymAppService,
@@ -68,7 +74,11 @@ public class CsvPseudonymizationJobRunnerTests
             s3,
             Options.Create(new S3Config { Bucket = Bucket }),
             Options.Create(
-                new CsvProcessingConfig { PseudonymizeBatchSize = pseudonymizeBatchSize }
+                new CsvProcessingConfig
+                {
+                    PseudonymizeBatchSize = pseudonymizeBatchSize,
+                    MissingValuePlaceholders = missingValuePlaceholders ?? ["NA", "NULL"],
+                }
             ),
             NullLogger<CsvPseudonymizationJobRunner>.Instance
         );
@@ -395,6 +405,49 @@ public class CsvPseudonymizationJobRunnerTests
             )
             .MustHaveHappenedOnceExactly();
         A.CallTo(() => jobRepository.CompleteAsync(job.Id, A<string>._, 4, A<CancellationToken>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithCustomMissingValuePlaceholders_ShouldOnlyTreatConfiguredPlaceholdersAsMissing()
+    {
+        // CsvProcessingConfig.MissingValuePlaceholders is configurable precisely so an operator
+        // whose data uses a different (or narrower/wider) set of "no value" conventions than the
+        // "NA"/"NULL" default isn't stuck with it - here "NA" is deliberately *not* configured, so
+        // it must be treated as a genuine value and reach the batch upsert like any other, while
+        // the configured "N/A" is skipped instead.
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,NA\n2,N/A\n");
+        FakePseudonymize("ns", "NA", "pseudonym-of-NA");
+
+        var sut = CreateSut(missingValuePlaceholders: ["N/A"]);
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        A.CallTo(() =>
+                pseudonymAppService.CreateTrustedBatchAsync(
+                    A<
+                        IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>
+                    >.That.Matches(reqs => reqs.Count == 1 && reqs[0].OriginalValue == "NA"),
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+        A.CallTo(() =>
+                jobRepository.UpdateProgressAsync(
+                    job.Id,
+                    A<long>._,
+                    2,
+                    0,
+                    1,
+                    A<CancellationToken>._
+                )
+            )
             .MustHaveHappenedOnceExactly();
     }
 

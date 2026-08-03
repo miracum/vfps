@@ -40,4 +40,13 @@ public class CsvProcessingConfig
     /// legitimately retrying through a transient outage.
     /// </summary>
     public TimeSpan StalledJobThreshold { get; set; } = TimeSpan.FromMinutes(10);
+
+    /// <summary>
+    /// Source values (matched case-insensitively, after trimming) treated as "no value" rather
+    /// than pseudonymized/de-pseudonymized - see
+    /// CsvPseudonymizationJobRunner.IsMissingValue. A genuinely blank/whitespace-only cell is
+    /// always treated this way regardless of this list; these are additional named placeholders
+    /// real-world exports commonly use instead of (or alongside) an actually empty cell.
+    /// </summary>
+    public List<string> MissingValuePlaceholders { get; set; } = ["NA", "NULL"];
 }
