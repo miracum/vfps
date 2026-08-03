@@ -353,6 +353,17 @@ else
                                         </BbBadge>
                                     </div>
                                 }
+                                @if (j.MissingValueCount > 0)
+                                {
+                                    <div
+                                        class="mt-1"
+                                        title="These values were blank or a common missing-data placeholder (NA/NULL) - left as-is rather than pseudonymized."
+                                    >
+                                        <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
+                                            @j.MissingValueCount missing value@(j.MissingValueCount == 1 ? "" : "s")
+                                        </BbBadge>
+                                    </div>
+                                }
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="Created at">
