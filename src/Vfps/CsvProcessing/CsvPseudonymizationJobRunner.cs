@@ -180,6 +180,7 @@ public class CsvPseudonymizationJobRunner(
         context?.SetJobParameter("OutputObjectKey", outputObjectKey);
         var encoding = Encoding.GetEncoding(job.Encoding);
         var badDataCounter = new BadDataCounter();
+        var missingValueCounter = new MissingValueCounter();
         var csvConfig = new CsvConfiguration(CultureInfo.InvariantCulture)
         {
             Delimiter = job.Delimiter,
@@ -213,6 +214,7 @@ public class CsvPseudonymizationJobRunner(
             csvConfig,
             pipe.Writer,
             badDataCounter,
+            missingValueCounter,
             cancellationToken
         );
         using var transferUtility = new TransferUtility(s3);
@@ -241,6 +243,7 @@ public class CsvPseudonymizationJobRunner(
         CsvConfiguration csvConfig,
         System.IO.Pipelines.PipeWriter pipeWriter,
         BadDataCounter badDataCounter,
+        MissingValueCounter missingValueCounter,
         IJobCancellationToken cancellationToken
     )
     {
@@ -348,7 +351,8 @@ public class CsvPseudonymizationJobRunner(
                         job.Direction,
                         inPlaceBySourceIndex,
                         appended,
-                        csvWriter
+                        csvWriter,
+                        missingValueCounter
                     );
                     rows += chunk.Count;
                     chunk.Clear();
@@ -361,6 +365,7 @@ public class CsvPseudonymizationJobRunner(
                         totalRowsRead,
                         rows,
                         badDataCounter.Count,
+                        missingValueCounter.Count,
                         sinceLastUpdate
                     )
                 )
@@ -376,7 +381,8 @@ public class CsvPseudonymizationJobRunner(
                     job.Direction,
                     inPlaceBySourceIndex,
                     appended,
-                    csvWriter
+                    csvWriter,
+                    missingValueCounter
                 );
                 rows += chunk.Count;
             }
@@ -386,6 +392,7 @@ public class CsvPseudonymizationJobRunner(
                 countingStream.BytesRead,
                 rows,
                 badDataCounter.Count,
+                missingValueCounter.Count,
                 CancellationToken.None
             );
 
@@ -412,12 +419,19 @@ public class CsvPseudonymizationJobRunner(
         PseudonymizationJobDirection direction,
         Dictionary<int, Namespace> inPlaceBySourceIndex,
         List<(int SourceIndex, string TargetColumn, Namespace Namespace)> appended,
-        CsvWriter csvWriter
+        CsvWriter csvWriter,
+        MissingValueCounter missingValueCounter
     )
     {
         if (direction == PseudonymizationJobDirection.Pseudonymize)
         {
-            await FlushChunkPseudonymizeAsync(chunk, inPlaceBySourceIndex, appended, csvWriter);
+            await FlushChunkPseudonymizeAsync(
+                chunk,
+                inPlaceBySourceIndex,
+                appended,
+                csvWriter,
+                missingValueCounter
+            );
         }
         else
         {
@@ -426,7 +440,8 @@ public class CsvPseudonymizationJobRunner(
                 direction,
                 inPlaceBySourceIndex,
                 appended,
-                csvWriter
+                csvWriter,
+                missingValueCounter
             );
         }
     }
@@ -445,15 +460,25 @@ public class CsvPseudonymizationJobRunner(
         List<BufferedRow> chunk,
         Dictionary<int, Namespace> inPlaceBySourceIndex,
         List<(int SourceIndex, string TargetColumn, Namespace Namespace)> appended,
-        CsvWriter csvWriter
+        CsvWriter csvWriter,
+        MissingValueCounter missingValueCounter
     )
     {
+        // A blank cell (or a common "no value" placeholder - see IsMissingValue) can't be
+        // pseudonymized, and CreateTrustedBatchAsync rejects one outright - excluded here rather
+        // than letting that exception fail the whole job/chunk over what a real-world CSV export
+        // routinely contains. Left out of the batch entirely (not just skipped on write) so it
+        // never occupies an upsert slot or a place in the resolved dictionary below.
         var requests = new List<(Namespace Namespace, string OriginalValue)>();
         foreach (var row in chunk)
         {
             foreach (var (sourceIndex, ns) in inPlaceBySourceIndex)
             {
-                requests.Add((ns, row.RawFields[sourceIndex] ?? string.Empty));
+                var raw = row.RawFields[sourceIndex] ?? string.Empty;
+                if (!IsMissingValue(raw))
+                {
+                    requests.Add((ns, raw));
+                }
             }
 
             foreach (var mapping in appended)
@@ -462,7 +487,10 @@ public class CsvPseudonymizationJobRunner(
                     mapping.SourceIndex < row.RawFields.Length
                         ? row.RawFields[mapping.SourceIndex] ?? string.Empty
                         : string.Empty;
-                requests.Add((mapping.Namespace, raw));
+                if (!IsMissingValue(raw))
+                {
+                    requests.Add((mapping.Namespace, raw));
+                }
             }
         }
 
@@ -481,7 +509,15 @@ public class CsvPseudonymizationJobRunner(
                 if (inPlaceBySourceIndex.TryGetValue(i, out var ns))
                 {
                     var raw = row.RawFields[i] ?? string.Empty;
-                    csvWriter.WriteField(resolved[(ns.Name, raw)].PseudonymValue);
+                    if (IsMissingValue(raw))
+                    {
+                        missingValueCounter.Count++;
+                        csvWriter.WriteField(raw);
+                    }
+                    else
+                    {
+                        csvWriter.WriteField(resolved[(ns.Name, raw)].PseudonymValue);
+                    }
                 }
                 else
                 {
@@ -495,7 +531,15 @@ public class CsvPseudonymizationJobRunner(
                     mapping.SourceIndex < row.RawFields.Length
                         ? row.RawFields[mapping.SourceIndex] ?? string.Empty
                         : string.Empty;
-                csvWriter.WriteField(resolved[(mapping.Namespace.Name, raw)].PseudonymValue);
+                if (IsMissingValue(raw))
+                {
+                    missingValueCounter.Count++;
+                    csvWriter.WriteField(raw);
+                }
+                else
+                {
+                    csvWriter.WriteField(resolved[(mapping.Namespace.Name, raw)].PseudonymValue);
+                }
             }
 
             await csvWriter.NextRecordAsync();
@@ -515,7 +559,8 @@ public class CsvPseudonymizationJobRunner(
         PseudonymizationJobDirection direction,
         Dictionary<int, Namespace> inPlaceBySourceIndex,
         List<(int SourceIndex, string TargetColumn, Namespace Namespace)> appended,
-        CsvWriter csvWriter
+        CsvWriter csvWriter,
+        MissingValueCounter missingValueCounter
     )
     {
         foreach (var row in chunk)
@@ -528,7 +573,8 @@ public class CsvPseudonymizationJobRunner(
                     row.InPlaceResults[i] = ResolveValueAsync(
                         direction,
                         ns,
-                        row.RawFields[i] ?? string.Empty
+                        row.RawFields[i] ?? string.Empty,
+                        missingValueCounter
                     );
                 }
             }
@@ -541,7 +587,12 @@ public class CsvPseudonymizationJobRunner(
                     mapping.SourceIndex < row.RawFields.Length
                         ? row.RawFields[mapping.SourceIndex] ?? string.Empty
                         : string.Empty;
-                row.AppendedResults[a] = ResolveValueAsync(direction, mapping.Namespace, raw);
+                row.AppendedResults[a] = ResolveValueAsync(
+                    direction,
+                    mapping.Namespace,
+                    raw,
+                    missingValueCounter
+                );
             }
         }
 
@@ -590,6 +641,9 @@ public class CsvPseudonymizationJobRunner(
     /// </param>
     /// <param name="rows">Rows actually flushed/written so far - what gets reported/persisted.</param>
     /// <param name="badDataRowCount">Malformed rows recovered from so far - see BadDataCounter.</param>
+    /// <param name="missingValueCount">
+    /// Blank/missing-placeholder values skipped so far - see MissingValueCounter.
+    /// </param>
     /// <param name="sinceLastUpdate">
     /// Elapsed-time fallback for the check-in interval - restarted every time this actually
     /// reports/checks in.
@@ -601,6 +655,7 @@ public class CsvPseudonymizationJobRunner(
         long totalRowsRead,
         long rows,
         int badDataRowCount,
+        int missingValueCount,
         Stopwatch sinceLastUpdate
     )
     {
@@ -617,12 +672,27 @@ public class CsvPseudonymizationJobRunner(
             countingStream.BytesRead,
             rows,
             badDataRowCount,
+            missingValueCount,
             CancellationToken.None
         );
         sinceLastUpdate.Restart();
 
         var current = await jobRepository.FindAsync(jobId, CancellationToken.None);
         return current?.Status == PseudonymizationJobStatus.Cancelled;
+    }
+
+    // Common "there's no value here" conventions besides a truly blank/whitespace-only cell -
+    // "NA" (R/pandas) and "NULL" (typical SQL export), matched case-insensitively and trimmed so
+    // stray surrounding whitespace doesn't defeat the match. Deliberately not a longer list (e.g.
+    // "N/A", "NaN", "-") - these two are what prompted this, and a value this permissive already
+    // trades a little precision (a dataset where "NA" is coincidentally a real value would have
+    // it silently passed through unpseudonymized) for not failing real-world exports outright.
+    private static bool IsMissingValue(string raw)
+    {
+        var trimmed = raw.Trim();
+        return trimmed.Length == 0
+            || trimmed.Equals("NA", StringComparison.OrdinalIgnoreCase)
+            || trimmed.Equals("NULL", StringComparison.OrdinalIgnoreCase);
     }
 
     private sealed class BufferedRow(string?[] rawFields)
@@ -639,19 +709,35 @@ public class CsvPseudonymizationJobRunner(
         public int Count { get; set; }
     }
 
+    // Same reasoning as BadDataCounter - mutated from deep inside FlushChunk*Async/
+    // ResolveValueAsync and observed by the progress-reporting code above.
+    private sealed class MissingValueCounter
+    {
+        public int Count { get; set; }
+    }
+
     /// <summary>
     /// Transforms one field according to the job's direction. Depseudonymize on a value with no
     /// matching pseudonym leaves it unchanged rather than failing the whole job or blanking it -
     /// the field is left exactly as it was found in the input, whether that's a genuine unknown
     /// pseudonym or a value that was never pseudonymized in the first place, so a partial/wrong
-    /// column selection is inspectable in the output rather than silently destroying data.
+    /// column selection is inspectable in the output rather than silently destroying data. A
+    /// blank/missing value (see IsMissingValue) short-circuits before even attempting a lookup -
+    /// same "leave it as-is" outcome, just skipping a DB round trip that could only ever miss.
     /// </summary>
     private async Task<string> ResolveValueAsync(
         PseudonymizationJobDirection direction,
         Namespace @namespace,
-        string rawValue
+        string rawValue,
+        MissingValueCounter missingValueCounter
     )
     {
+        if (IsMissingValue(rawValue))
+        {
+            missingValueCounter.Count++;
+            return rawValue;
+        }
+
         if (direction == PseudonymizationJobDirection.Depseudonymize)
         {
             var pseudonym = await pseudonymAppService.ReverseLookupTrustedAsync(

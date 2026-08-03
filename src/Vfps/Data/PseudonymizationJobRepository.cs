@@ -74,6 +74,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
         long bytesProcessed,
         long rowsProcessed,
         int badDataRowCount,
+        int missingValueCount,
         CancellationToken cancellationToken
     )
     {
@@ -84,6 +85,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
                     s.SetProperty(j => j.BytesProcessed, bytesProcessed)
                         .SetProperty(j => j.RowsProcessed, rowsProcessed)
                         .SetProperty(j => j.BadDataRowCount, badDataRowCount)
+                        .SetProperty(j => j.MissingValueCount, missingValueCount)
                         .SetProperty(j => j.LastUpdatedAt, DateTimeOffset.UtcNow),
                 cancellationToken
             );

@@ -107,6 +107,16 @@ public class PseudonymizationJob : TracksCreationAndUpdates
     public int BadDataRowCount { get; set; }
 
     /// <summary>
+    /// Fields skipped rather than pseudonymized/de-pseudonymized because they were blank or a
+    /// common "missing data" placeholder ("NA"/"NULL", case-insensitive - see
+    /// CsvPseudonymizationJobRunner.IsMissingValue) - passed through to the output unchanged
+    /// instead of failing the whole job over what a real-world export routinely contains. Purely
+    /// a count so the UI can flag "N values were left as-is" without storing the values
+    /// themselves.
+    /// </summary>
+    public int MissingValueCount { get; set; }
+
+    /// <summary>
     /// Sanitized failure message only - never raw row content or a raw exception string, since
     /// this service's entire purpose is protecting the values that would otherwise leak here.
     /// </summary>

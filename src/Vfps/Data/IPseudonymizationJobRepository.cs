@@ -47,6 +47,7 @@ public interface IPseudonymizationJobRepository
         long bytesProcessed,
         long rowsProcessed,
         int badDataRowCount,
+        int missingValueCount,
         CancellationToken cancellationToken
     );
 
