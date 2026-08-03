@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.10.1](https://github.com/miracum/vfps/compare/v1.10.0...v1.10.1) (2026-08-03)
+
+
+### Bug Fixes
+
+* make ignored blank values in CSV processing configurable, fix missing timezone data in container ([#274](https://github.com/miracum/vfps/issues/274)) ([5ea620b](https://github.com/miracum/vfps/commit/5ea620b788a98e9b24ebe719bc23900dc94ccb6d))
+
 ## [1.10.0](https://github.com/miracum/vfps/compare/v1.9.1...v1.10.0) (2026-08-03)
 
 
