@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1785782379813,
+  "lastUpdate": 1785799260703,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -6282,6 +6282,66 @@ window.BENCHMARK_DATA = {
             "value": 1281.8953904371995,
             "unit": "ns",
             "range": "± 2.596745993130103"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5ea620b788a98e9b24ebe719bc23900dc94ccb6d",
+          "message": "fix: make ignored blank values in CSV processing configurable, fix missing timezone data in container (#274)\n\n* fix: missing timezone error\n\n* fix: ignore blank or NA columns in CSV processing\n\n* fix: configurable blank/ignored values\n\n* docs",
+          "timestamp": "2026-08-04T01:18:04+02:00",
+          "tree_id": "1f570a8d077d9e91495851f62c1d26bfca610cdb",
+          "url": "https://github.com/miracum/vfps/commit/5ea620b788a98e9b24ebe719bc23900dc94ccb6d"
+        },
+        "date": 1785799260435,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1379.478868484497,
+            "unit": "ns",
+            "range": "± 4.462585496328552"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 583.2640337944031,
+            "unit": "ns",
+            "range": "± 1.0712360188915813"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 951.9796487172445,
+            "unit": "ns",
+            "range": "± 3.9430775749851765"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 959.9238009134929,
+            "unit": "ns",
+            "range": "± 7.923722311833798"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 1290.967280461238,
+            "unit": "ns",
+            "range": "± 1.0373876923801695"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1431.7007135244517,
+            "unit": "ns",
+            "range": "± 1.1525093716009214"
           }
         ]
       }
