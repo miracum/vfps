@@ -1,6 +1,6 @@
 services:
   postgresql:
-    image: docker.io/library/postgres:18.3@sha256:7e32e9833a6fb1c92c32552794cb6ed569d51b445a54907d35fc112ef39684db
+    image: docker.io/library/postgres:18.4@sha256:3a82e1f56c8f0f5616a11103ac3d47e632c3938698946a7ad26da0df1334744a
     restart: unless-stopped
     deploy:
       resources:
@@ -24,7 +24,7 @@ services:
   # Tracing:Otlp:Endpoint points at, not a proprietary Jaeger exporter.
   # https://www.jaegertracing.io/docs/2.19/getting-started/
   jaeger:
-    image: docker.io/jaegertracing/jaeger:2.19.0@sha256:ede4864215be4cd85bd8c3129a2fea6c5713c5653c7282c429dba123014bc68b
+    image: docker.io/jaegertracing/jaeger:2.20.0@sha256:46a886260e04002d8f45e213fc39063fa11a50446048fdaa64786fc0840cb9f8
     restart: unless-stopped
     deploy:
       resources:
