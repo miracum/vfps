@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.10.2](https://github.com/miracum/vfps/compare/v1.10.1...v1.10.2) (2026-08-04)
+
+
+### Miscellaneous Chores
+
+* **deps:** update actions/setup-dotnet action to v6 ([#279](https://github.com/miracum/vfps/issues/279)) ([843d37e](https://github.com/miracum/vfps/commit/843d37e3fe73e1c3b39fd3e6f16ea5c6a8b49eb8))
+* **deps:** update all digest updates ([#276](https://github.com/miracum/vfps/issues/276)) ([ed63cb4](https://github.com/miracum/vfps/commit/ed63cb477ffcd62a786f8ac872129830584dbf24))
+* **deps:** update all non-major dependencies ([#278](https://github.com/miracum/vfps/issues/278)) ([c6fe013](https://github.com/miracum/vfps/commit/c6fe013ab49e0d5e56bb84002439a28b7c15104e))
+* **deps:** update github-actions ([#277](https://github.com/miracum/vfps/issues/277)) ([b294b95](https://github.com/miracum/vfps/commit/b294b9544582f656da007a18e936a07c0d0e5f19))
+
 ## [1.10.1](https://github.com/miracum/vfps/compare/v1.10.0...v1.10.1) (2026-08-03)
 
 
