@@ -50,6 +50,9 @@ message Namespace {
   optional string pseudonym_prefix = 6;
   // a suffix to append to each generated pseudonym
   optional string pseudonym_suffix = 7;
+  // an optional regular expression used to validate an original value before a pseudonym is
+  // generated for it. If set, values that don't match are rejected with a client error.
+  optional string original_value_validation_regex = 8;
 }
 
 // method used to generate the pseudonyms in the namespace
@@ -92,6 +95,9 @@ message NamespaceServiceCreateRequest {
   optional string pseudonym_suffix = 5;
   // a description for the namespace
   string description = 6;
+  // an optional regular expression used to validate an original value before a pseudonym is
+  // generated for it. If set, values that don't match are rejected with a client error.
+  optional string original_value_validation_regex = 7;
 }
 
 // response for creating a namespace entity

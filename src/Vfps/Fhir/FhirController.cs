@@ -126,6 +126,19 @@ public class FhirController(
             );
             return BadRequest(outcome);
         }
+        catch (OriginalValueValidationException ex)
+        {
+            var outcome = new OperationOutcome();
+            outcome.Issue.Add(
+                new OperationOutcome.IssueComponent
+                {
+                    Severity = OperationOutcome.IssueSeverity.Error,
+                    Code = OperationOutcome.IssueType.Processing,
+                    Diagnostics = ex.Message,
+                }
+            );
+            return BadRequest(outcome);
+        }
         catch (PseudonymUpsertFailedException)
         {
             var outcome = new OperationOutcome();

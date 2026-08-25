@@ -17,6 +17,10 @@ public interface IPseudonymAppService
     /// get identical generation logic and per-namespace write-access enforcement.
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
+    /// <exception cref="OriginalValueValidationException">
+    /// <paramref name="originalValue"/> does not match the namespace's
+    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
+    /// </exception>
     Task<Pseudonym> CreateAsync(
         string namespaceName,
         string originalValue,
@@ -33,6 +37,10 @@ public interface IPseudonymAppService
     /// runs later, in a Hangfire background thread, well after the request that created the job.
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
+    /// <exception cref="OriginalValueValidationException">
+    /// <paramref name="originalValue"/> does not match the namespace's
+    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
+    /// </exception>
     Task<Pseudonym> CreateTrustedAsync(
         string namespaceName,
         string originalValue,
@@ -47,6 +55,10 @@ public interface IPseudonymAppService
     /// otherwise, since a CSV job calls this far more often than any other caller ever would).
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
+    /// <exception cref="OriginalValueValidationException">
+    /// <paramref name="originalValue"/> does not match the namespace's
+    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
+    /// </exception>
     Task<Pseudonym> CreateTrustedAsync(
         Namespace @namespace,
         string originalValue,
@@ -66,6 +78,10 @@ public interface IPseudonymAppService
     /// being generated/upserted twice.
     /// </returns>
     /// <exception cref="ArgumentException">Any request's original value is blank.</exception>
+    /// <exception cref="OriginalValueValidationException">
+    /// Any request's original value does not match its namespace's
+    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
+    /// </exception>
     Task<
         IReadOnlyDictionary<(string Namespace, string OriginalValue), Pseudonym>
     > CreateTrustedBatchAsync(
@@ -142,4 +158,17 @@ public class PseudonymUpsertFailedException(string namespaceName)
     )
 {
     public string NamespaceName { get; } = namespaceName;
+}
+
+/// <summary>
+/// Thrown when an original value fails a namespace's <see cref="Namespace.OriginalValueValidationRegex"/>
+/// check, before any pseudonym is generated for it.
+/// </summary>
+public class OriginalValueValidationException(string namespaceName, string pattern)
+    : Exception(
+        $"The original value does not match the required pattern '{pattern}' for namespace '{namespaceName}'."
+    )
+{
+    public string NamespaceName { get; } = namespaceName;
+    public string Pattern { get; } = pattern;
 }

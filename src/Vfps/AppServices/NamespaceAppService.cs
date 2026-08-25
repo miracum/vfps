@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.RegularExpressions;
 using EntityFramework.Exceptions.Common;
 using Vfps.Authorization;
 using Vfps.Data;
@@ -49,6 +50,25 @@ public class NamespaceAppService(
                 $"The '{namespaceToCreate.PseudonymGenerationMethod}' pseudonym generation "
                     + $"method requires a pseudonym length of exactly {fixedLength}."
             );
+        }
+
+        // Caught here, at namespace creation, rather than leaving an invalid pattern to fail
+        // lazily on every subsequent pseudonym creation in this namespace.
+        if (!string.IsNullOrEmpty(namespaceToCreate.OriginalValueValidationRegex))
+        {
+            try
+            {
+                _ = new Regex(namespaceToCreate.OriginalValueValidationRegex);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new ArgumentException(
+                    $"The original value validation regex '{namespaceToCreate.OriginalValueValidationRegex}' "
+                        + $"is not a valid regular expression: {ex.Message}",
+                    nameof(namespaceToCreate),
+                    ex
+                );
+            }
         }
 
         var now = DateTimeOffset.UtcNow;

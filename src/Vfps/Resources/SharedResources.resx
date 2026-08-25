@@ -415,6 +415,12 @@
   <data name="App.Namespaces.Suffix" xml:space="preserve">
     <value>Suffix</value>
   </data>
+  <data name="App.Namespaces.ValidationRegex" xml:space="preserve">
+    <value>Original value validation regex</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexHelp" xml:space="preserve">
+    <value>Optional. If set, an original value must match this regular expression before a pseudonym is generated for it.</value>
+  </data>
   <data name="App.Nav.AccessControl" xml:space="preserve">
     <value>Access Control</value>
   </data>
