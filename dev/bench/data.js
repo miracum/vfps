@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787684932718,
+  "lastUpdate": 1787686209737,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -6702,6 +6702,72 @@ window.BENCHMARK_DATA = {
             "value": 1285.121204249064,
             "unit": "ns",
             "range": "± 2.3039137373678473"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f6b869a4c6efc47aad2355cb4fe28554561f686a",
+          "message": "feat: support for input validation (#293)\n\n* feat: added input validation per-namespace\n\n* fix exception\n\n* feat: base32\n\n---------\n\nCo-authored-by: chgl <5307555+chgl@users.noreply.github.com>",
+          "timestamp": "2026-08-25T21:26:46+02:00",
+          "tree_id": "de0d55bf3f1d0f690fd616fb55ea9afb9c3a9bb8",
+          "url": "https://github.com/miracum/vfps/commit/f6b869a4c6efc47aad2355cb4fe28554561f686a"
+        },
+        "date": 1787686208725,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 890.0218345201932,
+            "unit": "ns",
+            "range": "± 4.525450695749706"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 593.8081486384074,
+            "unit": "ns",
+            "range": "± 2.3042308579217905"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 422.7998380661011,
+            "unit": "ns",
+            "range": "± 0.7906630005724166"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 444.77791224993194,
+            "unit": "ns",
+            "range": "± 1.6624388115117712"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 839.9456910451253,
+            "unit": "ns",
+            "range": "± 3.617126006310271"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 944.0087729862759,
+            "unit": "ns",
+            "range": "± 7.0931460308319805"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 890.6077359517416,
+            "unit": "ns",
+            "range": "± 4.209152014551004"
           }
         ]
       }
