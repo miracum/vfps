@@ -1,0 +1,490 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="App.AccessControl.AdminRolesDescription" xml:space="preserve">
+    <value>Full access to every namespace, including namespace create/delete.</value>
+  </data>
+  <data name="App.AccessControl.AdminRolesTitle" xml:space="preserve">
+    <value>Admin roles</value>
+  </data>
+  <data name="App.AccessControl.AdminsOnlyDescription" xml:space="preserve">
+    <value>Viewing namespace access rules requires one of the configured admin roles.</value>
+  </data>
+  <data name="App.AccessControl.AdminsOnlyTitle" xml:space="preserve">
+    <value>Admins only</value>
+  </data>
+  <data name="App.AccessControl.AllNamespaces" xml:space="preserve">
+    <value>All namespaces (*)</value>
+  </data>
+  <data name="App.AccessControl.DisabledDescription" xml:space="preserve">
+    <value>{0} is {1}, so every request has full read, write, and reverse-lookup access to every namespace regardless of role.</value>
+  </data>
+  <data name="App.AccessControl.DisabledTitle" xml:space="preserve">
+    <value>Authorization is disabled</value>
+  </data>
+  <data name="App.AccessControl.EffectiveAccessDescription" xml:space="preserve">
+    <value>Resolved roles for each existing namespace - the union of any rule specific to it and the wildcard rule above, the same resolution namespace/pseudonym access checks use.</value>
+  </data>
+  <data name="App.AccessControl.EffectiveAccessTitle" xml:space="preserve">
+    <value>Effective access per namespace</value>
+  </data>
+  <data name="App.AccessControl.NamespaceRulesDescription" xml:space="preserve">
+    <value>Raw {0} entries. A namespace of {1} applies to every namespace, in addition to any rule specific to it.</value>
+  </data>
+  <data name="App.AccessControl.NamespaceRulesTitle" xml:space="preserve">
+    <value>Configured namespace rules</value>
+  </data>
+  <data name="App.AccessControl.NoNamespaceRules" xml:space="preserve">
+    <value>No namespace rules configured - only admins have any access.</value>
+  </data>
+  <data name="App.AccessControl.NoNamespacesExist" xml:space="preserve">
+    <value>No namespaces exist yet.</value>
+  </data>
+  <data name="App.AccessControl.Read" xml:space="preserve">
+    <value>Read</value>
+  </data>
+  <data name="App.AccessControl.ReverseLookup" xml:space="preserve">
+    <value>Reverse lookup</value>
+  </data>
+  <data name="App.AccessControl.Write" xml:space="preserve">
+    <value>Write</value>
+  </data>
+  <data name="App.Common.Actions" xml:space="preserve">
+    <value>Actions</value>
+  </data>
+  <data name="App.Common.Browse" xml:space="preserve">
+    <value>Browse</value>
+  </data>
+  <data name="App.Common.Cancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
+  <data name="App.Common.Clear" xml:space="preserve">
+    <value>Clear</value>
+  </data>
+  <data name="App.Common.Create" xml:space="preserve">
+    <value>Create</value>
+  </data>
+  <data name="App.Common.Delete" xml:space="preserve">
+    <value>Delete</value>
+  </data>
+  <data name="App.Common.Description" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="App.Common.Name" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="App.Common.Next" xml:space="preserve">
+    <value>Next</value>
+  </data>
+  <data name="App.Common.Open" xml:space="preserve">
+    <value>Open</value>
+  </data>
+  <data name="App.Common.Previous" xml:space="preserve">
+    <value>Previous</value>
+  </data>
+  <data name="App.CsvJobs.AddColumnMapping" xml:space="preserve">
+    <value>Add column mapping</value>
+  </data>
+  <data name="App.CsvJobs.BadDataRowTitle" xml:space="preserve">
+    <value>These rows contained malformed CSV data (e.g. an unescaped quote) - the affected value was kept as-is rather than failing the job.</value>
+  </data>
+  <data name="App.CsvJobs.ClearFinishedJobs" xml:space="preserve">
+    <value>Clear finished jobs</value>
+  </data>
+  <data name="App.CsvJobs.ClearFinishedJobsConfirmBody" xml:space="preserve">
+    <value>This permanently deletes every completed, failed, and cancelled job shown below from the list and the database - this cannot be undone. Their input/output files in object storage are unaffected and expire on their own schedule.</value>
+  </data>
+  <data name="App.CsvJobs.ClearFinishedJobsConfirmTitle" xml:space="preserve">
+    <value>Clear finished jobs?</value>
+  </data>
+  <data name="App.CsvJobs.ColumnMappings" xml:space="preserve">
+    <value>Column mappings</value>
+  </data>
+  <data name="App.CsvJobs.ColumnMappingsHintDepseudonymize" xml:space="preserve">
+    <value>Each row replaces a source column's pseudonym with its original value in the given namespace - either in place, or into a new appended column (leave "target column" empty to replace in place). A pseudonym with no match in that namespace is left unchanged.</value>
+  </data>
+  <data name="App.CsvJobs.ColumnMappingsHintPseudonymize" xml:space="preserve">
+    <value>Each row replaces a source column's value with its pseudonym in the given namespace - either in place, or into a new appended column (leave "target column" empty to replace in place).</value>
+  </data>
+  <data name="App.CsvJobs.ColumnMappingsHintSuffix" xml:space="preserve">
+    <value>Pick a CSV file above with "File has a header row" checked to select source columns by name instead of typing them.</value>
+  </data>
+  <data name="App.CsvJobs.CreateErrorTitle" xml:space="preserve">
+    <value>Could not create job</value>
+  </data>
+  <data name="App.CsvJobs.CreatedAt" xml:space="preserve">
+    <value>Created at</value>
+  </data>
+  <data name="App.CsvJobs.CsvFile" xml:space="preserve">
+    <value>CSV file</value>
+  </data>
+  <data name="App.CsvJobs.Delimiter" xml:space="preserve">
+    <value>Delimiter</value>
+  </data>
+  <data name="App.CsvJobs.DepseudonymizeWarning" xml:space="preserve">
+    <value>This reveals original values into the output file - requires reverse-lookup access to every namespace used below, same as the reverse lookup on a namespace's pseudonym list.</value>
+  </data>
+  <data name="App.CsvJobs.Direction" xml:space="preserve">
+    <value>Direction</value>
+  </data>
+  <data name="App.CsvJobs.DirectionDepseudonymize" xml:space="preserve">
+    <value>De-pseudonymize</value>
+  </data>
+  <data name="App.CsvJobs.DirectionDepseudonymizeOption" xml:space="preserve">
+    <value>De-pseudonymize - replace pseudonyms with original values</value>
+  </data>
+  <data name="App.CsvJobs.DirectionPseudonymize" xml:space="preserve">
+    <value>Pseudonymize</value>
+  </data>
+  <data name="App.CsvJobs.DirectionPseudonymizeOption" xml:space="preserve">
+    <value>Pseudonymize - replace original values with pseudonyms</value>
+  </data>
+  <data name="App.CsvJobs.DisabledDescription" xml:space="preserve">
+    <value>Set {0} (and the other {1} settings) to enable this feature - it requires S3-compatible object storage.</value>
+  </data>
+  <data name="App.CsvJobs.DisabledTitle" xml:space="preserve">
+    <value>CSV pseudonymization is disabled</value>
+  </data>
+  <data name="App.CsvJobs.Download" xml:space="preserve">
+    <value>Download</value>
+  </data>
+  <data name="App.CsvJobs.Encoding" xml:space="preserve">
+    <value>Encoding</value>
+  </data>
+  <data name="App.CsvJobs.File" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="App.CsvJobs.HasHeaderRow" xml:space="preserve">
+    <value>File has a header row</value>
+  </data>
+  <data name="App.CsvJobs.HeaderRow" xml:space="preserve">
+    <value>Header row</value>
+  </data>
+  <data name="App.CsvJobs.Id" xml:space="preserve">
+    <value>Id</value>
+  </data>
+  <data name="App.CsvJobs.Issue" xml:space="preserve">
+    <value>Issue</value>
+  </data>
+  <data name="App.CsvJobs.JobCreated" xml:space="preserve">
+    <value>Job created</value>
+  </data>
+  <data name="App.CsvJobs.JobsTitle" xml:space="preserve">
+    <value>Jobs</value>
+  </data>
+  <data name="App.CsvJobs.MissingValueCountPlural" xml:space="preserve">
+    <value>{0} missing values</value>
+  </data>
+  <data name="App.CsvJobs.MissingValueCountSingular" xml:space="preserve">
+    <value>{0} missing value</value>
+  </data>
+  <data name="App.CsvJobs.MissingValueTitle" xml:space="preserve">
+    <value>These values were blank or a common missing-data placeholder (NA/NULL) - left as-is rather than pseudonymized.</value>
+  </data>
+  <data name="App.CsvJobs.NewJobDescription" xml:space="preserve">
+    <value>Select a CSV file to upload, and specify how its columns should be pseudonymized or de-pseudonymized. The output will be available for download once the job completes.</value>
+  </data>
+  <data name="App.CsvJobs.NewJobTitle" xml:space="preserve">
+    <value>New job</value>
+  </data>
+  <data name="App.CsvJobs.NoMappingsError" xml:space="preserve">
+    <value>At least one column mapping with a source column and namespace is required.</value>
+  </data>
+  <data name="App.CsvJobs.PageTitle" xml:space="preserve">
+    <value>CSV pseudonymization</value>
+  </data>
+  <data name="App.CsvJobs.Progress" xml:space="preserve">
+    <value>Progress</value>
+  </data>
+  <data name="App.CsvJobs.RemoveMapping" xml:space="preserve">
+    <value>Remove mapping</value>
+  </data>
+  <data name="App.CsvJobs.RetentionNoticePlural" xml:space="preserve">
+    <value>Uploaded input files and their pseudonymized output are automatically deleted from object storage {0} days after upload. Download output you need to keep before then.</value>
+  </data>
+  <data name="App.CsvJobs.RetentionNoticeSingular" xml:space="preserve">
+    <value>Uploaded input files and their pseudonymized output are automatically deleted from object storage 1 day after upload. Download output you need to keep before then.</value>
+  </data>
+  <data name="App.CsvJobs.RowsCount" xml:space="preserve">
+    <value>{0} rows</value>
+  </data>
+  <data name="App.CsvJobs.SelectColumn" xml:space="preserve">
+    <value>Select a column</value>
+  </data>
+  <data name="App.CsvJobs.SelectNamespace" xml:space="preserve">
+    <value>Select a namespace</value>
+  </data>
+  <data name="App.CsvJobs.ShowJobDashboard" xml:space="preserve">
+    <value>Show Job Dashboard</value>
+  </data>
+  <data name="App.CsvJobs.SourceColumn" xml:space="preserve">
+    <value>Source column</value>
+  </data>
+  <data name="App.CsvJobs.SourceColumnPlaceholder" xml:space="preserve">
+    <value>name or 0-based index</value>
+  </data>
+  <data name="App.CsvJobs.Status" xml:space="preserve">
+    <value>Status</value>
+  </data>
+  <data name="App.CsvJobs.StatusAwaitingUpload" xml:space="preserve">
+    <value>Awaiting upload</value>
+  </data>
+  <data name="App.CsvJobs.StatusCancelled" xml:space="preserve">
+    <value>Cancelled</value>
+  </data>
+  <data name="App.CsvJobs.StatusCompleted" xml:space="preserve">
+    <value>Completed</value>
+  </data>
+  <data name="App.CsvJobs.StatusFailed" xml:space="preserve">
+    <value>Failed</value>
+  </data>
+  <data name="App.CsvJobs.StatusQueued" xml:space="preserve">
+    <value>Queued</value>
+  </data>
+  <data name="App.CsvJobs.StatusRunning" xml:space="preserve">
+    <value>Running</value>
+  </data>
+  <data name="App.CsvJobs.StatusStalled" xml:space="preserve">
+    <value>Stalled</value>
+  </data>
+  <data name="App.CsvJobs.TargetColumn" xml:space="preserve">
+    <value>Target column</value>
+  </data>
+  <data name="App.CsvJobs.TargetColumnPlaceholder" xml:space="preserve">
+    <value>empty = replace in place</value>
+  </data>
+  <data name="App.CsvJobs.ThroughputRowsPerSecond" xml:space="preserve">
+    <value>{0} rows/s</value>
+  </data>
+  <data name="App.CsvJobs.UploadAndProcess" xml:space="preserve">
+    <value>Upload and process</value>
+  </data>
+  <data name="App.CsvJobs.UploadFailed" xml:space="preserve">
+    <value>Upload failed: {0}</value>
+  </data>
+  <data name="App.CsvJobs.UploadedNoFileName" xml:space="preserve">
+    <value>Uploaded and queued for processing.</value>
+  </data>
+  <data name="App.CsvJobs.UploadedWithFileName" xml:space="preserve">
+    <value>"{0}" was uploaded and queued for processing.</value>
+  </data>
+  <data name="App.CsvJobs.WarningCountPlural" xml:space="preserve">
+    <value>{0} warnings</value>
+  </data>
+  <data name="App.CsvJobs.WarningCountSingular" xml:space="preserve">
+    <value>{0} warning</value>
+  </data>
+  <data name="App.Home.CsvProcessingDescription" xml:space="preserve">
+    <value>Pseudonymize columns in a CSV file asynchronously.</value>
+  </data>
+  <data name="App.Home.NamespacesDescription" xml:space="preserve">
+    <value>Create namespaces and browse pseudonyms at scale.</value>
+  </data>
+  <data name="App.Home.Subtitle" xml:space="preserve">
+    <value>A very fast and resource-efficient pseudonym service.</value>
+  </data>
+  <data name="App.MainLayout.Email" xml:space="preserve">
+    <value>Email</value>
+  </data>
+  <data name="App.MainLayout.NoRoles" xml:space="preserve">
+    <value>none</value>
+  </data>
+  <data name="App.MainLayout.Roles" xml:space="preserve">
+    <value>Roles</value>
+  </data>
+  <data name="App.MainLayout.SignIn" xml:space="preserve">
+    <value>Sign in</value>
+  </data>
+  <data name="App.MainLayout.SignOut" xml:space="preserve">
+    <value>Sign out</value>
+  </data>
+  <data name="App.MainLayout.ToggleDarkMode" xml:space="preserve">
+    <value>Toggle dark mode</value>
+  </data>
+  <data name="App.MainLayout.UnknownUser" xml:space="preserve">
+    <value>Unknown user</value>
+  </data>
+  <data name="App.Namespaces.AllTitle" xml:space="preserve">
+    <value>All namespaces</value>
+  </data>
+  <data name="App.Namespaces.CreateDescription" xml:space="preserve">
+    <value>Namespaces are immutable once created - delete and re-create instead of editing.</value>
+  </data>
+  <data name="App.Namespaces.CreateErrorTitle" xml:space="preserve">
+    <value>Could not create namespace</value>
+  </data>
+  <data name="App.Namespaces.CreateTitle" xml:space="preserve">
+    <value>Create namespace</value>
+  </data>
+  <data name="App.Namespaces.DeleteConfirmBodyPrefix" xml:space="preserve">
+    <value>This permanently deletes the namespace and every pseudonym it contains. This cannot be undone. Type</value>
+  </data>
+  <data name="App.Namespaces.DeleteConfirmBodySuffix" xml:space="preserve">
+    <value>below to confirm.</value>
+  </data>
+  <data name="App.Namespaces.DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete namespace "{0}"?</value>
+  </data>
+  <data name="App.Namespaces.DeleteErrorTitle" xml:space="preserve">
+    <value>Could not delete namespace</value>
+  </data>
+  <data name="App.Namespaces.FixedLengthNote" xml:space="preserve">
+    <value>Fixed at {0} for this generation method.</value>
+  </data>
+  <data name="App.Namespaces.GenerationMethod" xml:space="preserve">
+    <value>Pseudonym generation method</value>
+  </data>
+  <data name="App.Namespaces.GenerationMethodColumn" xml:space="preserve">
+    <value>Generation method</value>
+  </data>
+  <data name="App.Namespaces.Length" xml:space="preserve">
+    <value>Pseudonym length</value>
+  </data>
+  <data name="App.Namespaces.LengthColumn" xml:space="preserve">
+    <value>Length</value>
+  </data>
+  <data name="App.Namespaces.NoPermissionDescription" xml:space="preserve">
+    <value>Creating a namespace requires admin access. Contact an administrator if you need a new one.</value>
+  </data>
+  <data name="App.Namespaces.NoPermissionTitle" xml:space="preserve">
+    <value>You don't have permission to create namespaces</value>
+  </data>
+  <data name="App.Namespaces.Prefix" xml:space="preserve">
+    <value>Prefix</value>
+  </data>
+  <data name="App.Namespaces.PseudonymsColumn" xml:space="preserve">
+    <value>Pseudonyms</value>
+  </data>
+  <data name="App.Namespaces.Suffix" xml:space="preserve">
+    <value>Suffix</value>
+  </data>
+  <data name="App.Nav.AccessControl" xml:space="preserve">
+    <value>Access Control</value>
+  </data>
+  <data name="App.Nav.ApiDocs" xml:space="preserve">
+    <value>API Docs</value>
+  </data>
+  <data name="App.Nav.CsvProcessing" xml:space="preserve">
+    <value>CSV Processing</value>
+  </data>
+  <data name="App.Nav.Namespaces" xml:space="preserve">
+    <value>Namespaces</value>
+  </data>
+  <data name="App.Nav.Pseudonyms" xml:space="preserve">
+    <value>Pseudonyms</value>
+  </data>
+  <data name="App.NotFound.Description" xml:space="preserve">
+    <value>Sorry, there's nothing at this address.</value>
+  </data>
+  <data name="App.Pseudonyms.BackToNamespaces" xml:space="preserve">
+    <value>Back to namespaces</value>
+  </data>
+  <data name="App.Pseudonyms.CreateDescription" xml:space="preserve">
+    <value>Pseudonymize an original value.</value>
+  </data>
+  <data name="App.Pseudonyms.CreateTitle" xml:space="preserve">
+    <value>Create pseudonym</value>
+  </data>
+  <data name="App.Pseudonyms.CreatedAt" xml:space="preserve">
+    <value>Created at</value>
+  </data>
+  <data name="App.Pseudonyms.Heading" xml:space="preserve">
+    <value>Pseudonyms in {0}</value>
+  </data>
+  <data name="App.Pseudonyms.LastUpdated" xml:space="preserve">
+    <value>Last updated</value>
+  </data>
+  <data name="App.Pseudonyms.LoadErrorTitle" xml:space="preserve">
+    <value>Could not load pseudonyms</value>
+  </data>
+  <data name="App.Pseudonyms.LookUp" xml:space="preserve">
+    <value>Look up</value>
+  </data>
+  <data name="App.Pseudonyms.NotFound" xml:space="preserve">
+    <value>Not found.</value>
+  </data>
+  <data name="App.Pseudonyms.NotFoundInNamespace" xml:space="preserve">
+    <value>No pseudonym '{0}' found in namespace '{1}'.</value>
+  </data>
+  <data name="App.Pseudonyms.OriginalValue" xml:space="preserve">
+    <value>Original value</value>
+  </data>
+  <data name="App.Pseudonyms.OriginalValueLabel" xml:space="preserve">
+    <value>Original value</value>
+  </data>
+  <data name="App.Pseudonyms.PageTitle" xml:space="preserve">
+    <value>Pseudonyms - {0}</value>
+  </data>
+  <data name="App.Pseudonyms.PseudonymLabel" xml:space="preserve">
+    <value>Pseudonym</value>
+  </data>
+  <data name="App.Pseudonyms.PseudonymValue" xml:space="preserve">
+    <value>Pseudonym value</value>
+  </data>
+  <data name="App.Pseudonyms.RevealOriginalValue" xml:space="preserve">
+    <value>Reveal original value</value>
+  </data>
+  <data name="App.Pseudonyms.ReverseLookupDescription" xml:space="preserve">
+    <value>Reveals the original value for one pseudonym.</value>
+  </data>
+  <data name="App.Pseudonyms.ReverseLookupTitle" xml:space="preserve">
+    <value>Reverse lookup</value>
+  </data>
+</root>

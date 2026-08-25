@@ -1,38 +1,39 @@
 @page "/namespaces/{NamespaceName}/pseudonyms"
 @rendermode InteractiveServer
 @inject IPseudonymAppService PseudonymAppService
+@inject IStringLocalizer<SharedResources> Localizer
 
-<PageTitle>Pseudonyms - @NamespaceName</PageTitle>
+<PageTitle>@Localizer["App.Pseudonyms.PageTitle", NamespaceName]</PageTitle>
 
 <div class="mx-auto max-w-5xl space-y-6">
     <div>
         <BbButton Variant="ButtonVariant.Link" Href="/ui/namespaces" Class="px-0">
             <LucideIcon Name="arrow-left" Size="16" />
-            Back to namespaces
+            @Localizer["App.Pseudonyms.BackToNamespaces"]
         </BbButton>
         <div class="flex items-center gap-2">
             <LucideIcon Name="key-round" Size="24" Class="text-primary" />
-            <h1 class="text-2xl font-semibold tracking-tight">Pseudonyms in @NamespaceName</h1>
+            <h1 class="text-2xl font-semibold tracking-tight">@Localizer["App.Pseudonyms.Heading", NamespaceName]</h1>
         </div>
     </div>
 
     <div class="grid gap-6 md:grid-cols-2">
         <BbCard>
             <BbCardHeader>
-                <BbCardTitle>Create pseudonym</BbCardTitle>
+                <BbCardTitle>@Localizer["App.Pseudonyms.CreateTitle"]</BbCardTitle>
                 <BbCardDescription>
-                    Pseudonymize an original value.
+                    @Localizer["App.Pseudonyms.CreateDescription"]
                 </BbCardDescription>
             </BbCardHeader>
             <BbCardContent Class="space-y-3">
                 <div class="flex flex-wrap items-end gap-2">
                     <BbField Class="w-full max-w-sm">
-                        <BbFieldLabel For="originalValue">Original value</BbFieldLabel>
+                        <BbFieldLabel For="originalValue">@Localizer["App.Pseudonyms.OriginalValue"]</BbFieldLabel>
                         <BbFieldContent>
                             <BbInput @bind-Value="_createValue" Id="originalValue" Required="true" />
                         </BbFieldContent>
                     </BbField>
-                    <BbButton OnClick="CreatePseudonymAsync" Loading="_isCreating">Create</BbButton>
+                    <BbButton OnClick="CreatePseudonymAsync" Loading="_isCreating">@Localizer["App.Common.Create"]</BbButton>
                 </div>
                 @if (_createError is not null)
                 {
@@ -43,7 +44,7 @@
                 @if (_createResult is not null)
                 {
                     <p class="text-sm">
-                        Pseudonym: <code class="rounded bg-muted px-1.5 py-0.5">@_createResult.PseudonymValue</code>
+                        @Localizer["App.Pseudonyms.PseudonymLabel"]: <code class="rounded bg-muted px-1.5 py-0.5">@_createResult.PseudonymValue</code>
                     </p>
                 }
             </BbCardContent>
@@ -51,20 +52,20 @@
 
         <BbCard>
             <BbCardHeader>
-                <BbCardTitle>Reverse lookup</BbCardTitle>
+                <BbCardTitle>@Localizer["App.Pseudonyms.ReverseLookupTitle"]</BbCardTitle>
                 <BbCardDescription>
-                    Reveals the original value for one pseudonym.
+                    @Localizer["App.Pseudonyms.ReverseLookupDescription"]
                 </BbCardDescription>
             </BbCardHeader>
             <BbCardContent Class="space-y-3">
                 <div class="flex flex-wrap items-end gap-2">
                     <BbField Class="w-full max-w-sm">
-                        <BbFieldLabel For="lookupValue">Pseudonym value</BbFieldLabel>
+                        <BbFieldLabel For="lookupValue">@Localizer["App.Pseudonyms.PseudonymValue"]</BbFieldLabel>
                         <BbFieldContent>
                             <BbInput @bind-Value="_lookupValue" Id="lookupValue" />
                         </BbFieldContent>
                     </BbField>
-                    <BbButton OnClick="ReverseLookupAsync" Loading="_isLookingUp">Look up</BbButton>
+                    <BbButton OnClick="ReverseLookupAsync" Loading="_isLookingUp">@Localizer["App.Pseudonyms.LookUp"]</BbButton>
                 </div>
                 @if (_lookupError is not null)
                 {
@@ -75,7 +76,7 @@
                 @if (_lookupResult is not null)
                 {
                     <p class="text-sm">
-                        Original value: <code class="rounded bg-muted px-1.5 py-0.5">@_lookupResult.OriginalValue</code>
+                        @Localizer["App.Pseudonyms.OriginalValueLabel"]: <code class="rounded bg-muted px-1.5 py-0.5">@_lookupResult.OriginalValue</code>
                     </p>
                 }
             </BbCardContent>
@@ -85,7 +86,7 @@
     @if (_errorMessage is not null)
     {
         <BbAlert Variant="AlertVariant.Danger">
-            <BbAlertTitle>Could not load pseudonyms</BbAlertTitle>
+            <BbAlertTitle>@Localizer["App.Pseudonyms.LoadErrorTitle"]</BbAlertTitle>
             <BbAlertDescription>@_errorMessage</BbAlertDescription>
         </BbAlert>
     }
@@ -93,13 +94,13 @@
     {
         <BbCard>
             <BbCardHeader>
-                <BbCardTitle>Pseudonyms</BbCardTitle>
+                <BbCardTitle>@Localizer["App.Nav.Pseudonyms"]</BbCardTitle>
             </BbCardHeader>
             <BbCardContent>
                 <BbDataGrid Items="@_items" ShowPagination="false" IsLoading="@_isLoading">
                     <Columns>
-                        <BbDataGridPropertyColumn Property="@(p => p.PseudonymValue)" Title="Pseudonym" />
-                        <BbDataGridTemplateColumn Title="Original value">
+                        <BbDataGridPropertyColumn Property="@(p => p.PseudonymValue)" Title="@Localizer["App.Pseudonyms.PseudonymLabel"]" />
+                        <BbDataGridTemplateColumn Title="@Localizer["App.Pseudonyms.OriginalValueLabel"]">
                             <ChildContent Context="p">
                                 @if (_revealedValues.TryGetValue(p.PseudonymValue, out var revealed))
                                 {
@@ -112,7 +113,7 @@
                                         Size="ButtonSize.Icon"
                                         OnClick="() => RevealAsync(p.PseudonymValue)"
                                         Loading="@_revealingValues.Contains(p.PseudonymValue)"
-                                        AriaLabel="Reveal original value"
+                                        AriaLabel="@Localizer["App.Pseudonyms.RevealOriginalValue"]"
                                     >
                                         <LucideIcon Name="eye" Size="16" />
                                     </BbButton>
@@ -125,12 +126,12 @@
                         </BbDataGridTemplateColumn>
                         <BbDataGridPropertyColumn
                             Property="@(p => p.CreatedAt)"
-                            Title="Created at"
+                            Title="@Localizer["App.Pseudonyms.CreatedAt"]"
                             Format="yyyy-MM-dd HH:mm:ss"
                         />
                         <BbDataGridPropertyColumn
                             Property="@(p => p.LastUpdatedAt)"
-                            Title="Last updated"
+                            Title="@Localizer["App.Pseudonyms.LastUpdated"]"
                             Format="yyyy-MM-dd HH:mm:ss"
                         />
                     </Columns>
@@ -142,14 +143,14 @@
                         OnClick="GoToPreviousPageAsync"
                         Disabled="@(_pageTokenStack.Count == 0 || _isLoading)"
                     >
-                        Previous
+                        @Localizer["App.Common.Previous"]
                     </BbButton>
                     <BbButton
                         Variant="ButtonVariant.Outline"
                         OnClick="GoToNextPageAsync"
                         Disabled="@(_nextPageToken is null || _isLoading)"
                     >
-                        Next
+                        @Localizer["App.Common.Next"]
                     </BbButton>
                 </div>
             </BbCardContent>
@@ -310,7 +311,11 @@
             );
             if (_lookupResult is null)
             {
-                _lookupError = $"No pseudonym '{_lookupValue}' found in namespace '{NamespaceName}'.";
+                _lookupError = Localizer[
+                    "App.Pseudonyms.NotFoundInNamespace",
+                    _lookupValue,
+                    NamespaceName
+                ];
             }
         }
         catch (ForbiddenException ex)
@@ -344,7 +349,7 @@
             );
             if (result is null)
             {
-                _revealErrors[pseudonymValue] = "Not found.";
+                _revealErrors[pseudonymValue] = Localizer["App.Pseudonyms.NotFound"];
             }
             else
             {

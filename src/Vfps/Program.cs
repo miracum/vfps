@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.AspNetCore.Localization;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -37,6 +38,17 @@ builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddBlazorBlueprintComponents();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddAuthorization();
+
+builder.Services.AddLocalization();
+
+var supportedCultures = new[] { "en", "de" };
+builder.Services.Configure<RequestLocalizationOptions>(options =>
+{
+    options
+        .SetDefaultCulture(supportedCultures[0])
+        .AddSupportedCultures(supportedCultures)
+        .AddSupportedUICultures(supportedCultures);
+});
 
 builder.Services.AddGrpc().AddJsonTranscoding();
 builder.Services.AddGrpcSwagger();
@@ -406,6 +418,8 @@ forwardedHeadersOptions.KnownIPNetworks.Clear();
 forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeadersOptions);
 
+app.UseRequestLocalization();
+
 if (!authConfig.IsEnabled)
 {
     app.Logger.LogWarning(
@@ -464,6 +478,33 @@ if (authConfig.IsEnabled)
         }
     );
 }
+
+// Backs MainLayout's language switcher - Blazor components can't set the request culture cookie
+// themselves, so a plain link to this endpoint (not Blazor-routed navigation) sets it and redirects
+// back to the page the user was on.
+app.MapGet(
+    "/culture/set",
+    (string culture, string? redirectUri, HttpContext ctx) =>
+    {
+        var resolvedCulture = supportedCultures.Contains(culture) ? culture : supportedCultures[0];
+
+        ctx.Response.Cookies.Append(
+            CookieRequestCultureProvider.DefaultCookieName,
+            CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(resolvedCulture)),
+            new CookieOptions
+            {
+                Expires = DateTimeOffset.UtcNow.AddYears(1),
+                IsEssential = true,
+                HttpOnly = true,
+                // Not hardcoded true: this app also runs over plain HTTP in local dev, where a
+                // hardcoded Secure flag would make the browser silently drop the cookie.
+                Secure = ctx.Request.IsHttps,
+            }
+        );
+
+        return Results.LocalRedirect(string.IsNullOrEmpty(redirectUri) ? "/ui" : redirectUri);
+    }
+);
 
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
