@@ -58,6 +58,7 @@ public class PseudonymizationMethodsLookupTests
     [InlineData(PseudonymGenerationMethod.SecureRandomBase64UrlEncoded)]
     [InlineData(PseudonymGenerationMethod.FullRandomHexEncoded)]
     [InlineData(PseudonymGenerationMethod.FullRandomBase62Encoded)]
+    [InlineData(PseudonymGenerationMethod.FullRandomBase32Encoded)]
     public void GetFixedPseudonymLength_WithConfigurableLengthMethod_ShouldReturnNull(
         PseudonymGenerationMethod method
     )

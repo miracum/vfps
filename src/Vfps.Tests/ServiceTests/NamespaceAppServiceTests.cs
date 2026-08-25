@@ -69,6 +69,47 @@ public class NamespaceAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task CreateAsync_WithInvalidOriginalValueValidationRegex_ShouldThrowArgumentException()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var act = () =>
+            sut.CreateAsync(
+                new Data.Models.Namespace
+                {
+                    Name = "should-not-be-created",
+                    PseudonymLength = 16,
+                    OriginalValueValidationRegex = "(unterminated",
+                },
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithValidOriginalValueValidationRegex_ShouldSucceed()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var created = await sut.CreateAsync(
+            new Data.Models.Namespace
+            {
+                Name = "with-validation-regex",
+                PseudonymLength = 16,
+                OriginalValueValidationRegex = "^[0-9]+$",
+            },
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        created.OriginalValueValidationRegex.Should().Be("^[0-9]+$");
+    }
+
+    [Fact]
     public async Task CreateAsync_WithFixedLengthMethodAndCorrectLength_ShouldSucceed()
     {
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);

@@ -55,6 +55,70 @@ public class PseudonymAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task CreateTrustedAsync_WithNonMatchingValidationRegex_ShouldThrowOriginalValueValidationException()
+    {
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "existingNamespace",
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+            OriginalValueValidationRegex = "^[0-9]+$",
+        };
+
+        var act = () => sut.CreateTrustedAsync(@namespace, "not-a-number", CancellationToken.None);
+
+        await act.Should().ThrowAsync<OriginalValueValidationException>();
+    }
+
+    [Fact]
+    public async Task CreateTrustedAsync_WithMatchingValidationRegex_ShouldCreate()
+    {
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "existingNamespace",
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+            OriginalValueValidationRegex = "^[0-9]+$",
+        };
+
+        var created = await sut.CreateTrustedAsync(@namespace, "12345", CancellationToken.None);
+
+        created.OriginalValue.Should().Be("12345");
+    }
+
+    [Fact]
+    public async Task CreateTrustedBatchAsync_WithNonMatchingValidationRegex_ShouldThrowOriginalValueValidationException()
+    {
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "existingNamespace",
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+            OriginalValueValidationRegex = "^[0-9]+$",
+        };
+
+        var act = () =>
+            sut.CreateTrustedBatchAsync([(@namespace, "not-a-number")], CancellationToken.None);
+
+        await act.Should().ThrowAsync<OriginalValueValidationException>();
+    }
+
+    [Fact]
     public async Task CreateTrustedAsync_CalledManyTimesConcurrently_ShouldNotThrowAndShouldCreateAll()
     {
         // The CSV job runner now calls this concurrently for a whole chunk of rows at once (see

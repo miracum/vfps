@@ -112,6 +112,40 @@ public class FhirControllerTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task CreatePseudonym_WithNonMatchingValidationRegex_ShouldReturnUnprocessableEntityOutcome()
+    {
+        InMemoryPseudonymContext.Namespaces.Add(
+            new Data.Models.Namespace
+            {
+                Name = "namespaceWithRegex",
+                PseudonymLength = 16,
+                CreatedAt = DateTime.UtcNow,
+                LastUpdatedAt = DateTime.UtcNow,
+                OriginalValueValidationRegex = "^[0-9]+$",
+            }
+        );
+        InMemoryPseudonymContext.SaveChanges();
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+
+        var p = new Parameters
+        {
+            Parameter = new List<Parameters.ParameterComponent>
+            {
+                new() { Name = "namespace", Value = new FhirString("namespaceWithRegex") },
+                new() { Name = "originalValue", Value = new FhirString("not-a-number") },
+            },
+        };
+
+        var response = await sut.CreatePseudonym(p, TestContext.Current.CancellationToken);
+
+        response
+            .Should()
+            .BeOfType<UnprocessableEntityObjectResult>()
+            .Which.Value.Should()
+            .BeOfType<OperationOutcome>();
+    }
+
+    [Fact]
     public async Task CreatePseudonym_WithNonExistingNamespace_ShouldReturnNotFoundOutcome()
     {
         var p = new Parameters

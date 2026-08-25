@@ -28,6 +28,10 @@ public class PseudonymizationMethodsLookup
                 PseudonymGenerationMethod.FullRandomBase62Encoded,
                 new FullRandomBase62EncodedGenerator()
             },
+            {
+                PseudonymGenerationMethod.FullRandomBase32Encoded,
+                new FullRandomBase32EncodedGenerator()
+            },
         };
     }
 

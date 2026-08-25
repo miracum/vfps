@@ -14,6 +14,7 @@ public class PseudonymGeneratorBenchmarks
     private readonly Uuid7Generator uuid7Generator = new();
     private readonly FullRandomHexEncodedGenerator fullRandomHexGenerator = new();
     private readonly FullRandomBase62EncodedGenerator fullRandomBase62Generator = new();
+    private readonly FullRandomBase32EncodedGenerator fullRandomBase32Generator = new();
 
     [Benchmark]
     public string CryptoRandomBase64UrlEncodedGenerator() =>
@@ -35,6 +36,10 @@ public class PseudonymGeneratorBenchmarks
     [Benchmark]
     public string FullRandomBase62EncodedGenerator() =>
         fullRandomBase62Generator.GeneratePseudonym(64);
+
+    [Benchmark]
+    public string FullRandomBase32EncodedGenerator() =>
+        fullRandomBase32Generator.GeneratePseudonym(64);
 }
 
 public static class Program

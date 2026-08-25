@@ -14,9 +14,17 @@ public interface INamespaceAppService
 {
     /// <summary>
     /// Creates the given namespace. <paramref name="namespaceToCreate"/> only needs
-    /// Name/Description/PseudonymGenerationMethod/PseudonymLength/PseudonymPrefix/PseudonymSuffix
-    /// populated - CreatedAt/LastUpdatedAt are set here. Requires admin access.
+    /// Name/Description/PseudonymGenerationMethod/PseudonymLength/PseudonymPrefix/PseudonymSuffix/
+    /// OriginalValueValidationRegex populated - CreatedAt/LastUpdatedAt are set here. Requires
+    /// admin access.
     /// </summary>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <see cref="Namespace.PseudonymLength"/> is invalid for the chosen generation method.
+    /// </exception>
+    /// <exception cref="ArgumentException">
+    /// <see cref="Namespace.OriginalValueValidationRegex"/> is set but not a valid regular
+    /// expression.
+    /// </exception>
     Task<Namespace> CreateAsync(
         Namespace namespaceToCreate,
         ClaimsPrincipal user,

@@ -24,6 +24,7 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
             PseudonymPrefix = request.PseudonymPrefix,
             PseudonymSuffix = request.PseudonymSuffix,
             PseudonymGenerationMethod = request.PseudonymGenerationMethod,
+            OriginalValueValidationRegex = request.OriginalValueValidationRegex,
         };
 
         Data.Models.Namespace created;
@@ -38,6 +39,10 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
         catch (ArgumentOutOfRangeException ex)
         {
             throw new RpcException(new Status(StatusCode.OutOfRange, ex.Message));
+        }
+        catch (ArgumentException ex)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
         }
         catch (NamespaceAlreadyExistsException)
         {
@@ -154,6 +159,7 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
             PseudonymLength = @namespace.PseudonymLength,
             PseudonymPrefix = @namespace.PseudonymPrefix,
             PseudonymSuffix = @namespace.PseudonymSuffix,
+            OriginalValueValidationRegex = @namespace.OriginalValueValidationRegex,
             Meta = new Meta
             {
                 CreatedAt = Timestamp.FromDateTimeOffset(@namespace.CreatedAt),

@@ -50,6 +50,9 @@ message Namespace {
   optional string pseudonym_prefix = 6;
   // a suffix to append to each generated pseudonym
   optional string pseudonym_suffix = 7;
+  // an optional regular expression used to validate an original value before a pseudonym is
+  // generated for it. If set, values that don't match are rejected with a client error.
+  optional string original_value_validation_regex = 8;
 }
 
 // method used to generate the pseudonyms in the namespace
@@ -75,6 +78,9 @@ enum PseudonymGenerationMethod {
   PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED = 5;
   // A fully cryptographically-safe randomly generated string encoded as Base62.
   PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_BASE62_ENCODED = 6;
+  // A fully cryptographically-safe randomly generated string encoded as Base32, using the
+  // alphabet defined in RFC 4648, section 6 (https://datatracker.ietf.org/doc/html/rfc4648#section-6).
+  PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_BASE32_ENCODED = 7;
 }
 
 // request to create a new namespace
@@ -92,6 +98,9 @@ message NamespaceServiceCreateRequest {
   optional string pseudonym_suffix = 5;
   // a description for the namespace
   string description = 6;
+  // an optional regular expression used to validate an original value before a pseudonym is
+  // generated for it. If set, values that don't match are rejected with a client error.
+  optional string original_value_validation_regex = 7;
 }
 
 // response for creating a namespace entity

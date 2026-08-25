@@ -161,6 +161,18 @@
                                 <BbInput @bind-Value="_newNamespace.PseudonymSuffix" Id="suffix" />
                             </BbFieldContent>
                         </BbField>
+                        <BbField Class="sm:col-span-2">
+                            <BbFieldLabel For="validationRegex">@Localizer["App.Namespaces.ValidationRegex"]</BbFieldLabel>
+                            <BbFieldContent>
+                                <BbInput
+                                    @bind-Value="_newNamespace.OriginalValueValidationRegex"
+                                    Id="validationRegex"
+                                />
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    @Localizer["App.Namespaces.ValidationRegexHelp"]
+                                </p>
+                            </BbFieldContent>
+                        </BbField>
                     </div>
                     <BbButton Type="ButtonType.Submit" Loading="_isCreating" Class="mt-4">
                         @Localizer["App.Common.Create"]
@@ -224,7 +236,7 @@
     private string _selectedMethod = Vfps
         .Protos
         .PseudonymGenerationMethod
-        .SecureRandomBase64UrlEncoded.ToString();
+        .FullRandomBase62Encoded.ToString();
     private string? _errorMessage;
     private string? _deleteErrorMessage;
     private bool _isCreating;
@@ -265,6 +277,7 @@
             Vfps.Protos.PseudonymGenerationMethod.Uuid7 => "UUIDv7",
             Vfps.Protos.PseudonymGenerationMethod.FullRandomHexEncoded => "Full random (hex)",
             Vfps.Protos.PseudonymGenerationMethod.FullRandomBase62Encoded => "Full random (Base62)",
+            Vfps.Protos.PseudonymGenerationMethod.FullRandomBase32Encoded => "Full random (Base32)",
             _ => method.ToString(),
         };
 
@@ -323,6 +336,7 @@
                     PseudonymLength = _newNamespace.PseudonymLength,
                     PseudonymPrefix = _newNamespace.PseudonymPrefix,
                     PseudonymSuffix = _newNamespace.PseudonymSuffix,
+                    OriginalValueValidationRegex = _newNamespace.OriginalValueValidationRegex,
                 },
                 user,
                 CancellationToken.None
@@ -336,6 +350,10 @@
             _errorMessage = ex.Message;
         }
         catch (ArgumentOutOfRangeException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch (ArgumentException ex)
         {
             _errorMessage = ex.Message;
         }
@@ -413,5 +431,6 @@
         public uint PseudonymLength { get; set; } = 16;
         public string? PseudonymPrefix { get; set; }
         public string? PseudonymSuffix { get; set; }
+        public string? OriginalValueValidationRegex { get; set; }
     }
 }
