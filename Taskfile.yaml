@@ -8,7 +8,7 @@ tasks:
     cmds:
       - docker build -t ghcr.io/miracum/vfps/stress-test:v1 --target=stress-test --iidfile=./stress-test-iid.txt .
     sources:
-      - src/Vfps.StressTests/*.cs
+      - tests/stress/*
     generates:
       - ./stress-test-iid.txt
 

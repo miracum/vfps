@@ -264,7 +264,18 @@ The pseudonym generation methods are continuously benchmarked. Results are viewa
 
 ### E2E load testing
 
-Create a pseudonym namespace used for benchmarking:
+Load testing uses [ghz](https://ghz.sh), a gRPC benchmarking tool. Install it via `go install github.com/bojand/ghz/cmd/ghz@latest` or download a [release binary](https://github.com/bojand/ghz/releases).
+
+To automatically find the maximum sustainable throughput of `PseudonymService/Create`, run
+[`tests/stress/throughput-test.sh`](tests/stress/throughput-test.sh) against a running instance
+(e.g. `docker compose -f compose.yaml --profile=test up`). It runs ghz at increasing concurrency
+levels and prints the achieved requests/sec, p99 latency, and error rate at each one:
+
+```sh
+tests/stress/throughput-test.sh 127.0.0.1:8081
+```
+
+For a one-off manual run, create a pseudonym namespace used for benchmarking:
 
 ```sh
 grpcurl \

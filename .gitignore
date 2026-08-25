@@ -406,5 +406,5 @@ coveragereport/
 
 megalinter-reports/
 
-# used by NBomber
+# used by ghz stress/throughput tests
 reports/

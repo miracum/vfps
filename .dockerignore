@@ -4,6 +4,7 @@
 !*.slnx
 !Directory.Build.props
 !tests/chaos
+!tests/stress
 !.config/
 !global.json
 src/**/bin
