@@ -6,8 +6,9 @@
 @inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
 @inject INamespacePermissionChecker PermissionChecker
 @inject INamespaceAppService NamespaceAppService
+@inject IStringLocalizer<SharedResources> Localizer
 
-<PageTitle>Access Control</PageTitle>
+<PageTitle>@Localizer["App.Nav.AccessControl"]</PageTitle>
 
 @{
     RenderFragment<IReadOnlyList<string>> RoleBadges = roles =>
@@ -29,25 +30,29 @@
 <div class="mx-auto max-w-5xl space-y-6">
     <div class="flex items-center gap-2">
         <LucideIcon Name="shield" Size="24" Class="text-primary" />
-        <h1 class="text-2xl font-semibold tracking-tight">Access Control</h1>
+        <h1 class="text-2xl font-semibold tracking-tight">@Localizer["App.Nav.AccessControl"]</h1>
     </div>
 
     @if (!AuthorizationConfigOptions.Value.IsEnabled)
     {
         <BbAlert Variant="AlertVariant.Info">
-            <BbAlertTitle>Authorization is disabled</BbAlertTitle>
+            <BbAlertTitle>@Localizer["App.AccessControl.DisabledTitle"]</BbAlertTitle>
             <BbAlertDescription>
-                <code>Authorization__IsEnabled</code> is <code>false</code>, so every request has
-                full read, write, and reverse-lookup access to every namespace regardless of role.
+                @((MarkupString)
+                    string.Format(
+                        Localizer["App.AccessControl.DisabledDescription"].Value,
+                        "<code>Authorization__IsEnabled</code>",
+                        "<code>false</code>"
+                    ))
             </BbAlertDescription>
         </BbAlert>
     }
     else if (!_isAdmin)
     {
         <BbAlert Variant="AlertVariant.Danger">
-            <BbAlertTitle>Admins only</BbAlertTitle>
+            <BbAlertTitle>@Localizer["App.AccessControl.AdminsOnlyTitle"]</BbAlertTitle>
             <BbAlertDescription>
-                Viewing namespace access rules requires one of the configured admin roles.
+                @Localizer["App.AccessControl.AdminsOnlyDescription"]
             </BbAlertDescription>
         </BbAlert>
     }
@@ -55,9 +60,9 @@
     {
         <BbCard>
             <BbCardHeader>
-                <BbCardTitle>Admin roles</BbCardTitle>
+                <BbCardTitle>@Localizer["App.AccessControl.AdminRolesTitle"]</BbCardTitle>
                 <BbCardDescription>
-                    Full access to every namespace, including namespace create/delete.
+                    @Localizer["App.AccessControl.AdminRolesDescription"]
                 </BbCardDescription>
             </BbCardHeader>
             <BbCardContent>
@@ -67,17 +72,21 @@
 
         <BbCard>
             <BbCardHeader>
-                <BbCardTitle>Configured namespace rules</BbCardTitle>
+                <BbCardTitle>@Localizer["App.AccessControl.NamespaceRulesTitle"]</BbCardTitle>
                 <BbCardDescription>
-                    Raw <code>Authorization:NamespaceRules</code> entries. A namespace of
-                    <code>*</code> applies to every namespace, in addition to any rule specific to it.
+                    @((MarkupString)
+                        string.Format(
+                            Localizer["App.AccessControl.NamespaceRulesDescription"].Value,
+                            "<code>Authorization:NamespaceRules</code>",
+                            "<code>*</code>"
+                        ))
                 </BbCardDescription>
             </BbCardHeader>
             <BbCardContent>
                 @if (AuthorizationConfigOptions.Value.NamespaceRules.Count == 0)
                 {
                     <p class="text-sm text-muted-foreground">
-                        No namespace rules configured - only admins have any access.
+                        @Localizer["App.AccessControl.NoNamespaceRules"]
                     </p>
                 }
                 else
@@ -87,18 +96,20 @@
                         ShowPagination="false"
                     >
                         <Columns>
-                            <BbDataGridTemplateColumn Title="Namespace">
+                            <BbDataGridTemplateColumn Title="@Localizer["App.Nav.Namespaces"]">
                                 <ChildContent Context="rule">
-                                    @(rule.Namespace == "*" ? "All namespaces (*)" : rule.Namespace)
+                                    @(rule.Namespace == "*"
+                                        ? Localizer["App.AccessControl.AllNamespaces"].Value
+                                        : rule.Namespace)
                                 </ChildContent>
                             </BbDataGridTemplateColumn>
-                            <BbDataGridTemplateColumn Title="Read">
+                            <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.Read"]">
                                 <ChildContent Context="rule">@RoleBadges(rule.ReadRoles)</ChildContent>
                             </BbDataGridTemplateColumn>
-                            <BbDataGridTemplateColumn Title="Write">
+                            <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.Write"]">
                                 <ChildContent Context="rule">@RoleBadges(rule.WriteRoles)</ChildContent>
                             </BbDataGridTemplateColumn>
-                            <BbDataGridTemplateColumn Title="Reverse lookup">
+                            <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.ReverseLookup"]">
                                 <ChildContent Context="rule">
                                     @RoleBadges(rule.ReverseLookupRoles)
                                 </ChildContent>
@@ -111,34 +122,32 @@
 
         <BbCard>
             <BbCardHeader>
-                <BbCardTitle>Effective access per namespace</BbCardTitle>
+                <BbCardTitle>@Localizer["App.AccessControl.EffectiveAccessTitle"]</BbCardTitle>
                 <BbCardDescription>
-                    Resolved roles for each existing namespace - the union of any rule specific to
-                    it and the wildcard rule above, the same resolution namespace/pseudonym access
-                    checks use.
+                    @Localizer["App.AccessControl.EffectiveAccessDescription"]
                 </BbCardDescription>
             </BbCardHeader>
             <BbCardContent>
                 @if (_namespaces.Count == 0)
                 {
-                    <p class="text-sm text-muted-foreground">No namespaces exist yet.</p>
+                    <p class="text-sm text-muted-foreground">@Localizer["App.AccessControl.NoNamespacesExist"]</p>
                 }
                 else
                 {
                     <BbDataGrid Items="@_namespaces" ShowPagination="false">
                         <Columns>
-                            <BbDataGridPropertyColumn Property="@(n => n.Name)" Title="Namespace" />
-                            <BbDataGridTemplateColumn Title="Read">
+                            <BbDataGridPropertyColumn Property="@(n => n.Name)" Title="@Localizer["App.Nav.Namespaces"]" />
+                            <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.Read"]">
                                 <ChildContent Context="n">
                                     @RoleBadges(ResolvedRoles(n.Name, r => r.ReadRoles))
                                 </ChildContent>
                             </BbDataGridTemplateColumn>
-                            <BbDataGridTemplateColumn Title="Write">
+                            <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.Write"]">
                                 <ChildContent Context="n">
                                     @RoleBadges(ResolvedRoles(n.Name, r => r.WriteRoles))
                                 </ChildContent>
                             </BbDataGridTemplateColumn>
-                            <BbDataGridTemplateColumn Title="Reverse lookup">
+                            <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.ReverseLookup"]">
                                 <ChildContent Context="n">
                                     @RoleBadges(ResolvedRoles(n.Name, r => r.ReverseLookupRoles))
                                 </ChildContent>

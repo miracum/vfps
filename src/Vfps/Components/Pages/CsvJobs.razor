@@ -13,17 +13,22 @@
 @inject NavigationManager NavigationManager
 @inject ILogger<CsvJobs> Logger
 @inject ToastService Toast
+@inject IStringLocalizer<SharedResources> Localizer
 
-<PageTitle>CSV pseudonymization</PageTitle>
+<PageTitle>@Localizer["App.CsvJobs.PageTitle"]</PageTitle>
 
 @if (!S3ConfigOptions.Value.IsEnabled)
 {
     <div class="mx-auto max-w-5xl">
         <BbAlert Variant="AlertVariant.Warning">
-            <BbAlertTitle>CSV pseudonymization is disabled</BbAlertTitle>
+            <BbAlertTitle>@Localizer["App.CsvJobs.DisabledTitle"]</BbAlertTitle>
             <BbAlertDescription>
-                Set <code>S3__IsEnabled=true</code> (and the other <code>S3__*</code> settings) to
-                enable this feature - it requires S3-compatible object storage.
+                @((MarkupString)
+                    string.Format(
+                        Localizer["App.CsvJobs.DisabledDescription"].Value,
+                        "<code>S3__IsEnabled=true</code>",
+                        "<code>S3__*</code>"
+                    ))
             </BbAlertDescription>
         </BbAlert>
     </div>
@@ -33,15 +38,16 @@ else
     <div class="mx-auto max-w-5xl space-y-6">
         <div class="flex items-center gap-2">
             <LucideIcon Name="file-spreadsheet" Size="24" Class="text-primary" />
-            <h1 class="text-2xl font-semibold tracking-tight">CSV pseudonymization</h1>
+            <h1 class="text-2xl font-semibold tracking-tight">@Localizer["App.CsvJobs.PageTitle"]</h1>
         </div>
 
         @if (S3ConfigOptions.Value.ObjectRetentionDays > 0)
         {
             <BbAlert Variant="AlertVariant.Info">
                 <BbAlertDescription>
-                    Uploaded input files and their pseudonymized output are automatically deleted
-                    from object storage @S3ConfigOptions.Value.ObjectRetentionDays day@(S3ConfigOptions.Value.ObjectRetentionDays == 1 ? "" : "s") after upload. Download output you need to keep before then.
+                    @(S3ConfigOptions.Value.ObjectRetentionDays == 1
+                        ? Localizer["App.CsvJobs.RetentionNoticeSingular"].Value
+                        : Localizer["App.CsvJobs.RetentionNoticePlural", S3ConfigOptions.Value.ObjectRetentionDays].Value)
                 </BbAlertDescription>
             </BbAlert>
         }
@@ -49,23 +55,22 @@ else
         @if (_createError is not null)
         {
             <BbAlert Variant="AlertVariant.Danger">
-                <BbAlertTitle>Could not create job</BbAlertTitle>
+                <BbAlertTitle>@Localizer["App.CsvJobs.CreateErrorTitle"]</BbAlertTitle>
                 <BbAlertDescription>@_createError</BbAlertDescription>
             </BbAlert>
         }
 
         <BbCard>
             <BbCardHeader>
-                <BbCardTitle>New job</BbCardTitle>
+                <BbCardTitle>@Localizer["App.CsvJobs.NewJobTitle"]</BbCardTitle>
                 <BbCardDescription>
-                    Select a CSV file to upload, and specify how its columns should be pseudonymized or de-pseudonymized.
-                    The output will be available for download once the job completes.
+                    @Localizer["App.CsvJobs.NewJobDescription"]
                 </BbCardDescription>
             </BbCardHeader>
             <BbCardContent Class="space-y-6">
                 <div class="grid gap-4 sm:grid-cols-3">
                     <BbField Class="sm:col-span-3">
-                        <BbFieldLabel For="direction">Direction</BbFieldLabel>
+                        <BbFieldLabel For="direction">@Localizer["App.CsvJobs.Direction"]</BbFieldLabel>
                         <BbFieldContent>
                             <select
                                 @bind="_direction"
@@ -73,10 +78,10 @@ else
                                 class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                             >
                                 <option value="@nameof(PseudonymizationJobDirection.Pseudonymize)">
-                                    Pseudonymize - replace original values with pseudonyms
+                                    @Localizer["App.CsvJobs.DirectionPseudonymizeOption"]
                                 </option>
                                 <option value="@nameof(PseudonymizationJobDirection.Depseudonymize)">
-                                    De-pseudonymize - replace pseudonyms with original values
+                                    @Localizer["App.CsvJobs.DirectionDepseudonymizeOption"]
                                 </option>
                             </select>
                         </BbFieldContent>
@@ -85,14 +90,12 @@ else
                     {
                         <BbAlert Variant="AlertVariant.Warning" Class="sm:col-span-3">
                             <BbAlertDescription>
-                                This reveals original values into the output file - requires
-                                reverse-lookup access to every namespace used below, same as the
-                                reverse lookup on a namespace's pseudonym list.
+                                @Localizer["App.CsvJobs.DepseudonymizeWarning"]
                             </BbAlertDescription>
                         </BbAlert>
                     }
                     <BbField Class="sm:col-span-3">
-                        <BbFieldLabel For="csvFileInput">CSV file</BbFieldLabel>
+                        <BbFieldLabel For="csvFileInput">@Localizer["App.CsvJobs.CsvFile"]</BbFieldLabel>
                         <BbFieldContent>
                             <input
                                 type="file"
@@ -105,13 +108,13 @@ else
                     </BbField>
 
                     <BbField>
-                        <BbFieldLabel For="encoding">Encoding</BbFieldLabel>
+                        <BbFieldLabel For="encoding">@Localizer["App.CsvJobs.Encoding"]</BbFieldLabel>
                         <BbFieldContent>
                             <BbInput @bind-Value="_encoding" Id="encoding" />
                         </BbFieldContent>
                     </BbField>
                     <BbField>
-                        <BbFieldLabel For="delimiter">Delimiter</BbFieldLabel>
+                        <BbFieldLabel For="delimiter">@Localizer["App.CsvJobs.Delimiter"]</BbFieldLabel>
                         <BbFieldContent>
                             <BbInput
                                 @bind-Value="_delimiter"
@@ -121,7 +124,7 @@ else
                         </BbFieldContent>
                     </BbField>
                     <BbField>
-                        <BbFieldLabel For="hasHeaderRow">Header row</BbFieldLabel>
+                        <BbFieldLabel For="hasHeaderRow">@Localizer["App.CsvJobs.HeaderRow"]</BbFieldLabel>
                         <BbFieldContent>
                             <div class="flex h-10 items-center gap-2">
                                 <BbCheckbox
@@ -129,34 +132,24 @@ else
                                     CheckedChanged="OnHasHeaderRowChangedAsync"
                                     Id="hasHeaderRow"
                                 />
-                                <label for="hasHeaderRow" class="text-sm">File has a header row</label>
+                                <label for="hasHeaderRow" class="text-sm">@Localizer["App.CsvJobs.HasHeaderRow"]</label>
                             </div>
                         </BbFieldContent>
                     </BbField>
                 </div>
 
                 <div>
-                    <h3 class="text-sm font-medium">Column mappings</h3>
+                    <h3 class="text-sm font-medium">@Localizer["App.CsvJobs.ColumnMappings"]</h3>
                     <p class="mt-1 text-sm text-muted-foreground">
                         @if (_direction == nameof(PseudonymizationJobDirection.Depseudonymize))
                         {
-                            <text>
-                                Each row replaces a source column's pseudonym with its original
-                                value in the given namespace - either in place, or into a new
-                                appended column (leave "target column" empty to replace in place).
-                                A pseudonym with no match in that namespace is left unchanged.
-                            </text>
+                            <text>@Localizer["App.CsvJobs.ColumnMappingsHintDepseudonymize"]</text>
                         }
                         else
                         {
-                            <text>
-                                Each row replaces a source column's value with its pseudonym in
-                                the given namespace - either in place, or into a new appended
-                                column (leave "target column" empty to replace in place).
-                            </text>
+                            <text>@Localizer["App.CsvJobs.ColumnMappingsHintPseudonymize"]</text>
                         }
-                        Pick a CSV file above with "File has a header row" checked to select
-                        source columns by name instead of typing them.
+                        @Localizer["App.CsvJobs.ColumnMappingsHintSuffix"]
                     </p>
 
                     <div class="mt-3 space-y-3">
@@ -165,7 +158,7 @@ else
                             <div class="flex flex-wrap items-end gap-2 rounded-lg border p-3">
                                 <BbField Class="w-48">
                                     <BbFieldLabel For="@row.SourceColumnId">
-                                        Source column
+                                        @Localizer["App.CsvJobs.SourceColumn"]
                                     </BbFieldLabel>
                                     <BbFieldContent>
                                         @if (_detectedColumns.Count > 0)
@@ -175,7 +168,7 @@ else
                                                 id="@row.SourceColumnId"
                                                 class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                                             >
-                                                <option value="">Select a column</option>
+                                                <option value="">@Localizer["App.CsvJobs.SelectColumn"]</option>
                                                 @foreach (var col in _detectedColumns)
                                                 {
                                                     <option value="@col">@col</option>
@@ -187,32 +180,32 @@ else
                                             <BbInput
                                                 @bind-Value="row.SourceColumn"
                                                 Id="@row.SourceColumnId"
-                                                Placeholder="name or 0-based index"
+                                                Placeholder="@Localizer["App.CsvJobs.SourceColumnPlaceholder"]"
                                             />
                                         }
                                     </BbFieldContent>
                                 </BbField>
                                 <BbField Class="w-48">
                                     <BbFieldLabel For="@row.TargetColumnId">
-                                        Target column
+                                        @Localizer["App.CsvJobs.TargetColumn"]
                                     </BbFieldLabel>
                                     <BbFieldContent>
                                         <BbInput
                                             @bind-Value="row.TargetColumn"
                                             Id="@row.TargetColumnId"
-                                            Placeholder="empty = replace in place"
+                                            Placeholder="@Localizer["App.CsvJobs.TargetColumnPlaceholder"]"
                                         />
                                     </BbFieldContent>
                                 </BbField>
                                 <BbField Class="w-48">
-                                    <BbFieldLabel For="@row.NamespaceId">Namespace</BbFieldLabel>
+                                    <BbFieldLabel For="@row.NamespaceId">@Localizer["App.Nav.Namespaces"]</BbFieldLabel>
                                     <BbFieldContent>
                                         <select
                                             @bind="row.Namespace"
                                             id="@row.NamespaceId"
                                             class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                                         >
-                                            <option value="">Select a namespace</option>
+                                            <option value="">@Localizer["App.CsvJobs.SelectNamespace"]</option>
                                             @foreach (var ns in _namespaces)
                                             {
                                                 <option value="@ns.Name">@ns.Name</option>
@@ -225,7 +218,7 @@ else
                                     Size="ButtonSize.Icon"
                                     OnClick="() => RemoveMappingRow(row)"
                                     Disabled="@(_columnMappings.Count == 1)"
-                                    AriaLabel="Remove mapping"
+                                    AriaLabel="@Localizer["App.CsvJobs.RemoveMapping"]"
                                 >
                                     <LucideIcon Name="x" Size="16" />
                                 </BbButton>
@@ -235,19 +228,19 @@ else
 
                     <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="AddMappingRow" Class="mt-3">
                         <LucideIcon Name="plus" Size="16" />
-                        Add column mapping
+                        @Localizer["App.CsvJobs.AddColumnMapping"]
                     </BbButton>
                 </div>
 
                 <BbButton OnClick="CreateJobAsync" Loading="_isCreating">
-                    Upload and process
+                    @Localizer["App.CsvJobs.UploadAndProcess"]
                 </BbButton>
             </BbCardContent>
         </BbCard>
 
         <BbCard>
             <BbCardHeader>
-                <BbCardTitle>Jobs</BbCardTitle>
+                <BbCardTitle>@Localizer["App.CsvJobs.JobsTitle"]</BbCardTitle>
                 @if (_jobs.Any(j => IsFinished(j.Status)))
                 {
                     <BbCardAction>
@@ -256,7 +249,7 @@ else
                             Size="ButtonSize.Small"
                             OnClick="() => _showClearFinishedConfirm = true"
                         >
-                            Clear finished jobs
+                            @Localizer["App.CsvJobs.ClearFinishedJobs"]
                         </BbButton>
                     </BbCardAction>
                 }
@@ -265,13 +258,10 @@ else
                 @if (_showClearFinishedConfirm)
                 {
                     <BbAlert Variant="AlertVariant.Warning" Class="mb-4">
-                        <BbAlertTitle>Clear finished jobs?</BbAlertTitle>
+                        <BbAlertTitle>@Localizer["App.CsvJobs.ClearFinishedJobsConfirmTitle"]</BbAlertTitle>
                         <BbAlertDescription>
                             <p class="mb-3">
-                                This permanently deletes every completed, failed, and cancelled job
-                                shown below from the list and the database - this cannot be undone.
-                                Their input/output files in object storage are unaffected and
-                                expire on their own schedule.
+                                @Localizer["App.CsvJobs.ClearFinishedJobsConfirmBody"]
                             </p>
                             <div class="flex items-center gap-2">
                                 <BbButton
@@ -279,13 +269,13 @@ else
                                     Loading="_isClearingFinished"
                                     OnClick="ConfirmClearFinishedJobsAsync"
                                 >
-                                    Clear
+                                    @Localizer["App.Common.Clear"]
                                 </BbButton>
                                 <BbButton
                                     Variant="ButtonVariant.Outline"
                                     OnClick="() => _showClearFinishedConfirm = false"
                                 >
-                                    Cancel
+                                    @Localizer["App.Common.Cancel"]
                                 </BbButton>
                             </div>
                         </BbAlertDescription>
@@ -293,47 +283,47 @@ else
                 }
                 <BbDataGrid Items="@_jobs" ShowPagination="false">
                     <Columns>
-                        <BbDataGridTemplateColumn Title="Id">
+                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Id"]">
                             <ChildContent Context="j">
                                 <code class="text-xs">@j.Id.ToString()[..8]</code>
                             </ChildContent>
                         </BbDataGridTemplateColumn>
-                        <BbDataGridTemplateColumn Title="File">
+                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.File"]">
                             <ChildContent Context="j">
                                 <div class="max-w-40 truncate text-xs" title="@j.OriginalFileName">
                                     @(j.OriginalFileName ?? "—")
                                 </div>
                             </ChildContent>
                         </BbDataGridTemplateColumn>
-                        <BbDataGridTemplateColumn Title="Direction">
+                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Direction"]">
                             <ChildContent Context="j">
                                 @(j.Direction == PseudonymizationJobDirection.Depseudonymize
-                                    ? "De-pseudonymize"
-                                    : "Pseudonymize")
+                                    ? Localizer["App.CsvJobs.DirectionDepseudonymize"].Value
+                                    : Localizer["App.CsvJobs.DirectionPseudonymize"].Value)
                             </ChildContent>
                         </BbDataGridTemplateColumn>
-                        <BbDataGridTemplateColumn Title="Status">
+                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Status"]">
                             <ChildContent Context="j">
                                 <BbBadge Variant="@BadgeVariantFor(j.Status)" Class="@BadgeClassFor(j.Status)">
-                                    @j.Status
+                                    @StatusLabel(j.Status)
                                 </BbBadge>
                             </ChildContent>
                         </BbDataGridTemplateColumn>
-                        <BbDataGridTemplateColumn Title="Progress">
+                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Progress"]">
                             <ChildContent Context="j">
                                 @if (j.TotalBytes > 0)
                                 {
                                     <div class="flex items-center gap-2">
                                         <BbProgress Value="@(100.0 * j.BytesProcessed / j.TotalBytes)" Class="w-24" />
                                         <span class="text-xs text-muted-foreground">
-                                            @j.RowsProcessed rows
+                                            @Localizer["App.CsvJobs.RowsCount", j.RowsProcessed]
                                         </span>
                                     </div>
                                 }
                                 else
                                 {
                                     <span class="text-xs text-muted-foreground">
-                                        @j.RowsProcessed rows
+                                        @Localizer["App.CsvJobs.RowsCount", j.RowsProcessed]
                                     </span>
                                 }
                                 @if (ThroughputTextFor(j) is { } throughputText)
@@ -346,10 +336,12 @@ else
                                 {
                                     <div
                                         class="mt-1"
-                                        title="These rows contained malformed CSV data (e.g. an unescaped quote) - the affected value was kept as-is rather than failing the job."
+                                        title="@Localizer["App.CsvJobs.BadDataRowTitle"]"
                                     >
                                         <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
-                                            @j.BadDataRowCount warning@(j.BadDataRowCount == 1 ? "" : "s")
+                                            @(j.BadDataRowCount == 1
+                                                ? Localizer["App.CsvJobs.WarningCountSingular", j.BadDataRowCount].Value
+                                                : Localizer["App.CsvJobs.WarningCountPlural", j.BadDataRowCount].Value)
                                         </BbBadge>
                                     </div>
                                 }
@@ -357,23 +349,25 @@ else
                                 {
                                     <div
                                         class="mt-1"
-                                        title="These values were blank or a common missing-data placeholder (NA/NULL) - left as-is rather than pseudonymized."
+                                        title="@Localizer["App.CsvJobs.MissingValueTitle"]"
                                     >
                                         <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
-                                            @j.MissingValueCount missing value@(j.MissingValueCount == 1 ? "" : "s")
+                                            @(j.MissingValueCount == 1
+                                                ? Localizer["App.CsvJobs.MissingValueCountSingular", j.MissingValueCount].Value
+                                                : Localizer["App.CsvJobs.MissingValueCountPlural", j.MissingValueCount].Value)
                                         </BbBadge>
                                     </div>
                                 }
                             </ChildContent>
                         </BbDataGridTemplateColumn>
-                        <BbDataGridTemplateColumn Title="Created at">
+                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.CreatedAt"]">
                             <ChildContent Context="j">
                                 @TimeZoneInfo.ConvertTime(j.CreatedAt, _browserTimeZone).ToString(
                                     "yyyy-MM-dd HH:mm:ss"
                                 )
                             </ChildContent>
                         </BbDataGridTemplateColumn>
-                        <BbDataGridTemplateColumn Title="Issue">
+                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Issue"]">
                             <ChildContent Context="j">
                                 @if (
                                     (j.Status == PseudonymizationJobStatus.Failed
@@ -395,7 +389,7 @@ else
                                 }
                             </ChildContent>
                         </BbDataGridTemplateColumn>
-                        <BbDataGridTemplateColumn Title="Actions">
+                        <BbDataGridTemplateColumn Title="@Localizer["App.Common.Actions"]">
                             <ChildContent Context="j">
                                 <div class="flex items-center gap-2">
                                     @if (j.Status == PseudonymizationJobStatus.Completed)
@@ -405,7 +399,7 @@ else
                                             Size="ButtonSize.Small"
                                             OnClick="() => DownloadAsync(j.Id)"
                                         >
-                                            Download
+                                            @Localizer["App.CsvJobs.Download"]
                                         </BbButton>
                                     }
                                     @if (
@@ -419,7 +413,7 @@ else
                                             Size="ButtonSize.Small"
                                             OnClick="() => CancelJobAsync(j.Id)"
                                         >
-                                            Cancel
+                                            @Localizer["App.Common.Cancel"]
                                         </BbButton>
                                     }
                                     @if (j.HangfireJobId is not null)
@@ -430,7 +424,7 @@ else
                                             Href="@HangfireJobDetailsUrl(j.HangfireJobId)"
                                             Target="_blank"
                                         >
-                                            Show Job Dashboard
+                                            @Localizer["App.CsvJobs.ShowJobDashboard"]
                                         </BbButton>
                                     }
                                 </div>
@@ -613,8 +607,21 @@ else
     private string? ThroughputTextFor(PseudonymizationJob job) =>
         job.Status == PseudonymizationJobStatus.Running
         && _throughputByJobId.TryGetValue(job.Id, out var rowsPerSecond)
-            ? $"{rowsPerSecond:N0} rows/s"
+            ? Localizer["App.CsvJobs.ThroughputRowsPerSecond", rowsPerSecond.ToString("N0")].Value
             : null;
+
+    private string StatusLabel(PseudonymizationJobStatus status) =>
+        status switch
+        {
+            PseudonymizationJobStatus.AwaitingUpload => Localizer["App.CsvJobs.StatusAwaitingUpload"],
+            PseudonymizationJobStatus.Queued => Localizer["App.CsvJobs.StatusQueued"],
+            PseudonymizationJobStatus.Running => Localizer["App.CsvJobs.StatusRunning"],
+            PseudonymizationJobStatus.Completed => Localizer["App.CsvJobs.StatusCompleted"],
+            PseudonymizationJobStatus.Failed => Localizer["App.CsvJobs.StatusFailed"],
+            PseudonymizationJobStatus.Cancelled => Localizer["App.CsvJobs.StatusCancelled"],
+            PseudonymizationJobStatus.Stalled => Localizer["App.CsvJobs.StatusStalled"],
+            _ => status.ToString(),
+        };
 
     // NavigationManager.BaseUri already includes the "/ui/" path base (App.razor's <base href>),
     // so appending the dashboard's own relative route gives an absolute link to the Hangfire
@@ -730,8 +737,7 @@ else
 
             if (mappings.Count == 0)
             {
-                _createError =
-                    "At least one column mapping with a source column and namespace is required.";
+                _createError = Localizer["App.CsvJobs.NoMappingsError"];
                 return;
             }
 
@@ -755,9 +761,9 @@ else
 
             Toast.Success(
                 job.OriginalFileName is null
-                    ? "Uploaded and queued for processing."
-                    : $"\"{job.OriginalFileName}\" was uploaded and queued for processing.",
-                "Job created"
+                    ? Localizer["App.CsvJobs.UploadedNoFileName"].Value
+                    : Localizer["App.CsvJobs.UploadedWithFileName", job.OriginalFileName].Value,
+                Localizer["App.CsvJobs.JobCreated"]
             );
 
             _columnMappings.Clear();
@@ -776,7 +782,7 @@ else
         }
         catch (Microsoft.JSInterop.JSException ex)
         {
-            _createError = $"Upload failed: {ex.Message}";
+            _createError = Localizer["App.CsvJobs.UploadFailed", ex.Message];
         }
         finally
         {

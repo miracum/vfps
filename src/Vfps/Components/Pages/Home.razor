@@ -2,6 +2,7 @@
 @using Microsoft.Extensions.Options
 @using Vfps.Config
 @inject IOptions<S3Config> S3ConfigOptions
+@inject IStringLocalizer<SharedResources> Localizer
 
 <PageTitle>Vfps</PageTitle>
 
@@ -9,7 +10,7 @@
     <div>
         <h1 class="text-2xl font-semibold tracking-tight">Vfps</h1>
         <p class="text-muted-foreground">
-            A very fast and resource-efficient pseudonym service.
+            @Localizer["App.Home.Subtitle"]
         </p>
     </div>
 
@@ -18,15 +19,15 @@
             <BbCardHeader>
                 <div class="flex items-center gap-2">
                     <LucideIcon Name="database" Size="18" Class="text-primary" />
-                    <BbCardTitle>Namespaces</BbCardTitle>
+                    <BbCardTitle>@Localizer["App.Nav.Namespaces"]</BbCardTitle>
                 </div>
                 <BbCardDescription>
-                    Create namespaces and browse pseudonyms at scale.
+                    @Localizer["App.Home.NamespacesDescription"]
                 </BbCardDescription>
             </BbCardHeader>
             <BbCardFooter>
                 <BbButton Href="/ui/namespaces" Variant="ButtonVariant.Outline">
-                    Open
+                    @Localizer["App.Common.Open"]
                 </BbButton>
             </BbCardFooter>
         </BbCard>
@@ -37,15 +38,15 @@
                 <BbCardHeader>
                     <div class="flex items-center gap-2">
                         <LucideIcon Name="file-spreadsheet" Size="18" Class="text-primary" />
-                        <BbCardTitle>CSV Processing</BbCardTitle>
+                        <BbCardTitle>@Localizer["App.Nav.CsvProcessing"]</BbCardTitle>
                     </div>
                     <BbCardDescription>
-                        Pseudonymize columns in a CSV file asynchronously.
+                        @Localizer["App.Home.CsvProcessingDescription"]
                     </BbCardDescription>
                 </BbCardHeader>
                 <BbCardFooter>
                     <BbButton Href="/ui/csv-jobs" Variant="ButtonVariant.Outline">
-                        Open
+                        @Localizer["App.Common.Open"]
                     </BbButton>
                 </BbCardFooter>
             </BbCard>
