@@ -1,6 +1,6 @@
 services:
   postgresql:
-    image: docker.io/library/postgres:18.4@sha256:3a82e1f56c8f0f5616a11103ac3d47e632c3938698946a7ad26da0df1334744a
+    image: docker.io/library/postgres:18.4@sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636
     restart: unless-stopped
     deploy:
       resources:
@@ -49,7 +49,7 @@ services:
   # reader/reader (realm role vfps-ns-development-read). Not started by default - requires the
   # "keycloak" compose profile.
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7@sha256:0f198be292568439d700cdbfb893e69a6009bb43a94a06a945b1d3d506c76b13
+    image: quay.io/keycloak/keycloak:26.7@sha256:831330513f55695572286e521f94fcd3c7e285250ed5b848090265a33192f669
     restart: unless-stopped
     command: start-dev --import-realm
     deploy:
