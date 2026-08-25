@@ -78,6 +78,9 @@ enum PseudonymGenerationMethod {
   PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED = 5;
   // A fully cryptographically-safe randomly generated string encoded as Base62.
   PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_BASE62_ENCODED = 6;
+  // A fully cryptographically-safe randomly generated string encoded as Base32, using the
+  // alphabet defined in RFC 4648, section 6 (https://datatracker.ietf.org/doc/html/rfc4648#section-6).
+  PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_BASE32_ENCODED = 7;
 }
 
 // request to create a new namespace
