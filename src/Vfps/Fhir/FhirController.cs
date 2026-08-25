@@ -29,6 +29,7 @@ public class FhirController(
     [ProducesResponseType(typeof(OperationOutcome), 400)]
     [ProducesResponseType(typeof(OperationOutcome), 403)]
     [ProducesResponseType(typeof(OperationOutcome), 404)]
+    [ProducesResponseType(typeof(OperationOutcome), 422)]
     [ProducesResponseType(typeof(OperationOutcome), 500)]
     public async Task<ObjectResult> CreatePseudonym(
         [FromBody] Parameters? parametersResource,
@@ -128,16 +129,19 @@ public class FhirController(
         }
         catch (OriginalValueValidationException ex)
         {
+            // Unlike the malformed/missing-field cases above (400), the request itself is
+            // well-formed - originalValue just fails a business rule the namespace enforces, so
+            // 422 fits better than 400 here.
             var outcome = new OperationOutcome();
             outcome.Issue.Add(
                 new OperationOutcome.IssueComponent
                 {
                     Severity = OperationOutcome.IssueSeverity.Error,
-                    Code = OperationOutcome.IssueType.Processing,
+                    Code = OperationOutcome.IssueType.BusinessRule,
                     Diagnostics = ex.Message,
                 }
             );
-            return BadRequest(outcome);
+            return UnprocessableEntity(outcome);
         }
         catch (PseudonymUpsertFailedException)
         {
