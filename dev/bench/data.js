@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787745147733,
+  "lastUpdate": 1787750311006,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -6834,6 +6834,66 @@ window.BENCHMARK_DATA = {
             "value": 1214.398865890503,
             "unit": "ns",
             "range": "± 2.1230078470944713"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7e0798023dd68201b137d1acc57e8d605c128d2b",
+          "message": "feat: multi psn namespaces (#295)\n\n* refactor: minio -> seaweedfs\n\n* amend\n\n* amend\n\n* feat: multi psn namespaces\n\n---------\n\nCo-authored-by: chgl <5307555+chgl@users.noreply.github.com>",
+          "timestamp": "2026-08-26T15:15:09+02:00",
+          "tree_id": "069bfb92e391743cfdf8cdbb4509d727e8e09902",
+          "url": "https://github.com/miracum/vfps/commit/7e0798023dd68201b137d1acc57e8d605c128d2b"
+        },
+        "date": 1787750310232,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 714.5159247716268,
+            "unit": "ns",
+            "range": "± 2.2948967116270684"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 355.65475170428937,
+            "unit": "ns",
+            "range": "± 0.777777709840288"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 377.0201506981483,
+            "unit": "ns",
+            "range": "± 0.5044174390304276"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 674.0321865815383,
+            "unit": "ns",
+            "range": "± 3.964042400477946"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 755.5116504828135,
+            "unit": "ns",
+            "range": "± 1.6384164609366771"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 734.3943727199847,
+            "unit": "ns",
+            "range": "± 1.562811550983755"
           }
         ]
       }
