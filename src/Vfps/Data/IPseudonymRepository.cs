@@ -8,7 +8,10 @@ namespace Vfps.Data;
 public interface IPseudonymRepository
 {
     /// <summary>
-    /// Store the given pseudonym iff one with the same namespace and original value doesn't already exist.
+    /// Store the given pseudonym iff one with the same namespace, original value, and sequence
+    /// number doesn't already exist. Every caller other than the multi-psn create path (see
+    /// <see cref="AppServices.PseudonymAppService.CreateTrustedAsync(Models.Namespace, string, long, CancellationToken)"/>)
+    /// always passes <see cref="Pseudonym.SequenceNumber"/> 0.
     /// </summary>
     /// <param name="pseudonym">The pseudonym to store</param>
     /// <returns>The newly stored pseudonym or the one fetched from the store if it already existed or null in case of an error.</returns>
@@ -18,17 +21,45 @@ public interface IPseudonymRepository
     /// Same as <see cref="CreateIfNotExist"/>, batched into a single round trip for many
     /// pseudonyms at once - CsvPseudonymizationJobRunner's dominant cost was one upsert round
     /// trip per field per row, which this collapses to one round trip per chunk. Callers must
-    /// dedupe <paramref name="pseudonyms"/> by (NamespaceName, OriginalValue) first - passing
-    /// the same key twice wastes a row rather than causing incorrect results.
+    /// dedupe <paramref name="pseudonyms"/> by (NamespaceName, OriginalValue, SequenceNumber)
+    /// first - passing the same key twice wastes a row rather than causing incorrect results.
     /// </summary>
     /// <returns>
-    /// One entry per distinct (NamespaceName, OriginalValue) in <paramref name="pseudonyms"/>.
-    /// Always fully covers the input - falls back to <see cref="CreateIfNotExist"/> one at a
-    /// time for any key the batched round trip didn't return a row for (expected to be rare:
-    /// only a concurrent writer racing the same key at the same instant).
+    /// One entry per distinct (NamespaceName, OriginalValue, SequenceNumber) in
+    /// <paramref name="pseudonyms"/>. Always fully covers the input - falls back to
+    /// <see cref="CreateIfNotExist"/> one at a time for any key the batched round trip didn't
+    /// return a row for (expected to be rare: only a concurrent writer racing the same key at
+    /// the same instant).
     /// </returns>
     Task<IReadOnlyList<Pseudonym>> CreateIfNotExistBatchAsync(
         IReadOnlyList<Pseudonym> pseudonyms,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Fetches every pseudonym stored for a given (NamespaceName, OriginalValue), ordered by
+    /// SequenceNumber ascending. At most one row for a namespace that never allows more than one
+    /// pseudonym per original value; possibly several for a multi-psn namespace (see
+    /// <see cref="Models.Namespace.AllowsMultiplePseudonyms"/>).
+    /// </summary>
+    Task<IReadOnlyList<Pseudonym>> FindAllByOriginalValueAsync(
+        string namespaceName,
+        string originalValue,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Inserts <paramref name="newSequenceCandidates"/> (the missing sequence numbers a multi-psn
+    /// Create call decided to add - see <see cref="AppServices.PseudonymAppService.CreateTrustedAsync(Models.Namespace, string, long, CancellationToken)"/>)
+    /// iff they don't already exist, then returns the complete, up-to-date set of every
+    /// pseudonym stored for that (NamespaceName, OriginalValue) - not just the candidates just
+    /// inserted. That final fresh read is what makes this correct under a concurrent race: two
+    /// callers computing overlapping "missing" sets from a stale read and inserting at the same
+    /// time both end up seeing whatever actually got persisted, rather than each returning its
+    /// own possibly-incomplete candidate list.
+    /// </summary>
+    Task<IReadOnlyList<Pseudonym>> CreateSetIfNotExistAsync(
+        IReadOnlyList<Pseudonym> newSequenceCandidates,
         CancellationToken cancellationToken
     );
 

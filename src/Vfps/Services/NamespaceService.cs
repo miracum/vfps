@@ -3,6 +3,7 @@ using Grpc.Core;
 using Vfps.AppServices;
 using Vfps.Authorization;
 using Vfps.Protos;
+using Vfps.PseudonymGenerators;
 
 namespace Vfps.Services;
 
@@ -25,6 +26,7 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
             PseudonymSuffix = request.PseudonymSuffix,
             PseudonymGenerationMethod = request.PseudonymGenerationMethod,
             OriginalValueValidationRegex = request.OriginalValueValidationRegex,
+            AllowsMultiplePseudonyms = request.AllowsMultiplePseudonyms,
         };
 
         Data.Models.Namespace created;
@@ -59,6 +61,10 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
         catch (ForbiddenException ex)
         {
             throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
+        }
+        catch (PseudonymGenerationMethodNotSupportedException ex)
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
         }
 
         return new NamespaceServiceCreateResponse { Namespace = ToProto(created) };
@@ -160,6 +166,7 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
             PseudonymPrefix = @namespace.PseudonymPrefix,
             PseudonymSuffix = @namespace.PseudonymSuffix,
             OriginalValueValidationRegex = @namespace.OriginalValueValidationRegex,
+            AllowsMultiplePseudonyms = @namespace.AllowsMultiplePseudonyms,
             Meta = new Meta
             {
                 CreatedAt = Timestamp.FromDateTimeOffset(@namespace.CreatedAt),

@@ -355,6 +355,12 @@
   <data name="App.MainLayout.UnknownUser" xml:space="preserve">
     <value>Unknown user</value>
   </data>
+  <data name="App.Namespaces.AllowsMultiplePseudonyms" xml:space="preserve">
+    <value>Allow multiple pseudonyms per original value</value>
+  </data>
+  <data name="App.Namespaces.AllowsMultiplePseudonymsColumn" xml:space="preserve">
+    <value>Multiple pseudonyms</value>
+  </data>
   <data name="App.Namespaces.AllTitle" xml:space="preserve">
     <value>All namespaces</value>
   </data>

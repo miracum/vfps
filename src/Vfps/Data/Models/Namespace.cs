@@ -19,5 +19,13 @@ public class Namespace : TracksCreationAndUpdates
     /// </summary>
     public string? OriginalValueValidationRegex { get; set; } = string.Empty;
 
+    /// <summary>
+    /// When true, a single pseudonym Create call for this namespace may store more than one
+    /// distinct pseudonym for the same original value (see PseudonymAppService.CreateAsync's
+    /// `count` parameter). When false (the default), behavior is unchanged: at most one
+    /// pseudonym per original value.
+    /// </summary>
+    public bool AllowsMultiplePseudonyms { get; set; }
+
     public ICollection<Pseudonym> Pseudonyms { get; set; } = [];
 }

@@ -43,6 +43,19 @@ public class ServiceTestBase : IDisposable
             PseudonymSuffix = "-suf",
         };
 
+        var multiPsnNamespace = new Data.Models.Namespace
+        {
+            Name = "multiPsnNamespace",
+            Description = "existing namespace allowing multiple pseudonyms per original value",
+            PseudonymLength = 16,
+            CreatedAt = DateTime.UtcNow,
+            LastUpdatedAt = DateTime.UtcNow,
+            PseudonymGenerationMethod = PseudonymGenerationMethod.FullRandomHexEncoded,
+            PseudonymPrefix = "",
+            PseudonymSuffix = "",
+            AllowsMultiplePseudonyms = true,
+        };
+
         var existingPseudonym = new Data.Models.Pseudonym
         {
             NamespaceName = "existingNamespace",
@@ -53,7 +66,11 @@ public class ServiceTestBase : IDisposable
         };
 
         InMemoryPseudonymContext.Database.EnsureCreated();
-        InMemoryPseudonymContext.Namespaces.AddRange(existingNamespace, emptyNamespace);
+        InMemoryPseudonymContext.Namespaces.AddRange(
+            existingNamespace,
+            emptyNamespace,
+            multiPsnNamespace
+        );
         InMemoryPseudonymContext.Pseudonyms.AddRange(existingPseudonym);
         InMemoryPseudonymContext.SaveChanges();
         InMemoryPseudonymContext.ChangeTracker.Clear();

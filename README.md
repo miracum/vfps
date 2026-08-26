@@ -48,6 +48,44 @@ grpcurl \
   vfps.api.v1.PseudonymService/Create
 ```
 
+### Multiple pseudonyms per original value
+
+A namespace created with `"allowsMultiplePseudonyms": true` lets a single `Create` call store more
+than one distinct pseudonym for the same original value, via the request's optional `count` field
+(omitted or `1` preserves the default single-pseudonym behavior for every other namespace):
+
+```sh
+grpcurl \
+  -plaintext \
+  -import-path src/Vfps/ \
+  -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
+  -d '{"name": "multi-psn-example", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED", "pseudonymLength": 32, "allowsMultiplePseudonyms": true}' \
+  127.0.0.1:8081 \
+  vfps.api.v1.NamespaceService/Create
+
+grpcurl \
+  -plaintext \
+  -import-path src/Vfps/ \
+  -proto src/Vfps/Protos/vfps/api/v1/pseudonyms.proto \
+  -d '{"namespace": "multi-psn-example", "originalValue": "to be pseudonymized", "count": 3}' \
+  127.0.0.1:8081 \
+  vfps.api.v1.PseudonymService/Create
+```
+
+The response's `pseudonyms` array holds the full set (`pseudonym` is kept, populated with the
+first one, for callers that only read a single value). The stored set for a given original value
+only ever grows: calling `Create` again with a `count` at or below what's already stored returns
+the existing set unchanged, while a larger `count` adds exactly the missing pseudonyms. CSV
+pseudonymization jobs and the FHIR `$create-pseudonym` operation don't support requesting more
+than one pseudonym - both always operate on the first (`sequenceNumber: 0`) pseudonym for a
+multi-psn namespace.
+
+> **Note**
+> The `PSEUDONYM_GENERATION_METHOD_SHA256_HEX_ENCODED` generation method has been removed -
+> it was the only deterministic method, and determinism is incompatible with generating multiple
+> distinct pseudonyms for the same original value. Namespaces can no longer be created with it;
+> this is a breaking change for anything scripting namespace creation against that enum value.
+
 ## Admin UI
 
 vfps ships with a web-based admin UI, served at `/ui`, for creating and browsing namespaces and running CSV pseudonymization jobs.
@@ -121,7 +159,7 @@ Available configuration options which can be set as environment variables:
 | `CsvProcessing__StalledJobThreshold`       | `TimeSpan` | `"0.00:10:00"` | How long a CSV job can sit `Running` with no progress update before it's marked `Stalled` (its worker likely crashed, lost its database connection, or was killed by an app restart). |
 | `CsvProcessing__MissingValuePlaceholders`  | `string[]` | `["NA", "NULL"]` | Source values (matched case-insensitively, after trimming) treated as "no value" and passed through to the output unchanged instead of being pseudonymized/de-pseudonymized. A blank/whitespace-only cell is always treated this way regardless of this setting. Set to `[]` to only skip genuinely blank cells. |
 
-CSV job input/output bytes never pass through the vfps process itself: the admin UI uploads directly to a presigned S3 PUT URL and downloads directly from a presigned S3 GET URL, and the Hangfire background job (running in-process, no separate worker deployment) streams the file S3-to-S3. See `compose.yaml`'s `s3` profile for a local MinIO setup usable for manual testing.
+CSV job input/output bytes never pass through the vfps process itself: the admin UI uploads directly to a presigned S3 PUT URL and downloads directly from a presigned S3 GET URL, and the Hangfire background job (running in-process, no separate worker deployment) streams the file S3-to-S3. See `compose.yaml`'s `s3` profile for a local SeaweedFS setup usable for manual testing.
 
 Each job runs in one of two directions: **Pseudonymize** (replace original values with their pseudonym - requires write access to every namespace used) or **De-pseudonymize** (replace pseudonym values with their original value - requires reverse-lookup access, since this reveals data). A pseudonym with no match in its namespace during de-pseudonymization is left unchanged in the output rather than failing the job.
 
@@ -184,7 +222,7 @@ will create a pseudonym in the `test` namespace. The expected response looks as 
 
 ### Build & run
 
-Start an empty PostgreSQL database, Keycloak, and MinIO for development (optionally add `-d` to run in the background):
+Start an empty PostgreSQL database, Keycloak, and SeaweedFS for development (optionally add `-d` to run in the background):
 
 ```sh
 docker compose -f compose.yaml --profile=keycloak --profile=s3 up

@@ -33,9 +33,9 @@ public class PseudonymRepository : IPseudonymRepository
         WITH
             cte AS (
             INSERT INTO
-                pseudonyms (namespace_name, original_value, pseudonym_value, created_at, last_updated_at)
+                pseudonyms (namespace_name, original_value, pseudonym_value, sequence_number, created_at, last_updated_at)
             VALUES
-                ({0}, {1}, {2}, NOW(), NOW()) ON CONFLICT (namespace_name, original_value)
+                ({0}, {1}, {2}, {3}, NOW(), NOW()) ON CONFLICT (namespace_name, original_value, sequence_number)
             DO NOTHING RETURNING *
             )
         SELECT *
@@ -43,14 +43,14 @@ public class PseudonymRepository : IPseudonymRepository
         UNION
         SELECT *
         FROM pseudonyms
-        WHERE namespace_name={0} AND original_value={1}
+        WHERE namespace_name={0} AND original_value={1} AND sequence_number={3}
     ";
 
     private readonly string SqliteInsertCommand =
         @"
-        INSERT INTO pseudonyms (namespace_name, original_value, pseudonym_value, created_at, last_updated_at)
-        VALUES ({0}, {1}, {2}, time('now'), time('now'))
-        ON CONFLICT (namespace_name, original_value)
+        INSERT INTO pseudonyms (namespace_name, original_value, pseudonym_value, sequence_number, created_at, last_updated_at)
+        VALUES ({0}, {1}, {2}, {3}, time('now'), time('now'))
+        ON CONFLICT (namespace_name, original_value, sequence_number)
         DO UPDATE SET original_value=excluded.original_value
         WHERE original_value IS excluded.original_value
         RETURNING *;
@@ -93,7 +93,8 @@ public class PseudonymRepository : IPseudonymRepository
                         UpsertCommand,
                         pseudonym.NamespaceName,
                         pseudonym.OriginalValue,
-                        pseudonym.PseudonymValue
+                        pseudonym.PseudonymValue,
+                        pseudonym.SequenceNumber
                     )
                     .AsNoTracking()
                     .ToListAsync();
@@ -153,10 +154,12 @@ public class PseudonymRepository : IPseudonymRepository
         // proven, single-row retry logic here instead of duplicating it for the batch case.
         if (upserted.Count < pseudonyms.Count)
         {
-            var covered = upserted.Select(p => (p.NamespaceName, p.OriginalValue)).ToHashSet();
+            var covered = upserted
+                .Select(p => (p.NamespaceName, p.OriginalValue, p.SequenceNumber))
+                .ToHashSet();
             foreach (
                 var missing in pseudonyms.Where(p =>
-                    !covered.Contains((p.NamespaceName, p.OriginalValue))
+                    !covered.Contains((p.NamespaceName, p.OriginalValue, p.SequenceNumber))
                 )
             )
             {
@@ -207,7 +210,7 @@ public class PseudonymRepository : IPseudonymRepository
     )
     {
         var values = new StringBuilder();
-        parameters = new object[pseudonyms.Count * 3];
+        parameters = new object[pseudonyms.Count * 4];
         for (var i = 0; i < pseudonyms.Count; i++)
         {
             if (i > 0)
@@ -215,7 +218,7 @@ public class PseudonymRepository : IPseudonymRepository
                 values.Append(", ");
             }
 
-            var baseIndex = i * 3;
+            var baseIndex = i * 4;
             values
                 .Append('(')
                 .Append('{')
@@ -224,24 +227,32 @@ public class PseudonymRepository : IPseudonymRepository
                 .Append(baseIndex + 1)
                 .Append("}, {")
                 .Append(baseIndex + 2)
+                .Append("}, {")
+                .Append(baseIndex + 3)
                 .Append("})");
 
             parameters[baseIndex] = pseudonyms[i].NamespaceName;
             parameters[baseIndex + 1] = pseudonyms[i].OriginalValue;
             parameters[baseIndex + 2] = pseudonyms[i].PseudonymValue;
+            parameters[baseIndex + 3] = pseudonyms[i].SequenceNumber;
         }
 
+        // The join on sequence_number too (not just namespace_name/original_value) matters for a
+        // multi-psn namespace (Namespace.AllowsMultiplePseudonyms): several rows can share
+        // (namespace_name, original_value) there, and without it this would return every one of
+        // them for a single input row instead of exactly the one sequence number that row asked
+        // for.
         return $"""
             WITH
-                input (namespace_name, original_value, pseudonym_value) AS (
+                input (namespace_name, original_value, pseudonym_value, sequence_number) AS (
                     VALUES {values}
                 ),
                 inserted AS (
                     INSERT INTO
-                        pseudonyms (namespace_name, original_value, pseudonym_value, created_at, last_updated_at)
-                    SELECT namespace_name, original_value, pseudonym_value, NOW(), NOW()
+                        pseudonyms (namespace_name, original_value, pseudonym_value, sequence_number, created_at, last_updated_at)
+                    SELECT namespace_name, original_value, pseudonym_value, sequence_number, NOW(), NOW()
                     FROM input
-                    ON CONFLICT (namespace_name, original_value) DO NOTHING
+                    ON CONFLICT (namespace_name, original_value, sequence_number) DO NOTHING
                     RETURNING *
                 )
             SELECT *
@@ -249,7 +260,9 @@ public class PseudonymRepository : IPseudonymRepository
             UNION
             SELECT p.*
             FROM pseudonyms p
-            JOIN input i ON p.namespace_name = i.namespace_name AND p.original_value = i.original_value
+            JOIN input i ON p.namespace_name = i.namespace_name
+                AND p.original_value = i.original_value
+                AND p.sequence_number = i.sequence_number
             """;
     }
 
@@ -273,7 +286,7 @@ public class PseudonymRepository : IPseudonymRepository
                         $"""
                         SELECT * FROM pseudonyms
                         WHERE namespace_name = {namespaceName}
-                        ORDER BY created_at DESC, original_value DESC
+                        ORDER BY created_at DESC, original_value DESC, sequence_number DESC
                         LIMIT {pageSize}
                         """
                     )
@@ -286,8 +299,9 @@ public class PseudonymRepository : IPseudonymRepository
                     $"""
                     SELECT * FROM pseudonyms
                     WHERE namespace_name = {namespaceName}
-                      AND (created_at, original_value) < ({cursor.CreatedAt}, {cursor.OriginalValue})
-                    ORDER BY created_at DESC, original_value DESC
+                      AND (created_at, original_value, sequence_number)
+                        < ({cursor.CreatedAt}, {cursor.OriginalValue}, {cursor.SequenceNumber})
+                    ORDER BY created_at DESC, original_value DESC, sequence_number DESC
                     LIMIT {pageSize}
                     """
                 )
@@ -303,7 +317,8 @@ public class PseudonymRepository : IPseudonymRepository
             .ToListAsync(cancellationToken);
 
         IEnumerable<Pseudonym> ordered = all.OrderByDescending(p => p.CreatedAt)
-            .ThenByDescending(p => p.OriginalValue, StringComparer.Ordinal);
+            .ThenByDescending(p => p.OriginalValue, StringComparer.Ordinal)
+            .ThenByDescending(p => p.SequenceNumber);
 
         if (cursor is not null)
         {
@@ -313,6 +328,11 @@ public class PseudonymRepository : IPseudonymRepository
                     || (
                         p.CreatedAt == cursor.CreatedAt
                         && string.CompareOrdinal(p.OriginalValue, cursor.OriginalValue) < 0
+                    )
+                    || (
+                        p.CreatedAt == cursor.CreatedAt
+                        && p.OriginalValue == cursor.OriginalValue
+                        && p.SequenceNumber < cursor.SequenceNumber
                     )
                 )
             );
@@ -414,5 +434,46 @@ public class PseudonymRepository : IPseudonymRepository
             .Pseudonyms.AsNoTracking()
             .Where(p => p.NamespaceName == namespaceName && p.PseudonymValue == pseudonymValue)
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Pseudonym>> FindAllByOriginalValueAsync(
+        string namespaceName,
+        string originalValue,
+        CancellationToken cancellationToken
+    )
+    {
+        return await Context
+            .Pseudonyms.AsNoTracking()
+            .Where(p => p.NamespaceName == namespaceName && p.OriginalValue == originalValue)
+            .OrderBy(p => p.SequenceNumber)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Pseudonym>> CreateSetIfNotExistAsync(
+        IReadOnlyList<Pseudonym> newSequenceCandidates,
+        CancellationToken cancellationToken
+    )
+    {
+        if (newSequenceCandidates.Count == 0)
+        {
+            return [];
+        }
+
+        // Insert whatever's missing - same upsert reasoning as CreateIfNotExistBatchAsync above,
+        // including its handling of a concurrent writer racing the same sequence number. The
+        // freshly-inserted rows it returns aren't used directly: the fresh read below is what
+        // makes this correct if a concurrent caller raced with a *different* (e.g. larger) set of
+        // missing sequence numbers for the same original value - every caller ends up seeing
+        // whatever actually got persisted, not just their own candidates.
+        await CreateIfNotExistBatchAsync(newSequenceCandidates, cancellationToken);
+
+        var first = newSequenceCandidates[0];
+        return await FindAllByOriginalValueAsync(
+            first.NamespaceName,
+            first.OriginalValue,
+            cancellationToken
+        );
     }
 }

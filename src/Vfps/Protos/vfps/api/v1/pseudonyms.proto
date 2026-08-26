@@ -67,6 +67,10 @@ message PseudonymListPaginationToken {
   // original_value of the last-seen pseudonym in the previous page - tie-breaker for
   // pseudonyms sharing the same created_at
   string original_value = 2;
+  // sequence_number of the last-seen pseudonym in the previous page - final tie-breaker for
+  // pseudonyms sharing the same (created_at, original_value), which a multi-psn namespace
+  // (see Namespace.allows_multiple_pseudonyms) can otherwise produce
+  int64 sequence_number = 3;
 }
 
 // message to fetch details for a given pseudonym
@@ -89,12 +93,23 @@ message PseudonymServiceCreateRequest {
   string namespace = 1;
   // the original value to be pseudonymized
   string original_value = 2;
+  // how many distinct pseudonyms to store for this original value. Only valid to set above 1
+  // when the target namespace has allows_multiple_pseudonyms set - unset (or 1) preserves
+  // today's single-pseudonym behavior for every other namespace. If fewer than this many
+  // pseudonyms already exist for the original value, exactly the missing ones are generated and
+  // added; if this many or more already exist, the existing set is returned unchanged.
+  optional int64 count = 3;
 }
 
 // response for creating a pseudonym entity
 message PseudonymServiceCreateResponse {
-  // the created pseudonym
+  // the created pseudonym. For a multi-psn namespace this is always the first (sequence_number
+  // 0) pseudonym of the full set below, kept for backwards compatibility with callers that only
+  // read this field.
   Pseudonym pseudonym = 1;
+  // every pseudonym stored for the requested original value after this call - length 1 unless
+  // the target namespace allows multiple pseudonyms per original value.
+  repeated Pseudonym pseudonyms = 2;
 }
 
 // the pseudonym entity
@@ -108,4 +123,7 @@ message Pseudonym {
   optional string original_value = 3;
   // the pseudonym created for the original value
   string pseudonym_value = 4;
+  // this pseudonym's position (starting at 0) among possibly multiple pseudonyms stored for the
+  // same original value in a multi-psn namespace. Always 0 otherwise.
+  int64 sequence_number = 5;
 }

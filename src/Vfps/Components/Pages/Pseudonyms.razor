@@ -226,12 +226,17 @@
         try
         {
             var user = await GetUserAsync();
-            _createResult = await PseudonymAppService.CreateAsync(
+            // count: 1 - this manual "create a test pseudonym" form always creates/shows exactly
+            // one. For a multi-psn namespace that already has more than one pseudonym stored for
+            // this original value, this is always the first one (sequence number 0).
+            var created = await PseudonymAppService.CreateAsync(
                 NamespaceName,
                 _createValue,
+                1,
                 user,
                 CancellationToken.None
             );
+            _createResult = created[0];
             _createValue = string.Empty;
 
             if (_grid is not null)

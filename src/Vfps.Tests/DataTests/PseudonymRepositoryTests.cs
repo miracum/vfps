@@ -27,13 +27,24 @@ public class PseudonymRepositoryTests
 
         var sql = PseudonymRepository.BuildBatchUpsertSql([pseudonym], out var parameters);
 
-        sql.Should().Contain("VALUES ({0}, {1}, {2})");
+        sql.Should().Contain("VALUES ({0}, {1}, {2}, {3})");
         sql.Should().Contain("INSERT INTO");
-        sql.Should().Contain("pseudonyms (namespace_name, original_value, pseudonym_value");
-        sql.Should().Contain("ON CONFLICT (namespace_name, original_value) DO NOTHING");
+        sql.Should()
+            .Contain(
+                "pseudonyms (namespace_name, original_value, pseudonym_value, sequence_number"
+            );
+        sql.Should()
+            .Contain("ON CONFLICT (namespace_name, original_value, sequence_number) DO NOTHING");
+        // The final SELECT must also join on sequence_number, not just namespace_name/
+        // original_value - otherwise a multi-psn namespace with several rows sharing
+        // (namespace_name, original_value) would return every one of them for a single input row.
+        sql.Should().Contain("AND p.sequence_number = i.sequence_number");
         parameters
             .Should()
-            .BeEquivalentTo(["ns", "value1", "pseudonym-of-value1"], o => o.WithStrictOrdering());
+            .BeEquivalentTo(
+                new object[] { "ns", "value1", "pseudonym-of-value1", 0 },
+                o => o.WithStrictOrdering()
+            );
     }
 
     [Fact]
@@ -48,24 +59,29 @@ public class PseudonymRepositoryTests
 
         var sql = PseudonymRepository.BuildBatchUpsertSql(pseudonyms, out var parameters);
 
-        // Each row's three placeholders must be contiguous and non-overlapping, in the same
+        // Each row's four placeholders must be contiguous and non-overlapping, in the same
         // order as the input list - a single off-by-one here would silently pair one row's
         // namespace with a different row's original/pseudonym value.
-        sql.Should().Contain("VALUES ({0}, {1}, {2}), ({3}, {4}, {5}), ({6}, {7}, {8})");
+        sql.Should()
+            .Contain("VALUES ({0}, {1}, {2}, {3}), ({4}, {5}, {6}, {7}), ({8}, {9}, {10}, {11})");
         parameters
             .Should()
             .BeEquivalentTo(
-                [
+                new object[]
+                {
                     "ns1",
                     "value1",
                     "pseudonym-of-value1",
+                    0,
                     "ns2",
                     "value2",
                     "pseudonym-of-value2",
+                    0,
                     "ns3",
                     "value3",
                     "pseudonym-of-value3",
-                ],
+                    0,
+                },
                 o => o.WithStrictOrdering()
             );
     }
