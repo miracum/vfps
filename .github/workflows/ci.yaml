@@ -279,7 +279,7 @@ jobs:
           PLAYWRIGHT_BASE_URL: http://127.0.0.1:8080
         run: |
           # CSV-upload tests need the S3-backed object storage this default deployment doesn't
-          # wire up (the "s3" compose profile's MinIO) - see Vfps.PlaywrightTests/CsvJobsTests.cs.
+          # wire up (the "s3" compose profile's SeaweedFS) - see Vfps.PlaywrightTests/CsvJobsTests.cs.
           dotnet test src/Vfps.PlaywrightTests \
             --configuration=Release \
             --filter-not-trait "Category=RequiresS3"
