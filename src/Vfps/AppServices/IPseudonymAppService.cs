@@ -92,9 +92,10 @@ public interface IPseudonymAppService
     /// <summary>
     /// Lists pseudonyms in a namespace, keyset-paginated. Deliberately returns
     /// <see cref="PseudonymSummaryDto"/> rather than a type carrying the original value - this
-    /// is the read path that a UI renders in bulk, and the original value must never cross into
-    /// it. <see cref="ReverseLookupAsync"/> is the only way to see an original value, one record
-    /// at a time. Requires read access to the namespace.
+    /// is the bulk projection exposed to external callers (gRPC/REST), and the original value
+    /// must never cross into it. <see cref="ReverseLookupAsync"/> is the only way an external
+    /// caller can see an original value, one record at a time. The Blazor pseudonym list page
+    /// uses <see cref="SearchAsync"/> instead. Requires read access to the namespace.
     /// </summary>
     Task<PseudonymPageDto> ListAsync(
         string namespaceName,
@@ -106,21 +107,23 @@ public interface IPseudonymAppService
     );
 
     /// <summary>
-    /// Same keyset pagination as <see cref="ListAsync"/>, but each item also carries its original
-    /// value - requires both read and reverse-lookup access to the namespace. The underlying
-    /// repository query already fetches the full row (see
-    /// <see cref="Data.IPseudonymRepository.ListByNamespaceAsync"/>), so this costs no extra
-    /// round trip over <see cref="ListAsync"/>; it only projects a field that method deliberately
-    /// drops. Not exposed via gRPC/REST - <see cref="ListAsync"/> remains the bulk projection for
-    /// external callers, deliberately without original values. Only for the Blazor pseudonym list
-    /// page, which shows original values inline for users who already have reverse-lookup access
-    /// instead of a per-row reveal button that would otherwise mean one
-    /// <see cref="ReverseLookupAsync"/> call per row.
+    /// Offset-paginated, optionally search-filtered listing for the Blazor pseudonym list page -
+    /// unlike <see cref="ListAsync"/>'s keyset pagination, this always returns a total count so
+    /// the grid can render "page X of Y" and jump directly to a page. <paramref name="searchText"/>
+    /// is matched as a case-insensitive substring against the pseudonym value, and - only when
+    /// <paramref name="user"/> already has reverse-lookup access to the namespace - the original
+    /// value too; null or blank returns every row. Each returned item's
+    /// <see cref="PseudonymSearchItemDto.OriginalValue"/> is likewise populated only when
+    /// <paramref name="user"/> has reverse-lookup access, null otherwise - the same gate
+    /// <see cref="ReverseLookupAsync"/> uses, just applied per page instead of one pseudonym at a
+    /// time, so the list page can show original values inline without a per-row reveal button.
+    /// Requires read access to the namespace.
     /// </summary>
-    Task<PseudonymWithOriginalValuePageDto> ListWithOriginalValuesAsync(
+    Task<PseudonymSearchPageDto> SearchAsync(
         string namespaceName,
-        int pageSize,
-        string? pageToken,
+        string? searchText,
+        int skip,
+        int take,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
     );
@@ -165,19 +168,22 @@ public record PseudonymPageDto(
     long? TotalSize
 );
 
-/// <summary>Pseudonym projection for <see cref="IPseudonymAppService.ListWithOriginalValuesAsync"/> - includes the original value.</summary>
-public record PseudonymWithOriginalValueDto(
+/// <summary>
+/// Pseudonym projection for <see cref="IPseudonymAppService.SearchAsync"/>. Unlike
+/// <see cref="PseudonymSummaryDto"/>, this carries the original value - but only when the
+/// requesting user has reverse-lookup access; it's null otherwise. Never null/non-null on a
+/// per-row basis within one page - it's a namespace-wide permission, so every item in a given
+/// <see cref="PseudonymSearchPageDto"/> has it set the same way.
+/// </summary>
+public record PseudonymSearchItemDto(
     string NamespaceName,
     string PseudonymValue,
-    string OriginalValue,
+    string? OriginalValue,
     DateTimeOffset CreatedAt,
     DateTimeOffset LastUpdatedAt
 );
 
-public record PseudonymWithOriginalValuePageDto(
-    IReadOnlyList<PseudonymWithOriginalValueDto> Items,
-    string? NextPageToken
-);
+public record PseudonymSearchPageDto(IReadOnlyList<PseudonymSearchItemDto> Items, long TotalCount);
 
 public class NamespaceNotFoundException(string namespaceName)
     : Exception($"The requested pseudonym namespace '{namespaceName}' does not exist.")

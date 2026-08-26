@@ -81,6 +81,28 @@ public class CachingPseudonymRepository(
     }
 
     /// <inheritdoc/>
+    public async Task<(IReadOnlyList<Pseudonym> Items, long TotalCount)> SearchByNamespaceAsync(
+        string namespaceName,
+        string? searchText,
+        bool includeOriginalValueInSearch,
+        int skip,
+        int take,
+        CancellationToken cancellationToken
+    )
+    {
+        // Not cached: same reasoning as ListByNamespaceAsync above - a bulk browsing/search
+        // query, not the single-key lookup this cache (keyed by original_value) is designed for.
+        return await Repository.SearchByNamespaceAsync(
+            namespaceName,
+            searchText,
+            includeOriginalValueInSearch,
+            skip,
+            take,
+            cancellationToken
+        );
+    }
+
+    /// <inheritdoc/>
     public async Task<Pseudonym?> FindByPseudonymValueAsync(
         string namespaceName,
         string pseudonymValue,

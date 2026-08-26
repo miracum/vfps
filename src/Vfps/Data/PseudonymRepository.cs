@@ -346,6 +346,64 @@ public class PseudonymRepository : IPseudonymRepository
     }
 
     /// <inheritdoc/>
+    public async Task<(IReadOnlyList<Pseudonym> Items, long TotalCount)> SearchByNamespaceAsync(
+        string namespaceName,
+        string? searchText,
+        bool includeOriginalValueInSearch,
+        int skip,
+        int take,
+        CancellationToken cancellationToken
+    )
+    {
+        var query = Context.Pseudonyms.AsNoTracking().Where(p => p.NamespaceName == namespaceName);
+
+        var trimmedSearch = string.IsNullOrWhiteSpace(searchText) ? null : searchText.Trim();
+        if (trimmedSearch is not null)
+        {
+            if (Context.Database.IsNpgsql())
+            {
+                var pattern = $"%{EscapeLikePattern(trimmedSearch)}%";
+                query = includeOriginalValueInSearch
+                    ? query.Where(p =>
+                        EF.Functions.ILike(p.PseudonymValue, pattern, LikeEscapeCharacter)
+                        || EF.Functions.ILike(p.OriginalValue, pattern, LikeEscapeCharacter)
+                    )
+                    : query.Where(p =>
+                        EF.Functions.ILike(p.PseudonymValue, pattern, LikeEscapeCharacter)
+                    );
+            }
+            else
+            {
+                // SQLite (test-only, never production scale - same reasoning as
+                // ListByNamespaceAsync above): EF.Functions.ILike is Npgsql-only, so fall back to
+                // a plain case-insensitive Contains, which EF translates to SQLite's LOWER().
+                var needle = trimmedSearch.ToLowerInvariant();
+                query = includeOriginalValueInSearch
+                    ? query.Where(p =>
+                        p.PseudonymValue.ToLower().Contains(needle)
+                        || p.OriginalValue.ToLower().Contains(needle)
+                    )
+                    : query.Where(p => p.PseudonymValue.ToLower().Contains(needle));
+            }
+        }
+
+        var totalCount = await query.LongCountAsync(cancellationToken);
+        var items = await query
+            .OrderByDescending(p => p.CreatedAt)
+            .ThenByDescending(p => p.PseudonymValue)
+            .Skip(skip)
+            .Take(take)
+            .ToListAsync(cancellationToken);
+
+        return (items, totalCount);
+    }
+
+    private const string LikeEscapeCharacter = "\\";
+
+    private static string EscapeLikePattern(string value) =>
+        value.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_");
+
+    /// <inheritdoc/>
     public async Task<Pseudonym?> FindByPseudonymValueAsync(
         string namespaceName,
         string pseudonymValue,

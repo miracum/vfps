@@ -130,14 +130,8 @@
   <data name="App.Common.Name" xml:space="preserve">
     <value>Name</value>
   </data>
-  <data name="App.Common.Next" xml:space="preserve">
-    <value>Weiter</value>
-  </data>
   <data name="App.Common.Open" xml:space="preserve">
     <value>Öffnen</value>
-  </data>
-  <data name="App.Common.Previous" xml:space="preserve">
-    <value>Zurück</value>
   </data>
   <data name="App.CsvJobs.AddColumnMapping" xml:space="preserve">
     <value>Spaltenzuordnung hinzufügen</value>
@@ -489,5 +483,11 @@
   </data>
   <data name="App.Pseudonyms.ReverseLookupTitle" xml:space="preserve">
     <value>Reverse-Lookup</value>
+  </data>
+  <data name="App.Pseudonyms.SearchPlaceholder" xml:space="preserve">
+    <value>Nach Pseudonymwert suchen</value>
+  </data>
+  <data name="App.Pseudonyms.SearchWithOriginalValuePlaceholder" xml:space="preserve">
+    <value>Nach Pseudonym- oder Originalwert suchen</value>
   </data>
 </root>

@@ -193,85 +193,6 @@ public class PseudonymAppService(
             );
         }
 
-        var (pseudonyms, nextPageToken) = await FetchPageAsync(
-            namespaceName,
-            pageSize,
-            pageToken,
-            cancellationToken
-        );
-
-        long? totalSize = includeTotalSize
-            ? await pseudonymRepository.CountByNamespaceAsync(namespaceName, cancellationToken)
-            : null;
-
-        var items = pseudonyms
-            .Select(p => new PseudonymSummaryDto(
-                p.NamespaceName,
-                p.PseudonymValue,
-                p.CreatedAt,
-                p.LastUpdatedAt
-            ))
-            .ToList();
-
-        return new PseudonymPageDto(items, nextPageToken, totalSize);
-    }
-
-    /// <inheritdoc/>
-    public async Task<PseudonymWithOriginalValuePageDto> ListWithOriginalValuesAsync(
-        string namespaceName,
-        int pageSize,
-        string? pageToken,
-        ClaimsPrincipal user,
-        CancellationToken cancellationToken
-    )
-    {
-        var _ =
-            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
-            ?? throw new NamespaceNotFoundException(namespaceName);
-        if (!permissionChecker.HasReadAccess(user, namespaceName))
-        {
-            throw new ForbiddenException(
-                $"Read access to namespace '{namespaceName}' is required."
-            );
-        }
-
-        if (!permissionChecker.HasReverseLookupAccess(user, namespaceName))
-        {
-            throw new ForbiddenException(
-                $"Reverse-lookup access to namespace '{namespaceName}' is required."
-            );
-        }
-
-        var (pseudonyms, nextPageToken) = await FetchPageAsync(
-            namespaceName,
-            pageSize,
-            pageToken,
-            cancellationToken
-        );
-
-        var items = pseudonyms
-            .Select(p => new PseudonymWithOriginalValueDto(
-                p.NamespaceName,
-                p.PseudonymValue,
-                p.OriginalValue,
-                p.CreatedAt,
-                p.LastUpdatedAt
-            ))
-            .ToList();
-
-        return new PseudonymWithOriginalValuePageDto(items, nextPageToken);
-    }
-
-    private async Task<(
-        IReadOnlyList<Data.Models.Pseudonym> Items,
-        string? NextPageToken
-    )> FetchPageAsync(
-        string namespaceName,
-        int pageSize,
-        string? pageToken,
-        CancellationToken cancellationToken
-    )
-    {
         var effectivePageSize = pageSize <= 0 ? DefaultPageSize : pageSize;
         var cursor = DecodeCursor(pageToken);
 
@@ -295,7 +216,65 @@ public class PseudonymAppService(
             );
         }
 
-        return (pseudonyms, nextPageToken);
+        long? totalSize = includeTotalSize
+            ? await pseudonymRepository.CountByNamespaceAsync(namespaceName, cancellationToken)
+            : null;
+
+        var items = pseudonyms
+            .Select(p => new PseudonymSummaryDto(
+                p.NamespaceName,
+                p.PseudonymValue,
+                p.CreatedAt,
+                p.LastUpdatedAt
+            ))
+            .ToList();
+
+        return new PseudonymPageDto(items, nextPageToken, totalSize);
+    }
+
+    /// <inheritdoc/>
+    public async Task<PseudonymSearchPageDto> SearchAsync(
+        string namespaceName,
+        string? searchText,
+        int skip,
+        int take,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        var _ =
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            ?? throw new NamespaceNotFoundException(namespaceName);
+        if (!permissionChecker.HasReadAccess(user, namespaceName))
+        {
+            throw new ForbiddenException(
+                $"Read access to namespace '{namespaceName}' is required."
+            );
+        }
+
+        var canRevealOriginalValues = permissionChecker.HasReverseLookupAccess(user, namespaceName);
+        var effectiveTake = take <= 0 ? DefaultPageSize : take;
+
+        var (pseudonyms, totalCount) = await pseudonymRepository.SearchByNamespaceAsync(
+            namespaceName,
+            searchText,
+            canRevealOriginalValues,
+            Math.Max(skip, 0),
+            effectiveTake,
+            cancellationToken
+        );
+
+        var items = pseudonyms
+            .Select(p => new PseudonymSearchItemDto(
+                p.NamespaceName,
+                p.PseudonymValue,
+                canRevealOriginalValues ? p.OriginalValue : null,
+                p.CreatedAt,
+                p.LastUpdatedAt
+            ))
+            .ToList();
+
+        return new PseudonymSearchPageDto(items, totalCount);
     }
 
     /// <inheritdoc/>

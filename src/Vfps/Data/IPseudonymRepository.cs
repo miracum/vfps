@@ -51,6 +51,32 @@ public interface IPseudonymRepository
     Task<long> CountByNamespaceAsync(string namespaceName, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Offset-paged, case-insensitive substring search within a namespace, ordered the same as
+    /// <see cref="ListByNamespaceAsync"/>. Always pays for a total count alongside the page
+    /// itself - unlike <see cref="CountByNamespaceAsync"/>, that cost isn't optional here, since
+    /// the caller (the Blazor pseudonym list page) needs it to render "page X of Y". A substring
+    /// scan can't use a plain b-tree index, so this is a full scan of the namespace at any scale
+    /// - acceptable for an admin-facing per-namespace browse, not meant for a hot path.
+    /// <paramref name="searchText"/> is matched against <c>pseudonym_value</c> (and, when
+    /// <paramref name="includeOriginalValueInSearch"/> is true, <c>original_value</c>) as a
+    /// substring, case-insensitively; null or blank returns every row in the namespace,
+    /// unfiltered. Callers must only pass <paramref name="includeOriginalValueInSearch"/> true
+    /// when the caller already has reverse-lookup access to the namespace - matching against
+    /// original values is itself a reverse-lookup-shaped capability (it lets a caller confirm an
+    /// original value is present without ever seeing it returned), so this repository trusts the
+    /// caller to have already gated it. See
+    /// <see cref="AppServices.IPseudonymAppService.SearchAsync"/>.
+    /// </summary>
+    Task<(IReadOnlyList<Pseudonym> Items, long TotalCount)> SearchByNamespaceAsync(
+        string namespaceName,
+        string? searchText,
+        bool includeOriginalValueInSearch,
+        int skip,
+        int take,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Counts all pseudonyms, grouped by namespace, in one query. Same full-scan-class cost
     /// as <see cref="CountByNamespaceAsync"/> (across every namespace instead of one) - only
     /// called by <see cref="PseudonymCountMetricsBackgroundService"/>'s periodic metrics
