@@ -23,9 +23,10 @@ public class PseudonymAppService(
     private const int DefaultPageSize = 25;
 
     /// <inheritdoc/>
-    public async Task<Data.Models.Pseudonym> CreateAsync(
+    public async Task<IReadOnlyList<Data.Models.Pseudonym>> CreateAsync(
         string namespaceName,
         string originalValue,
+        long count,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
     )
@@ -37,7 +38,11 @@ public class PseudonymAppService(
             );
         }
 
-        return await CreateTrustedAsync(namespaceName, originalValue, cancellationToken);
+        var @namespace =
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            ?? throw new NamespaceNotFoundException(namespaceName);
+
+        return await CreateTrustedAsync(@namespace, originalValue, count, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -61,6 +66,18 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
+        var created = await CreateTrustedAsync(@namespace, originalValue, 1, cancellationToken);
+        return created[0];
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Data.Models.Pseudonym>> CreateTrustedAsync(
+        Data.Models.Namespace @namespace,
+        string originalValue,
+        long count,
+        CancellationToken cancellationToken
+    )
+    {
         if (string.IsNullOrWhiteSpace(originalValue))
         {
             throw new ArgumentException(
@@ -69,34 +86,90 @@ public class PseudonymAppService(
             );
         }
 
+        if (count < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(count), "count must be at least 1.");
+        }
+
+        if (count > 1 && !@namespace.AllowsMultiplePseudonyms)
+        {
+            throw new MultiplePseudonymsNotAllowedException(@namespace.Name);
+        }
+
         ValidateOriginalValue(@namespace, originalValue);
 
-        string pseudonymValue;
-        using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
-        {
-            activity?.SetTag("Method", @namespace.PseudonymGenerationMethod.ToString());
-            pseudonymValue = methodsLookup.Generate(
-                @namespace.PseudonymGenerationMethod,
-                originalValue,
-                @namespace.PseudonymLength
-            );
-        }
-        pseudonymValue = @namespace.PseudonymPrefix + pseudonymValue + @namespace.PseudonymSuffix;
-
-        var pseudonym = new Data.Models.Pseudonym
-        {
-            NamespaceName = @namespace.Name,
-            OriginalValue = originalValue,
-            PseudonymValue = pseudonymValue,
-        };
-
-        // A fresh, pooled DbContext per call rather than the scoped pseudonymRepository above -
-        // this overload is what the CSV job runner calls, many times concurrently, within a
+        // A fresh, pooled DbContext per call rather than the scoped pseudonymRepository field -
+        // this method is what the CSV job runner calls, many times concurrently, within a
         // single Hangfire job's DI scope. DbContext instances aren't safe for concurrent use, so
         // the scoped one shared across that whole job would throw if used this way.
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var upserted = await new PseudonymRepository(context).CreateIfNotExist(pseudonym);
-        return upserted ?? throw new PseudonymUpsertFailedException(@namespace.Name);
+        var repository = new PseudonymRepository(context);
+
+        // Grow-to-N idempotency: a count at or below what's already stored is always a no-op -
+        // existing pseudonyms are never regenerated or truncated, only ever added to.
+        var existing = await repository.FindAllByOriginalValueAsync(
+            @namespace.Name,
+            originalValue,
+            cancellationToken
+        );
+        if (existing.Count >= count)
+        {
+            return existing;
+        }
+
+        var knownPseudonymValues = new HashSet<string>(
+            existing.Select(p => p.PseudonymValue),
+            StringComparer.Ordinal
+        );
+        var newSequenceCandidates = new List<Data.Models.Pseudonym>((int)(count - existing.Count));
+        for (var sequenceNumber = existing.Count; sequenceNumber < count; sequenceNumber++)
+        {
+            newSequenceCandidates.Add(
+                new Data.Models.Pseudonym
+                {
+                    NamespaceName = @namespace.Name,
+                    OriginalValue = originalValue,
+                    PseudonymValue = GenerateUniquePseudonymValue(@namespace, knownPseudonymValues),
+                    SequenceNumber = sequenceNumber,
+                }
+            );
+        }
+
+        return await repository.CreateSetIfNotExistAsync(newSequenceCandidates, cancellationToken);
+    }
+
+    // Bounded retries against an in-batch collision - astronomically unlikely for any registered
+    // (all non-deterministic) generator at a realistic length, but a real possibility now that
+    // several values are generated for the same original value in one call, rather than each
+    // value being generated independently across the whole table.
+    private const int MaxGenerationAttempts = 5;
+
+    private string GenerateUniquePseudonymValue(
+        Data.Models.Namespace @namespace,
+        HashSet<string> knownPseudonymValues
+    )
+    {
+        for (var attempt = 0; attempt < MaxGenerationAttempts; attempt++)
+        {
+            string pseudonymValue;
+            using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
+            {
+                activity?.SetTag("Method", @namespace.PseudonymGenerationMethod.ToString());
+                pseudonymValue = methodsLookup.Generate(
+                    @namespace.PseudonymGenerationMethod,
+                    @namespace.PseudonymLength
+                );
+            }
+            pseudonymValue =
+                @namespace.PseudonymPrefix + pseudonymValue + @namespace.PseudonymSuffix;
+
+            if (knownPseudonymValues.Add(pseudonymValue))
+            {
+                return pseudonymValue;
+            }
+        }
+
+        throw new PseudonymUpsertFailedException(@namespace.Name);
     }
 
     /// <inheritdoc/>
@@ -142,13 +215,17 @@ public class PseudonymAppService(
                 activity?.SetTag("Method", @namespace.PseudonymGenerationMethod.ToString());
                 pseudonymValue = methodsLookup.Generate(
                     @namespace.PseudonymGenerationMethod,
-                    originalValue,
                     @namespace.PseudonymLength
                 );
             }
             pseudonymValue =
                 @namespace.PseudonymPrefix + pseudonymValue + @namespace.PseudonymSuffix;
 
+            // SequenceNumber left at its default (0) - this batch path always targets the first
+            // pseudonym for an original value, same as CreateTrustedAsync's single-value overload.
+            // For a multi-psn namespace that already has additional (sequence > 0) pseudonyms
+            // stored via the dedicated count-aware create path, those are left untouched; this
+            // path only ever creates/reads sequence 0.
             distinctByKey[key] = new Data.Models.Pseudonym
             {
                 NamespaceName = @namespace.Name,
@@ -212,7 +289,7 @@ public class PseudonymAppService(
         {
             var last = pseudonyms[^1];
             nextPageToken = EncodeCursor(
-                new PseudonymPageCursor(last.CreatedAt, last.OriginalValue)
+                new PseudonymPageCursor(last.CreatedAt, last.OriginalValue, last.SequenceNumber)
             );
         }
 
@@ -349,7 +426,11 @@ public class PseudonymAppService(
         var token = new PseudonymListPaginationToken();
         token.MergeFrom(WebEncoders.Base64UrlDecode(pageToken));
 
-        return new PseudonymPageCursor(token.CreatedAt.ToDateTimeOffset(), token.OriginalValue);
+        return new PseudonymPageCursor(
+            token.CreatedAt.ToDateTimeOffset(),
+            token.OriginalValue,
+            token.SequenceNumber
+        );
     }
 
     private static string EncodeCursor(PseudonymPageCursor cursor)
@@ -358,6 +439,7 @@ public class PseudonymAppService(
         {
             CreatedAt = Timestamp.FromDateTimeOffset(cursor.CreatedAt),
             OriginalValue = cursor.OriginalValue,
+            SequenceNumber = cursor.SequenceNumber,
         };
 
         return WebEncoders.Base64UrlEncode(token.ToByteArray());

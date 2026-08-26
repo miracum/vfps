@@ -48,6 +48,44 @@ grpcurl \
   vfps.api.v1.PseudonymService/Create
 ```
 
+### Multiple pseudonyms per original value
+
+A namespace created with `"allowsMultiplePseudonyms": true` lets a single `Create` call store more
+than one distinct pseudonym for the same original value, via the request's optional `count` field
+(omitted or `1` preserves the default single-pseudonym behavior for every other namespace):
+
+```sh
+grpcurl \
+  -plaintext \
+  -import-path src/Vfps/ \
+  -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
+  -d '{"name": "multi-psn-example", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED", "pseudonymLength": 32, "allowsMultiplePseudonyms": true}' \
+  127.0.0.1:8081 \
+  vfps.api.v1.NamespaceService/Create
+
+grpcurl \
+  -plaintext \
+  -import-path src/Vfps/ \
+  -proto src/Vfps/Protos/vfps/api/v1/pseudonyms.proto \
+  -d '{"namespace": "multi-psn-example", "originalValue": "to be pseudonymized", "count": 3}' \
+  127.0.0.1:8081 \
+  vfps.api.v1.PseudonymService/Create
+```
+
+The response's `pseudonyms` array holds the full set (`pseudonym` is kept, populated with the
+first one, for callers that only read a single value). The stored set for a given original value
+only ever grows: calling `Create` again with a `count` at or below what's already stored returns
+the existing set unchanged, while a larger `count` adds exactly the missing pseudonyms. CSV
+pseudonymization jobs and the FHIR `$create-pseudonym` operation don't support requesting more
+than one pseudonym - both always operate on the first (`sequenceNumber: 0`) pseudonym for a
+multi-psn namespace.
+
+> **Note**
+> The `PSEUDONYM_GENERATION_METHOD_SHA256_HEX_ENCODED` generation method has been removed -
+> it was the only deterministic method, and determinism is incompatible with generating multiple
+> distinct pseudonyms for the same original value. Namespaces can no longer be created with it;
+> this is a breaking change for anything scripting namespace creation against that enum value.
+
 ## Admin UI
 
 vfps ships with a web-based admin UI, served at `/ui`, for creating and browsing namespaces and running CSV pseudonymization jobs.

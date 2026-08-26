@@ -11,19 +11,38 @@ namespace Vfps.AppServices;
 public interface IPseudonymAppService
 {
     /// <summary>
-    /// Creates (or fetches the existing) pseudonym for <paramref name="originalValue"/> in
-    /// <paramref name="namespaceName"/>. Requires write access to the namespace. Shared by the
+    /// Creates (or fetches/grows the existing) set of pseudonyms for <paramref name="originalValue"/>
+    /// in <paramref name="namespaceName"/>. Requires write access to the namespace. Shared by the
     /// gRPC adapter and <see cref="CsvProcessing.CsvPseudonymizationJobRunner"/>, so both paths
     /// get identical generation logic and per-namespace write-access enforcement.
     /// </summary>
+    /// <param name="namespaceName">The namespace to create the pseudonym(s) in.</param>
+    /// <param name="originalValue">The value to pseudonymize.</param>
+    /// <param name="count">
+    /// How many distinct pseudonyms the caller wants stored for <paramref name="originalValue"/>.
+    /// Must be at least 1; anything above 1 requires the namespace's
+    /// <see cref="Namespace.AllowsMultiplePseudonyms"/> to be set. If fewer than <paramref name="count"/>
+    /// already exist, exactly the missing ones are generated and added (existing ones are never
+    /// regenerated); if this many or more already exist, the existing set is returned unchanged -
+    /// a given original value's stored set only ever grows, so a repeat call with the same or a
+    /// smaller <paramref name="count"/> is always a no-op.
+    /// </param>
+    /// <param name="user">The caller, checked for write access to <paramref name="namespaceName"/>.</param>
+    /// <param name="cancellationToken">Cancellation token.</param>
+    /// <returns>Every pseudonym stored for <paramref name="originalValue"/> after this call, ordered by sequence number.</returns>
     /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is less than 1.</exception>
+    /// <exception cref="MultiplePseudonymsNotAllowedException">
+    /// <paramref name="count"/> is greater than 1 but the namespace doesn't allow multiple pseudonyms.
+    /// </exception>
     /// <exception cref="OriginalValueValidationException">
     /// <paramref name="originalValue"/> does not match the namespace's
     /// <see cref="Namespace.OriginalValueValidationRegex"/>.
     /// </exception>
-    Task<Pseudonym> CreateAsync(
+    Task<IReadOnlyList<Pseudonym>> CreateAsync(
         string namespaceName,
         string originalValue,
+        long count,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
     );
@@ -53,6 +72,10 @@ public interface IPseudonymAppService
     /// its column mappings reference exactly once before processing any rows, rather than
     /// re-fetching the same namespace on every field of every row (the dominant per-row cost
     /// otherwise, since a CSV job calls this far more often than any other caller ever would).
+    /// Single-value convenience wrapper around
+    /// <see cref="CreateTrustedAsync(Namespace, string, long, CancellationToken)"/> with
+    /// <c>count: 1</c> - always returns the first (sequence number 0) pseudonym, ignoring any
+    /// others a multi-psn namespace might already have stored for this original value.
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
     /// <exception cref="OriginalValueValidationException">
@@ -62,6 +85,28 @@ public interface IPseudonymAppService
     Task<Pseudonym> CreateTrustedAsync(
         Namespace @namespace,
         string originalValue,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Same trust boundary as <see cref="CreateTrustedAsync(Namespace, string, CancellationToken)"/>,
+    /// generalized to a <paramref name="count"/> of pseudonyms - the core multi-psn create/grow
+    /// logic. See <see cref="CreateAsync"/> for the grow-to-N semantics; this is that same logic
+    /// without the permission check.
+    /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
+    /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is less than 1.</exception>
+    /// <exception cref="MultiplePseudonymsNotAllowedException">
+    /// <paramref name="count"/> is greater than 1 but the namespace doesn't allow multiple pseudonyms.
+    /// </exception>
+    /// <exception cref="OriginalValueValidationException">
+    /// <paramref name="originalValue"/> does not match the namespace's
+    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
+    /// </exception>
+    Task<IReadOnlyList<Pseudonym>> CreateTrustedAsync(
+        Namespace @namespace,
+        string originalValue,
+        long count,
         CancellationToken cancellationToken
     );
 
@@ -211,4 +256,16 @@ public class OriginalValueValidationException(string namespaceName, string patte
 {
     public string NamespaceName { get; } = namespaceName;
     public string Pattern { get; } = pattern;
+}
+
+/// <summary>
+/// Thrown when a pseudonym Create call asks for more than one pseudonym (<c>count &gt; 1</c>)
+/// against a namespace whose <see cref="Namespace.AllowsMultiplePseudonyms"/> is false.
+/// </summary>
+public class MultiplePseudonymsNotAllowedException(string namespaceName)
+    : Exception(
+        $"Namespace '{namespaceName}' does not allow storing multiple pseudonyms per original value."
+    )
+{
+    public string NamespaceName { get; } = namespaceName;
 }

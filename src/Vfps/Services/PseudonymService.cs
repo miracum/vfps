@@ -3,6 +3,7 @@ using Grpc.Core;
 using Vfps.AppServices;
 using Vfps.Authorization;
 using Vfps.Protos;
+using Vfps.PseudonymGenerators;
 
 namespace Vfps.Services;
 
@@ -16,12 +17,15 @@ public class PseudonymService(IPseudonymAppService pseudonymAppService)
         ServerCallContext context
     )
     {
-        Data.Models.Pseudonym upsertedPseudonym;
+        var count = request.HasCount ? request.Count : 1;
+
+        IReadOnlyList<Data.Models.Pseudonym> upsertedPseudonyms;
         try
         {
-            upsertedPseudonym = await pseudonymAppService.CreateAsync(
+            upsertedPseudonyms = await pseudonymAppService.CreateAsync(
                 request.Namespace,
                 request.OriginalValue,
+                count,
                 context.GetUser(),
                 context.CancellationToken
             );
@@ -50,6 +54,14 @@ public class PseudonymService(IPseudonymAppService pseudonymAppService)
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
         }
+        catch (MultiplePseudonymsNotAllowedException ex)
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
+        }
+        catch (PseudonymGenerationMethodNotSupportedException ex)
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
+        }
         catch (PseudonymUpsertFailedException ex)
         {
             var metadata = new Metadata { { "Namespace", request.Namespace } };
@@ -57,21 +69,27 @@ public class PseudonymService(IPseudonymAppService pseudonymAppService)
             throw new RpcException(new Status(StatusCode.Internal, ex.Message), metadata);
         }
 
-        return new PseudonymServiceCreateResponse
+        var response = new PseudonymServiceCreateResponse
         {
-            Pseudonym = new Pseudonym
+            Pseudonym = ToProto(upsertedPseudonyms[0]),
+        };
+        response.Pseudonyms.AddRange(upsertedPseudonyms.Select(ToProto));
+        return response;
+    }
+
+    private static Pseudonym ToProto(Data.Models.Pseudonym pseudonym) =>
+        new()
+        {
+            Namespace = pseudonym.NamespaceName,
+            OriginalValue = pseudonym.OriginalValue,
+            PseudonymValue = pseudonym.PseudonymValue,
+            SequenceNumber = pseudonym.SequenceNumber,
+            Meta = new Meta
             {
-                Namespace = upsertedPseudonym.NamespaceName,
-                OriginalValue = upsertedPseudonym.OriginalValue,
-                PseudonymValue = upsertedPseudonym.PseudonymValue,
-                Meta = new Meta
-                {
-                    CreatedAt = Timestamp.FromDateTimeOffset(upsertedPseudonym.CreatedAt),
-                    LastUpdatedAt = Timestamp.FromDateTimeOffset(upsertedPseudonym.LastUpdatedAt),
-                },
+                CreatedAt = Timestamp.FromDateTimeOffset(pseudonym.CreatedAt),
+                LastUpdatedAt = Timestamp.FromDateTimeOffset(pseudonym.LastUpdatedAt),
             },
         };
-    }
 
     /// <inheritdoc/>
     public override async Task<PseudonymServiceGetResponse> Get(
@@ -111,20 +129,7 @@ public class PseudonymService(IPseudonymAppService pseudonymAppService)
             );
         }
 
-        return new PseudonymServiceGetResponse
-        {
-            Pseudonym = new Pseudonym
-            {
-                Namespace = pseudonym.NamespaceName,
-                OriginalValue = pseudonym.OriginalValue,
-                PseudonymValue = pseudonym.PseudonymValue,
-                Meta = new Meta
-                {
-                    CreatedAt = Timestamp.FromDateTimeOffset(pseudonym.CreatedAt),
-                    LastUpdatedAt = Timestamp.FromDateTimeOffset(pseudonym.LastUpdatedAt),
-                },
-            },
-        };
+        return new PseudonymServiceGetResponse { Pseudonym = ToProto(pseudonym) };
     }
 
     /// <inheritdoc/>

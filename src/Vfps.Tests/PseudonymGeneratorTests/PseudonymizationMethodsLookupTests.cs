@@ -20,9 +20,7 @@ public class PseudonymizationMethodsLookupTests
         }
     }
 
-    // Same reasoning as the indexer test above, but for Generate() specifically - the one place
-    // that dispatches between IPseudonymGenerator and IDeterministicPseudonymGenerator. A
-    // registered generator implementing neither would only surface here, not via the indexer.
+    // Same reasoning as the indexer test above, but for Generate() specifically.
     [Fact]
     public void Generate_ForEveryEnumValue_ShouldReturnANonEmptyPseudonym()
     {
@@ -30,21 +28,36 @@ public class PseudonymizationMethodsLookupTests
         {
             var pseudonymLength = method switch
             {
-                PseudonymGenerationMethod.Sha256HexEncoded => 64u,
                 PseudonymGenerationMethod.Uuid4 or PseudonymGenerationMethod.Uuid7 => 36u,
                 _ => 32u,
             };
 
-            sut.Generate(method, "test", pseudonymLength)
+            sut.Generate(method, pseudonymLength)
                 .Should()
                 .NotBeNullOrEmpty($"'{method}' should generate a pseudonym");
         }
     }
 
+    // The former SHA-256 method's enum number (2) is `reserved` in the proto, not reused - an
+    // existing namespace created before its removal would still have this stored. Generate() must
+    // fail loudly and clearly for it rather than silently producing something or throwing a raw
+    // KeyNotFoundException.
+    [Fact]
+    public void Generate_ForRemovedSha256Method_ShouldThrowPseudonymGenerationMethodNotSupportedException()
+    {
+        var removedMethod = (PseudonymGenerationMethod)2;
+
+        var act = () => sut.Generate(removedMethod, 64u);
+
+        act.Should()
+            .Throw<PseudonymGenerationMethodNotSupportedException>()
+            .Which.Method.Should()
+            .Be(removedMethod);
+    }
+
     [Theory]
     [InlineData(PseudonymGenerationMethod.Uuid4, 36u)]
     [InlineData(PseudonymGenerationMethod.Uuid7, 36u)]
-    [InlineData(PseudonymGenerationMethod.Sha256HexEncoded, 64u)]
     public void GetFixedPseudonymLength_WithFixedLengthMethod_ShouldReturnItsLength(
         PseudonymGenerationMethod method,
         uint expectedLength

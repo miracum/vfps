@@ -280,9 +280,245 @@ public class PseudonymAppServiceTests : ServiceTestBase
         var sut = CreatePseudonymAppService(namespaceRepository, pseudonymRepository);
 
         var act = () =>
-            sut.CreateAsync("existingNamespace", " ", UserWithRoles(), CancellationToken.None);
+            sut.CreateAsync("existingNamespace", " ", 1, UserWithRoles(), CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithCountGreaterThanOneOnOrdinaryNamespace_ShouldThrowMultiplePseudonymsNotAllowedException()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(namespaceRepository, pseudonymRepository);
+
+        var act = () =>
+            sut.CreateAsync(
+                "existingNamespace",
+                "some value",
+                2,
+                UserWithRoles(),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<MultiplePseudonymsNotAllowedException>();
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task CreateTrustedAsync_WithCountLessThanOne_ShouldThrowArgumentOutOfRangeException(
+        long count
+    )
+    {
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "existingNamespace",
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+        };
+
+        var act = () =>
+            sut.CreateTrustedAsync(@namespace, "some value", count, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public async Task CreateTrustedAsync_WithCountOnMultiPsnNamespace_ShouldCreateThatManyDistinctPseudonyms()
+    {
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "multiPsnNamespace",
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+            AllowsMultiplePseudonyms = true,
+        };
+
+        var created = await sut.CreateTrustedAsync(
+            @namespace,
+            "shared value",
+            3,
+            CancellationToken.None
+        );
+
+        created.Should().HaveCount(3);
+        created.Select(p => p.SequenceNumber).Should().BeEquivalentTo([0, 1, 2]);
+        created.Select(p => p.PseudonymValue).Distinct().Should().HaveCount(3);
+        created.Should().OnlyContain(p => p.OriginalValue == "shared value");
+    }
+
+    [Fact]
+    public async Task CreateTrustedAsync_WithLargerCountThanExisting_ShouldOnlyAddTheMissingOnes()
+    {
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "multiPsnNamespace",
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+            AllowsMultiplePseudonyms = true,
+        };
+
+        var first = await sut.CreateTrustedAsync(
+            @namespace,
+            "shared value",
+            3,
+            CancellationToken.None
+        );
+        var grown = await sut.CreateTrustedAsync(
+            @namespace,
+            "shared value",
+            5,
+            CancellationToken.None
+        );
+
+        grown.Should().HaveCount(5);
+        // The first 3 must be untouched - same pseudonym values at the same sequence numbers.
+        grown
+            .Where(p => p.SequenceNumber < 3)
+            .Select(p => p.PseudonymValue)
+            .Should()
+            .BeEquivalentTo(first.Select(p => p.PseudonymValue));
+        grown.Select(p => p.PseudonymValue).Distinct().Should().HaveCount(5);
+    }
+
+    [Fact]
+    public async Task CreateTrustedAsync_WithSmallerOrEqualCountThanExisting_ShouldReturnExistingSetUnchanged()
+    {
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "multiPsnNamespace",
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+            AllowsMultiplePseudonyms = true,
+        };
+
+        var first = await sut.CreateTrustedAsync(
+            @namespace,
+            "shared value",
+            5,
+            CancellationToken.None
+        );
+        var repeatSameCount = await sut.CreateTrustedAsync(
+            @namespace,
+            "shared value",
+            5,
+            CancellationToken.None
+        );
+        var repeatSmallerCount = await sut.CreateTrustedAsync(
+            @namespace,
+            "shared value",
+            2,
+            CancellationToken.None
+        );
+
+        repeatSameCount
+            .Select(p => p.PseudonymValue)
+            .Should()
+            .BeEquivalentTo(first.Select(p => p.PseudonymValue));
+        // Not truncated to 2 - the full, already-larger set is still returned.
+        repeatSmallerCount.Should().HaveCount(5);
+        repeatSmallerCount
+            .Select(p => p.PseudonymValue)
+            .Should()
+            .BeEquivalentTo(first.Select(p => p.PseudonymValue));
+    }
+
+    [Fact]
+    public async Task CreateTrustedAsync_SingleValueOverload_ShouldReturnFirstSequenceOnly()
+    {
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "multiPsnNamespace",
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+            AllowsMultiplePseudonyms = true,
+        };
+        var full = await sut.CreateTrustedAsync(
+            @namespace,
+            "shared value",
+            3,
+            CancellationToken.None
+        );
+
+        var single = await sut.CreateTrustedAsync(
+            @namespace,
+            "shared value",
+            CancellationToken.None
+        );
+
+        single.SequenceNumber.Should().Be(0);
+        single.PseudonymValue.Should().Be(full.Single(p => p.SequenceNumber == 0).PseudonymValue);
+    }
+
+    [Fact]
+    public async Task CreateTrustedBatchAsync_AgainstMultiPsnNamespaceWithExistingSequences_ShouldOnlyEverTouchSequenceZero()
+    {
+        // CreateTrustedBatchAsync (the CSV job path) has no `count` concept - it always operates
+        // on sequence 0 only, so it must not disturb (or be confused by) additional sequences
+        // already created via the dedicated multi-psn create path.
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "multiPsnNamespace",
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+            AllowsMultiplePseudonyms = true,
+        };
+        var multi = await sut.CreateTrustedAsync(
+            @namespace,
+            "shared value",
+            3,
+            CancellationToken.None
+        );
+
+        var batchResult = await sut.CreateTrustedBatchAsync(
+            [(@namespace, "shared value")],
+            CancellationToken.None
+        );
+
+        batchResult.Should().HaveCount(1);
+        var batchPseudonym = batchResult[(@namespace.Name, "shared value")];
+        batchPseudonym.SequenceNumber.Should().Be(0);
+        batchPseudonym
+            .PseudonymValue.Should()
+            .Be(multi.Single(p => p.SequenceNumber == 0).PseudonymValue);
+
+        var allForValue = await pseudonymRepository.FindAllByOriginalValueAsync(
+            @namespace.Name,
+            "shared value",
+            CancellationToken.None
+        );
+        allForValue.Should().HaveCount(3);
     }
 
     [Fact]

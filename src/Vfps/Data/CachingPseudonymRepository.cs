@@ -118,4 +118,33 @@ public class CachingPseudonymRepository(
             cancellationToken
         );
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Pseudonym>> FindAllByOriginalValueAsync(
+        string namespaceName,
+        string originalValue,
+        CancellationToken cancellationToken
+    )
+    {
+        // Not cached: this cache is designed around the single-pseudonym-per-key shape of
+        // CreateIfNotExist above; a multi-psn namespace's set of pseudonyms for one original
+        // value doesn't fit that single-key model, and multi-psn creation already bypasses this
+        // decorator entirely (see PseudonymAppService.CreateTrustedAsync's own fresh, pooled
+        // DbContext), so this path is never actually hot for it in practice.
+        return await Repository.FindAllByOriginalValueAsync(
+            namespaceName,
+            originalValue,
+            cancellationToken
+        );
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Pseudonym>> CreateSetIfNotExistAsync(
+        IReadOnlyList<Pseudonym> newSequenceCandidates,
+        CancellationToken cancellationToken
+    )
+    {
+        // Not cached - same reasoning as FindAllByOriginalValueAsync above.
+        return await Repository.CreateSetIfNotExistAsync(newSequenceCandidates, cancellationToken);
+    }
 }

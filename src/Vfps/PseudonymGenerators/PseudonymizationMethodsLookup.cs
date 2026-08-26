@@ -4,23 +4,17 @@ namespace Vfps.PseudonymGenerators;
 
 public class PseudonymizationMethodsLookup
 {
-    // Typed as object rather than a shared marker interface: IPseudonymGenerator and
-    // IDeterministicPseudonymGenerator represent genuinely different capabilities (does this
-    // generator need the original value or not) and deliberately share no common base - see the
-    // doc comments on each. Generate() below is the only place that needs to know which one it
-    // got.
-    private readonly IDictionary<PseudonymGenerationMethod, object> lookup;
+    private readonly IDictionary<PseudonymGenerationMethod, IPseudonymGenerator> lookup;
 
     public PseudonymizationMethodsLookup()
     {
-        lookup = new Dictionary<PseudonymGenerationMethod, object>()
+        lookup = new Dictionary<PseudonymGenerationMethod, IPseudonymGenerator>()
         {
             { PseudonymGenerationMethod.Unspecified, new CryptoRandomBase64UrlEncodedGenerator() },
             {
                 PseudonymGenerationMethod.SecureRandomBase64UrlEncoded,
                 new CryptoRandomBase64UrlEncodedGenerator()
             },
-            { PseudonymGenerationMethod.Sha256HexEncoded, new HexEncodedSha256HashGenerator() },
             { PseudonymGenerationMethod.Uuid4, new Uuid4Generator() },
             { PseudonymGenerationMethod.Uuid7, new Uuid7Generator() },
             { PseudonymGenerationMethod.FullRandomHexEncoded, new FullRandomHexEncodedGenerator() },
@@ -35,9 +29,17 @@ public class PseudonymizationMethodsLookup
         };
     }
 
-    public object this[PseudonymGenerationMethod method]
+    public IPseudonymGenerator this[PseudonymGenerationMethod method]
     {
-        get { return lookup[method]; }
+        get
+        {
+            if (!lookup.TryGetValue(method, out var generator))
+            {
+                throw new PseudonymGenerationMethodNotSupportedException(method);
+            }
+
+            return generator;
+        }
     }
 
     /// <summary>
@@ -48,29 +50,29 @@ public class PseudonymizationMethodsLookup
     /// NamespaceAppService.CreateAsync) and to drive the admin UI's namespace-creation form.
     /// </summary>
     public uint? GetFixedPseudonymLength(PseudonymGenerationMethod method) =>
-        (lookup[method] as IHasFixedPseudonymLength)?.FixedPseudonymLength;
+        (this[method] as IHasFixedPseudonymLength)?.FixedPseudonymLength;
 
     /// <summary>
-    /// Generates a pseudonym for <paramref name="method"/>, passing <paramref name="originalValue"/>
-    /// through only if the registered generator actually needs it. The single place that knows
-    /// about the <see cref="IPseudonymGenerator"/>/<see cref="IDeterministicPseudonymGenerator"/>
-    /// split, so callers (the gRPC/Blazor path and the FHIR facade) don't have to.
+    /// Generates a pseudonym for <paramref name="method"/>. Every registered generator is
+    /// non-deterministic (ignores the original value entirely) - the last deterministic method,
+    /// SHA-256, was removed because determinism is incompatible with a multi-psn namespace
+    /// generating several *distinct* pseudonyms for the same original value in one call.
     /// </summary>
-    public string Generate(
-        PseudonymGenerationMethod method,
-        string originalValue,
-        uint pseudonymLength
-    ) =>
-        lookup[method] switch
-        {
-            IDeterministicPseudonymGenerator deterministic => deterministic.GeneratePseudonym(
-                originalValue,
-                pseudonymLength
-            ),
-            IPseudonymGenerator generator => generator.GeneratePseudonym(pseudonymLength),
-            var other => throw new InvalidOperationException(
-                $"Registered generator for '{method}' ({other.GetType()}) implements neither "
-                    + $"{nameof(IPseudonymGenerator)} nor {nameof(IDeterministicPseudonymGenerator)}."
-            ),
-        };
+    public string Generate(PseudonymGenerationMethod method, uint pseudonymLength) =>
+        this[method].GeneratePseudonym(pseudonymLength);
+}
+
+/// <summary>
+/// Thrown by <see cref="PseudonymizationMethodsLookup"/> when asked to use a
+/// <see cref="PseudonymGenerationMethod"/> that has no registered generator - notably, an
+/// existing namespace created before a generation method was removed (e.g. the former SHA-256
+/// method). Reading pseudonyms already stored under such a namespace is unaffected; only
+/// generating a *new* one fails.
+/// </summary>
+public class PseudonymGenerationMethodNotSupportedException(PseudonymGenerationMethod method)
+    : Exception(
+        $"The pseudonym generation method '{method}' is no longer supported for creating new pseudonyms."
+    )
+{
+    public PseudonymGenerationMethod Method { get; } = method;
 }

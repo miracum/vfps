@@ -121,6 +121,27 @@ public class NamespaceServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task Create_WithAllowsMultiplePseudonyms_ShouldPersistAndReturnIt()
+    {
+        var request = new NamespaceServiceCreateRequest
+        {
+            Name = nameof(Create_WithAllowsMultiplePseudonyms_ShouldPersistAndReturnIt),
+            PseudonymLength = 16,
+            AllowsMultiplePseudonyms = true,
+        };
+
+        var response = await sut.Create(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
+
+        response.Namespace.AllowsMultiplePseudonyms.Should().BeTrue();
+        InMemoryPseudonymContext
+            .Namespaces.Should()
+            .Contain(n => n.Name == request.Name && n.AllowsMultiplePseudonyms);
+    }
+
+    [Fact]
     public async Task Create_WithPseudonymLengthZero_ShouldFail()
     {
         var request = new NamespaceServiceCreateRequest

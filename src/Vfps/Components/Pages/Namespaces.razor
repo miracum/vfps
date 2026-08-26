@@ -173,6 +173,19 @@
                                 </p>
                             </BbFieldContent>
                         </BbField>
+                        <BbField Class="sm:col-span-2">
+                            <BbFieldContent>
+                                <div class="flex h-10 items-center gap-2">
+                                    <BbCheckbox
+                                        @bind-Checked="_newNamespace.AllowsMultiplePseudonyms"
+                                        Id="allowsMultiplePseudonyms"
+                                    />
+                                    <label for="allowsMultiplePseudonyms" class="text-sm">
+                                        @Localizer["App.Namespaces.AllowsMultiplePseudonyms"]
+                                    </label>
+                                </div>
+                            </BbFieldContent>
+                        </BbField>
                     </div>
                     <BbButton Type="ButtonType.Submit" Loading="_isCreating" Class="mt-4">
                         @Localizer["App.Common.Create"]
@@ -198,6 +211,14 @@
                     <BbDataGridPropertyColumn Property="@(n => n.PseudonymLength)" Title="@Localizer["App.Namespaces.LengthColumn"]" />
                     <BbDataGridPropertyColumn Property="@(n => n.PseudonymPrefix)" Title="@Localizer["App.Namespaces.Prefix"]" />
                     <BbDataGridPropertyColumn Property="@(n => n.PseudonymSuffix)" Title="@Localizer["App.Namespaces.Suffix"]" />
+                    <BbDataGridTemplateColumn Title="@Localizer["App.Namespaces.AllowsMultiplePseudonymsColumn"]">
+                        <ChildContent Context="n">
+                            @if (n.AllowsMultiplePseudonyms)
+                            {
+                                <LucideIcon Name="check" Size="16" />
+                            }
+                        </ChildContent>
+                    </BbDataGridTemplateColumn>
                     <BbDataGridTemplateColumn Title="@Localizer["App.Namespaces.PseudonymsColumn"]">
                         <ChildContent Context="n">
                             <BbButton
@@ -272,7 +293,6 @@
         {
             Vfps.Protos.PseudonymGenerationMethod.SecureRandomBase64UrlEncoded =>
                 "Secure random (base64url)",
-            Vfps.Protos.PseudonymGenerationMethod.Sha256HexEncoded => "SHA-256 (hex)",
             Vfps.Protos.PseudonymGenerationMethod.Uuid4 => "UUIDv4",
             Vfps.Protos.PseudonymGenerationMethod.Uuid7 => "UUIDv7",
             Vfps.Protos.PseudonymGenerationMethod.FullRandomHexEncoded => "Full random (hex)",
@@ -337,6 +357,7 @@
                     PseudonymPrefix = _newNamespace.PseudonymPrefix,
                     PseudonymSuffix = _newNamespace.PseudonymSuffix,
                     OriginalValueValidationRegex = _newNamespace.OriginalValueValidationRegex,
+                    AllowsMultiplePseudonyms = _newNamespace.AllowsMultiplePseudonyms,
                 },
                 user,
                 CancellationToken.None
@@ -358,6 +379,10 @@
             _errorMessage = ex.Message;
         }
         catch (ForbiddenException ex)
+        {
+            _errorMessage = ex.Message;
+        }
+        catch (PseudonymGenerationMethodNotSupportedException ex)
         {
             _errorMessage = ex.Message;
         }
@@ -432,5 +457,6 @@
         public string? PseudonymPrefix { get; set; }
         public string? PseudonymSuffix { get; set; }
         public string? OriginalValueValidationRegex { get; set; }
+        public bool AllowsMultiplePseudonyms { get; set; }
     }
 }

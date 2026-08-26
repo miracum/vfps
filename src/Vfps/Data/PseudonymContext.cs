@@ -17,11 +17,23 @@ public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbCo
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Pseudonym>().HasKey(c => new { c.NamespaceName, c.OriginalValue });
+        // SequenceNumber is part of the key (rather than just (NamespaceName, OriginalValue)) so
+        // a multi-psn namespace (Namespace.AllowsMultiplePseudonyms) can store more than one
+        // pseudonym per original value. It's always 0 for a namespace that never allows more than
+        // one, so this is a no-op for every other namespace's behavior.
+        modelBuilder
+            .Entity<Pseudonym>()
+            .HasKey(c => new
+            {
+                c.NamespaceName,
+                c.OriginalValue,
+                c.SequenceNumber,
+            });
 
         // Keyset/seek pagination for PseudonymAppService.ListAsync - lets `List` page through
         // hundreds of millions of rows per namespace without the cost of OFFSET, which grows
-        // linearly with page depth.
+        // linearly with page depth. SequenceNumber is included as the final tie-breaker since
+        // OriginalValue alone is no longer guaranteed unique per namespace under multi-psn.
         modelBuilder
             .Entity<Pseudonym>()
             .HasIndex(p => new
@@ -29,8 +41,11 @@ public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbCo
                 p.NamespaceName,
                 p.CreatedAt,
                 p.OriginalValue,
+                p.SequenceNumber,
             })
-            .HasDatabaseName("ix_pseudonyms_namespace_name_created_at_original_value")
+            .HasDatabaseName(
+                "ix_pseudonyms_namespace_name_created_at_original_value_sequence_number"
+            )
             .IsCreatedConcurrently();
 
         // Reverse lookup (pseudonym_value -> original_value) has no supporting index today -

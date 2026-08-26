@@ -79,12 +79,18 @@ public class FhirController(
         Data.Models.Pseudonym upsertedPseudonym;
         try
         {
-            upsertedPseudonym = await pseudonymAppService.CreateAsync(
+            // count: 1 - this facade always returns exactly one pseudonym value. For a multi-psn
+            // namespace (Namespace.AllowsMultiplePseudonyms) that already has more than one
+            // pseudonym stored for this original value, this is always the first one
+            // (sequence number 0); it never creates additional ones.
+            var upsertedPseudonyms = await pseudonymAppService.CreateAsync(
                 namespaceName,
                 originalValue,
+                1,
                 User,
                 cancellationToken
             );
+            upsertedPseudonym = upsertedPseudonyms[0];
         }
         catch (NamespaceNotFoundException)
         {

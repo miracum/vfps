@@ -74,6 +74,69 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task Create_WithoutCount_ShouldPopulateBothPseudonymAndPseudonymsWithOneEntry()
+    {
+        var request = new PseudonymServiceCreateRequest
+        {
+            Namespace = "existingNamespace",
+            OriginalValue = nameof(
+                Create_WithoutCount_ShouldPopulateBothPseudonymAndPseudonymsWithOneEntry
+            ),
+        };
+
+        var response = await sut.Create(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
+
+        response.Pseudonyms.Should().ContainSingle();
+        response.Pseudonyms[0].PseudonymValue.Should().Be(response.Pseudonym.PseudonymValue);
+        response.Pseudonym.SequenceNumber.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Create_WithCountOnMultiPsnNamespace_ShouldPopulateFullSet()
+    {
+        var request = new PseudonymServiceCreateRequest
+        {
+            Namespace = "multiPsnNamespace",
+            OriginalValue = nameof(Create_WithCountOnMultiPsnNamespace_ShouldPopulateFullSet),
+            Count = 3,
+        };
+
+        var response = await sut.Create(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
+
+        response.Pseudonyms.Should().HaveCount(3);
+        response.Pseudonym.PseudonymValue.Should().Be(response.Pseudonyms[0].PseudonymValue);
+        response
+            .Pseudonyms.Select(p => p.SequenceNumber)
+            .Should()
+            .BeEquivalentTo(new[] { 0, 1, 2 });
+        response.Pseudonyms.Select(p => p.PseudonymValue).Distinct().Should().HaveCount(3);
+    }
+
+    [Fact]
+    public async Task Create_WithCountGreaterThanOneOnOrdinaryNamespace_ShouldThrowFailedPrecondition()
+    {
+        var request = new PseudonymServiceCreateRequest
+        {
+            Namespace = "existingNamespace",
+            OriginalValue = nameof(
+                Create_WithCountGreaterThanOneOnOrdinaryNamespace_ShouldThrowFailedPrecondition
+            ),
+            Count = 2,
+        };
+
+        await sut.Invoking(async s => await s.Create(request, TestServerCallContext.Create()))
+            .Should()
+            .ThrowAsync<RpcException>()
+            .Where(e => e.StatusCode == StatusCode.FailedPrecondition);
+    }
+
+    [Fact]
     public async Task Create_WithNonExistingNamespace_ShouldThrowNotFoundError()
     {
         var request = new PseudonymServiceCreateRequest
