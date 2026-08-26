@@ -1,6 +1,7 @@
 @page "/namespaces/{NamespaceName}/pseudonyms"
 @rendermode InteractiveServer
 @inject IPseudonymAppService PseudonymAppService
+@inject INamespacePermissionChecker PermissionChecker
 @inject IStringLocalizer<SharedResources> Localizer
 
 <PageTitle>@Localizer["App.Pseudonyms.PageTitle", NamespaceName]</PageTitle>
@@ -102,25 +103,13 @@
                         <BbDataGridPropertyColumn Property="@(p => p.PseudonymValue)" Title="@Localizer["App.Pseudonyms.PseudonymLabel"]" />
                         <BbDataGridTemplateColumn Title="@Localizer["App.Pseudonyms.OriginalValueLabel"]">
                             <ChildContent Context="p">
-                                @if (_revealedValues.TryGetValue(p.PseudonymValue, out var revealed))
+                                @if (!_hasReverseLookupAccess)
+                                {
+                                    <span class="text-muted-foreground">&mdash;</span>
+                                }
+                                else if (_revealedValues.TryGetValue(p.PseudonymValue, out var revealed))
                                 {
                                     <code class="rounded bg-muted px-1.5 py-0.5 text-xs">@revealed</code>
-                                }
-                                else
-                                {
-                                    <BbButton
-                                        Variant="ButtonVariant.Ghost"
-                                        Size="ButtonSize.Icon"
-                                        OnClick="() => RevealAsync(p.PseudonymValue)"
-                                        Loading="@_revealingValues.Contains(p.PseudonymValue)"
-                                        AriaLabel="@Localizer["App.Pseudonyms.RevealOriginalValue"]"
-                                    >
-                                        <LucideIcon Name="eye" Size="16" />
-                                    </BbButton>
-                                    @if (_revealErrors.TryGetValue(p.PseudonymValue, out var revealError))
-                                    {
-                                        <p class="mt-1 text-xs text-destructive">@revealError</p>
-                                    }
                                 }
                             </ChildContent>
                         </BbDataGridTemplateColumn>
@@ -184,15 +173,17 @@
     private string? _createError;
     private Vfps.Data.Models.Pseudonym? _createResult;
 
-    // Per-row reveal state for the pseudonym list, keyed by pseudonym value - independent of the
-    // single reverse-lookup textbox above, and independent per row so revealing one row doesn't
-    // block revealing another.
-    private readonly HashSet<string> _revealingValues = [];
-    private readonly Dictionary<string, string> _revealedValues = [];
-    private readonly Dictionary<string, string> _revealErrors = [];
+    // Original values for the pseudonym list, keyed by pseudonym value - independent of the
+    // single reverse-lookup textbox above. Populated by LoadPageAsync in the same query as the
+    // list itself (see ListWithOriginalValuesAsync) whenever the user has reverse-lookup access,
+    // rather than one ReverseLookupAsync call per row behind a button.
+    private bool _hasReverseLookupAccess;
+    private IReadOnlyDictionary<string, string> _revealedValues = new Dictionary<string, string>();
 
     protected override async Task OnInitializedAsync()
     {
+        var user = await GetUserAsync();
+        _hasReverseLookupAccess = PermissionChecker.HasReverseLookupAccess(user, NamespaceName);
         await LoadPageAsync(null);
     }
 
@@ -213,16 +204,43 @@
         try
         {
             var user = await GetUserAsync();
-            var page = await PseudonymAppService.ListAsync(
-                NamespaceName,
-                PageSize,
-                pageToken,
-                includeTotalSize: false,
-                user,
-                CancellationToken.None
-            );
-            _items = page.Items;
-            _nextPageToken = page.NextPageToken;
+            string? nextPageToken;
+            if (_hasReverseLookupAccess)
+            {
+                var page = await PseudonymAppService.ListWithOriginalValuesAsync(
+                    NamespaceName,
+                    PageSize,
+                    pageToken,
+                    user,
+                    CancellationToken.None
+                );
+                _items = page
+                    .Items.Select(p => new PseudonymSummaryDto(
+                        p.NamespaceName,
+                        p.PseudonymValue,
+                        p.CreatedAt,
+                        p.LastUpdatedAt
+                    ))
+                    .ToList();
+                _revealedValues = page.Items.ToDictionary(p => p.PseudonymValue, p => p.OriginalValue);
+                nextPageToken = page.NextPageToken;
+            }
+            else
+            {
+                var page = await PseudonymAppService.ListAsync(
+                    NamespaceName,
+                    PageSize,
+                    pageToken,
+                    includeTotalSize: false,
+                    user,
+                    CancellationToken.None
+                );
+                _items = page.Items;
+                _revealedValues = new Dictionary<string, string>();
+                nextPageToken = page.NextPageToken;
+            }
+
+            _nextPageToken = nextPageToken;
             _currentPageToken = pageToken;
         }
         catch (NamespaceNotFoundException ex)
@@ -325,44 +343,6 @@
         finally
         {
             _isLookingUp = false;
-        }
-    }
-
-    private async Task RevealAsync(string pseudonymValue)
-    {
-        // Per-row guard, not the single _isLookingUp flag - HashSet.Add returns false if a
-        // reveal for this exact row is already in flight, without blocking other rows.
-        if (!_revealingValues.Add(pseudonymValue))
-        {
-            return;
-        }
-
-        _revealErrors.Remove(pseudonymValue);
-        try
-        {
-            var user = await GetUserAsync();
-            var result = await PseudonymAppService.ReverseLookupAsync(
-                NamespaceName,
-                pseudonymValue,
-                user,
-                CancellationToken.None
-            );
-            if (result is null)
-            {
-                _revealErrors[pseudonymValue] = Localizer["App.Pseudonyms.NotFound"];
-            }
-            else
-            {
-                _revealedValues[pseudonymValue] = result.OriginalValue;
-            }
-        }
-        catch (ForbiddenException ex)
-        {
-            _revealErrors[pseudonymValue] = ex.Message;
-        }
-        finally
-        {
-            _revealingValues.Remove(pseudonymValue);
         }
     }
 

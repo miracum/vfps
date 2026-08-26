@@ -310,6 +310,110 @@ public class PseudonymAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task ListWithOriginalValuesAsync_WithoutReadAccess_ShouldThrowForbidden()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            namespaceRepository,
+            pseudonymRepository,
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        ReverseLookupRoles = ["can-reverse-lookup"],
+                    },
+                ],
+            }
+        );
+
+        var act = () =>
+            sut.ListWithOriginalValuesAsync(
+                "existingNamespace",
+                25,
+                null,
+                UserWithRoles("can-reverse-lookup"),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task ListWithOriginalValuesAsync_WithReadAccessButNotReverseLookupAccess_ShouldThrowForbidden()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            namespaceRepository,
+            pseudonymRepository,
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        ReadRoles = ["read-only"],
+                    },
+                ],
+            }
+        );
+
+        var act = () =>
+            sut.ListWithOriginalValuesAsync(
+                "existingNamespace",
+                25,
+                null,
+                UserWithRoles("read-only"),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task ListWithOriginalValuesAsync_WithReadAndReverseLookupAccess_ShouldIncludeOriginalValues()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            namespaceRepository,
+            pseudonymRepository,
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        ReadRoles = ["read-only"],
+                        ReverseLookupRoles = ["can-reverse-lookup"],
+                    },
+                ],
+            }
+        );
+
+        var page = await sut.ListWithOriginalValuesAsync(
+            "existingNamespace",
+            25,
+            null,
+            UserWithRoles("read-only", "can-reverse-lookup"),
+            CancellationToken.None
+        );
+
+        page.Items.Should().ContainSingle();
+        page.Items[0].PseudonymValue.Should().Be("existingPseudonym");
+        page.Items[0].OriginalValue.Should().Be("an original value");
+    }
+
+    [Fact]
     public async Task ReverseLookupAsync_WithReadAccessButNotReverseLookupAccess_ShouldThrowForbidden()
     {
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);

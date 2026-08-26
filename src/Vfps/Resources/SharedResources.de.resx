@@ -484,9 +484,6 @@
   <data name="App.Pseudonyms.PseudonymValue" xml:space="preserve">
     <value>Pseudonymwert</value>
   </data>
-  <data name="App.Pseudonyms.RevealOriginalValue" xml:space="preserve">
-    <value>Originalwert anzeigen</value>
-  </data>
   <data name="App.Pseudonyms.ReverseLookupDescription" xml:space="preserve">
     <value>Zeigt den Originalwert für ein Pseudonym an.</value>
   </data>

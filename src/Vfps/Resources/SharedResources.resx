@@ -484,9 +484,6 @@
   <data name="App.Pseudonyms.PseudonymValue" xml:space="preserve">
     <value>Pseudonym value</value>
   </data>
-  <data name="App.Pseudonyms.RevealOriginalValue" xml:space="preserve">
-    <value>Reveal original value</value>
-  </data>
   <data name="App.Pseudonyms.ReverseLookupDescription" xml:space="preserve">
     <value>Reveals the original value for one pseudonym.</value>
   </data>

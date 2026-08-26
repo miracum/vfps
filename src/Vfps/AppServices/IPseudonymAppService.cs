@@ -106,6 +106,26 @@ public interface IPseudonymAppService
     );
 
     /// <summary>
+    /// Same keyset pagination as <see cref="ListAsync"/>, but each item also carries its original
+    /// value - requires both read and reverse-lookup access to the namespace. The underlying
+    /// repository query already fetches the full row (see
+    /// <see cref="Data.IPseudonymRepository.ListByNamespaceAsync"/>), so this costs no extra
+    /// round trip over <see cref="ListAsync"/>; it only projects a field that method deliberately
+    /// drops. Not exposed via gRPC/REST - <see cref="ListAsync"/> remains the bulk projection for
+    /// external callers, deliberately without original values. Only for the Blazor pseudonym list
+    /// page, which shows original values inline for users who already have reverse-lookup access
+    /// instead of a per-row reveal button that would otherwise mean one
+    /// <see cref="ReverseLookupAsync"/> call per row.
+    /// </summary>
+    Task<PseudonymWithOriginalValuePageDto> ListWithOriginalValuesAsync(
+        string namespaceName,
+        int pageSize,
+        string? pageToken,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Reveals the original value for a single pseudonym. This is a distinct, more tightly-gated
     /// action than <see cref="ListAsync"/> (requires reverse-lookup access, not just read access).
     /// </summary>
@@ -143,6 +163,20 @@ public record PseudonymPageDto(
     IReadOnlyList<PseudonymSummaryDto> Items,
     string? NextPageToken,
     long? TotalSize
+);
+
+/// <summary>Pseudonym projection for <see cref="IPseudonymAppService.ListWithOriginalValuesAsync"/> - includes the original value.</summary>
+public record PseudonymWithOriginalValueDto(
+    string NamespaceName,
+    string PseudonymValue,
+    string OriginalValue,
+    DateTimeOffset CreatedAt,
+    DateTimeOffset LastUpdatedAt
+);
+
+public record PseudonymWithOriginalValuePageDto(
+    IReadOnlyList<PseudonymWithOriginalValueDto> Items,
+    string? NextPageToken
 );
 
 public class NamespaceNotFoundException(string namespaceName)
