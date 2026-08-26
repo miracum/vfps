@@ -1,6 +1,7 @@
 @page "/namespaces/{NamespaceName}/pseudonyms"
 @rendermode InteractiveServer
 @inject IPseudonymAppService PseudonymAppService
+@inject INamespacePermissionChecker PermissionChecker
 @inject IStringLocalizer<SharedResources> Localizer
 
 <PageTitle>@Localizer["App.Pseudonyms.PageTitle", NamespaceName]</PageTitle>
@@ -97,30 +98,25 @@
                 <BbCardTitle>@Localizer["App.Nav.Pseudonyms"]</BbCardTitle>
             </BbCardHeader>
             <BbCardContent>
-                <BbDataGrid Items="@_items" ShowPagination="false" IsLoading="@_isLoading">
+                <BbDataGrid
+                    @ref="_grid"
+                    TData="PseudonymSearchItemDto"
+                    ItemsProvider="ProvideItemsAsync"
+                    ShowSearch="true"
+                    SearchPlaceholder="@(_hasReverseLookupAccess ? Localizer["App.Pseudonyms.SearchWithOriginalValuePlaceholder"] : Localizer["App.Pseudonyms.SearchPlaceholder"])"
+                    InitialPageSize="PageSize"
+                >
                     <Columns>
                         <BbDataGridPropertyColumn Property="@(p => p.PseudonymValue)" Title="@Localizer["App.Pseudonyms.PseudonymLabel"]" />
                         <BbDataGridTemplateColumn Title="@Localizer["App.Pseudonyms.OriginalValueLabel"]">
                             <ChildContent Context="p">
-                                @if (_revealedValues.TryGetValue(p.PseudonymValue, out var revealed))
+                                @if (p.OriginalValue is { } revealed)
                                 {
                                     <code class="rounded bg-muted px-1.5 py-0.5 text-xs">@revealed</code>
                                 }
                                 else
                                 {
-                                    <BbButton
-                                        Variant="ButtonVariant.Ghost"
-                                        Size="ButtonSize.Icon"
-                                        OnClick="() => RevealAsync(p.PseudonymValue)"
-                                        Loading="@_revealingValues.Contains(p.PseudonymValue)"
-                                        AriaLabel="@Localizer["App.Pseudonyms.RevealOriginalValue"]"
-                                    >
-                                        <LucideIcon Name="eye" Size="16" />
-                                    </BbButton>
-                                    @if (_revealErrors.TryGetValue(p.PseudonymValue, out var revealError))
-                                    {
-                                        <p class="mt-1 text-xs text-destructive">@revealError</p>
-                                    }
+                                    <span class="text-muted-foreground">&mdash;</span>
                                 }
                             </ChildContent>
                         </BbDataGridTemplateColumn>
@@ -136,23 +132,6 @@
                         />
                     </Columns>
                 </BbDataGrid>
-
-                <div class="mt-4 flex gap-2">
-                    <BbButton
-                        Variant="ButtonVariant.Outline"
-                        OnClick="GoToPreviousPageAsync"
-                        Disabled="@(_pageTokenStack.Count == 0 || _isLoading)"
-                    >
-                        @Localizer["App.Common.Previous"]
-                    </BbButton>
-                    <BbButton
-                        Variant="ButtonVariant.Outline"
-                        OnClick="GoToNextPageAsync"
-                        Disabled="@(_nextPageToken is null || _isLoading)"
-                    >
-                        @Localizer["App.Common.Next"]
-                    </BbButton>
-                </div>
             </BbCardContent>
         </BbCard>
     }
@@ -167,12 +146,14 @@
     [Parameter]
     public string NamespaceName { get; set; } = string.Empty;
 
-    private IReadOnlyList<PseudonymSummaryDto> _items = [];
-    private string? _currentPageToken;
-    private string? _nextPageToken;
-    private readonly Stack<string?> _pageTokenStack = new();
-    private bool _isLoading;
+    private BlazorBlueprint.Components.BbDataGrid<PseudonymSearchItemDto>? _grid;
     private string? _errorMessage;
+
+    // Only used to pick the search placeholder text below - ProvideItemsAsync re-derives this
+    // server-side on every request via PseudonymAppService.SearchAsync, so this flag being stale
+    // (e.g. permissions changed mid-session) can't let anyone search original values they aren't
+    // allowed to see.
+    private bool _hasReverseLookupAccess;
 
     private string _lookupValue = string.Empty;
     private bool _isLookingUp;
@@ -184,58 +165,49 @@
     private string? _createError;
     private Vfps.Data.Models.Pseudonym? _createResult;
 
-    // Per-row reveal state for the pseudonym list, keyed by pseudonym value - independent of the
-    // single reverse-lookup textbox above, and independent per row so revealing one row doesn't
-    // block revealing another.
-    private readonly HashSet<string> _revealingValues = [];
-    private readonly Dictionary<string, string> _revealedValues = [];
-    private readonly Dictionary<string, string> _revealErrors = [];
-
     protected override async Task OnInitializedAsync()
     {
-        await LoadPageAsync(null);
+        var user = await GetUserAsync();
+        _hasReverseLookupAccess = PermissionChecker.HasReverseLookupAccess(user, NamespaceName);
     }
 
     private async Task<ClaimsPrincipal> GetUserAsync() =>
         AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
 
-    private async Task LoadPageAsync(string? pageToken)
+    private async ValueTask<
+        BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>
+    > ProvideItemsAsync(BlazorBlueprint.Primitives.DataGrid.DataGridRequest request)
     {
-        // Guards against re-entrant invocation - see the identical comment on
-        // Namespaces.razor's CreateNamespaceAsync for why this matters under Blazor Server.
-        if (_isLoading)
-        {
-            return;
-        }
-
-        _isLoading = true;
-        _errorMessage = null;
         try
         {
             var user = await GetUserAsync();
-            var page = await PseudonymAppService.ListAsync(
+            var page = await PseudonymAppService.SearchAsync(
                 NamespaceName,
-                PageSize,
-                pageToken,
-                includeTotalSize: false,
+                request.SearchText,
+                request.StartIndex,
+                request.Count ?? PageSize,
                 user,
-                CancellationToken.None
+                request.CancellationToken
             );
-            _items = page.Items;
-            _nextPageToken = page.NextPageToken;
-            _currentPageToken = pageToken;
+
+            _errorMessage = null;
+            return new BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>
+            {
+                Items = [.. page.Items],
+                // TotalCount is a long; the grid's pagination footer only accepts int. A
+                // namespace would need over two billion pseudonyms to overflow this.
+                TotalItemCount = (int)page.TotalCount,
+            };
         }
-        catch (NamespaceNotFoundException ex)
+        catch (Exception ex) when (ex is NamespaceNotFoundException or ForbiddenException)
         {
             _errorMessage = ex.Message;
-        }
-        catch (ForbiddenException ex)
-        {
-            _errorMessage = ex.Message;
-        }
-        finally
-        {
-            _isLoading = false;
+            StateHasChanged();
+            return new BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>
+            {
+                Items = [],
+                TotalItemCount = 0,
+            };
         }
     }
 
@@ -262,9 +234,10 @@
             );
             _createValue = string.Empty;
 
-            // Newest pseudonyms sort first, so jump back to the first page to show it.
-            _pageTokenStack.Clear();
-            await LoadPageAsync(null);
+            if (_grid is not null)
+            {
+                await _grid.RefreshDataAsync();
+            }
         }
         catch (NamespaceNotFoundException ex)
         {
@@ -326,65 +299,5 @@
         {
             _isLookingUp = false;
         }
-    }
-
-    private async Task RevealAsync(string pseudonymValue)
-    {
-        // Per-row guard, not the single _isLookingUp flag - HashSet.Add returns false if a
-        // reveal for this exact row is already in flight, without blocking other rows.
-        if (!_revealingValues.Add(pseudonymValue))
-        {
-            return;
-        }
-
-        _revealErrors.Remove(pseudonymValue);
-        try
-        {
-            var user = await GetUserAsync();
-            var result = await PseudonymAppService.ReverseLookupAsync(
-                NamespaceName,
-                pseudonymValue,
-                user,
-                CancellationToken.None
-            );
-            if (result is null)
-            {
-                _revealErrors[pseudonymValue] = Localizer["App.Pseudonyms.NotFound"];
-            }
-            else
-            {
-                _revealedValues[pseudonymValue] = result.OriginalValue;
-            }
-        }
-        catch (ForbiddenException ex)
-        {
-            _revealErrors[pseudonymValue] = ex.Message;
-        }
-        finally
-        {
-            _revealingValues.Remove(pseudonymValue);
-        }
-    }
-
-    private async Task GoToNextPageAsync()
-    {
-        if (_nextPageToken is null)
-        {
-            return;
-        }
-
-        _pageTokenStack.Push(_currentPageToken);
-        await LoadPageAsync(_nextPageToken);
-    }
-
-    private async Task GoToPreviousPageAsync()
-    {
-        if (_pageTokenStack.Count == 0)
-        {
-            return;
-        }
-
-        var previousToken = _pageTokenStack.Pop();
-        await LoadPageAsync(previousToken);
     }
 }

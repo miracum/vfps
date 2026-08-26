@@ -233,6 +233,51 @@ public class PseudonymAppService(
     }
 
     /// <inheritdoc/>
+    public async Task<PseudonymSearchPageDto> SearchAsync(
+        string namespaceName,
+        string? searchText,
+        int skip,
+        int take,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        var _ =
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            ?? throw new NamespaceNotFoundException(namespaceName);
+        if (!permissionChecker.HasReadAccess(user, namespaceName))
+        {
+            throw new ForbiddenException(
+                $"Read access to namespace '{namespaceName}' is required."
+            );
+        }
+
+        var canRevealOriginalValues = permissionChecker.HasReverseLookupAccess(user, namespaceName);
+        var effectiveTake = take <= 0 ? DefaultPageSize : take;
+
+        var (pseudonyms, totalCount) = await pseudonymRepository.SearchByNamespaceAsync(
+            namespaceName,
+            searchText,
+            canRevealOriginalValues,
+            Math.Max(skip, 0),
+            effectiveTake,
+            cancellationToken
+        );
+
+        var items = pseudonyms
+            .Select(p => new PseudonymSearchItemDto(
+                p.NamespaceName,
+                p.PseudonymValue,
+                canRevealOriginalValues ? p.OriginalValue : null,
+                p.CreatedAt,
+                p.LastUpdatedAt
+            ))
+            .ToList();
+
+        return new PseudonymSearchPageDto(items, totalCount);
+    }
+
+    /// <inheritdoc/>
     public async Task<Data.Models.Pseudonym?> ReverseLookupAsync(
         string namespaceName,
         string pseudonymValue,

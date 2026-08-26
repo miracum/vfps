@@ -1,5 +1,5 @@
+using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Logging;
-using Prometheus;
 using Vfps.Data;
 
 namespace Vfps;
@@ -24,11 +24,13 @@ public class PseudonymCountMetricsBackgroundService(
     // this one pays a real, bounded database cost each tick.
     private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(5);
 
-    private static readonly Gauge PseudonymsPerNamespace = Metrics.CreateGauge(
-        "vfps_pseudonyms",
-        "Current number of pseudonyms per namespace, refreshed periodically from the database. "
-            + "A namespace with no pseudonyms yet simply has no series here.",
-        "namespace"
+    // Dotted name is the OpenTelemetry convention; the Prometheus exporter renders it with
+    // underscores on export ("vfps_pseudonyms"), matching the metric name this service exposed
+    // under prometheus-net.
+    private static readonly Gauge<long> PseudonymsPerNamespace = Program.Meter.CreateGauge<long>(
+        "vfps.pseudonyms",
+        description: "Current number of pseudonyms per namespace, refreshed periodically from "
+            + "the database. A namespace with no pseudonyms yet simply has no series here."
     );
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -53,7 +55,10 @@ public class PseudonymCountMetricsBackgroundService(
 
             foreach (var (namespaceName, count) in counts)
             {
-                PseudonymsPerNamespace.WithLabels(namespaceName).Set(count);
+                PseudonymsPerNamespace.Record(
+                    count,
+                    new KeyValuePair<string, object?>("namespace", namespaceName)
+                );
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

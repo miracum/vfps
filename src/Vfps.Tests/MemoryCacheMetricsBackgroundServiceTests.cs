@@ -1,6 +1,5 @@
-using System.Text;
+using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Caching.Memory;
-using Prometheus;
 
 namespace Vfps.Tests.MemoryCacheMetricsBackgroundServiceTests;
 
@@ -16,18 +15,13 @@ public class MemoryCacheMetricsBackgroundServiceTests
         var sut = new MemoryCacheMetricsBackgroundService(memoryCache);
         var cancelToken = new CancellationToken();
 
-        await sut.StartAsync(cancelToken);
+        var act = async () =>
+        {
+            await sut.StartAsync(cancelToken);
+            await sut.StopAsync(cancelToken);
+        };
 
-        await sut.StopAsync(cancelToken);
-
-        var memoryStream = new MemoryStream();
-        await Metrics.DefaultRegistry.CollectAndExportAsTextAsync(
-            memoryStream,
-            TestContext.Current.CancellationToken
-        );
-
-        var text = Encoding.UTF8.GetString(memoryStream.ToArray());
-        text.Should().NotBeEmpty();
+        await act.Should().NotThrowAsync();
     }
 
     [Fact]
@@ -35,8 +29,8 @@ public class MemoryCacheMetricsBackgroundServiceTests
     {
         // The "starts/stops without exception" test above never actually lets a tick's worth of
         // ExecuteAsync's loop body run before cancelling - this uses a short injectable interval
-        // (see the constructor's own comment) to actually observe one, and asserts the gauges it
-        // sets rather than just that *something* got exported.
+        // (see the constructor's own comment) to actually observe one, and asserts the gauge
+        // values it records via a MeterListener rather than just that *something* got exported.
         using var memoryCache = new MemoryCache(
             new MemoryCacheOptions { TrackStatistics = true, SizeLimit = 32 }
         );
@@ -49,22 +43,47 @@ public class MemoryCacheMetricsBackgroundServiceTests
             TimeSpan.FromMilliseconds(20)
         );
 
+        long? entries = null;
+        long? hits = null;
+        long? misses = null;
+
+        // MemoryCacheMetricsBackgroundService.EntriesInCache/CacheHits/CacheMisses are static, so
+        // this listener observes recordings from any instance of the service - matching the
+        // existing "same already-registered collector for a name it's seen before" behavior this
+        // codebase already relied on under prometheus-net.
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, l) =>
+        {
+            if (instrument.Meter == Program.Meter)
+            {
+                l.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>(
+            (instrument, measurement, _, _) =>
+            {
+                switch (instrument.Name)
+                {
+                    case "vfps.cache.entries":
+                        entries = measurement;
+                        break;
+                    case "vfps.cache.hits_total":
+                        hits = measurement;
+                        break;
+                    case "vfps.cache.misses_total":
+                        misses = measurement;
+                        break;
+                }
+            }
+        );
+        listener.Start();
+
         await sut.StartAsync(TestContext.Current.CancellationToken);
         await Task.Delay(200, TestContext.Current.CancellationToken);
         await sut.StopAsync(TestContext.Current.CancellationToken);
 
-        // Metrics.CreateGauge returns the same already-registered collector for a name/help
-        // combo it's seen before, rather than a new one - this is how the values the service's
-        // own private static gauges were set to become observable here.
-        var entriesGauge = Metrics.CreateGauge(
-            "vfps_cache_entries",
-            "Number of entries in the cache."
-        );
-        var missesGauge = Metrics.CreateGauge("vfps_cache_misses_total", "Number of cache misses.");
-        var hitsGauge = Metrics.CreateGauge("vfps_cache_hits_total", "Number of cache hits.");
-
-        entriesGauge.Value.Should().Be(1);
-        hitsGauge.Value.Should().BeGreaterThanOrEqualTo(1);
-        missesGauge.Value.Should().BeGreaterThanOrEqualTo(1);
+        entries.Should().Be(1);
+        hits.Should().BeGreaterThanOrEqualTo(1);
+        misses.Should().BeGreaterThanOrEqualTo(1);
     }
 }

@@ -310,6 +310,224 @@ public class PseudonymAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task SearchAsync_WithoutReadAccess_ShouldThrowForbidden()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            namespaceRepository,
+            pseudonymRepository,
+            new AuthorizationConfig { IsEnabled = true }
+        );
+
+        var act = () =>
+            sut.SearchAsync(
+                "existingNamespace",
+                null,
+                0,
+                25,
+                UserWithRoles(),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task SearchAsync_WithReadAccessButNotReverseLookupAccess_ShouldOmitOriginalValues()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            namespaceRepository,
+            pseudonymRepository,
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        ReadRoles = ["read-only"],
+                    },
+                ],
+            }
+        );
+
+        var page = await sut.SearchAsync(
+            "existingNamespace",
+            null,
+            0,
+            25,
+            UserWithRoles("read-only"),
+            CancellationToken.None
+        );
+
+        page.Items.Should().ContainSingle();
+        page.Items[0].OriginalValue.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task SearchAsync_WithReadAndReverseLookupAccess_ShouldIncludeOriginalValues()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            namespaceRepository,
+            pseudonymRepository,
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        ReadRoles = ["read-only"],
+                        ReverseLookupRoles = ["can-reverse-lookup"],
+                    },
+                ],
+            }
+        );
+
+        var page = await sut.SearchAsync(
+            "existingNamespace",
+            null,
+            0,
+            25,
+            UserWithRoles("read-only", "can-reverse-lookup"),
+            CancellationToken.None
+        );
+
+        page.Items.Should().ContainSingle();
+        page.Items[0].PseudonymValue.Should().Be("existingPseudonym");
+        page.Items[0].OriginalValue.Should().Be("an original value");
+        page.TotalCount.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task SearchAsync_WithSearchTextMatchingOriginalValue_ShouldOnlyMatchWhenPermitted()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            namespaceRepository,
+            pseudonymRepository,
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        ReadRoles = ["read-only"],
+                        ReverseLookupRoles = ["can-reverse-lookup"],
+                    },
+                ],
+            }
+        );
+
+        // Searching for a substring of the original value must not surface it as a match unless
+        // the caller also has reverse-lookup access - otherwise a read-only user could confirm an
+        // original value is present in the namespace without ReverseLookupAsync ever letting them
+        // see it.
+        var withoutReverseLookup = await sut.SearchAsync(
+            "existingNamespace",
+            "original value",
+            0,
+            25,
+            UserWithRoles("read-only"),
+            CancellationToken.None
+        );
+        withoutReverseLookup.Items.Should().BeEmpty();
+
+        var withReverseLookup = await sut.SearchAsync(
+            "existingNamespace",
+            "original value",
+            0,
+            25,
+            UserWithRoles("read-only", "can-reverse-lookup"),
+            CancellationToken.None
+        );
+        withReverseLookup.Items.Should().ContainSingle();
+        withReverseLookup.Items[0].PseudonymValue.Should().Be("existingPseudonym");
+    }
+
+    [Fact]
+    public async Task SearchAsync_WithSearchTextMatchingPseudonymValue_ShouldMatchWithoutReverseLookupAccess()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            namespaceRepository,
+            pseudonymRepository,
+            new AuthorizationConfig
+            {
+                IsEnabled = true,
+                NamespaceRules =
+                [
+                    new NamespaceRule
+                    {
+                        Namespace = "existingNamespace",
+                        ReadRoles = ["read-only"],
+                    },
+                ],
+            }
+        );
+
+        var page = await sut.SearchAsync(
+            "existingNamespace",
+            "existingPseudo",
+            0,
+            25,
+            UserWithRoles("read-only"),
+            CancellationToken.None
+        );
+
+        page.Items.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task SearchAsync_WithMorePseudonymsThanTake_ShouldPageAndReportTotalCount()
+    {
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+
+        // Beyond the base fixture's single "existingPseudonym", seed a few more so paging
+        // (skip/take) and the total count actually have something to page across.
+        InMemoryPseudonymContext.Pseudonyms.AddRange(
+            Enumerable
+                .Range(0, 4)
+                .Select(i => new Data.Models.Pseudonym
+                {
+                    NamespaceName = "existingNamespace",
+                    OriginalValue = $"paging-original-{i}",
+                    PseudonymValue = $"paging-pseudonym-{i}",
+                    CreatedAt = DateTimeOffset.UtcNow.AddMinutes(i),
+                    LastUpdatedAt = DateTimeOffset.UtcNow.AddMinutes(i),
+                })
+        );
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var firstPage = await sut.SearchAsync(
+            "existingNamespace",
+            null,
+            0,
+            2,
+            UserWithRoles(),
+            CancellationToken.None
+        );
+
+        firstPage.Items.Should().HaveCount(2);
+        firstPage.TotalCount.Should().Be(5);
+    }
+
+    [Fact]
     public async Task ReverseLookupAsync_WithReadAccessButNotReverseLookupAccess_ShouldThrowForbidden()
     {
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);

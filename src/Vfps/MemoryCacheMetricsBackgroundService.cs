@@ -1,6 +1,6 @@
+using System.Diagnostics.Metrics;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Logging;
-using Prometheus;
 
 namespace Vfps;
 
@@ -14,17 +14,20 @@ public class MemoryCacheMetricsBackgroundService(
     // StalledPseudonymizationJobWatchdogService's own checkInterval constructor parameter.
     private readonly TimeSpan _interval = interval ?? TimeSpan.FromSeconds(60);
 
-    private static readonly Gauge EntriesInCache = Metrics.CreateGauge(
-        "vfps_cache_entries",
-        "Number of entries in the cache."
+    // Dotted names are the OpenTelemetry convention; the Prometheus exporter renders them with
+    // underscores on export (e.g. "vfps_cache_entries"), matching the metric names this service
+    // exposed under prometheus-net.
+    private static readonly Gauge<long> EntriesInCache = Program.Meter.CreateGauge<long>(
+        "vfps.cache.entries",
+        description: "Number of entries in the cache."
     );
-    private static readonly Gauge CacheMisses = Metrics.CreateGauge(
-        "vfps_cache_misses_total",
-        "Number of cache misses."
+    private static readonly Gauge<long> CacheMisses = Program.Meter.CreateGauge<long>(
+        "vfps.cache.misses_total",
+        description: "Number of cache misses."
     );
-    private static readonly Gauge CacheHits = Metrics.CreateGauge(
-        "vfps_cache_hits_total",
-        "Number of cache hits."
+    private static readonly Gauge<long> CacheHits = Program.Meter.CreateGauge<long>(
+        "vfps.cache.hits_total",
+        description: "Number of cache hits."
     );
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -34,9 +37,9 @@ public class MemoryCacheMetricsBackgroundService(
             var stats = memoryCache.GetCurrentStatistics();
             if (stats is not null)
             {
-                EntriesInCache.Set(stats.CurrentEntryCount);
-                CacheMisses.Set(stats.TotalMisses);
-                CacheHits.Set(stats.TotalHits);
+                EntriesInCache.Record(stats.CurrentEntryCount);
+                CacheMisses.Record(stats.TotalMisses);
+                CacheHits.Record(stats.TotalHits);
             }
 
             await Task.Delay(_interval, stoppingToken);
