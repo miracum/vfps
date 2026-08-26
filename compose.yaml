@@ -74,10 +74,12 @@ services:
 
   # Local S3-compatible object storage for testing S3__IsEnabled=true (CSV pseudonymization
   # jobs). Not started by default - requires the "s3" compose profile.
-  minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+  # Credentials/identities are fixed via tests/seaweedfs/s3.json (mirrors the previous
+  # MINIO_ROOT_USER/PASSWORD env vars, SeaweedFS has no equivalent env-based config).
+  seaweedfs:
+    image: docker.io/chrislusf/seaweedfs:4.44@sha256:e67e8c385484120b78bff47ba5f4debbca47fbd27ed1a39f016f47e8baea615b
     restart: unless-stopped
-    command: server /data --console-address ":9001"
+    command: server -dir=/data -s3 -s3.port=9000 -s3.config=/etc/seaweedfs/s3.json
     deploy:
       resources:
         limits:
@@ -87,25 +89,23 @@ services:
     security_opt:
       - "no-new-privileges:true"
     privileged: false
-    environment:
-      MINIO_ROOT_USER: vfps
-      # kics-scan ignore-line
-      MINIO_ROOT_PASSWORD: vfps-minio-secret
+    volumes:
+      - ./tests/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
     profiles:
       - s3
     ports:
       - "127.0.0.1:9000:9000"
-      - "127.0.0.1:9001:9001"
+      - "127.0.0.1:8888:8888"
 
   # One-shot sidecar that creates the "vfps-csv-jobs" bucket vfps uploads/downloads CSV job
-  # files to/from, then exits - MinIO itself doesn't auto-create buckets.
-  minio-create-bucket:
+  # files to/from, then exits - SeaweedFS itself doesn't auto-create buckets.
+  seaweedfs-create-bucket:
     image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
     depends_on:
-      - minio
+      - seaweedfs
     entrypoint: >
       /bin/sh -c "
-      until mc alias set local http://minio:9000 vfps vfps-minio-secret; do sleep 1; done;
+      until mc alias set local http://seaweedfs:9000 vfps vfps-minio-secret; do sleep 1; done;
       mc mb --ignore-existing local/vfps-csv-jobs;
       "
     profiles:
@@ -148,7 +148,7 @@ services:
       Authorization__AdminRoles__0: "vfps-admin"
       Authorization__NamespaceRules__0__Namespace: "development"
       Authorization__NamespaceRules__0__ReadRoles__0: "vfps-ns-development-read"
-      # requires externally-reachable minio. host.docker-internal doesnt quite work.
+      # requires externally-reachable seaweedfs. host.docker-internal doesnt quite work.
       #S3__IsEnabled: "true"
       S3__ServiceUrl: "http://host.docker.internal:9000"
       S3__AccessKey: "vfps"

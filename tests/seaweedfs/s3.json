@@ -1,0 +1,20 @@
+{
+  "identities": [
+    {
+      "name": "vfps",
+      "credentials": [
+        {
+          "accessKey": "vfps",
+          "secretKey": "vfps-minio-secret"
+        }
+      ],
+      "actions": [
+        "Read",
+        "Write",
+        "List",
+        "Tagging",
+        "Admin"
+      ]
+    }
+  ]
+}
