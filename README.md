@@ -127,7 +127,8 @@ Each job runs in one of two directions: **Pseudonymize** (replace original value
 
 ## Observability
 
-The service exports metrics in Prometheus format on `:8082/metrics`.
+The service exports metrics via OpenTelemetry, exposed in Prometheus text format on `:8082/metrics`.
+Traces can optionally be pushed to an OTLP collector, see `Tracing:IsEnabled` and `Tracing:Otlp:Endpoint` in `appsettings.json`.
 Health-, readiness-, and liveness-probes are exposed at `:8080/healthz`, `:8080/readyz`, and `:8080/livez` respectively.
 
 ## FHIR operations

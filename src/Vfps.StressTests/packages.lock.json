@@ -902,11 +902,6 @@
           "Microsoft.Extensions.Options.ConfigurationExtensions": "10.0.0"
         }
       },
-      "Microsoft.Extensions.ObjectPool": {
-        "type": "Transitive",
-        "resolved": "7.0.0",
-        "contentHash": "udvKco0sAVgYGTBnHUb0tY9JQzJ/nPDiv/8PIyz69wl1AibeCDZOLVVI+6156dPfHmJH7ws5oUJRiW4ZmAvuuA=="
-      },
       "Microsoft.Extensions.Options": {
         "type": "Transitive",
         "resolved": "10.0.11",
@@ -1150,6 +1145,14 @@
           "OpenTelemetry": "1.18.0"
         }
       },
+      "OpenTelemetry.Exporter.Prometheus.AspNetCore": {
+        "type": "Transitive",
+        "resolved": "1.18.0-beta.1",
+        "contentHash": "TN/EaLh2nwk7IECKJyqBioC3+A/rYXYv6Fby0MGYStI0dQzJdgtV8+ERpLq2L3WWSM9Lah7qOEV305+1PUmLEw==",
+        "dependencies": {
+          "OpenTelemetry": "[1.18.0, 2.0.0)"
+        }
+      },
       "OpenTelemetry.Extensions.Hosting": {
         "type": "Transitive",
         "resolved": "1.18.0",
@@ -1167,45 +1170,28 @@
           "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.18.0, 2.0.0)"
         }
       },
+      "OpenTelemetry.Instrumentation.Http": {
+        "type": "Transitive",
+        "resolved": "1.18.0",
+        "contentHash": "/X57peOOa4a+9V4DSVXbuIWdsAxmU5gsxw8lu+gJU0zuewsYhC9f6qdm8GEW0VvqG9e+gxn0HdVR5G3YHcWDTw==",
+        "dependencies": {
+          "Microsoft.Extensions.Configuration": "10.0.0",
+          "Microsoft.Extensions.Options": "10.0.0",
+          "OpenTelemetry.Api.ProviderBuilderExtensions": "[1.18.0, 2.0.0)"
+        }
+      },
+      "OpenTelemetry.Instrumentation.Runtime": {
+        "type": "Transitive",
+        "resolved": "1.18.0",
+        "contentHash": "McuXGjBJDL/Cown2PxfUQysK98MZG7ZDjO/IKUtaAx8t1m0PB0d+QtJC79RFTVipMhRIwjJiULNOp0OGfZbvwg==",
+        "dependencies": {
+          "OpenTelemetry.Api": "[1.18.0, 2.0.0)"
+        }
+      },
       "Planetarium.LruCacheNet": {
         "type": "Transitive",
         "resolved": "1.2.0",
         "contentHash": "WE2eblbDjsOoJhOBA+Jiwk/c+xrbFTRu+KaUOhhRWklCyScWSGCFS3gNmuc7zjjdJPSjotGAoKjAJIkHsXPXxQ=="
-      },
-      "prometheus-net": {
-        "type": "Transitive",
-        "resolved": "8.2.1",
-        "contentHash": "3wVgdEPOCBF752s2xps5T+VH+c9mJK8S8GKEDg49084P6JZMumTZI5Te6aJ9MQpX0sx7om6JOnBpIi7ZBmmiDQ==",
-        "dependencies": {
-          "Microsoft.Extensions.Http": "3.1.0",
-          "Microsoft.Extensions.ObjectPool": "7.0.0"
-        }
-      },
-      "prometheus-net.AspNetCore": {
-        "type": "Transitive",
-        "resolved": "8.2.1",
-        "contentHash": "/4TfTvbwIDqpaKTiWvEsjUywiHYF9zZvGZF5sK15avoDsUO/WPQbKsF8TiMaesuphdFQPK2z52P0zk6j26V0rQ==",
-        "dependencies": {
-          "prometheus-net": "8.2.1"
-        }
-      },
-      "prometheus-net.AspNetCore.Grpc": {
-        "type": "Transitive",
-        "resolved": "8.2.1",
-        "contentHash": "zd2npweTzIb7u9k9uaTIz3is+m6L36Dlegwt5P/RQvDaKLCZhm0fvWz3PxiLKriIdWOuAesujnMBu77aTet29Q==",
-        "dependencies": {
-          "Grpc.AspNetCore.Server": "2.48.0",
-          "prometheus-net.AspNetCore": "8.2.1"
-        }
-      },
-      "prometheus-net.AspNetCore.HealthChecks": {
-        "type": "Transitive",
-        "resolved": "8.2.1",
-        "contentHash": "aKeCH7Wc6FayXPZHyxolifmH/JaH7eyRpMhge3hzdfi4JMHlTPdhDFKDizGvwOd5RL7rhEmUWfhiWAT1j6GYXg==",
-        "dependencies": {
-          "Microsoft.Extensions.Diagnostics.HealthChecks": "6.0.9",
-          "prometheus-net.AspNetCore": "8.2.1"
-        }
       },
       "Serilog": {
         "type": "Transitive",
@@ -1472,11 +1458,11 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )",
           "Npgsql.OpenTelemetry": "[10.0.3, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.18.0, )",
+          "OpenTelemetry.Exporter.Prometheus.AspNetCore": "[1.18.0-beta.1, )",
           "OpenTelemetry.Extensions.Hosting": "[1.18.0, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.18.0, )",
-          "prometheus-net.AspNetCore": "[8.2.1, )",
-          "prometheus-net.AspNetCore.Grpc": "[8.2.1, )",
-          "prometheus-net.AspNetCore.HealthChecks": "[8.2.1, )"
+          "OpenTelemetry.Instrumentation.Http": "[1.18.0, )",
+          "OpenTelemetry.Instrumentation.Runtime": "[1.18.0, )"
         }
       }
     }

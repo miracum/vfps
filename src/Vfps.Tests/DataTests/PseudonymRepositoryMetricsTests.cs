@@ -1,6 +1,6 @@
+using System.Diagnostics.Metrics;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
-using Prometheus;
 using Vfps.Data;
 
 namespace Vfps.Tests.DataTests;
@@ -10,9 +10,9 @@ public class PseudonymRepositoryMetricsTests : ServiceTests.ServiceTestBase
     private async Task<string> CreateTestNamespaceAsync()
     {
         // A unique namespace name per test run keeps this independent of the shared, static
-        // Prometheus default registry - other tests incrementing the same counter under a
-        // different namespace label don't affect this one's time series. A real row is required
-        // too - pseudonyms.namespace_name has a foreign key constraint to namespaces.name.
+        // Meter (Program.Meter) - other tests recording the same gauge under a different
+        // namespace tag don't affect this one's observed values. A real row is required too -
+        // pseudonyms.namespace_name has a foreign key constraint to namespaces.name.
         var namespaceName = $"metrics-test-{Guid.NewGuid():N}";
         InMemoryPseudonymContext.Namespaces.Add(
             new Data.Models.Namespace
@@ -122,27 +122,38 @@ public class PseudonymRepositoryMetricsTests : ServiceTests.ServiceTestBase
             NullLogger<PseudonymCountMetricsBackgroundService>.Instance
         );
 
+        long? observedCount = null;
+        using var listener = new MeterListener();
+        listener.InstrumentPublished = (instrument, l) =>
+        {
+            if (instrument.Meter == Program.Meter && instrument.Name == "vfps.pseudonyms")
+            {
+                l.EnableMeasurementEvents(instrument);
+            }
+        };
+        listener.SetMeasurementEventCallback<long>(
+            (_, measurement, tags, _) =>
+            {
+                foreach (var tag in tags)
+                {
+                    if (tag.Key == "namespace" && (string?)tag.Value == namespaceName)
+                    {
+                        observedCount = measurement;
+                    }
+                }
+            }
+        );
+        listener.Start();
+
         await sut.StartAsync(CancellationToken.None);
         // The background service refreshes once immediately on startup, before the first
         // PeriodicTimer tick - poll briefly rather than assuming a fixed delay is enough.
-        string? exported = null;
-        for (var i = 0; i < 50; i++)
+        for (var i = 0; i < 50 && observedCount is null; i++)
         {
-            using var stream = new MemoryStream();
-            await Metrics.DefaultRegistry.CollectAndExportAsTextAsync(
-                stream,
-                TestContext.Current.CancellationToken
-            );
-            exported = System.Text.Encoding.UTF8.GetString(stream.ToArray());
-            if (exported.Contains($"vfps_pseudonyms{{namespace=\"{namespaceName}\"}}"))
-            {
-                break;
-            }
-
             await Task.Delay(20, TestContext.Current.CancellationToken);
         }
         await sut.StopAsync(CancellationToken.None);
 
-        exported.Should().Contain($"vfps_pseudonyms{{namespace=\"{namespaceName}\"}} 2");
+        observedCount.Should().Be(2);
     }
 }

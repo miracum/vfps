@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Security.Claims;
 using Amazon.Runtime;
 using Amazon.S3;
@@ -18,7 +19,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
-using Prometheus;
 using Vfps;
 using Vfps.AppServices;
 using Vfps.Authorization;
@@ -27,6 +27,7 @@ using Vfps.Config;
 using Vfps.CsvProcessing;
 using Vfps.Data;
 using Vfps.Fhir;
+using Vfps.Metrics;
 using Vfps.PseudonymGenerators;
 using Vfps.Services;
 using Vfps.Tracing;
@@ -54,11 +55,17 @@ builder.Services.AddGrpc().AddJsonTranscoding();
 builder.Services.AddGrpcSwagger();
 builder.Services.AddGrpcHealthChecks();
 builder.Services.AddGrpcReflection();
-builder.Services.AddHealthChecks().AddDbContextCheck<PseudonymContext>().ForwardToPrometheus();
+builder.Services.AddHealthChecks().AddDbContextCheck<PseudonymContext>();
 
-builder.Services.AddMetricServer(options =>
-    options.Port = builder.Configuration.GetValue<ushort>("MetricsPort", 8082)
-);
+// A dedicated metrics port (separate from the app's public HTTP/gRPC listeners) keeps /metrics
+// off the internet-facing endpoints - only an in-cluster scraper needs to reach it. Kept as a
+// second, code-configured Kestrel listener alongside the appsettings.json-configured Http/
+// HttpGrpc endpoints, rather than folding it into those, so a request to /metrics is only ever
+// reachable on this port (enforced by the "metrics port" guard middleware below). Port 0 (used by
+// appsettings.Test.json) makes Kestrel bind an ephemeral OS-assigned port, matching the prior
+// prometheus-net MetricServer's own Port=0 behavior for parallel test runs.
+var metricsPort = builder.Configuration.GetValue<ushort>("MetricsPort", 8082);
+builder.WebHost.ConfigureKestrel(kestrelOptions => kestrelOptions.ListenAnyIP(metricsPort));
 
 builder.Services.AddSwaggerGen(c =>
 {
@@ -389,6 +396,11 @@ builder.Services.AddControllers(options =>
     options.OutputFormatters.Insert(0, new FhirOutputFormatter());
 });
 
+// Metrics are always exported (a pull-based /metrics endpoint costs nothing when nobody scrapes
+// it), matching this codebase's other unconditional infrastructure. Tracing stays opt-in below:
+// pushing spans to a collector nobody deployed would be per-request overhead for nothing.
+builder.AddMetrics();
+
 // Tracing
 var isTracingEnabled = builder.Configuration.GetValue("Tracing:IsEnabled", false);
 if (isTracingEnabled)
@@ -418,6 +430,27 @@ forwardedHeadersOptions.KnownIPNetworks.Clear();
 forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeadersOptions);
 
+// Keeps /metrics off the app's public-facing ports: ASP.NET Core routing doesn't care which
+// Kestrel listener accepted a connection, so without this, traffic arriving on the Http/HttpGrpc
+// listeners could reach the Prometheus exporter too - defeating the point of a separate metrics
+// port. Checks the actual accepted connection's local port rather than a Host-header match, since
+// the Host header can desync from the real port behind port-forwarding/NAT. When MetricsPort is 0
+// (appsettings.Test.json), Kestrel binds an ephemeral port, so metricsPort never matches a real
+// connection's LocalPort and /metrics is simply unreachable - fine, since nothing scrapes it in
+// tests.
+app.Use(
+    async (context, next) =>
+    {
+        if (context.Request.Path == "/metrics" && context.Connection.LocalPort != metricsPort)
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        await next(context);
+    }
+);
+
 app.UseRequestLocalization();
 
 if (!authConfig.IsEnabled)
@@ -438,7 +471,6 @@ app.MapGrpcService<NamespaceService>();
 app.MapGrpcHealthChecksService();
 app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "VFPS API v1"));
-app.UseHttpMetrics();
 
 app.UseAuthentication();
 app.UseAuthorization();
@@ -523,7 +555,7 @@ app.MapHealthChecks(
 
 app.MapHealthChecks("/livez", new HealthCheckOptions { Predicate = _ => false });
 
-app.UseGrpcMetrics();
+app.MapPrometheusScrapingEndpoint();
 
 if (app.Environment.IsDevelopment())
 {
@@ -584,6 +616,8 @@ app.Run();
 public partial class Program
 {
     internal static readonly ActivitySource ActivitySource = new("Vfps");
+
+    internal static readonly Meter Meter = new("Vfps");
 
     protected Program() { }
 }
