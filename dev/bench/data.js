@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787686209737,
+  "lastUpdate": 1787745147733,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -6768,6 +6768,72 @@ window.BENCHMARK_DATA = {
             "value": 890.6077359517416,
             "unit": "ns",
             "range": "± 4.209152014551004"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "88b552eb7f51398fc898d6ba2f0bea39a772241a",
+          "message": "feat: always show de-pseuded values in the table if permissions allow and use a complex data table with page controls (#294)\n\n* fix: always show the original value as well\n\n* feat: switch from prometheus libs to otel metrics\n\n* feat: switch to Data Table with page controls\n\n---------\n\nCo-authored-by: chgl <5307555+chgl@users.noreply.github.com>",
+          "timestamp": "2026-08-26T13:49:28+02:00",
+          "tree_id": "cbb203160d7d504e51e9d31e7762cdf879b9ba5f",
+          "url": "https://github.com/miracum/vfps/commit/88b552eb7f51398fc898d6ba2f0bea39a772241a"
+        },
+        "date": 1787745147018,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1199.3113699692947,
+            "unit": "ns",
+            "range": "± 1.6586654581449327"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.HexEncodedSha256HashGenerator",
+            "value": 597.9170598250168,
+            "unit": "ns",
+            "range": "± 1.4145954410632549"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 684.8578272660574,
+            "unit": "ns",
+            "range": "± 0.6835324341031807"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 709.2880327360971,
+            "unit": "ns",
+            "range": "± 1.9471136534854643"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 1138.3958575384956,
+            "unit": "ns",
+            "range": "± 1.6999930161041676"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1259.7800626118978,
+            "unit": "ns",
+            "range": "± 11.428021864486352"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 1214.398865890503,
+            "unit": "ns",
+            "range": "± 2.1230078470944713"
           }
         ]
       }
