@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.11.0](https://github.com/miracum/vfps/compare/v1.10.2...v1.11.0) (2026-08-26)
+
+
+### Features
+
+* always show de-pseuded values in the table if permissions allow and use a complex data table with page controls ([#294](https://github.com/miracum/vfps/issues/294)) ([88b552e](https://github.com/miracum/vfps/commit/88b552eb7f51398fc898d6ba2f0bea39a772241a))
+* multi psn namespaces ([#295](https://github.com/miracum/vfps/issues/295)) ([7e07980](https://github.com/miracum/vfps/commit/7e0798023dd68201b137d1acc57e8d605c128d2b))
+* support for input validation ([#293](https://github.com/miracum/vfps/issues/293)) ([f6b869a](https://github.com/miracum/vfps/commit/f6b869a4c6efc47aad2355cb4fe28554561f686a))
+* **ui:** localization support for DE and EN ([#289](https://github.com/miracum/vfps/issues/289)) ([aadfe84](https://github.com/miracum/vfps/commit/aadfe8466467d46b209e574921932eb834a22c81))
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#291](https://github.com/miracum/vfps/issues/291)) ([880adcc](https://github.com/miracum/vfps/commit/880adcc0c26151d994c0a2d7fce8c2370fd5e289))
+
 ## [1.10.2](https://github.com/miracum/vfps/compare/v1.10.1...v1.10.2) (2026-08-04)
 
 
