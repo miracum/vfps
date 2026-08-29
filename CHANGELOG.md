@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.11.1](https://github.com/miracum/vfps/compare/v1.11.0...v1.11.1) (2026-08-29)
+
+
+### Miscellaneous Chores
+
+* **deps:** update all digest updates ([#290](https://github.com/miracum/vfps/issues/290)) ([5b85fc3](https://github.com/miracum/vfps/commit/5b85fc362401d889dcb0351fe547c041c05ef70b))
+* **deps:** update registry.k8s.io/kubectl docker tag to v1.37.0 ([#297](https://github.com/miracum/vfps/issues/297)) ([869f8ea](https://github.com/miracum/vfps/commit/869f8eae303105a09706f02def57a92e0555ae4c))
+
 ## [1.11.0](https://github.com/miracum/vfps/compare/v1.10.2...v1.11.0) (2026-08-26)
 
 
