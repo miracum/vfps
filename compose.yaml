@@ -49,7 +49,7 @@ services:
   # reader/reader (realm role vfps-ns-development-read). Not started by default - requires the
   # "keycloak" compose profile.
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7@sha256:831330513f55695572286e521f94fcd3c7e285250ed5b848090265a33192f669
+    image: quay.io/keycloak/keycloak:26.7@sha256:ff4257d0d64efbe99ed1ddfaf07765cc3c36dc7518bf8324d41961327f441c54
     restart: unless-stopped
     command: start-dev --import-realm
     deploy:
