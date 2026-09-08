@@ -71,6 +71,24 @@ public interface IPseudonymizationJobRepository
     );
 
     /// <summary>
+    /// Records where an in-progress job's output writing has got to, so an attempt killed after
+    /// this point resumes here instead of reprocessing from the first row. Only ever called right
+    /// after a part upload succeeds - see <see cref="Models.JobOutputCheckpoint"/> for why a
+    /// checkpoint is meaningless without one.
+    /// </summary>
+    Task SaveOutputCheckpointAsync(
+        Guid id,
+        Models.JobOutputCheckpoint checkpoint,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Drops a job's checkpoint once it can no longer be resumed from - it finished, or its
+    /// multipart upload was aborted.
+    /// </summary>
+    Task ClearOutputCheckpointAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
     /// Deletes every job in a terminal state (Completed, Failed, Cancelled, Stalled) - Running/Queued/
     /// AwaitingUpload jobs are never touched, so an in-progress job can't be deleted out from
     /// under its own runner. Scoped to <paramref name="createdBy"/>, or every such job when null

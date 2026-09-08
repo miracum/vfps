@@ -202,179 +202,317 @@ public class CsvPseudonymizationJobRunner(
             },
         };
 
+        var partSize = csvProcessingConfig.Value.OutputPartSizeBytes;
+        var resumeFrom = await TryResumeAsync(job, outputObjectKey, partSize, cancellationToken);
+        var output =
+            resumeFrom?.Output
+            ?? await MultipartOutputStream.StartAsync(
+                s3,
+                s3Config.Value.Bucket,
+                outputObjectKey,
+                partSize,
+                cancellationToken.ShutdownToken
+            );
+
         using var getResponse = await s3.GetObjectAsync(s3Config.Value.Bucket, job.InputObjectKey);
         var countingStream = new ByteCountingStream(getResponse.ResponseStream);
 
-        var pipe = new System.IO.Pipelines.Pipe();
+        try
+        {
+            var result = await TransformAsync(
+                job,
+                countingStream,
+                encoding,
+                csvConfig,
+                output,
+                resumeFrom?.Checkpoint,
+                badDataCounter,
+                missingValueCounter,
+                cancellationToken
+            );
 
-        var transformTask = TransformAsync(
-            job,
-            countingStream,
-            encoding,
-            csvConfig,
-            pipe.Writer,
-            badDataCounter,
-            missingValueCounter,
-            cancellationToken
-        );
-        using var transferUtility = new TransferUtility(s3);
-        var uploadTask = transferUtility.UploadAsync(
-            pipe.Reader.AsStream(),
+            if (result.CancelledByUser)
+            {
+                // Nothing should be left behind for a job the user cancelled - least of all a
+                // half-written output object presented as if it were the job's result.
+                await AbandonOutputAsync(job.Id, output);
+                return (outputObjectKey, result.Rows);
+            }
+
+            await output.CompleteAsync(cancellationToken.ShutdownToken);
+            await jobRepository.ClearOutputCheckpointAsync(job.Id, CancellationToken.None);
+
+            return (outputObjectKey, result.Rows);
+        }
+        catch (OperationCanceledException)
+            when (cancellationToken.ShutdownToken.IsCancellationRequested)
+        {
+            // The one case where the upload is deliberately left open: this attempt is being cut
+            // short by a shutdown, not failing, and the parts already stored plus the checkpoint
+            // pointing at them are exactly what lets the next attempt carry on from here.
+            logger.LogInformation(
+                "Leaving job {JobId}'s output upload open with {PartCount} part(s) stored so the "
+                    + "next attempt can resume from that point.",
+                job.Id,
+                output.Parts.Count
+            );
+            throw;
+        }
+        catch
+        {
+            // Any other failure is terminal for this attempt (automatic retries are disabled -
+            // see Program.cs), so the upload would otherwise linger as storage nothing lists.
+            await AbandonOutputAsync(job.Id, output);
+            throw;
+        }
+        finally
+        {
+            output.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Re-attaches to the multipart upload a previous attempt left behind, if there is one and the
+    /// object store still has it. Returns null when the job has to start over.
+    /// </summary>
+    private async Task<(
+        MultipartOutputStream Output,
+        JobOutputCheckpoint Checkpoint
+    )?> TryResumeAsync(
+        PseudonymizationJob job,
+        string outputObjectKey,
+        int partSize,
+        IJobCancellationToken cancellationToken
+    )
+    {
+        // The key check guards against a checkpoint written for some other object ever being
+        // applied here - the key is derived from the job id so this should be impossible, but
+        // resuming onto the wrong object would silently corrupt output rather than fail loudly.
+        if (job.OutputCheckpoint is not { } checkpoint || checkpoint.ObjectKey != outputObjectKey)
+        {
+            return null;
+        }
+
+        var output = await MultipartOutputStream.TryResumeAsync(
+            s3,
             s3Config.Value.Bucket,
-            outputObjectKey,
+            checkpoint,
+            partSize,
             cancellationToken.ShutdownToken
         );
 
-        await Task.WhenAll(transformTask, uploadTask);
+        if (output is null)
+        {
+            logger.LogWarning(
+                "Job {JobId} has a checkpoint at row {Row}, but its output upload no longer "
+                    + "exists in object storage - it was most likely aborted by the bucket's "
+                    + "lifecycle policy. Reprocessing the job from the beginning.",
+                job.Id,
+                checkpoint.RowsWritten
+            );
+            await jobRepository.ClearOutputCheckpointAsync(job.Id, CancellationToken.None);
+            return null;
+        }
 
-        return (outputObjectKey, await transformTask);
+        logger.LogInformation(
+            "Resuming job {JobId} from row {Row} ({PartCount} output part(s) already stored) "
+                + "rather than reprocessing it from the beginning.",
+            job.Id,
+            checkpoint.RowsWritten,
+            checkpoint.Parts.Count
+        );
+
+        return (output, checkpoint);
+    }
+
+    /// <summary>
+    /// Throws away an output upload and the checkpoint pointing at it. Best-effort: this runs on
+    /// paths that are already failing or cancelling, and losing the abort call only costs some
+    /// orphaned storage (which the bucket's own lifecycle rule eventually reclaims), whereas
+    /// throwing from here would mask the real reason the job stopped.
+    /// </summary>
+    private async Task AbandonOutputAsync(Guid jobId, MultipartOutputStream output)
+    {
+        try
+        {
+            await output.AbortAsync(CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(
+                ex,
+                "Failed to abort the output upload for job {JobId}; the bucket lifecycle policy "
+                    + "will clean it up instead.",
+                jobId
+            );
+        }
+
+        try
+        {
+            await jobRepository.ClearOutputCheckpointAsync(jobId, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to clear the checkpoint for job {JobId}.", jobId);
+        }
     }
 
     /// <summary>
     /// Reads+transforms the input CSV row by row (via <c>GetField(index)</c> only - never a
     /// typed <c>GetField&lt;T&gt;()</c>, since fields here are opaque values to relocate, not
-    /// data to interpret) and writes the result into <paramref name="pipeWriter"/>, which the
-    /// caller concurrently uploads to S3 from the other end of the same <see cref="System.IO.Pipelines.Pipe"/>.
+    /// data to interpret) and writes the result into <paramref name="output"/>, which uploads it
+    /// to object storage a part at a time.
+    ///
+    /// When <paramref name="resumeFrom"/> is given, the rows it covers are read but not
+    /// re-transformed and nothing is written for them - their output is already stored in the
+    /// parts that checkpoint refers to.
     /// </summary>
-    private async Task<long> TransformAsync(
+    private async Task<TransformResult> TransformAsync(
         PseudonymizationJob job,
         ByteCountingStream countingStream,
         Encoding encoding,
         CsvConfiguration csvConfig,
-        System.IO.Pipelines.PipeWriter pipeWriter,
+        MultipartOutputStream output,
+        JobOutputCheckpoint? resumeFrom,
         BadDataCounter badDataCounter,
         MissingValueCounter missingValueCounter,
         IJobCancellationToken cancellationToken
     )
     {
-        var pipeOutStream = pipeWriter.AsStream();
-        try
+        // A byte-order mark belongs to the file, not to each part, and StreamWriter would emit one
+        // at the start of whatever stream it is handed - which on a resumed job is the middle of
+        // the file. Writing it here, and giving the writer a preamble-free encoding, keeps that in
+        // one place instead of depending on StreamWriter's own position-based guess.
+        if (resumeFrom is null)
         {
-            using var reader = new StreamReader(countingStream, encoding);
-            using var csvReader = new CsvReader(reader, csvConfig, leaveOpen: true);
-            await using var writer = new StreamWriter(pipeOutStream, encoding, leaveOpen: true);
-            await using var csvWriter = new CsvWriter(writer, csvConfig, leaveOpen: true);
-
-            string[]? header = null;
-            if (job.HasHeaderRow)
+            var preamble = encoding.GetPreamble();
+            if (preamble.Length > 0)
             {
-                await csvReader.ReadAsync();
-                csvReader.ReadHeader();
-                header = csvReader.HeaderRecord;
+                await output.WriteAsync(preamble, cancellationToken.ShutdownToken);
+            }
+        }
+
+        using var reader = new StreamReader(countingStream, encoding);
+        using var csvReader = new CsvReader(reader, csvConfig, leaveOpen: true);
+        await using var writer = new StreamWriter(
+            output,
+            WithoutPreamble(encoding),
+            leaveOpen: true
+        );
+        await using var csvWriter = new CsvWriter(writer, csvConfig, leaveOpen: true);
+
+        string[]? header = null;
+        if (job.HasHeaderRow)
+        {
+            await csvReader.ReadAsync();
+            csvReader.ReadHeader();
+            header = csvReader.HeaderRecord;
+        }
+
+        // Resolve every distinct namespace this job's column mappings reference exactly
+        // once, up front - not on every field of every row, which used to be the dominant
+        // per-row cost (a namespace lookup on top of the actual upsert/reverse-lookup, for
+        // every single value). Also fails the job immediately if a mapping references a
+        // namespace that no longer exists, rather than only discovering that many rows in.
+        var namespaces = new Dictionary<string, Namespace>();
+        foreach (var namespaceName in job.ColumnMappings.Select(m => m.Namespace).Distinct())
+        {
+            namespaces[namespaceName] =
+                await namespaceRepository.FindAsync(namespaceName, CancellationToken.None)
+                ?? throw new InvalidOperationException(
+                    $"Namespace '{namespaceName}' does not exist."
+                );
+        }
+
+        var inPlaceBySourceIndex = new Dictionary<int, Namespace>();
+        var appended = new List<(int SourceIndex, string TargetColumn, Namespace Namespace)>();
+        foreach (var mapping in job.ColumnMappings)
+        {
+            var sourceIndex = ResolveColumnIndex(mapping.SourceColumn, header);
+            var @namespace = namespaces[mapping.Namespace];
+            if (mapping.TargetColumn is null)
+            {
+                inPlaceBySourceIndex.TryAdd(sourceIndex, @namespace);
+            }
+            else
+            {
+                appended.Add((sourceIndex, mapping.TargetColumn, @namespace));
+            }
+        }
+
+        // Skipped when resuming: the header is already inside the parts a previous attempt
+        // uploaded, and writing it again would put it in the middle of the file.
+        if (resumeFrom is null && header is not null)
+        {
+            foreach (var h in header)
+            {
+                csvWriter.WriteField(h);
             }
 
-            // Resolve every distinct namespace this job's column mappings reference exactly
-            // once, up front - not on every field of every row, which used to be the dominant
-            // per-row cost (a namespace lookup on top of the actual upsert/reverse-lookup, for
-            // every single value). Also fails the job immediately if a mapping references a
-            // namespace that no longer exists, rather than only discovering that many rows in.
-            var namespaces = new Dictionary<string, Namespace>();
-            foreach (var namespaceName in job.ColumnMappings.Select(m => m.Namespace).Distinct())
+            foreach (var a in appended)
             {
-                namespaces[namespaceName] =
-                    await namespaceRepository.FindAsync(namespaceName, CancellationToken.None)
-                    ?? throw new InvalidOperationException(
-                        $"Namespace '{namespaceName}' does not exist."
-                    );
+                csvWriter.WriteField(a.TargetColumn);
             }
 
-            var inPlaceBySourceIndex = new Dictionary<int, Namespace>();
-            var appended = new List<(int SourceIndex, string TargetColumn, Namespace Namespace)>();
-            foreach (var mapping in job.ColumnMappings)
+            await csvWriter.NextRecordAsync();
+        }
+
+        if (resumeFrom is not null)
+        {
+            // Fast-forward the reader over the rows whose output is already stored. They are read
+            // but not transformed, so none of the (expensive) pseudonymization work is repeated -
+            // which is the entire point of resuming.
+            for (var skipped = 0L; skipped < resumeFrom.RowsWritten; skipped++)
             {
-                var sourceIndex = ResolveColumnIndex(mapping.SourceColumn, header);
-                var @namespace = namespaces[mapping.Namespace];
-                if (mapping.TargetColumn is null)
+                if (!await csvReader.ReadAsync())
                 {
-                    inPlaceBySourceIndex.TryAdd(sourceIndex, @namespace);
-                }
-                else
-                {
-                    appended.Add((sourceIndex, mapping.TargetColumn, @namespace));
-                }
-            }
-
-            if (header is not null)
-            {
-                foreach (var h in header)
-                {
-                    csvWriter.WriteField(h);
-                }
-
-                foreach (var a in appended)
-                {
-                    csvWriter.WriteField(a.TargetColumn);
-                }
-
-                await csvWriter.NextRecordAsync();
-            }
-
-            var chunkSize =
-                job.Direction == PseudonymizationJobDirection.Pseudonymize
-                    // Clamped rather than trusted as-is - a misconfigured 0 or negative value
-                    // would otherwise throw out of the List<BufferedRow> capacity below or flush
-                    // on every single row.
-                    ? Math.Max(1, csvProcessingConfig.Value.PseudonymizeBatchSize)
-                    : DepseudonymizeConcurrencyChunkSize;
-
-            // rows: actually flushed/written so far - what's reported as progress and eventually
-            // RowsProcessed. totalRowsRead: consumed from the reader so far, flushed or not - this
-            // drives when MaybeReportProgressAndCheckCancelledAsync actually checks in, decoupled
-            // from the (now potentially much larger, for Pseudonymize) flush boundary so a big
-            // batch size can't blunt cancellation/progress responsiveness. If a cancellation is
-            // noticed while a batch is only partially buffered, that partial buffer is simply
-            // dropped rather than flushed - same "discard whatever hasn't been written yet"
-            // behavior as always, just checked more often than the flush boundary now allows for.
-            var rows = 0L;
-            var totalRowsRead = 0L;
-            var sinceLastUpdate = Stopwatch.StartNew();
-            var chunk = new List<BufferedRow>(chunkSize);
-
-            while (await csvReader.ReadAsync())
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-
-                var fieldCount = csvReader.Parser.Count;
-                var rawFields = new string?[fieldCount];
-                for (var i = 0; i < fieldCount; i++)
-                {
-                    rawFields[i] = csvReader.GetField(i);
-                }
-
-                chunk.Add(new BufferedRow(rawFields));
-                totalRowsRead++;
-
-                if (chunk.Count >= chunkSize)
-                {
-                    await FlushChunkAsync(
-                        chunk,
-                        job.Direction,
-                        inPlaceBySourceIndex,
-                        appended,
-                        csvWriter,
-                        missingValueCounter
-                    );
-                    rows += chunk.Count;
-                    chunk.Clear();
-                }
-
-                if (
-                    await MaybeReportProgressAndCheckCancelledAsync(
-                        job.Id,
-                        countingStream,
-                        totalRowsRead,
-                        rows,
-                        badDataCounter.Count,
-                        missingValueCounter.Count,
-                        sinceLastUpdate
-                    )
-                )
-                {
-                    return rows;
+                    break;
                 }
             }
 
-            if (chunk.Count > 0)
+            // Restored *after* the skip, not before: re-reading those rows fires BadDataFound
+            // again for any malformed ones among them, which would otherwise count them a second
+            // time on every resume.
+            badDataCounter.Count = resumeFrom.BadDataRowCount;
+            missingValueCounter.Count = resumeFrom.MissingValueCount;
+        }
+
+        var chunkSize =
+            job.Direction == PseudonymizationJobDirection.Pseudonymize
+                // Clamped rather than trusted as-is - a misconfigured 0 or negative value
+                // would otherwise throw out of the List<BufferedRow> capacity below or flush
+                // on every single row.
+                ? Math.Max(1, csvProcessingConfig.Value.PseudonymizeBatchSize)
+                : DepseudonymizeConcurrencyChunkSize;
+
+        // rows: actually flushed/written so far - what's reported as progress and eventually
+        // RowsProcessed. totalRowsRead: consumed from the reader so far, flushed or not - this
+        // drives when MaybeReportProgressAndCheckCancelledAsync actually checks in, decoupled
+        // from the (now potentially much larger, for Pseudonymize) flush boundary so a big
+        // batch size can't blunt cancellation/progress responsiveness. If a cancellation is
+        // noticed while a batch is only partially buffered, that partial buffer is simply
+        // dropped rather than flushed - same "discard whatever hasn't been written yet"
+        // behavior as always, just checked more often than the flush boundary now allows for.
+        var rows = resumeFrom?.RowsWritten ?? 0L;
+        var totalRowsRead = rows;
+        var sinceLastUpdate = Stopwatch.StartNew();
+        var chunk = new List<BufferedRow>(chunkSize);
+
+        while (await csvReader.ReadAsync())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var fieldCount = csvReader.Parser.Count;
+            var rawFields = new string?[fieldCount];
+            for (var i = 0; i < fieldCount; i++)
+            {
+                rawFields[i] = csvReader.GetField(i);
+            }
+
+            chunk.Add(new BufferedRow(rawFields));
+            totalRowsRead++;
+
+            if (chunk.Count >= chunkSize)
             {
                 await FlushChunkAsync(
                     chunk,
@@ -385,25 +523,69 @@ public class CsvPseudonymizationJobRunner(
                     missingValueCounter
                 );
                 rows += chunk.Count;
+                chunk.Clear();
+
+                // A chunk boundary is a row boundary, and flushing the writer here pushes whole
+                // rows (never a partial one) into the output buffer - which is what makes it safe
+                // to cut a part, and what makes the row count recorded alongside it exact.
+                await csvWriter.FlushAsync();
+                if (await output.TryFlushPartAsync(cancellationToken.ShutdownToken))
+                {
+                    await jobRepository.SaveOutputCheckpointAsync(
+                        job.Id,
+                        new JobOutputCheckpoint
+                        {
+                            UploadId = output.UploadId,
+                            ObjectKey = output.Key,
+                            Parts = [.. output.Parts],
+                            RowsWritten = rows,
+                            BadDataRowCount = badDataCounter.Count,
+                            MissingValueCount = missingValueCounter.Count,
+                        },
+                        CancellationToken.None
+                    );
+                }
             }
 
-            await jobRepository.UpdateProgressAsync(
-                job.Id,
-                countingStream.BytesRead,
-                rows,
-                badDataCounter.Count,
-                missingValueCounter.Count,
-                CancellationToken.None
-            );
+            if (
+                await MaybeReportProgressAndCheckCancelledAsync(
+                    job.Id,
+                    countingStream,
+                    totalRowsRead,
+                    rows,
+                    badDataCounter.Count,
+                    missingValueCounter.Count,
+                    sinceLastUpdate
+                )
+            )
+            {
+                return new TransformResult(rows, CancelledByUser: true);
+            }
+        }
 
-            return rows;
-        }
-        finally
+        if (chunk.Count > 0)
         {
-            // Always complete the pipe, success or failure - otherwise the concurrent upload
-            // task (reading from the other end of the same pipe) would hang forever.
-            await pipeOutStream.DisposeAsync();
+            await FlushChunkAsync(
+                chunk,
+                job.Direction,
+                inPlaceBySourceIndex,
+                appended,
+                csvWriter,
+                missingValueCounter
+            );
+            rows += chunk.Count;
         }
+
+        await jobRepository.UpdateProgressAsync(
+            job.Id,
+            countingStream.BytesRead,
+            rows,
+            badDataCounter.Count,
+            missingValueCounter.Count,
+            CancellationToken.None
+        );
+
+        return new TransformResult(rows, CancelledByUser: false);
     }
 
     /// <summary>
@@ -696,6 +878,29 @@ public class CsvPseudonymizationJobRunner(
                 trimmed.Equals(placeholder, StringComparison.OrdinalIgnoreCase)
             );
     }
+
+    /// <param name="Rows">Rows written to the output, including any inherited from a resumed checkpoint.</param>
+    /// <param name="CancelledByUser">
+    /// True when processing stopped early because the job was cancelled through the UI - as
+    /// opposed to running to the end of the input, or being cut short by a shutdown (which throws).
+    /// </param>
+    private sealed record TransformResult(long Rows, bool CancelledByUser);
+
+    /// <summary>
+    /// The same encoding with its byte-order mark suppressed, so only <see cref="TransformAsync"/>
+    /// decides whether a file gets one. Encodings other than the Unicode family have no preamble
+    /// to begin with, so they are returned unchanged.
+    /// </summary>
+    private static Encoding WithoutPreamble(Encoding encoding) =>
+        encoding.CodePage switch
+        {
+            65001 => new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+            1200 => new UnicodeEncoding(bigEndian: false, byteOrderMark: false),
+            1201 => new UnicodeEncoding(bigEndian: true, byteOrderMark: false),
+            12000 => new UTF32Encoding(bigEndian: false, byteOrderMark: false),
+            12001 => new UTF32Encoding(bigEndian: true, byteOrderMark: false),
+            _ => encoding,
+        };
 
     private sealed class BufferedRow(string?[] rawFields)
     {

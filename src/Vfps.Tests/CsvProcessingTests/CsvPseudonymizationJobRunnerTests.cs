@@ -15,16 +15,12 @@ using Vfps.Data.Models;
 
 namespace Vfps.Tests.CsvProcessingTests;
 
-// These tests deliberately verify the row-transform logic (which namespace/value each field
-// resolves to, in what order, and how many rows get processed) via the calls made to
-// pseudonymAppService/jobRepository, rather than by reading back the uploaded output object's
-// bytes. A fully-faked IAmazonS3 doesn't model TransferUtility faithfully enough for that:
-// TransferUtility.UploadAsync reads internal client config (e.g. buffer/part size) off
-// IAmazonS3.Config, and FakeItEasy auto-fakes that property to an object with zeroed-out
-// values, which makes TransferUtility produce a bogus empty upload - confirmed to be a test-only
-// artifact, not a real bug, via an actual end-to-end run (real browser upload, real MinIO,
-// correct pseudonymized content downloaded back). Asserting on "uploaded" content here would
-// just be asserting on that artifact.
+// Most of these tests verify the row-transform logic (which namespace/value each field resolves
+// to, in what order, and how many rows get processed) via the calls made to pseudonymAppService/
+// jobRepository. Output content can now also be asserted on directly - see CaptureOutputParts:
+// the runner drives the multipart upload itself rather than handing a pipe to TransferUtility,
+// which used to read internal client config off IAmazonS3.Config that FakeItEasy auto-fakes to
+// zeroed-out values, producing a bogus empty upload that made such assertions meaningless.
 public class CsvPseudonymizationJobRunnerTests
 {
     private const string Bucket = "test-bucket";
@@ -65,7 +61,8 @@ public class CsvPseudonymizationJobRunnerTests
     // exercise the same behavior a real deployment would see out of the box.
     private CsvPseudonymizationJobRunner CreateSut(
         int pseudonymizeBatchSize = 20,
-        List<string>? missingValuePlaceholders = null
+        List<string>? missingValuePlaceholders = null,
+        int? outputPartSizeBytes = null
     ) =>
         new(
             jobRepository,
@@ -78,6 +75,8 @@ public class CsvPseudonymizationJobRunnerTests
                 {
                     PseudonymizeBatchSize = pseudonymizeBatchSize,
                     MissingValuePlaceholders = missingValuePlaceholders ?? ["NA", "NULL"],
+                    OutputPartSizeBytes =
+                        outputPartSizeBytes ?? new CsvProcessingConfig().OutputPartSizeBytes,
                 }
             ),
             NullLogger<CsvPseudonymizationJobRunner>.Instance
@@ -113,6 +112,57 @@ public class CsvPseudonymizationJobRunnerTests
                     ResponseStream = new MemoryStream(Encoding.UTF8.GetBytes(csvContent)),
                 }
             );
+
+    private const string UploadId = "test-upload-id";
+
+    /// <summary>
+    /// Stubs the multipart upload calls and collects the bytes of every uploaded part, so a test
+    /// can assert on the output the job actually produced. Parts are copied out inside the
+    /// callback because the runner reuses (and clears) one buffer for all of them.
+    /// </summary>
+    private List<byte[]> CaptureOutputParts()
+    {
+        var parts = new List<byte[]>();
+
+        A.CallTo(() =>
+                s3.InitiateMultipartUploadAsync(
+                    A<InitiateMultipartUploadRequest>._,
+                    A<CancellationToken>._
+                )
+            )
+            .Returns(new InitiateMultipartUploadResponse { UploadId = UploadId });
+
+        A.CallTo(() => s3.UploadPartAsync(A<UploadPartRequest>._, A<CancellationToken>._))
+            .ReturnsLazily(call =>
+            {
+                var request = call.GetArgument<UploadPartRequest>(0)!;
+                using var copy = new MemoryStream();
+                request.InputStream.CopyTo(copy);
+                parts.Add(copy.ToArray());
+
+                return Task.FromResult(
+                    new UploadPartResponse
+                    {
+                        PartNumber = request.PartNumber,
+                        ETag = $"etag-{request.PartNumber}",
+                    }
+                );
+            });
+
+        return parts;
+    }
+
+    /// <summary>The full output as text, with the encoding's byte-order mark stripped.</summary>
+    private static string ReadOutput(List<byte[]> parts) =>
+        Encoding.UTF8.GetString([.. parts.SelectMany(part => part)]).TrimStart('\uFEFF');
+
+    private void FakeResumableUpload() =>
+        A.CallTo(() => s3.ListPartsAsync(A<ListPartsRequest>._, A<CancellationToken>._))
+            .Returns(new ListPartsResponse());
+
+    private void FakeStaleUpload() =>
+        A.CallTo(() => s3.ListPartsAsync(A<ListPartsRequest>._, A<CancellationToken>._))
+            .Throws(new AmazonS3Exception("no such upload") { ErrorCode = "NoSuchUpload" });
 
     private void FakeFindJob(PseudonymizationJob job) =>
         A.CallTo(() => jobRepository.FindAsync(job.Id, A<CancellationToken>._)).Returns(job);
@@ -190,6 +240,210 @@ public class CsvPseudonymizationJobRunnerTests
                         PseudonymValue = pseudonymValue,
                     }
             );
+
+    [Fact]
+    public async Task RunAsync_ShouldWriteTheTransformedRowsToTheOutputUpload()
+    {
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,secret\n2,other\n");
+        FakePseudonymize("ns", "secret", "pseudonym-of-secret");
+        FakePseudonymize("ns", "other", "pseudonym-of-other");
+        var parts = CaptureOutputParts();
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        ReadOutput(parts)
+            .Should()
+            .Be("id,value\r\n1,pseudonym-of-secret\r\n2,pseudonym-of-other\r\n");
+        A.CallTo(() =>
+                s3.CompleteMultipartUploadAsync(
+                    A<CompleteMultipartUploadRequest>.That.Matches(r => r.UploadId == UploadId),
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task RunAsync_OnceEnoughOutputAccumulates_ShouldUploadAPartAndCheckpointIt()
+    {
+        // The only test that produces enough output for a part to actually be cut (S3's 5 MiB
+        // minimum is a hard floor, so this can't be made cheap by shrinking the part size). Rows
+        // are wide rather than numerous to keep it fast, and every row carries the same value so a
+        // single batched resolve covers all of them.
+        var wideValue = new string('x', 1000);
+        var widePseudonym = new string('p', 1000);
+        var rowCount = 6000;
+        var input = new StringBuilder("id,value\n");
+        for (var i = 0; i < rowCount; i++)
+        {
+            input.Append(i).Append(',').Append(wideValue).Append('\n');
+        }
+
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, input.ToString());
+        FakePseudonymize("ns", wideValue, widePseudonym);
+        var parts = CaptureOutputParts();
+
+        var sut = CreateSut(
+            pseudonymizeBatchSize: rowCount,
+            outputPartSizeBytes: MultipartOutputStream.MinimumPartSizeBytes
+        );
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        parts.Should().ContainSingle();
+        parts[0].Length.Should().BeGreaterThanOrEqualTo(MultipartOutputStream.MinimumPartSizeBytes);
+
+        // The checkpoint has to name the rows whose output is inside the part that was just
+        // stored - that pairing is what makes resuming correct rather than approximate.
+        A.CallTo(() =>
+                jobRepository.SaveOutputCheckpointAsync(
+                    job.Id,
+                    A<JobOutputCheckpoint>.That.Matches(checkpoint =>
+                        checkpoint.UploadId == UploadId
+                        && checkpoint.RowsWritten == rowCount
+                        && checkpoint.Parts.Count == 1
+                        && checkpoint.Parts[0].ETag == "etag-1"
+                    ),
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+
+        // ...and it must be gone once the job can no longer be resumed from it.
+        A.CallTo(() => jobRepository.ClearOutputCheckpointAsync(job.Id, A<CancellationToken>._))
+            .MustHaveHappened();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithACheckpoint_ShouldNotReprocessTheRowsItCovers()
+    {
+        // The point of checkpointing: an interrupted job picks up where it stopped instead of
+        // redoing the (expensive) pseudonymization for rows whose output is already stored.
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        job.OutputCheckpoint = new JobOutputCheckpoint
+        {
+            UploadId = UploadId,
+            ObjectKey = $"csv-jobs/{job.Id}/output.csv",
+            Parts = [new CompletedOutputPart { PartNumber = 1, ETag = "etag-1" }],
+            RowsWritten = 1,
+        };
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,already-done\n2,still-to-do\n");
+        FakePseudonymize("ns", "still-to-do", "pseudonym-of-still-to-do");
+        FakeResumableUpload();
+        var parts = CaptureOutputParts();
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        A.CallTo(() =>
+                pseudonymAppService.CreateTrustedBatchAsync(
+                    A<
+                        IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>
+                    >.That.Matches(reqs => reqs.Any(r => r.OriginalValue == "already-done")),
+                    A<CancellationToken>._
+                )
+            )
+            .MustNotHaveHappened();
+
+        // Neither the byte-order mark nor the header is re-emitted - both are already inside the
+        // part the checkpoint refers to, so repeating them would corrupt the middle of the file.
+        var written = Encoding.UTF8.GetString([.. parts.SelectMany(part => part)]);
+        written.Should().Be("2,pseudonym-of-still-to-do\r\n");
+
+        A.CallTo(() =>
+                s3.InitiateMultipartUploadAsync(
+                    A<InitiateMultipartUploadRequest>._,
+                    A<CancellationToken>._
+                )
+            )
+            .MustNotHaveHappened();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithACheckpointWhoseUploadIsGone_ShouldStartOver()
+    {
+        // The bucket lifecycle rule aborts incomplete uploads eventually, so a checkpoint can
+        // outlive the parts it points at. That has to degrade to a full reprocess rather than
+        // failing the job at CompleteMultipartUpload after all the work has been redone.
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        job.OutputCheckpoint = new JobOutputCheckpoint
+        {
+            UploadId = "long-gone",
+            ObjectKey = $"csv-jobs/{job.Id}/output.csv",
+            Parts = [new CompletedOutputPart { PartNumber = 1, ETag = "etag-1" }],
+            RowsWritten = 1,
+        };
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,first\n2,second\n");
+        FakePseudonymize("ns", "first", "pseudonym-of-first");
+        FakePseudonymize("ns", "second", "pseudonym-of-second");
+        FakeStaleUpload();
+        var parts = CaptureOutputParts();
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        A.CallTo(() => jobRepository.ClearOutputCheckpointAsync(job.Id, A<CancellationToken>._))
+            .MustHaveHappened();
+        ReadOutput(parts)
+            .Should()
+            .Be("id,value\r\n1,pseudonym-of-first\r\n2,pseudonym-of-second\r\n");
+        A.CallTo(() => jobRepository.CompleteAsync(job.Id, A<string>._, 2, A<CancellationToken>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenProcessingFails_ShouldAbortTheOutputUpload()
+    {
+        // A failed attempt is terminal (automatic retries are disabled), so leaving the upload
+        // open would strand parts that nothing will ever complete or resume.
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "missing-ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("missing-ns", A<CancellationToken>._))
+            .Returns<Data.Models.Namespace?>(null);
+        FakeInputObject(job, "id,value\n1,secret\n");
+        CaptureOutputParts();
+
+        var sut = CreateSut();
+        var act = async () => await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        await act.Should().ThrowAsync<InvalidOperationException>();
+        A.CallTo(() =>
+                s3.AbortMultipartUploadAsync(
+                    A<AbortMultipartUploadRequest>.That.Matches(r => r.UploadId == UploadId),
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+    }
 
     [Fact]
     public async Task RunAsync_WithPseudonymizeDirection_ShouldPseudonymizeEachRowValueAndComplete()

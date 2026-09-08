@@ -31,6 +31,10 @@ public class S3BucketConfigurationBackgroundService(
 ) : BackgroundService
 {
     private const string LifecycleRuleId = "vfps-csv-jobs-retention";
+
+    // Clamped to ObjectRetentionDays where that is shorter, since an upload outliving the objects
+    // it would produce makes no sense.
+    private const int AbortIncompleteUploadsAfterDays = 7;
     private const string CorsRuleId = "vfps-csv-jobs-cors";
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -54,9 +58,11 @@ public class S3BucketConfigurationBackgroundService(
         }
 
         logger.LogInformation(
-            "Applying an S3 lifecycle rule to expire objects under {Prefix} after {Days} day(s).",
+            "Applying an S3 lifecycle rule to expire objects under {Prefix} after {Days} day(s), "
+                + "and to abort incomplete multipart uploads after {AbortDays} day(s).",
             PseudonymizationJobAppService.S3ObjectKeyPrefix,
-            config.ObjectRetentionDays
+            config.ObjectRetentionDays,
+            Math.Min(AbortIncompleteUploadsAfterDays, config.ObjectRetentionDays)
         );
 
         try
@@ -84,6 +90,26 @@ public class S3BucketConfigurationBackgroundService(
                                 {
                                     Days = config.ObjectRetentionDays,
                                 },
+                                // A job's output is written as a multipart upload that is
+                                // deliberately left open when an attempt is interrupted, so the
+                                // next attempt can resume into it (see MultipartOutputStream).
+                                // An upload whose job never comes back would otherwise sit there
+                                // forever, consuming storage that no object listing shows. This
+                                // is the backstop for that; the runner still aborts explicitly
+                                // whenever a job fails or is cancelled.
+                                //
+                                // Deliberately generous: this window is how long a job has to be
+                                // picked up again before its stored parts are destroyed and it
+                                // has to start over, so it must comfortably outlast any plausible
+                                // outage or paused rollout.
+                                AbortIncompleteMultipartUpload =
+                                    new LifecycleRuleAbortIncompleteMultipartUpload
+                                    {
+                                        DaysAfterInitiation = Math.Min(
+                                            AbortIncompleteUploadsAfterDays,
+                                            config.ObjectRetentionDays
+                                        ),
+                                    },
                             },
                         ],
                     },

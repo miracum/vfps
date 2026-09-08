@@ -42,6 +42,19 @@ public class CsvProcessingConfig
     public TimeSpan StalledJobThreshold { get; set; } = TimeSpan.FromMinutes(10);
 
     /// <summary>
+    /// How much output a job buffers in memory before uploading it as one part of its output
+    /// object - and therefore how much work an interrupted job has to redo, since a checkpoint can
+    /// only be taken once a part is durably stored (see
+    /// <see cref="Data.Models.JobOutputCheckpoint"/>).
+    ///
+    /// S3 requires every part but the last to be at least 5 MiB, so that's the hard floor and
+    /// smaller values are clamped up to it. The default trades a slightly larger redo window for
+    /// fewer round trips; note this much memory is held per running job, so it multiplies by
+    /// <see cref="WorkerCount"/>.
+    /// </summary>
+    public int OutputPartSizeBytes { get; set; } = 8 * 1024 * 1024;
+
+    /// <summary>
     /// How many CSV jobs one replica processes concurrently (Hangfire's worker count for this
     /// app's job server). Pinned rather than left at Hangfire's own default of
     /// <c>min(ProcessorCount * 5, 20)</c>, because that default is chosen for short, cheap jobs

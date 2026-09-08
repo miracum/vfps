@@ -69,6 +69,32 @@ public class PseudonymizationJobRepository(PseudonymContext context)
     }
 
     /// <inheritdoc/>
+    public async Task SaveOutputCheckpointAsync(
+        Guid id,
+        JobOutputCheckpoint checkpoint,
+        CancellationToken cancellationToken
+    )
+    {
+        await context
+            .PseudonymizationJobs.Where(j => j.Id == id)
+            .ExecuteUpdateAsync(
+                s =>
+                    s.SetProperty(j => j.OutputCheckpoint, checkpoint)
+                        .SetProperty(j => j.LastUpdatedAt, DateTimeOffset.UtcNow),
+                cancellationToken
+            );
+    }
+
+    public async Task ClearOutputCheckpointAsync(Guid id, CancellationToken cancellationToken)
+    {
+        await context
+            .PseudonymizationJobs.Where(j => j.Id == id)
+            .ExecuteUpdateAsync(
+                s => s.SetProperty(j => j.OutputCheckpoint, (JobOutputCheckpoint?)null),
+                cancellationToken
+            );
+    }
+
     public async Task UpdateProgressAsync(
         Guid id,
         long bytesProcessed,

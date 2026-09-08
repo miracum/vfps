@@ -98,6 +98,34 @@ public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbCo
             columnMappingsProperty.HasColumnType("jsonb");
         }
 
+        // Same JSON-column treatment again, for the resumable-output checkpoint. Nullable: a job
+        // only carries one while it's being processed, and EF leaves null alone rather than
+        // running it through the converter.
+        var checkpointConverter = new ValueConverter<JobOutputCheckpoint?, string>(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v => JsonSerializer.Deserialize<JobOutputCheckpoint>(v, (JsonSerializerOptions?)null)
+        );
+        var checkpointComparer = new ValueComparer<JobOutputCheckpoint?>(
+            (a, b) =>
+                JsonSerializer.Serialize(a, (JsonSerializerOptions?)null)
+                == JsonSerializer.Serialize(b, (JsonSerializerOptions?)null),
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null).GetHashCode(),
+            v =>
+                JsonSerializer.Deserialize<JobOutputCheckpoint>(
+                    JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    (JsonSerializerOptions?)null
+                )
+        );
+
+        var checkpointProperty = modelBuilder
+            .Entity<PseudonymizationJob>()
+            .Property(j => j.OutputCheckpoint);
+        checkpointProperty.HasConversion(checkpointConverter, checkpointComparer);
+        if (Database.IsNpgsql())
+        {
+            checkpointProperty.HasColumnType("jsonb");
+        }
+
         // Same JSON-column treatment as ColumnMappings above: a MetricSnapshot's values are only
         // ever read and written as a whole set, so they live in one column rather than a row per
         // series - which is also what makes "replace wholesale" (and therefore a series that has

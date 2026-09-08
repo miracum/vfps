@@ -184,6 +184,12 @@ application's, and are easy to miss:
   bundled `efbundle` and `efbundle-dataprotection` as a separate Job. Because that Job runs while
   the previous version's pods are still serving, migrations have to be backwards-compatible with the
   running version (expand/contract) for the upgrade to be non-disruptive.
+- **CSV jobs survive a rollout, but not for free.** An interrupted job resumes from its last
+  checkpoint rather than reprocessing from row 0 (see above), so a rolling upgrade costs at most one
+  part's worth of redone work plus however long Hangfire takes to re-dispatch it
+  (`CsvProcessing__OrphanedJobRecoveryDelay`). Jobs are still processed in the API pods, so they
+  share those pods' CPU, memory and shutdown window - a dedicated worker Deployment is the next step
+  if job load starts affecting API latency.
 - **The per-namespace pseudonym count metric is computed by one replica and shared.**
   `vfps_pseudonyms` comes from a `GROUP BY` count over the whole pseudonyms table, so it's
   recomputed at most every 5 minutes by whichever replica wins an atomic claim on the
@@ -239,10 +245,20 @@ Available configuration options which can be set as environment variables:
 | `S3__AllowedOrigins`          | `string[]` | `[]`         | Origins (e.g. `https://vfps.example.org`) allowed to PUT/GET objects directly against the bucket via presigned URLs, applied as an S3 bucket CORS rule on startup. The browser talks to the bucket on a different origin than vfps itself, so without this the browser blocks the upload with a CORS error before it reaches S3. Empty (the default) leaves the bucket's CORS configuration untouched. **Overwrites the bucket's entire existing CORS configuration** - use a bucket dedicated to vfps. |
 | `CsvProcessing__PseudonymizeBatchSize`     | `int`      | `1000`         | How many rows' worth of values go into one batched upsert round trip when pseudonymizing a CSV job. Doesn't apply to de-pseudonymization, which resolves concurrently instead. |
 | `CsvProcessing__StalledJobThreshold`       | `TimeSpan` | `"0.00:10:00"` | How long a CSV job can sit `Running` with no progress update before it's marked `Stalled` (its worker likely crashed, lost its database connection, or was killed by an app restart). |
+| `CsvProcessing__OutputPartSizeBytes`       | `int`      | `8388608`      | How much output a CSV job buffers before uploading it as one part of its output object - and therefore how much work an interrupted job redoes, since it can only checkpoint once a part is durably stored. S3 requires every part but the last to be at least 5 MiB, so smaller values are clamped up to that. This much memory is held per running job, so it multiplies by `CsvProcessing__WorkerCount`. |
 | `CsvProcessing__WorkerCount`               | `int`      | `4`            | How many CSV jobs one replica processes concurrently. Pinned rather than left at Hangfire's own default (`min(cores * 5, 20)`), which knows nothing about the shared Npgsql connection pool: a de-pseudonymizing job resolves each chunk via up to 20 concurrent lookups, so 20 workers would be up to 400 concurrent connection requests from one replica against a pool whose default maximum is 100. Raise it in step with `Maximum Pool Size`, and remember it multiplies by replica count against one shared database. |
 | `CsvProcessing__JobServerShutdownTimeout`  | `TimeSpan` | `"0.00:00:15"` | How long the Hangfire job server waits for in-flight jobs to wind down on shutdown. A CSV job can't checkpoint and resume, so this doesn't let one finish - it buys time to unwind cleanly and record its own outcome. Must stay comfortably below `ShutdownTimeout`. |
 | `CsvProcessing__OrphanedJobRecoveryDelay`  | `TimeSpan` | `"0.00:02:00"` | How long a job orphaned by a replica disappearing (rolling upgrade, OOM kill, node failure) waits before another replica picks it up and reprocesses it from the start. Hangfire's own default is 5 minutes, which races uncomfortably closely with `CsvProcessing__StalledJobThreshold`; 2 minutes makes re-dispatch the reliable winner, so an upgrade costs a job a couple of minutes rather than a `Stalled` status. Hangfire's heartbeat and server-check intervals are derived from this; values below 30s are clamped. |
 | `CsvProcessing__MissingValuePlaceholders`  | `string[]` | `["NA", "NULL"]` | Source values (matched case-insensitively, after trimming) treated as "no value" and passed through to the output unchanged instead of being pseudonymized/de-pseudonymized. A blank/whitespace-only cell is always treated this way regardless of this setting. Set to `[]` to only skip genuinely blank cells. |
+
+A job interrupted mid-processing - a rolling upgrade, an OOM kill, a node failure - resumes rather
+than starting over. Its output is written as a multipart upload that is deliberately left open when
+an attempt is cut short, and a checkpoint recording the parts already stored plus the input row they
+end on is saved alongside it; the next attempt re-reads those rows without re-pseudonymizing them
+and appends from there. Checkpoints are taken per uploaded part, so the work at risk is bounded by
+`CsvProcessing__OutputPartSizeBytes` of output rather than by the length of the whole job. If the
+upload has since been aborted (see `S3__ObjectRetentionDays`, whose lifecycle rule also reclaims
+abandoned uploads after at most 7 days), the job falls back to reprocessing from the first row.
 
 CSV job input/output bytes never pass through the vfps process itself: the admin UI uploads directly to a presigned S3 PUT URL and downloads directly from a presigned S3 GET URL, and the Hangfire background job (running in-process, no separate worker deployment) streams the file S3-to-S3. See `compose.yaml`'s `s3` profile for a local SeaweedFS setup usable for manual testing.
 
