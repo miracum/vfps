@@ -248,7 +248,7 @@ will create a pseudonym in the `test` namespace. The expected response looks as 
 
 ### Prerequisites
 
-- .NET 7.0: <https://dotnet.microsoft.com/en-us/download/dotnet>
+- .NET 10.0: <https://dotnet.microsoft.com/en-us/download/dotnet>
 - Docker CLI 20.10.17: <https://www.docker.com/>
 - Docker Compose: <https://docs.docker.com/compose/install/>
 

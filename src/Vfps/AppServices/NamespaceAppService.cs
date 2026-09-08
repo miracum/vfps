@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.RegularExpressions;
 using EntityFramework.Exceptions.Common;
+using Microsoft.EntityFrameworkCore;
 using Vfps.Authorization;
 using Vfps.Data;
 using Vfps.Data.Models;
@@ -12,7 +13,8 @@ namespace Vfps.AppServices;
 public class NamespaceAppService(
     INamespaceRepository namespaceRepository,
     INamespacePermissionChecker permissionChecker,
-    PseudonymizationMethodsLookup methodsLookup
+    PseudonymizationMethodsLookup methodsLookup,
+    IDbContextFactory<PseudonymContext> contextFactory
 ) : INamespaceAppService
 {
     /// <inheritdoc/>
@@ -196,7 +198,16 @@ public class NamespaceAppService(
         CancellationToken cancellationToken
     )
     {
-        if (await namespaceRepository.FindAsync(namespaceName, cancellationToken) is null)
+        // A fresh, pooled DbContext rather than the scoped namespaceRepository field, for the same
+        // reason PseudonymAppService's trusted methods use one: the Blazor pseudonym page calls
+        // this from OnInitializedAsync while its data grid's ItemsProvider is concurrently calling
+        // PseudonymAppService.SearchAsync, and both would otherwise share the one circuit-scoped
+        // PseudonymContext - which isn't safe for concurrent use and throws "A second operation
+        // was started on this context instance".
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var repository = new NamespaceRepository(context);
+
+        if (await repository.FindAsync(namespaceName, cancellationToken) is null)
         {
             throw new NamespaceNotFoundException(namespaceName);
         }
@@ -208,10 +219,7 @@ public class NamespaceAppService(
             );
         }
 
-        var children = await namespaceRepository.ListChildrenAsync(
-            namespaceName,
-            cancellationToken
-        );
+        var children = await repository.ListChildrenAsync(namespaceName, cancellationToken);
 
         // Filtered per-row, exactly as GetAllAsync does - a caller who can read the parent but
         // not a given child simply doesn't see that child.
