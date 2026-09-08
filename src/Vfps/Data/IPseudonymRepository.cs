@@ -128,4 +128,19 @@ public interface IPseudonymRepository
         string pseudonymValue,
         CancellationToken cancellationToken
     );
+
+    /// <summary>
+    /// Returns the subset of <paramref name="pseudonymValues"/> that exist as pseudonym values
+    /// in <paramref name="namespaceName"/>. Backs the parent-existence check a child namespace
+    /// performs on its original values (see <see cref="Models.Namespace.ParentValidationMode"/>),
+    /// batched so a CSV chunk costs one round trip per parent namespace rather than one per row.
+    /// Uses the same (namespace_name, pseudonym_value) index as
+    /// <see cref="FindByPseudonymValueAsync"/>, and projects just the value - existence is all
+    /// the caller needs, and the original values behind these rows must not be materialized.
+    /// </summary>
+    Task<IReadOnlySet<string>> FilterExistingPseudonymValuesAsync(
+        string namespaceName,
+        IReadOnlyCollection<string> pseudonymValues,
+        CancellationToken cancellationToken
+    );
 }

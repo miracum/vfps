@@ -86,6 +86,38 @@ multi-psn namespace.
 > distinct pseudonyms for the same original value. Namespaces can no longer be created with it;
 > this is a breaking change for anything scripting namespace creation against that enum value.
 
+### Multi-level namespaces
+
+Namespaces can form a hierarchy: a namespace created with a `parentName` is a *child* namespace,
+whose original values are pseudonym values produced by its parent. This is how multiple levels of
+pseudonymization are built - e.g. an MPI is pseudonymized in a root namespace, and that pseudonym
+is then re-pseudonymized in a per-study child namespace, so a study never sees a value that
+resolves directly to the MPI.
+
+Each namespace keeps its own generation configuration; nothing is inherited from the parent.
+Setting `parentValidationMode` to `PARENT_VALIDATION_MODE_ENSURE_EXISTS` additionally requires
+every original value to already exist as a pseudonym in the parent namespace, rejecting anything
+else with a `FAILED_PRECONDITION` error:
+
+```sh
+grpcurl \
+  -plaintext \
+  -import-path src/Vfps/ \
+  -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
+  -d '{"name": "study-a", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED", "pseudonymLength": 32, "parentName": "test", "parentValidationMode": "PARENT_VALIDATION_MODE_ENSURE_EXISTS"}' \
+  127.0.0.1:8081 \
+  vfps.api.v1.NamespaceService/Create
+```
+
+Chaining a pseudonym into the child namespace is an ordinary `Create` call whose `originalValue`
+is the parent's pseudonym value. A namespace's direct children can be listed with `ListChildren`
+(`GET /v1/namespaces/{name}/children`), which is deliberately non-recursive - call it once per
+level to walk a whole tree.
+
+The parent link is set at creation and can't be changed afterwards, like every other namespace
+field, which also makes hierarchy cycles impossible. A namespace that still has children can't be
+deleted; delete the children first. Deleting a pseudonym level doesn't cascade to any other level.
+
 ## Admin UI
 
 vfps ships with a web-based admin UI, served at `/ui`, for creating and browsing namespaces and running CSV pseudonymization jobs.

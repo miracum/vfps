@@ -277,4 +277,227 @@ public class NamespaceAppServiceTests : ServiceTestBase
 
         await act.Should().ThrowAsync<NamespaceNotFoundException>();
     }
+
+    [Fact]
+    public async Task CreateAsync_WithExistingParent_ShouldCreateChildNamespace()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var created = await sut.CreateAsync(
+            new Data.Models.Namespace
+            {
+                Name = "child",
+                PseudonymLength = 16,
+                ParentName = "existingNamespace",
+                ParentValidationMode = ParentValidationMode.EnsureExists,
+            },
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        created.ParentName.Should().Be("existingNamespace");
+        created.ParentValidationMode.Should().Be(ParentValidationMode.EnsureExists);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithNonExistingParent_ShouldThrowNamespaceNotFoundException()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var act = () =>
+            sut.CreateAsync(
+                new Data.Models.Namespace
+                {
+                    Name = "orphan",
+                    PseudonymLength = 16,
+                    ParentName = "notExisting",
+                },
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<NamespaceNotFoundException>();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithSelfAsParent_ShouldThrowArgumentException()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var act = () =>
+            sut.CreateAsync(
+                new Data.Models.Namespace
+                {
+                    Name = "self-parenting",
+                    PseudonymLength = 16,
+                    ParentName = "self-parenting",
+                },
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithValidationModeButNoParent_ShouldThrowArgumentException()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var act = () =>
+            sut.CreateAsync(
+                new Data.Models.Namespace
+                {
+                    Name = "validating-root",
+                    PseudonymLength = 16,
+                    ParentValidationMode = ParentValidationMode.EnsureExists,
+                },
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_WithChildNamespaces_ShouldThrowNamespaceHasChildrenException()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+        await sut.CreateAsync(
+            new Data.Models.Namespace
+            {
+                Name = "child-blocking-delete",
+                PseudonymLength = 16,
+                ParentName = "existingNamespace",
+            },
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        var act = () =>
+            sut.DeleteAsync("existingNamespace", new ClaimsPrincipal(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<NamespaceHasChildrenException>();
+        (await namespaceRepository.FindAsync("existingNamespace", CancellationToken.None))
+            .Should()
+            .NotBeNull();
+    }
+
+    [Fact]
+    public async Task DeleteAsync_AfterChildrenAreDeleted_ShouldDeleteParent()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+        await sut.CreateAsync(
+            new Data.Models.Namespace
+            {
+                Name = "temporary-child",
+                PseudonymLength = 16,
+                ParentName = "emptyNamespace",
+            },
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        await sut.DeleteAsync("temporary-child", new ClaimsPrincipal(), CancellationToken.None);
+        await sut.DeleteAsync("emptyNamespace", new ClaimsPrincipal(), CancellationToken.None);
+
+        (await namespaceRepository.FindAsync("emptyNamespace", CancellationToken.None))
+            .Should()
+            .BeNull();
+    }
+
+    [Fact]
+    public async Task ListChildrenAsync_ShouldReturnOnlyDirectChildren()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+        foreach (
+            var (name, parent) in new[]
+            {
+                ("level-1-a", "existingNamespace"),
+                ("level-1-b", "existingNamespace"),
+                ("level-2", "level-1-a"),
+            }
+        )
+        {
+            await sut.CreateAsync(
+                new Data.Models.Namespace
+                {
+                    Name = name,
+                    PseudonymLength = 16,
+                    ParentName = parent,
+                },
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+        }
+
+        var children = await sut.ListChildrenAsync(
+            "existingNamespace",
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        // level-2 is a grandchild - this listing is deliberately non-recursive.
+        children.Select(n => n.Name).Should().BeEquivalentTo(["level-1-a", "level-1-b"]);
+    }
+
+    [Fact]
+    public async Task ListChildrenAsync_ShouldOmitChildrenTheCallerCannotRead()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var config = new AuthorizationConfig
+        {
+            IsEnabled = true,
+            NamespaceRules =
+            [
+                new NamespaceRule { Namespace = "existingNamespace", ReadRoles = ["reader"] },
+                new NamespaceRule { Namespace = "visible-child", ReadRoles = ["reader"] },
+            ],
+        };
+        var admin = CreateNamespaceAppService(
+            namespaceRepository,
+            new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
+        );
+        foreach (var name in new[] { "visible-child", "hidden-child" })
+        {
+            await admin.CreateAsync(
+                new Data.Models.Namespace
+                {
+                    Name = name,
+                    PseudonymLength = 16,
+                    ParentName = "existingNamespace",
+                },
+                UserWithRoles("admin"),
+                CancellationToken.None
+            );
+        }
+
+        var sut = CreateNamespaceAppService(namespaceRepository, config);
+        var children = await sut.ListChildrenAsync(
+            "existingNamespace",
+            UserWithRoles("reader"),
+            CancellationToken.None
+        );
+
+        children.Select(n => n.Name).Should().BeEquivalentTo(["visible-child"]);
+    }
+
+    [Fact]
+    public async Task ListChildrenAsync_WithNonExistingNamespace_ShouldThrowNamespaceNotFoundException()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var act = () =>
+            sut.ListChildrenAsync("notExisting", new ClaimsPrincipal(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<NamespaceNotFoundException>();
+    }
 }

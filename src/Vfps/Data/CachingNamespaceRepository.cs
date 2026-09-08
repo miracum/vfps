@@ -68,6 +68,28 @@ public class CachingNamespaceRepository(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Namespace>> ListChildrenAsync(
+        string namespaceName,
+        CancellationToken cancellationToken
+    )
+    {
+        // Not cached, for the same reason as GetAllAsync: low cardinality, and not on the
+        // pseudonym create/list hot path that the single-namespace cache exists for.
+        return await NamespaceRepository.ListChildrenAsync(namespaceName, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> HasChildrenAsync(
+        string namespaceName,
+        CancellationToken cancellationToken
+    )
+    {
+        // Deliberately uncached: this gates namespace deletion, so a stale "no children" answer
+        // would defeat the check it exists to enforce.
+        return await NamespaceRepository.HasChildrenAsync(namespaceName, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task DeleteAsync(string namespaceName, CancellationToken cancellationToken)
     {
         await NamespaceRepository.DeleteAsync(namespaceName, cancellationToken);

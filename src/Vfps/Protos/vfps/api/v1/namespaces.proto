@@ -31,6 +31,12 @@ service NamespaceService {
   rpc Delete(NamespaceServiceDeleteRequest) returns (NamespaceServiceDeleteResponse) {
     option (google.api.http) = {delete: "/v1/namespaces/{name}"};
   }
+
+  // list the direct children of a namespace. Non-recursive: callers wanting a full
+  // subtree call this once per level.
+  rpc ListChildren(NamespaceServiceListChildrenRequest) returns (NamespaceServiceListChildrenResponse) {
+    option (google.api.http) = {get: "/v1/namespaces/{name}/children"};
+  }
 }
 
 // describes a pseudonym namespace
@@ -56,6 +62,21 @@ message Namespace {
   // when true, a single pseudonym Create call for this namespace may store more than one
   // distinct pseudonym for the same original value.
   bool allows_multiple_pseudonyms = 9;
+  // the name of this namespace's parent, if any. Absent means this namespace is a
+  // pseudonymization root: its original values are not pseudonyms of another namespace.
+  optional string parent_name = 10;
+  // how original values are validated against the parent namespace.
+  // Only meaningful when parent_name is set.
+  ParentValidationMode parent_validation_mode = 11;
+}
+
+// how original values in a child namespace are validated against its parent namespace
+enum ParentValidationMode {
+  // unspecified performs no validation against the parent namespace
+  PARENT_VALIDATION_MODE_UNSPECIFIED = 0;
+  // the original value must already exist as a pseudonym value in the parent namespace,
+  // otherwise the request is rejected
+  PARENT_VALIDATION_MODE_ENSURE_EXISTS = 1;
 }
 
 // method used to generate the pseudonyms in the namespace
@@ -108,6 +129,13 @@ message NamespaceServiceCreateRequest {
   // when true, a single pseudonym Create call for this namespace may store more than one
   // distinct pseudonym for the same original value.
   bool allows_multiple_pseudonyms = 8;
+  // the name of an existing namespace to set as this namespace's parent, making this a
+  // child namespace whose original values are pseudonyms of that parent. The parent must
+  // already exist. Immutable once the namespace is created.
+  optional string parent_name = 9;
+  // how original values are validated against the parent namespace.
+  // Requires parent_name to be set.
+  ParentValidationMode parent_validation_mode = 10;
 }
 
 // response for creating a namespace entity
@@ -143,5 +171,17 @@ message NamespaceServiceGetAllRequest {}
 // response to list all namespaces
 message NamespaceServiceGetAllResponse {
   // the list of all namespaces
+  repeated Namespace namespaces = 1;
+}
+
+// request to list the direct children of a namespace
+message NamespaceServiceListChildrenRequest {
+  // the name of the namespace whose direct children to list
+  string name = 1;
+}
+
+// response listing the direct children of a namespace
+message NamespaceServiceListChildrenResponse {
+  // the direct children of the requested namespace
   repeated Namespace namespaces = 1;
 }

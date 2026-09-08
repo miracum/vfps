@@ -105,6 +105,10 @@ public class PseudonymAppService(
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         var repository = new PseudonymRepository(context);
 
+        // Checked before the grow-to-N short circuit below, so an invalid original value is
+        // rejected the same way whether or not a pseudonym for it happens to exist already.
+        await ValidateParentAsync(@namespace, [originalValue], repository, cancellationToken);
+
         // Grow-to-N idempotency: a count at or below what's already stored is always a no-op -
         // existing pseudonyms are never regenerated or truncated, only ever added to.
         var existing = await repository.FindAllByOriginalValueAsync(
@@ -185,6 +189,31 @@ public class PseudonymAppService(
             return new Dictionary<(string, string), Data.Models.Pseudonym>();
         }
 
+        // Same fresh, pooled DbContext reasoning as CreateTrustedAsync(Namespace, ...) above.
+        // Opened before the generation loop rather than after it, since the parent-existence
+        // check below has to run - and reject - before any pseudonym is generated.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var repository = new PseudonymRepository(context);
+
+        // One round trip per distinct validating parent namespace, rather than one per row: a
+        // CSV chunk is typically thousands of rows against a handful of namespaces. Blank values
+        // are excluded so they still fail with the blank-value ArgumentException below rather
+        // than being reported as missing from the parent.
+        foreach (var group in requests.GroupBy(r => r.Namespace.Name, StringComparer.Ordinal))
+        {
+            await ValidateParentAsync(
+                group.First().Namespace,
+                [
+                    .. group
+                        .Select(r => r.OriginalValue)
+                        .Where(v => !string.IsNullOrWhiteSpace(v))
+                        .Distinct(StringComparer.Ordinal),
+                ],
+                repository,
+                cancellationToken
+            );
+        }
+
         // Dedupe up front - a CSV chunk routinely repeats the same value (e.g. a patient ID
         // column), and there's no reason to generate a candidate pseudonym or send a duplicate
         // row over the wire more than once per chunk. The first candidate generated for a given
@@ -234,9 +263,7 @@ public class PseudonymAppService(
             };
         }
 
-        // Same fresh, pooled DbContext reasoning as CreateTrustedAsync(Namespace, ...) above.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var upserted = await new PseudonymRepository(context).CreateIfNotExistBatchAsync(
+        var upserted = await repository.CreateIfNotExistBatchAsync(
             [.. distinctByKey.Values],
             cancellationToken
         );
@@ -413,6 +440,42 @@ public class PseudonymAppService(
         if (!Regex.IsMatch(originalValue, pattern, RegexOptions.None, ValidationRegexTimeout))
         {
             throw new OriginalValueValidationException(@namespace.Name, pattern);
+        }
+    }
+
+    /// <summary>
+    /// Enforces a child namespace's <see cref="Data.Models.Namespace.ParentValidationMode"/>: every
+    /// original value must already exist as a pseudonym value in the parent namespace. A no-op for
+    /// a root namespace, or one that doesn't opt in - so the extra round trip is only paid by the
+    /// namespaces that asked for it.
+    /// </summary>
+    private static async Task ValidateParentAsync(
+        Data.Models.Namespace @namespace,
+        IReadOnlyCollection<string> originalValues,
+        IPseudonymRepository repository,
+        CancellationToken cancellationToken
+    )
+    {
+        if (
+            @namespace.ParentValidationMode != ParentValidationMode.EnsureExists
+            || string.IsNullOrEmpty(@namespace.ParentName)
+            || originalValues.Count == 0
+        )
+        {
+            return;
+        }
+
+        var existing = await repository.FilterExistingPseudonymValuesAsync(
+            @namespace.ParentName,
+            originalValues,
+            cancellationToken
+        );
+
+        // Membership rather than a count comparison, so a caller passing the same value twice
+        // can't be mistaken for a missing one.
+        if (originalValues.Any(value => !existing.Contains(value)))
+        {
+            throw new ParentPseudonymNotFoundException(@namespace.Name, @namespace.ParentName);
         }
     }
 

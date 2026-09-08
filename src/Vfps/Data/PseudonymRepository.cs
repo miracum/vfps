@@ -437,6 +437,30 @@ public class PseudonymRepository : IPseudonymRepository
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlySet<string>> FilterExistingPseudonymValuesAsync(
+        string namespaceName,
+        IReadOnlyCollection<string> pseudonymValues,
+        CancellationToken cancellationToken
+    )
+    {
+        if (pseudonymValues.Count == 0)
+        {
+            return new HashSet<string>(StringComparer.Ordinal);
+        }
+
+        var found = await Context
+            .Pseudonyms.AsNoTracking()
+            .Where(p =>
+                p.NamespaceName == namespaceName && pseudonymValues.Contains(p.PseudonymValue)
+            )
+            .Select(p => p.PseudonymValue)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        return new HashSet<string>(found, StringComparer.Ordinal);
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Pseudonym>> FindAllByOriginalValueAsync(
         string namespaceName,
         string originalValue,

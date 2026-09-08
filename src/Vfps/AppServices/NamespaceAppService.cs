@@ -71,6 +71,43 @@ public class NamespaceAppService(
             }
         }
 
+        // A validation mode with nothing to validate against is a configuration mistake - caught
+        // here rather than silently doing nothing on every subsequent pseudonym create.
+        // Fully qualified: a `using Vfps.Protos` here would make the unqualified `Namespace`
+        // used throughout this file ambiguous with the generated proto message of the same name.
+        if (
+            namespaceToCreate.ParentValidationMode != Protos.ParentValidationMode.Unspecified
+            && string.IsNullOrEmpty(namespaceToCreate.ParentName)
+        )
+        {
+            throw new ArgumentException(
+                "A parent validation mode requires a parent namespace to validate against.",
+                nameof(namespaceToCreate)
+            );
+        }
+
+        if (!string.IsNullOrEmpty(namespaceToCreate.ParentName))
+        {
+            // Can't happen today - the parent has to exist already, and this namespace doesn't
+            // yet - but checked explicitly so a future relaxation of the set-once-at-creation
+            // rule can't silently introduce a one-node cycle.
+            if (namespaceToCreate.ParentName == namespaceToCreate.Name)
+            {
+                throw new ArgumentException(
+                    "A namespace cannot be its own parent.",
+                    nameof(namespaceToCreate)
+                );
+            }
+
+            if (
+                await namespaceRepository.FindAsync(namespaceToCreate.ParentName, cancellationToken)
+                is null
+            )
+            {
+                throw new NamespaceNotFoundException(namespaceToCreate.ParentName);
+            }
+        }
+
         var now = DateTimeOffset.UtcNow;
         namespaceToCreate.CreatedAt = now;
         namespaceToCreate.LastUpdatedAt = now;
@@ -140,6 +177,44 @@ public class NamespaceAppService(
             throw new NamespaceNotFoundException(namespaceName);
         }
 
+        // Refused rather than cascaded: deleting a parent would otherwise destroy every
+        // pseudonymization level built on top of it. The self-referencing foreign key is
+        // ON DELETE RESTRICT too, so this check is about returning a clear error rather than a
+        // raw constraint violation - the database is what actually holds the line under a race.
+        if (await namespaceRepository.HasChildrenAsync(namespaceName, cancellationToken))
+        {
+            throw new NamespaceHasChildrenException(namespaceName);
+        }
+
         await namespaceRepository.DeleteAsync(namespaceName, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Namespace>> ListChildrenAsync(
+        string namespaceName,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        if (await namespaceRepository.FindAsync(namespaceName, cancellationToken) is null)
+        {
+            throw new NamespaceNotFoundException(namespaceName);
+        }
+
+        if (!permissionChecker.HasReadAccess(user, namespaceName))
+        {
+            throw new ForbiddenException(
+                $"Read access to namespace '{namespaceName}' is required."
+            );
+        }
+
+        var children = await namespaceRepository.ListChildrenAsync(
+            namespaceName,
+            cancellationToken
+        );
+
+        // Filtered per-row, exactly as GetAllAsync does - a caller who can read the parent but
+        // not a given child simply doesn't see that child.
+        return [.. children.Where(n => permissionChecker.HasReadAccess(user, n.Name))];
     }
 }

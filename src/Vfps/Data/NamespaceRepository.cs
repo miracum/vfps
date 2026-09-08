@@ -56,6 +56,30 @@ public class NamespaceRepository(PseudonymContext context) : INamespaceRepositor
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Namespace>> ListChildrenAsync(
+        string namespaceName,
+        CancellationToken cancellationToken
+    )
+    {
+        return await context
+            .Namespaces.AsNoTracking()
+            .Where(n => n.ParentName == namespaceName)
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> HasChildrenAsync(
+        string namespaceName,
+        CancellationToken cancellationToken
+    )
+    {
+        return await context.Namespaces.AnyAsync(
+            n => n.ParentName == namespaceName,
+            cancellationToken
+        );
+    }
+
+    /// <inheritdoc/>
     public async Task DeleteAsync(string namespaceName, CancellationToken cancellationToken)
     {
         // A direct bulk delete, not a load-then-Remove-then-SaveChanges round trip - the

@@ -23,7 +23,7 @@ public class InitNamespacesBackgroundService(
         using var scope = serviceProvider.CreateScope();
         var namespaceRepository = scope.ServiceProvider.GetRequiredService<INamespaceRepository>();
 
-        foreach (var @namespace in namespaces)
+        foreach (var @namespace in OrderParentsFirst(namespaces))
         {
             logger.LogInformation(
                 "Attempting to create namespace {NamespaceName}",
@@ -65,6 +65,68 @@ public class InitNamespacesBackgroundService(
                     @namespace.Name
                 );
             }
+            catch (ReferenceConstraintException)
+            {
+                // The configured parent namespace doesn't exist - neither already in the database
+                // nor anywhere in this same Init section. Logged and skipped rather than thrown,
+                // matching how this service treats every other per-namespace failure: one bad
+                // entry shouldn't stop the rest (or startup itself).
+                logger.LogWarning(
+                    "Namespace {NamespaceName} declares a parent {ParentName} that does not exist. Skipping.",
+                    @namespace.Name,
+                    @namespace.ParentName
+                );
+            }
         }
+    }
+
+    /// <summary>
+    /// Orders namespaces so a parent is always created before any child that references it,
+    /// letting a whole hierarchy be declared in one Init section in any order. Entries whose
+    /// parent isn't part of this section keep their original relative order - the parent is then
+    /// expected to already exist in the database, and the create fails informatively if it doesn't.
+    /// </summary>
+    private static List<Data.Models.Namespace> OrderParentsFirst(
+        List<Data.Models.Namespace> namespaces
+    )
+    {
+        var byName = new Dictionary<string, Data.Models.Namespace>(StringComparer.Ordinal);
+        foreach (var @namespace in namespaces)
+        {
+            // Last one wins for a duplicated name, rather than throwing the way ToDictionary
+            // would - the create below already reports duplicates properly.
+            byName[@namespace.Name] = @namespace;
+        }
+
+        var ordered = new List<Data.Models.Namespace>(namespaces.Count);
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+
+        void Visit(Data.Models.Namespace @namespace)
+        {
+            // Doubles as the cycle guard: a config that declares A's parent as B and B's parent
+            // as A stops here rather than recursing forever. The resulting order can't satisfy
+            // both, so one of them fails its foreign key and is logged and skipped above.
+            if (!visited.Add(@namespace.Name))
+            {
+                return;
+            }
+
+            if (
+                @namespace.ParentName is not null
+                && byName.TryGetValue(@namespace.ParentName, out var parent)
+            )
+            {
+                Visit(parent);
+            }
+
+            ordered.Add(@namespace);
+        }
+
+        foreach (var @namespace in namespaces)
+        {
+            Visit(@namespace);
+        }
+
+        return ordered;
     }
 }

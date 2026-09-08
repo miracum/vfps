@@ -358,6 +358,27 @@
   <data name="App.Namespaces.AllowsMultiplePseudonyms" xml:space="preserve">
     <value>Allow multiple pseudonyms per original value</value>
   </data>
+  <data name="App.Namespaces.Parent" xml:space="preserve">
+    <value>Parent namespace</value>
+  </data>
+  <data name="App.Namespaces.ParentColumn" xml:space="preserve">
+    <value>Parent</value>
+  </data>
+  <data name="App.Namespaces.NoParent" xml:space="preserve">
+    <value>None (root namespace)</value>
+  </data>
+  <data name="App.Namespaces.ParentHelp" xml:space="preserve">
+    <value>Makes this a child namespace whose original values are pseudonyms of the parent. Cannot be changed after creation.</value>
+  </data>
+  <data name="App.Namespaces.EnsureParentPseudonymExists" xml:space="preserve">
+    <value>Require original values to exist in the parent</value>
+  </data>
+  <data name="App.Namespaces.EnsureParentPseudonymExistsHelp" xml:space="preserve">
+    <value>Rejects pseudonym creation unless the original value is already a pseudonym in the parent namespace.</value>
+  </data>
+  <data name="App.Namespaces.ValidatedBadge" xml:space="preserve">
+    <value>(validated)</value>
+  </data>
   <data name="App.Namespaces.AllowsMultiplePseudonymsColumn" xml:space="preserve">
     <value>Multiple pseudonyms</value>
   </data>
@@ -447,6 +468,21 @@
   </data>
   <data name="App.Pseudonyms.CreateTitle" xml:space="preserve">
     <value>Create pseudonym</value>
+  </data>
+  <data name="App.Pseudonyms.ChainAction" xml:space="preserve">
+    <value>Pseudonymize into…</value>
+  </data>
+  <data name="App.Pseudonyms.ChainTitle" xml:space="preserve">
+    <value>Pseudonymize into a child namespace</value>
+  </data>
+  <data name="App.Pseudonyms.ChainDescription" xml:space="preserve">
+    <value>Creates a next-level pseudonym in a child namespace, using this pseudonym from '{0}' as the original value.</value>
+  </data>
+  <data name="App.Pseudonyms.ChainOriginalValue" xml:space="preserve">
+    <value>Original value</value>
+  </data>
+  <data name="App.Pseudonyms.ChainTarget" xml:space="preserve">
+    <value>Child namespace</value>
   </data>
   <data name="App.Pseudonyms.CreatedAt" xml:space="preserve">
     <value>Created at</value>

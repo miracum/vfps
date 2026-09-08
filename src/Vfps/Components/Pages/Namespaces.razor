@@ -186,6 +186,42 @@
                                 </div>
                             </BbFieldContent>
                         </BbField>
+                        <BbField>
+                            <BbFieldLabel For="parentName">@Localizer["App.Namespaces.Parent"]</BbFieldLabel>
+                            <BbFieldContent>
+                                <select
+                                    @bind="_newNamespace.ParentName"
+                                    id="parentName"
+                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <option value="">@Localizer["App.Namespaces.NoParent"]</option>
+                                    @foreach (var candidate in _namespaces)
+                                    {
+                                        <option value="@candidate.Name">@candidate.Name</option>
+                                    }
+                                </select>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    @Localizer["App.Namespaces.ParentHelp"]
+                                </p>
+                            </BbFieldContent>
+                        </BbField>
+                        <BbField>
+                            <BbFieldContent>
+                                <div class="flex h-10 items-center gap-2">
+                                    <BbCheckbox
+                                        @bind-Checked="_newNamespace.EnsureParentPseudonymExists"
+                                        Id="ensureParentPseudonymExists"
+                                        Disabled="@string.IsNullOrEmpty(_newNamespace.ParentName)"
+                                    />
+                                    <label for="ensureParentPseudonymExists" class="text-sm">
+                                        @Localizer["App.Namespaces.EnsureParentPseudonymExists"]
+                                    </label>
+                                </div>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    @Localizer["App.Namespaces.EnsureParentPseudonymExistsHelp"]
+                                </p>
+                            </BbFieldContent>
+                        </BbField>
                     </div>
                     <BbButton Type="ButtonType.Submit" Loading="_isCreating" Class="mt-4">
                         @Localizer["App.Common.Create"]
@@ -216,6 +252,20 @@
                             @if (n.AllowsMultiplePseudonyms)
                             {
                                 <LucideIcon Name="check" Size="16" />
+                            }
+                        </ChildContent>
+                    </BbDataGridTemplateColumn>
+                    <BbDataGridTemplateColumn Title="@Localizer["App.Namespaces.ParentColumn"]">
+                        <ChildContent Context="n">
+                            @if (!string.IsNullOrEmpty(n.ParentName))
+                            {
+                                <span class="text-sm">@n.ParentName</span>
+                                @if (n.ParentValidationMode == Vfps.Protos.ParentValidationMode.EnsureExists)
+                                {
+                                    <span class="ml-1 text-xs text-muted-foreground">
+                                        @Localizer["App.Namespaces.ValidatedBadge"]
+                                    </span>
+                                }
                             }
                         </ChildContent>
                     </BbDataGridTemplateColumn>
@@ -358,6 +408,16 @@
                     PseudonymSuffix = _newNamespace.PseudonymSuffix,
                     OriginalValueValidationRegex = _newNamespace.OriginalValueValidationRegex,
                     AllowsMultiplePseudonyms = _newNamespace.AllowsMultiplePseudonyms,
+                    ParentName = string.IsNullOrEmpty(_newNamespace.ParentName)
+                        ? null
+                        : _newNamespace.ParentName,
+                    // The checkbox is disabled without a parent, but a stale value could still
+                    // survive picking a parent and then clearing it again before submitting.
+                    ParentValidationMode =
+                        _newNamespace.EnsureParentPseudonymExists
+                        && !string.IsNullOrEmpty(_newNamespace.ParentName)
+                            ? Vfps.Protos.ParentValidationMode.EnsureExists
+                            : Vfps.Protos.ParentValidationMode.Unspecified,
                 },
                 user,
                 CancellationToken.None
@@ -436,6 +496,10 @@
         {
             _deleteErrorMessage = ex.Message;
         }
+        catch (NamespaceHasChildrenException ex)
+        {
+            _deleteErrorMessage = ex.Message;
+        }
         catch (ForbiddenException ex)
         {
             _deleteErrorMessage = ex.Message;
@@ -458,5 +522,7 @@
         public string? PseudonymSuffix { get; set; }
         public string? OriginalValueValidationRegex { get; set; }
         public bool AllowsMultiplePseudonyms { get; set; }
+        public string? ParentName { get; set; }
+        public bool EnsureParentPseudonymExists { get; set; }
     }
 }

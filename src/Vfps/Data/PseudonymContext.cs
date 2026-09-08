@@ -17,6 +17,20 @@ public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbCo
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Self-referencing parent/child hierarchy. DeleteBehavior.Restrict rather than the
+        // Cascade used for a namespace's pseudonyms: deleting a namespace that still has
+        // children would otherwise silently destroy every downstream pseudonymization level.
+        // NamespaceAppService.DeleteAsync checks for children up front so callers get a clear
+        // error; this constraint is what makes that guarantee hold under a race.
+        modelBuilder
+            .Entity<Namespace>()
+            .HasOne(n => n.Parent)
+            .WithMany(n => n.Children)
+            .HasForeignKey(n => n.ParentName)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Namespace>().HasIndex(n => n.ParentName);
+
         // SequenceNumber is part of the key (rather than just (NamespaceName, OriginalValue)) so
         // a multi-psn namespace (Namespace.AllowsMultiplePseudonyms) can store more than one
         // pseudonym per original value. It's always 0 for a namespace that never allows more than
