@@ -69,8 +69,12 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await Task.Delay(1000);
         await Page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.NetworkIdle });
 
-        var bodyText = await Page.Locator("body").InnerTextAsync();
-        CountOccurrences(bodyText, name).Should().Be(1);
+        // Counts rows in the namespace table rather than occurrences of the name in the page
+        // text: the name legitimately appears elsewhere on the page too - the create form's
+        // parent-namespace picker lists every existing namespace as an option - so matching raw
+        // body text would report a second "namespace" that was never created.
+        await Expect(Page.Locator("tr", new PageLocatorOptions { HasText = name }))
+            .ToHaveCountAsync(1);
         pageErrors.Should().BeEmpty();
     }
 
@@ -100,17 +104,4 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
     }
 
     private static string UniqueName() => $"e2e-ns-{UniqueSuffix()}";
-
-    private static int CountOccurrences(string haystack, string needle)
-    {
-        var count = 0;
-        var index = 0;
-        while ((index = haystack.IndexOf(needle, index, StringComparison.Ordinal)) != -1)
-        {
-            count++;
-            index += needle.Length;
-        }
-
-        return count;
-    }
 }
