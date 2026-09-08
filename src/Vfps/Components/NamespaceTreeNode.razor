@@ -1,0 +1,85 @@
+@using Vfps.Data.Models
+
+@*
+    One node of a namespace hierarchy, rendering its own descendants by recursing into itself.
+    Driven entirely by the flat namespace list the page already loaded - a namespace carries its
+    ParentName, and namespace cardinality is low by design (see INamespaceRepository.GetAllAsync),
+    so the whole tree is grouped in memory rather than costing a request per level.
+*@
+
+<div class="@(Depth == 0 ? "" : "ml-4 border-l border-border pl-3")">
+    <div class="flex items-center gap-1.5 py-1 @(IsSelected ? "font-semibold text-primary" : "")">
+        @if (Depth > 0)
+        {
+            <LucideIcon Name="corner-down-right" Size="14" Class="shrink-0 text-muted-foreground" />
+        }
+        else
+        {
+            <LucideIcon Name="database" Size="14" Class="shrink-0 text-muted-foreground" />
+        }
+        <span class="text-sm">@Node.Name</span>
+        @if (IsSelected)
+        {
+            <span class="rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
+                @Localizer["App.Namespaces.HierarchySelected"]
+            </span>
+        }
+        @if (Node.ParentValidationMode == Vfps.Protos.ParentValidationMode.EnsureExists)
+        {
+            <span class="text-xs text-muted-foreground">
+                @Localizer["App.Namespaces.ValidatedBadge"]
+            </span>
+        }
+    </div>
+
+    @foreach (var child in Children)
+    {
+        @* SelectedName needs the @ prefix: it's a string parameter, so a bare attribute value
+           would bind the literal text "SelectedName" instead of this component's own value. *@
+        <NamespaceTreeNode
+            Node="child"
+            ChildrenByParent="ChildrenByParent"
+            SelectedName="@SelectedName"
+            Depth="Depth + 1"
+            Ancestry="NodeAncestry"
+        />
+    }
+</div>
+
+@code {
+    [Inject]
+    private IStringLocalizer<SharedResources> Localizer { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public Namespace Node { get; set; } = null!;
+
+    /// <summary>Every namespace grouped by its parent's name - the whole tree, precomputed once.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyDictionary<string, List<Namespace>> ChildrenByParent { get; set; } = null!;
+
+    [Parameter]
+    public string? SelectedName { get; set; }
+
+    [Parameter]
+    public int Depth { get; set; }
+
+    /// <summary>
+    /// The names on the path from the root down to (and including) this node's parent. Purely a
+    /// cycle guard: a parent link is immutable and can only ever point at an already-existing
+    /// namespace, so a cycle can't be created through the API - but a hand-edited database
+    /// shouldn't be able to hang the render loop.
+    /// </summary>
+    [Parameter]
+    public IReadOnlySet<string> Ancestry { get; set; } = new HashSet<string>(StringComparer.Ordinal);
+
+    private bool IsSelected =>
+        string.Equals(Node.Name, SelectedName, StringComparison.Ordinal);
+
+    private HashSet<string> NodeAncestry =>
+        new(Ancestry, StringComparer.Ordinal) { Node.Name };
+
+    private IEnumerable<Namespace> Children =>
+        ChildrenByParent.TryGetValue(Node.Name, out var children)
+            ? children.Where(c => !Ancestry.Contains(c.Name) && c.Name != Node.Name)
+            : [];
+}

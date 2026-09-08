@@ -379,6 +379,24 @@
   <data name="App.Namespaces.ValidatedBadge" xml:space="preserve">
     <value>(validiert)</value>
   </data>
+  <data name="App.Namespaces.HierarchyAction" xml:space="preserve">
+    <value>Hierarchie</value>
+  </data>
+  <data name="App.Namespaces.HierarchyTitle" xml:space="preserve">
+    <value>Hierarchie für '{0}'</value>
+  </data>
+  <data name="App.Namespaces.HierarchyDescription" xml:space="preserve">
+    <value>Die vollständige Pseudonym-Hierarchie, zu der dieser Namensraum gehört - von der Wurzel bis zu allen darunterliegenden Stufen. Es werden nur Namensräume angezeigt, die Sie lesen dürfen.</value>
+  </data>
+  <data name="App.Namespaces.HierarchySelected" xml:space="preserve">
+    <value>ausgewählt</value>
+  </data>
+  <data name="App.Namespaces.HierarchyStandalone" xml:space="preserve">
+    <value>Dieser Namensraum hat weder Eltern- noch Kind-Namensräume.</value>
+  </data>
+  <data name="App.Common.Close" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
   <data name="App.Namespaces.AllowsMultiplePseudonymsColumn" xml:space="preserve">
     <value>Mehrere Pseudonyme</value>
   </data>

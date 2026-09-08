@@ -379,6 +379,24 @@
   <data name="App.Namespaces.ValidatedBadge" xml:space="preserve">
     <value>(validated)</value>
   </data>
+  <data name="App.Namespaces.HierarchyAction" xml:space="preserve">
+    <value>Hierarchy</value>
+  </data>
+  <data name="App.Namespaces.HierarchyTitle" xml:space="preserve">
+    <value>Hierarchy for '{0}'</value>
+  </data>
+  <data name="App.Namespaces.HierarchyDescription" xml:space="preserve">
+    <value>The full pseudonymization hierarchy this namespace belongs to, from its root down through every level below it. Only namespaces you can read are shown.</value>
+  </data>
+  <data name="App.Namespaces.HierarchySelected" xml:space="preserve">
+    <value>selected</value>
+  </data>
+  <data name="App.Namespaces.HierarchyStandalone" xml:space="preserve">
+    <value>This namespace has no parent and no children.</value>
+  </data>
+  <data name="App.Common.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
   <data name="App.Namespaces.AllowsMultiplePseudonymsColumn" xml:space="preserve">
     <value>Multiple pseudonyms</value>
   </data>
