@@ -58,6 +58,12 @@ public class PseudonymService(IPseudonymAppService pseudonymAppService)
         {
             throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
         }
+        catch (ParentPseudonymNotFoundException ex)
+        {
+            // FailedPrecondition rather than the InvalidArgument used for a regex mismatch: the
+            // value can be perfectly well-formed and simply absent from the parent namespace.
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
+        }
         catch (PseudonymGenerationMethodNotSupportedException ex)
         {
             throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));

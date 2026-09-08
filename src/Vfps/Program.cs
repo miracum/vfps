@@ -19,6 +19,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.OpenApi.Models;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 using Vfps;
 using Vfps.AppServices;
 using Vfps.Authorization;
@@ -56,6 +57,19 @@ builder.Services.AddGrpcSwagger();
 builder.Services.AddGrpcHealthChecks();
 builder.Services.AddGrpcReflection();
 builder.Services.AddHealthChecks().AddDbContextCheck<PseudonymContext>();
+
+// How long the host waits for in-flight work to finish after SIGTERM before tearing everything
+// down. Kept just under Kubernetes' own default terminationGracePeriodSeconds of 30s so the
+// process gets to finish draining rather than being SIGKILLed exactly as it would have: with both
+// at 30s there is no margin at all. Raising this is only useful alongside a matching increase to
+// terminationGracePeriodSeconds (and, for gRPC and Blazor clients to actually be routed away
+// before the drain starts, a preStop hook) - see the deployment notes in the README.
+builder.Services.Configure<HostOptions>(hostOptions =>
+    hostOptions.ShutdownTimeout = builder.Configuration.GetValue(
+        "ShutdownTimeout",
+        TimeSpan.FromSeconds(25)
+    )
+);
 
 // A dedicated metrics port (separate from the app's public HTTP/gRPC listeners) keeps /metrics
 // off the internet-facing endpoints - only an in-cluster scraper needs to reach it. Kept as a
@@ -96,6 +110,29 @@ builder.Services.AddSwaggerGen(c =>
     c.CustomSchemaIds(type => type.FullName?.Replace('+', '.'));
 });
 
+// A connection failure mid-outage (e.g. a Postgres upgrade/failover, or a rolling restart) would
+// otherwise throw immediately out of every DB call on the context - including from inside a
+// running CsvPseudonymizationJobRunner job, which has no other way to ride out a transient
+// outage. Npgsql's own NpgsqlException.IsTransient correctly classifies a connection-refused/
+// timeout failure (the SocketException case) as retriable, so this is safe to apply broadly, not
+// just to the CSV job path. 15 retries at up to 5min each, exponential backoff, covers several
+// minutes of outage (the real-world trigger for this: a multi-minute Postgres upgrade left every
+// DB call failing - see the incident this was added for) while still eventually giving up rather
+// than retrying forever. Safe with this codebase's raw-SQL (FromSqlRaw/FromSqlInterpolated)
+// usage - none of it opens an explicit Database.BeginTransaction, which is the one thing this
+// feature can't wrap.
+//
+// Applied to every context that talks to this database, not just PseudonymContext:
+// DataProtectionKeyContext went without it originally, which meant the exact same Postgres blip
+// the API rode out cleanly would still throw on any auth-cookie or antiforgery-token operation,
+// taking the Blazor UI down on its own.
+void ConfigureNpgsqlResilience(NpgsqlDbContextOptionsBuilder npgsqlOptions) =>
+    npgsqlOptions.EnableRetryOnFailure(
+        maxRetryCount: 15,
+        maxRetryDelay: TimeSpan.FromMinutes(5),
+        errorCodesToAdd: null
+    );
+
 void ConfigurePseudonymContext(IServiceProvider isp, DbContextOptionsBuilder options)
 {
     var config = isp.GetService<IConfiguration>()!;
@@ -115,28 +152,7 @@ void ConfigurePseudonymContext(IServiceProvider isp, DbContextOptionsBuilder opt
     switch (backingStore.ToLowerInvariant())
     {
         case "postgresql":
-            options.UseNpgsql(
-                connString,
-                npgsqlOptions =>
-                    // A connection failure mid-outage (e.g. a Postgres upgrade/failover, or a
-                    // rolling restart) would otherwise throw immediately out of every DB call on
-                    // this context - including from inside a running CsvPseudonymizationJobRunner
-                    // job, which has no other way to ride out a transient outage. Npgsql's own
-                    // NpgsqlException.IsTransient correctly classifies a connection-refused/
-                    // timeout failure (the SocketException case) as retriable, so this is safe to
-                    // apply broadly, not just to the CSV job path. 12 retries at up to 30s each,
-                    // exponential backoff, covers several minutes of outage (the real-world
-                    // trigger for this: a multi-minute Postgres upgrade left every DB call failing
-                    // - see the incident this was added for) while still eventually giving up
-                    // rather than retrying forever. Safe with this codebase's raw-SQL
-                    // (FromSqlRaw/FromSqlInterpolated) usage - none of it opens an explicit
-                    // Database.BeginTransaction, which is the one thing this feature can't wrap.
-                    npgsqlOptions.EnableRetryOnFailure(
-                        maxRetryCount: 15,
-                        maxRetryDelay: TimeSpan.FromMinutes(5),
-                        errorCodesToAdd: null
-                    )
-            );
+            options.UseNpgsql(connString, ConfigureNpgsqlResilience);
             break;
         default:
             throw new InvalidOperationException(
@@ -210,6 +226,13 @@ builder.Services.AddScoped<INamespaceAppService, NamespaceAppService>();
 builder.Services.AddScoped<IPseudonymAppService, PseudonymAppService>();
 
 builder.Services.AddHostedService<InitNamespacesBackgroundService>();
+
+// The per-namespace pseudonym count is too expensive to recompute on every replica, so one
+// replica computes it and the rest read the result out of a MetricSnapshot row - see
+// PseudonymCountMetrics. The background service runs everywhere and unconditionally; which replica
+// pays the cost is settled by the snapshot's own refresh claim, not by configuration.
+builder.Services.AddScoped<IMetricSnapshotRepository, MetricSnapshotRepository>();
+builder.Services.AddScoped<PseudonymCountMetrics>();
 builder.Services.AddHostedService<PseudonymCountMetricsBackgroundService>();
 
 // Authorization: fully declarative, off by default (see Config/AuthorizationConfig.cs) - matches
@@ -313,7 +336,7 @@ var dataProtectionConnectionString = builder.Configuration.GetConnectionString("
 if (!string.IsNullOrEmpty(dataProtectionConnectionString))
 {
     builder.Services.AddDbContext<DataProtectionKeyContext>(options =>
-        options.UseNpgsql(dataProtectionConnectionString)
+        options.UseNpgsql(dataProtectionConnectionString, ConfigureNpgsqlResilience)
     );
     builder.Services.AddDataProtection().PersistKeysToDbContext<DataProtectionKeyContext>();
 }
@@ -325,6 +348,8 @@ var s3Config = new S3Config();
 builder.Configuration.GetSection("S3").Bind(s3Config);
 
 builder.Services.Configure<CsvProcessingConfig>(builder.Configuration.GetSection("CsvProcessing"));
+var csvProcessingConfig = new CsvProcessingConfig();
+builder.Configuration.GetSection("CsvProcessing").Bind(csvProcessingConfig);
 
 if (s3Config.IsEnabled)
 {
@@ -387,7 +412,28 @@ if (s3Config.IsEnabled)
             // column name, malformed input) and will just fail again identically.
             .UseFilter(new AutomaticRetryAttribute { Attempts = 0 })
     );
-    builder.Services.AddHangfireServer();
+    builder.Services.AddHangfireServer(hangfireOptions =>
+    {
+        // Every one of these is pinned rather than left at a Hangfire default, because the
+        // defaults are tuned for short jobs on a single server and this app runs long CSV jobs
+        // across a horizontally-scaled Deployment sharing one database. See CsvProcessingConfig
+        // for the reasoning behind each value.
+        hangfireOptions.WorkerCount = Math.Max(1, csvProcessingConfig.WorkerCount);
+        hangfireOptions.ShutdownTimeout = csvProcessingConfig.JobServerShutdownTimeout;
+
+        // Derived, not separately configurable: a heartbeat slower than the timeout it's checked
+        // against would have healthy servers declare each other dead and double-process jobs, so
+        // these three only make sense set together. The floor guards the same invariant against a
+        // recovery delay configured so low that the derived heartbeat can't keep up with it.
+        var recoveryDelay =
+            csvProcessingConfig.OrphanedJobRecoveryDelay < TimeSpan.FromSeconds(30)
+                ? TimeSpan.FromSeconds(30)
+                : csvProcessingConfig.OrphanedJobRecoveryDelay;
+
+        hangfireOptions.ServerTimeout = recoveryDelay;
+        hangfireOptions.ServerCheckInterval = recoveryDelay / 4;
+        hangfireOptions.HeartbeatInterval = recoveryDelay / 8;
+    });
 }
 
 builder.Services.AddControllers(options =>

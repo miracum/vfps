@@ -1,6 +1,7 @@
 @page "/namespaces/{NamespaceName}/pseudonyms"
 @rendermode InteractiveServer
 @inject IPseudonymAppService PseudonymAppService
+@inject INamespaceAppService NamespaceAppService
 @inject INamespacePermissionChecker PermissionChecker
 @inject IStringLocalizer<SharedResources> Localizer
 
@@ -84,6 +85,67 @@
         </BbCard>
     </div>
 
+    @if (_chainSourceValue is not null)
+    {
+        <BbCard>
+            <BbCardHeader>
+                <BbCardTitle>@Localizer["App.Pseudonyms.ChainTitle"]</BbCardTitle>
+                <BbCardDescription>
+                    @Localizer["App.Pseudonyms.ChainDescription", NamespaceName]
+                </BbCardDescription>
+            </BbCardHeader>
+            <BbCardContent Class="space-y-3">
+                <p class="text-sm">
+                    @Localizer["App.Pseudonyms.ChainOriginalValue"]:
+                    <code class="rounded bg-muted px-1.5 py-0.5 text-xs">@_chainSourceValue</code>
+                </p>
+                <div class="flex flex-wrap items-end gap-2">
+                    <BbField Class="w-full max-w-sm">
+                        <BbFieldLabel For="chainTarget">@Localizer["App.Pseudonyms.ChainTarget"]</BbFieldLabel>
+                        <BbFieldContent>
+                            <select
+                                @bind="_chainTargetNamespace"
+                                id="chainTarget"
+                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                @foreach (var child in _children)
+                                {
+                                    <option value="@child.Name">@child.Name</option>
+                                }
+                            </select>
+                        </BbFieldContent>
+                    </BbField>
+                    <BbButton OnClick="ChainPseudonymAsync" Loading="_isChaining">
+                        @Localizer["App.Common.Create"]
+                    </BbButton>
+                    <BbButton Variant="ButtonVariant.Outline" OnClick="CancelChain">
+                        @Localizer["App.Common.Cancel"]
+                    </BbButton>
+                </div>
+                @if (_chainError is not null)
+                {
+                    <BbAlert Variant="AlertVariant.Danger">
+                        <BbAlertDescription>@_chainError</BbAlertDescription>
+                    </BbAlert>
+                }
+                @if (_chainResult is not null)
+                {
+                    <p class="text-sm">
+                        @Localizer["App.Pseudonyms.PseudonymLabel"]:
+                        <code class="rounded bg-muted px-1.5 py-0.5">@_chainResult.PseudonymValue</code>
+                        <BbButton
+                            Variant="ButtonVariant.Link"
+                            Size="ButtonSize.Small"
+                            Href="@($"/ui/namespaces/{Uri.EscapeDataString(_chainResult.NamespaceName)}/pseudonyms")"
+                        >
+                            @Localizer["App.Common.Browse"]
+                        </BbButton>
+                    </p>
+                }
+            </BbCardContent>
+        </BbCard>
+    }
+
     @if (_errorMessage is not null)
     {
         <BbAlert Variant="AlertVariant.Danger">
@@ -130,6 +192,20 @@
                             Title="@Localizer["App.Pseudonyms.LastUpdated"]"
                             Format="yyyy-MM-dd HH:mm:ss"
                         />
+                        @if (_children.Count > 0)
+                        {
+                            <BbDataGridTemplateColumn Title="@Localizer["App.Common.Actions"]">
+                                <ChildContent Context="p">
+                                    <BbButton
+                                        Variant="ButtonVariant.Outline"
+                                        Size="ButtonSize.Small"
+                                        OnClick="() => StartChain(p.PseudonymValue)"
+                                    >
+                                        @Localizer["App.Pseudonyms.ChainAction"]
+                                    </BbButton>
+                                </ChildContent>
+                            </BbDataGridTemplateColumn>
+                        }
                     </Columns>
                 </BbDataGrid>
             </BbCardContent>
@@ -165,10 +241,92 @@
     private string? _createError;
     private Vfps.Data.Models.Pseudonym? _createResult;
 
+    // The child namespaces this one can chain into - drives the per-row "pseudonymize into"
+    // action, which is hidden entirely when this namespace has no children.
+    private IReadOnlyList<Vfps.Data.Models.Namespace> _children = [];
+
+    private string? _chainSourceValue;
+    private string _chainTargetNamespace = string.Empty;
+    private bool _isChaining;
+    private string? _chainError;
+    private Vfps.Data.Models.Pseudonym? _chainResult;
+
     protected override async Task OnInitializedAsync()
     {
         var user = await GetUserAsync();
         _hasReverseLookupAccess = PermissionChecker.HasReverseLookupAccess(user, NamespaceName);
+
+        try
+        {
+            _children = await NamespaceAppService.ListChildrenAsync(
+                NamespaceName,
+                user,
+                CancellationToken.None
+            );
+        }
+        catch (Exception ex) when (ex is NamespaceNotFoundException or ForbiddenException)
+        {
+            // Left empty rather than surfaced: the grid below reports the same condition through
+            // ProvideItemsAsync, and a missing chaining action is not worth a second error banner.
+            _children = [];
+        }
+    }
+
+    private void StartChain(string pseudonymValue)
+    {
+        _chainSourceValue = pseudonymValue;
+        _chainTargetNamespace = _children[0].Name;
+        _chainError = null;
+        _chainResult = null;
+    }
+
+    private void CancelChain()
+    {
+        _chainSourceValue = null;
+        _chainError = null;
+        _chainResult = null;
+    }
+
+    private async Task ChainPseudonymAsync()
+    {
+        // Same re-entrancy guard as CreatePseudonymAsync above.
+        if (_isChaining || _chainSourceValue is null)
+        {
+            return;
+        }
+
+        _isChaining = true;
+        _chainError = null;
+        _chainResult = null;
+        try
+        {
+            var user = await GetUserAsync();
+            // This namespace's pseudonym value becomes the child namespace's original value -
+            // that chaining is the whole point of a parent/child hierarchy.
+            var created = await PseudonymAppService.CreateAsync(
+                _chainTargetNamespace,
+                _chainSourceValue,
+                1,
+                user,
+                CancellationToken.None
+            );
+            _chainResult = created[0];
+        }
+        catch (Exception ex)
+            when (ex
+                    is NamespaceNotFoundException
+                        or ParentPseudonymNotFoundException
+                        or PseudonymUpsertFailedException
+                        or ForbiddenException
+                        or ArgumentException
+            )
+        {
+            _chainError = ex.Message;
+        }
+        finally
+        {
+            _isChaining = false;
+        }
     }
 
     private async Task<ClaimsPrincipal> GetUserAsync() =>
@@ -245,6 +403,10 @@
             }
         }
         catch (NamespaceNotFoundException ex)
+        {
+            _createError = ex.Message;
+        }
+        catch (ParentPseudonymNotFoundException ex)
         {
             _createError = ex.Message;
         }

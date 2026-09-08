@@ -27,6 +27,8 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
             PseudonymGenerationMethod = request.PseudonymGenerationMethod,
             OriginalValueValidationRegex = request.OriginalValueValidationRegex,
             AllowsMultiplePseudonyms = request.AllowsMultiplePseudonyms,
+            ParentName = request.HasParentName ? request.ParentName : null,
+            ParentValidationMode = request.ParentValidationMode,
         };
 
         Data.Models.Namespace created;
@@ -45,6 +47,13 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
         catch (ArgumentException ex)
         {
             throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
+        catch (NamespaceNotFoundException ex)
+        {
+            // The parent namespace named in the request doesn't exist.
+            var metadata = new Metadata { { "Namespace", ex.NamespaceName } };
+
+            throw new RpcException(new Status(StatusCode.NotFound, ex.Message), metadata);
         }
         catch (NamespaceAlreadyExistsException)
         {
@@ -135,8 +144,52 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
         {
             throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
         }
+        catch (NamespaceHasChildrenException ex)
+        {
+            var metadata = new Metadata { { "Namespace", request.Name } };
+
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message), metadata);
+        }
 
         return new NamespaceServiceDeleteResponse();
+    }
+
+    /// <inheritdoc/>
+    public override async Task<NamespaceServiceListChildrenResponse> ListChildren(
+        NamespaceServiceListChildrenRequest request,
+        ServerCallContext context
+    )
+    {
+        IReadOnlyList<Data.Models.Namespace> children;
+        try
+        {
+            children = await namespaceAppService.ListChildrenAsync(
+                request.Name,
+                context.GetUser(),
+                context.CancellationToken
+            );
+        }
+        catch (NamespaceNotFoundException)
+        {
+            var metadata = new Metadata { { "Namespace", request.Name } };
+
+            throw new RpcException(
+                new Status(
+                    StatusCode.NotFound,
+                    "The requested pseudonym namespace does not exist."
+                ),
+                metadata
+            );
+        }
+        catch (ForbiddenException ex)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
+        }
+
+        var response = new NamespaceServiceListChildrenResponse();
+        response.Namespaces.AddRange(children.Select(ToProto));
+
+        return response;
     }
 
     /// <inheritdoc/>
@@ -156,8 +209,9 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
         return response;
     }
 
-    private static Namespace ToProto(Data.Models.Namespace @namespace) =>
-        new()
+    private static Namespace ToProto(Data.Models.Namespace @namespace)
+    {
+        var proto = new Namespace
         {
             Name = @namespace.Name,
             Description = @namespace.Description,
@@ -167,10 +221,22 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
             PseudonymSuffix = @namespace.PseudonymSuffix,
             OriginalValueValidationRegex = @namespace.OriginalValueValidationRegex,
             AllowsMultiplePseudonyms = @namespace.AllowsMultiplePseudonyms,
+            ParentValidationMode = @namespace.ParentValidationMode,
             Meta = new Meta
             {
                 CreatedAt = Timestamp.FromDateTimeOffset(@namespace.CreatedAt),
                 LastUpdatedAt = Timestamp.FromDateTimeOffset(@namespace.LastUpdatedAt),
             },
         };
+
+        // Assigned only when set: parent_name is an `optional` proto field, whose generated
+        // setter rejects null outright, and leaving it absent (rather than present-but-empty) is
+        // what tells a client this namespace is a root.
+        if (@namespace.ParentName is not null)
+        {
+            proto.ParentName = @namespace.ParentName;
+        }
+
+        return proto;
+    }
 }

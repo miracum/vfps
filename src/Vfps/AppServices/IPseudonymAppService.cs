@@ -259,6 +259,22 @@ public class OriginalValueValidationException(string namespaceName, string patte
 }
 
 /// <summary>
+/// Thrown when a namespace requires its original values to already exist as pseudonyms in its
+/// parent namespace (<see cref="Namespace.ParentValidationMode"/>) and a given value doesn't.
+/// Like the other validation exceptions here, the message deliberately doesn't echo the rejected
+/// value back to the caller.
+/// </summary>
+public class ParentPseudonymNotFoundException(string namespaceName, string parentNamespaceName)
+    : Exception(
+        $"The original value does not exist as a pseudonym in the parent namespace "
+            + $"'{parentNamespaceName}' required by namespace '{namespaceName}'."
+    )
+{
+    public string NamespaceName { get; } = namespaceName;
+    public string ParentNamespaceName { get; } = parentNamespaceName;
+}
+
+/// <summary>
 /// Thrown when a pseudonym Create call asks for more than one pseudonym (<c>count &gt; 1</c>)
 /// against a namespace whose <see cref="Namespace.AllowsMultiplePseudonyms"/> is false.
 /// </summary>

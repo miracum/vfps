@@ -27,5 +27,24 @@ public class Namespace : TracksCreationAndUpdates
     /// </summary>
     public bool AllowsMultiplePseudonyms { get; set; }
 
+    /// <summary>
+    /// The name of this namespace's parent, if it is a child in a pseudonymization hierarchy -
+    /// i.e. its original values are pseudonym values produced by that parent namespace. Null
+    /// means this namespace is a root. Set at creation and never changed afterwards, like every
+    /// other field here; that also makes hierarchy cycles impossible, since a namespace can only
+    /// ever point at one that already existed.
+    /// </summary>
+    public string? ParentName { get; set; }
+
+    /// <summary>
+    /// Whether an original value must already exist as a pseudonym value in
+    /// <see cref="ParentName"/>'s namespace before a pseudonym is generated for it here.
+    /// Only meaningful when <see cref="ParentName"/> is set; off by default.
+    /// </summary>
+    public ParentValidationMode ParentValidationMode { get; set; }
+
+    public Namespace? Parent { get; set; }
+    public ICollection<Namespace> Children { get; set; } = [];
+
     public ICollection<Pseudonym> Pseudonyms { get; set; } = [];
 }

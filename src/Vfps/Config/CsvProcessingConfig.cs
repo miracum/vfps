@@ -42,6 +42,56 @@ public class CsvProcessingConfig
     public TimeSpan StalledJobThreshold { get; set; } = TimeSpan.FromMinutes(10);
 
     /// <summary>
+    /// How many CSV jobs one replica processes concurrently (Hangfire's worker count for this
+    /// app's job server). Pinned rather than left at Hangfire's own default of
+    /// <c>min(ProcessorCount * 5, 20)</c>, because that default is chosen for short, cheap jobs
+    /// and knows nothing about this app's real constraint: the shared Npgsql connection pool. A
+    /// single de-pseudonymizing job resolves a chunk via up to
+    /// CsvPseudonymizationJobRunner.DepseudonymizeConcurrencyChunkSize (20) concurrent lookups, so
+    /// 20 workers would be up to 400 concurrent connection requests from one replica against a
+    /// pool whose default maximum is 100 - jobs would then spend their time queued on the pool
+    /// (and eventually time out on the connection string's Timeout) rather than working. 4 keeps
+    /// the worst case (~80) inside that default pool while still overlapping jobs, and is the
+    /// knob to raise in step with `Maximum Pool Size` if a deployment wants more concurrency.
+    ///
+    /// Note this multiplies by replica count against a *shared* database: 4 workers on each of 3
+    /// replicas is 12 concurrent jobs, not 4.
+    /// </summary>
+    public int WorkerCount { get; set; } = 4;
+
+    /// <summary>
+    /// How long the Hangfire job server waits for its in-flight jobs to wind down when the app is
+    /// shutting down (e.g. a rolling upgrade). A CSV job can't checkpoint and resume, so waiting
+    /// longer doesn't let one finish - what this window actually buys is time for the runner to
+    /// unwind cleanly after CsvPseudonymizationJobRunner's per-row
+    /// ThrowIfCancellationRequested() fires, and for a job that happened to be nearly done to
+    /// record its own outcome instead of being cut off mid-write.
+    ///
+    /// Must stay comfortably below the app-level ShutdownTimeout (which in turn must stay below
+    /// the pod's terminationGracePeriodSeconds), or the host gives up on this service before it
+    /// has finished stopping and SIGKILL arrives mid-unwind anyway.
+    /// </summary>
+    public TimeSpan JobServerShutdownTimeout { get; set; } = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    /// How long a job orphaned by a replica disappearing (a rolling upgrade, an OOM kill, a node
+    /// failure) waits before another replica picks it up and reprocesses it. This is Hangfire's
+    /// dead-server detection window; its own default is 5 minutes, which combined with this app's
+    /// <see cref="StalledJobThreshold"/> of 10 minutes leaves an uncomfortably narrow margin - the
+    /// two mechanisms race, and whenever the stall watchdog wins, the job is flagged Stalled in
+    /// the UI even though it was about to be re-dispatched and completed normally (see
+    /// StalledPseudonymizationJobWatchdogService for why that verdict is deliberately not
+    /// terminal). Shortening this to 2 minutes makes re-dispatch the reliable winner, so a rolling
+    /// upgrade costs a job a couple of minutes rather than a scary status and a ~5+ minute wait.
+    ///
+    /// Hangfire's heartbeat and server-check intervals are derived from this (see Program.cs)
+    /// rather than exposed separately, since setting them inconsistently - a heartbeat slower than
+    /// this window - would have live servers declare each other dead and double-process jobs.
+    /// Values below 30 seconds are clamped for that same reason.
+    /// </summary>
+    public TimeSpan OrphanedJobRecoveryDelay { get; set; } = TimeSpan.FromMinutes(2);
+
+    /// <summary>
     /// Source values (matched case-insensitively, after trimming) treated as "no value" rather
     /// than pseudonymized/de-pseudonymized - see
     /// CsvPseudonymizationJobRunner.IsMissingValue. A genuinely blank/whitespace-only cell is

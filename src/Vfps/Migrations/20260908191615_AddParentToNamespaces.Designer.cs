@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Vfps.Data;
@@ -11,9 +12,11 @@ using Vfps.Data;
 namespace Vfps.Migrations
 {
     [DbContext(typeof(PseudonymContext))]
-    partial class PseudonymContextModelSnapshot : ModelSnapshot
+    [Migration("20260908191615_AddParentToNamespaces")]
+    partial class AddParentToNamespaces
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,35 +24,6 @@ namespace Vfps.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
-
-            modelBuilder.Entity("Vfps.Data.Models.MetricSnapshot", b =>
-                {
-                    b.Property<string>("Name")
-                        .HasColumnType("text")
-                        .HasColumnName("name");
-
-                    b.Property<DateTimeOffset>("ComputedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("computed_at");
-
-                    b.Property<string>("Values")
-                        .IsRequired()
-                        .HasColumnType("jsonb")
-                        .HasColumnName("values");
-
-                    b.HasKey("Name")
-                        .HasName("pk_metric_snapshots");
-
-                    b.ToTable("metric_snapshots", (string)null);
-
-                    b.HasData(
-                        new
-                        {
-                            Name = "pseudonym-counts",
-                            ComputedAt = new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
-                            Values = "{}"
-                        });
-                });
 
             modelBuilder.Entity("Vfps.Data.Models.Namespace", b =>
                 {

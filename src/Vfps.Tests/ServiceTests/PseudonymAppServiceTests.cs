@@ -118,6 +118,229 @@ public class PseudonymAppServiceTests : ServiceTestBase
         await act.Should().ThrowAsync<OriginalValueValidationException>();
     }
 
+    // "existingNamespace" already contains the pseudonym value "existingPseudonym" (see
+    // ServiceTestBase) - that's the parent value a child namespace chains from here. The row has
+    // to actually exist, since pseudonyms.namespace_name is a foreign key; the returned instance
+    // is what the trusted overloads read their configuration from.
+    private async Task<Data.Models.Namespace> CreateChildNamespaceAsync(
+        ParentValidationMode mode = ParentValidationMode.EnsureExists,
+        string name = "childNamespace",
+        string parentName = "existingNamespace"
+    )
+    {
+        var child = new Data.Models.Namespace
+        {
+            Name = name,
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+            ParentName = parentName,
+            ParentValidationMode = mode,
+            CreatedAt = DateTime.UtcNow,
+            LastUpdatedAt = DateTime.UtcNow,
+        };
+
+        await new NamespaceRepository(InMemoryPseudonymContext).CreateAsync(
+            child,
+            CancellationToken.None
+        );
+
+        return child;
+    }
+
+    [Fact]
+    public async Task CreateTrustedAsync_WithValueExistingInParent_ShouldCreate()
+    {
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            new PseudonymRepository(InMemoryPseudonymContext)
+        );
+
+        var created = await sut.CreateTrustedAsync(
+            await CreateChildNamespaceAsync(),
+            "existingPseudonym",
+            CancellationToken.None
+        );
+
+        created.OriginalValue.Should().Be("existingPseudonym");
+        created.PseudonymValue.Should().HaveLength(16);
+    }
+
+    [Fact]
+    public async Task CreateTrustedAsync_WithValueMissingFromParent_ShouldThrowParentPseudonymNotFoundException()
+    {
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            new PseudonymRepository(InMemoryPseudonymContext)
+        );
+        var child = await CreateChildNamespaceAsync();
+
+        var act = () =>
+            sut.CreateTrustedAsync(child, "never-pseudonymized-upstream", CancellationToken.None);
+
+        await act.Should().ThrowAsync<ParentPseudonymNotFoundException>();
+    }
+
+    [Fact]
+    public async Task CreateTrustedAsync_WithValidationOffAndValueMissingFromParent_ShouldCreate()
+    {
+        // A parent link on its own is only metadata - without EnsureExists, nothing is checked,
+        // which is what keeps this off the hot path for namespaces that didn't opt in.
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            new PseudonymRepository(InMemoryPseudonymContext)
+        );
+
+        var created = await sut.CreateTrustedAsync(
+            await CreateChildNamespaceAsync(ParentValidationMode.Unspecified),
+            "never-pseudonymized-upstream",
+            CancellationToken.None
+        );
+
+        created.OriginalValue.Should().Be("never-pseudonymized-upstream");
+    }
+
+    [Fact]
+    public async Task CreateTrustedAsync_WithMultiPsnParent_ShouldAcceptAnyOfItsPseudonyms()
+    {
+        // A multi-psn parent stores several pseudonyms per original value, distinguished by
+        // sequence number. The existence check looks values up by pseudonym_value alone, so every
+        // one of them is a valid input to the child - no special-casing for sequence numbers.
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            namespaceRepository,
+            new PseudonymRepository(InMemoryPseudonymContext)
+        );
+        var parent = await namespaceRepository.FindAsync(
+            "multiPsnNamespace",
+            CancellationToken.None
+        );
+        var parentPseudonyms = await sut.CreateTrustedAsync(
+            parent!,
+            "multi-psn-original",
+            3,
+            CancellationToken.None
+        );
+        var child = await CreateChildNamespaceAsync(
+            name: "childOfMultiPsn",
+            parentName: "multiPsnNamespace"
+        );
+
+        foreach (var parentPseudonym in parentPseudonyms)
+        {
+            var created = await sut.CreateTrustedAsync(
+                child,
+                parentPseudonym.PseudonymValue,
+                CancellationToken.None
+            );
+
+            created.OriginalValue.Should().Be(parentPseudonym.PseudonymValue);
+        }
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithValueMissingFromParent_ShouldThrowParentPseudonymNotFoundException()
+    {
+        // The permission-checked entry point delegates to the same validation, so a child
+        // namespace is enforced identically whether the caller is gRPC/Blazor or the job runner.
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            namespaceRepository,
+            new PseudonymRepository(InMemoryPseudonymContext)
+        );
+        await CreateChildNamespaceAsync();
+
+        var act = () =>
+            sut.CreateAsync(
+                "childNamespace",
+                "never-pseudonymized-upstream",
+                1,
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ParentPseudonymNotFoundException>();
+    }
+
+    [Fact]
+    public async Task CreateTrustedBatchAsync_WithAnyValueMissingFromParent_ShouldThrowAndCreateNothing()
+    {
+        // Whole-batch rejection, matching how the regex validation already behaves: a CSV job
+        // referencing values that were never pseudonymized upstream is a misconfigured job.
+        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            pseudonymRepository
+        );
+        var child = await CreateChildNamespaceAsync();
+
+        var act = () =>
+            sut.CreateTrustedBatchAsync(
+                [(child, "existingPseudonym"), (child, "never-pseudonymized-upstream")],
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ParentPseudonymNotFoundException>();
+        // The valid row must not have been created either - validation runs before any generation.
+        (
+            await pseudonymRepository.FindAllByOriginalValueAsync(
+                "childNamespace",
+                "existingPseudonym",
+                CancellationToken.None
+            )
+        )
+            .Should()
+            .BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateTrustedBatchAsync_WithAllValuesExistingInParent_ShouldCreateAll()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            namespaceRepository,
+            new PseudonymRepository(InMemoryPseudonymContext)
+        );
+        // A second value in the parent, so the batch covers more than one row.
+        var parent = await namespaceRepository.FindAsync(
+            "existingNamespace",
+            CancellationToken.None
+        );
+        var second = await sut.CreateTrustedAsync(
+            parent!,
+            "another-original-value",
+            CancellationToken.None
+        );
+        var child = await CreateChildNamespaceAsync();
+
+        var created = await sut.CreateTrustedBatchAsync(
+            [(child, "existingPseudonym"), (child, second.PseudonymValue)],
+            CancellationToken.None
+        );
+
+        created.Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task CreateTrustedBatchAsync_WithMixedNamespaces_ShouldOnlyValidateTheValidatingOnes()
+    {
+        // A CSV chunk's column mappings can span namespaces: a value that isn't in the parent is
+        // fine for a namespace that doesn't validate, and must not be rejected on its behalf.
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreatePseudonymAppService(
+            namespaceRepository,
+            new PseudonymRepository(InMemoryPseudonymContext)
+        );
+        var root = await namespaceRepository.FindAsync("emptyNamespace", CancellationToken.None);
+        var child = await CreateChildNamespaceAsync();
+
+        var created = await sut.CreateTrustedBatchAsync(
+            [(child, "existingPseudonym"), (root!, "anything-goes-here")],
+            CancellationToken.None
+        );
+
+        created.Should().HaveCount(2);
+    }
+
     [Fact]
     public async Task CreateTrustedAsync_CalledManyTimesConcurrently_ShouldNotThrowAndShouldCreateAll()
     {

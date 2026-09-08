@@ -38,4 +38,24 @@ public interface INamespaceRepository
     /// <param name="namespaceName">The name of the namespace to delete.</param>
     /// <param name="cancellationToken">A cancellation token to abort the action</param>
     Task DeleteAsync(string namespaceName, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Lists the direct children of a namespace - those whose <see cref="Models.Namespace.ParentName"/>
+    /// is <paramref name="namespaceName"/>. Non-recursive, and unpaginated for the same
+    /// low-cardinality reason as <see cref="GetAllAsync"/>.
+    /// </summary>
+    /// <param name="namespaceName">The name of the parent namespace.</param>
+    /// <param name="cancellationToken">A cancellation token to abort the action</param>
+    Task<IReadOnlyList<Models.Namespace>> ListChildrenAsync(
+        string namespaceName,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Whether any namespace declares <paramref name="namespaceName"/> as its parent. Used to
+    /// refuse deleting a namespace that still has children.
+    /// </summary>
+    /// <param name="namespaceName">The name of the parent namespace.</param>
+    /// <param name="cancellationToken">A cancellation token to abort the action</param>
+    Task<bool> HasChildrenAsync(string namespaceName, CancellationToken cancellationToken);
 }

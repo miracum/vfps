@@ -147,4 +147,24 @@ public class CachingPseudonymRepository(
         // Not cached - same reasoning as FindAllByOriginalValueAsync above.
         return await Repository.CreateSetIfNotExistAsync(newSequenceCandidates, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlySet<string>> FilterExistingPseudonymValuesAsync(
+        string namespaceName,
+        IReadOnlyCollection<string> pseudonymValues,
+        CancellationToken cancellationToken
+    )
+    {
+        // Not cached: this cache is keyed by original_value, not pseudonym_value. A positive-only
+        // cache would be safe here (a pseudonym that exists can't stop existing - there's no
+        // per-pseudonym delete, and a namespace with children can't be deleted), but a *miss*
+        // must never be cached, since the parent value legitimately appears moments later when a
+        // caller creates it in the parent and then immediately chains into the child. Left
+        // uncached until measurements justify the second key scheme.
+        return await Repository.FilterExistingPseudonymValuesAsync(
+            namespaceName,
+            pseudonymValues,
+            cancellationToken
+        );
+    }
 }

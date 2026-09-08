@@ -186,6 +186,42 @@
                                 </div>
                             </BbFieldContent>
                         </BbField>
+                        <BbField>
+                            <BbFieldLabel For="parentName">@Localizer["App.Namespaces.Parent"]</BbFieldLabel>
+                            <BbFieldContent>
+                                <select
+                                    @bind="_newNamespace.ParentName"
+                                    id="parentName"
+                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <option value="">@Localizer["App.Namespaces.NoParent"]</option>
+                                    @foreach (var candidate in _namespaces)
+                                    {
+                                        <option value="@candidate.Name">@candidate.Name</option>
+                                    }
+                                </select>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    @Localizer["App.Namespaces.ParentHelp"]
+                                </p>
+                            </BbFieldContent>
+                        </BbField>
+                        <BbField>
+                            <BbFieldContent>
+                                <div class="flex h-10 items-center gap-2">
+                                    <BbCheckbox
+                                        @bind-Checked="_newNamespace.EnsureParentPseudonymExists"
+                                        Id="ensureParentPseudonymExists"
+                                        Disabled="@string.IsNullOrEmpty(_newNamespace.ParentName)"
+                                    />
+                                    <label for="ensureParentPseudonymExists" class="text-sm">
+                                        @Localizer["App.Namespaces.EnsureParentPseudonymExists"]
+                                    </label>
+                                </div>
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    @Localizer["App.Namespaces.EnsureParentPseudonymExistsHelp"]
+                                </p>
+                            </BbFieldContent>
+                        </BbField>
                     </div>
                     <BbButton Type="ButtonType.Submit" Loading="_isCreating" Class="mt-4">
                         @Localizer["App.Common.Create"]
@@ -194,6 +230,39 @@
             </EditForm>
         </BbCardContent>
     </BbCard>
+
+    @if (_hierarchySelection is not null)
+    {
+        <BbCard>
+            <BbCardHeader>
+                <BbCardTitle>
+                    @Localizer["App.Namespaces.HierarchyTitle", _hierarchySelection.Name]
+                </BbCardTitle>
+                <BbCardDescription>
+                    @Localizer["App.Namespaces.HierarchyDescription"]
+                </BbCardDescription>
+            </BbCardHeader>
+            <BbCardContent Class="space-y-3">
+                @if (HierarchyRoot is { } root)
+                {
+                    <NamespaceTreeNode
+                        Node="root"
+                        ChildrenByParent="ChildrenByParent"
+                        SelectedName="@_hierarchySelection.Name"
+                    />
+                    @if (ReferenceEquals(root, _hierarchySelection) && !ChildrenByParent.ContainsKey(root.Name))
+                    {
+                        <p class="text-sm text-muted-foreground">
+                            @Localizer["App.Namespaces.HierarchyStandalone"]
+                        </p>
+                    }
+                }
+                <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="HideHierarchy">
+                    @Localizer["App.Common.Close"]
+                </BbButton>
+            </BbCardContent>
+        </BbCard>
+    }
 
     <BbCard>
         <BbCardHeader>
@@ -219,6 +288,20 @@
                             }
                         </ChildContent>
                     </BbDataGridTemplateColumn>
+                    <BbDataGridTemplateColumn Title="@Localizer["App.Namespaces.ParentColumn"]">
+                        <ChildContent Context="n">
+                            @if (!string.IsNullOrEmpty(n.ParentName))
+                            {
+                                <span class="text-sm">@n.ParentName</span>
+                                @if (n.ParentValidationMode == Vfps.Protos.ParentValidationMode.EnsureExists)
+                                {
+                                    <span class="ml-1 text-xs text-muted-foreground">
+                                        @Localizer["App.Namespaces.ValidatedBadge"]
+                                    </span>
+                                }
+                            }
+                        </ChildContent>
+                    </BbDataGridTemplateColumn>
                     <BbDataGridTemplateColumn Title="@Localizer["App.Namespaces.PseudonymsColumn"]">
                         <ChildContent Context="n">
                             <BbButton
@@ -232,6 +315,15 @@
                     </BbDataGridTemplateColumn>
                     <BbDataGridTemplateColumn Title="@Localizer["App.Common.Actions"]">
                         <ChildContent Context="n">
+                            <BbButton
+                                id="@($"hierarchy-namespace-{n.Name}")"
+                                Variant="ButtonVariant.Outline"
+                                Size="ButtonSize.Small"
+                                Class="mr-2"
+                                OnClick="() => ShowHierarchy(n)"
+                            >
+                                @Localizer["App.Namespaces.HierarchyAction"]
+                            </BbButton>
                             <BbButton
                                 id="@($"delete-namespace-{n.Name}")"
                                 Variant="ButtonVariant.Destructive"
@@ -263,6 +355,57 @@
     private bool _isCreating;
     private bool _isDeleting;
     private bool _canCreateNamespace;
+
+    // Set when a row's hierarchy button is clicked - drives the tree panel above the table.
+    private Namespace? _hierarchySelection;
+
+    /// <summary>
+    /// Every namespace grouped by its parent's name. Built from the list this page already
+    /// loaded rather than queried per level: GetAllAsync returns every namespace the caller can
+    /// read (unpaginated, since namespace cardinality is low by design) and each one carries its
+    /// ParentName, so the entire hierarchy is already in hand - walking it costs nothing, while
+    /// a recursive server call would cost a round trip per level for the same answer.
+    /// </summary>
+    private Dictionary<string, List<Namespace>> ChildrenByParent =>
+        _namespaces
+            .Where(n => !string.IsNullOrEmpty(n.ParentName))
+            .GroupBy(n => n.ParentName!, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.OrderBy(n => n.Name, StringComparer.Ordinal).ToList(),
+                StringComparer.Ordinal);
+
+    /// <summary>
+    /// The top of the selected namespace's lineage, so the tree shows its ancestors as well as
+    /// its descendants. Stops at the highest namespace the caller can actually see: an ancestor
+    /// filtered out by read access simply isn't part of the tree, and its visible descendant
+    /// becomes the root of what's rendered.
+    /// </summary>
+    private Namespace? HierarchyRoot
+    {
+        get
+        {
+            if (_hierarchySelection is null)
+            {
+                return null;
+            }
+
+            var byName = _namespaces.ToDictionary(n => n.Name, StringComparer.Ordinal);
+            var current = _hierarchySelection;
+            // Guards against a cycle that only a hand-edited database could produce - the API
+            // can't create one, since a parent is set once and must already exist.
+            var seen = new HashSet<string>(StringComparer.Ordinal) { current.Name };
+
+            while (
+                !string.IsNullOrEmpty(current.ParentName)
+                && byName.TryGetValue(current.ParentName, out var parent)
+                && seen.Add(parent.Name)
+            )
+            {
+                current = parent;
+            }
+
+            return current;
+        }
+    }
 
     // Set when a row's "Delete" button is clicked, cleared on cancel/confirm - drives the inline
     // confirmation panel rendered above the tables. Deliberately not a modal dialog (see
@@ -326,6 +469,14 @@
     {
         var user = await GetUserAsync();
         _namespaces = await NamespaceAppService.GetAllAsync(user, CancellationToken.None);
+
+        // Re-resolve against the fresh list so the tree reflects newly created children, and
+        // closes itself if the namespace it was showing has since been deleted.
+        _hierarchySelection = _hierarchySelection is null
+            ? null
+            : _namespaces.FirstOrDefault(n =>
+                string.Equals(n.Name, _hierarchySelection.Name, StringComparison.Ordinal)
+            );
     }
 
     private async Task CreateNamespaceAsync()
@@ -358,6 +509,16 @@
                     PseudonymSuffix = _newNamespace.PseudonymSuffix,
                     OriginalValueValidationRegex = _newNamespace.OriginalValueValidationRegex,
                     AllowsMultiplePseudonyms = _newNamespace.AllowsMultiplePseudonyms,
+                    ParentName = string.IsNullOrEmpty(_newNamespace.ParentName)
+                        ? null
+                        : _newNamespace.ParentName,
+                    // The checkbox is disabled without a parent, but a stale value could still
+                    // survive picking a parent and then clearing it again before submitting.
+                    ParentValidationMode =
+                        _newNamespace.EnsureParentPseudonymExists
+                        && !string.IsNullOrEmpty(_newNamespace.ParentName)
+                            ? Vfps.Protos.ParentValidationMode.EnsureExists
+                            : Vfps.Protos.ParentValidationMode.Unspecified,
                 },
                 user,
                 CancellationToken.None
@@ -391,6 +552,10 @@
             _isCreating = false;
         }
     }
+
+    private void ShowHierarchy(Namespace selected) => _hierarchySelection = selected;
+
+    private void HideHierarchy() => _hierarchySelection = null;
 
     private void StartDeleteNamespace(Namespace namespaceToDelete)
     {
@@ -436,6 +601,10 @@
         {
             _deleteErrorMessage = ex.Message;
         }
+        catch (NamespaceHasChildrenException ex)
+        {
+            _deleteErrorMessage = ex.Message;
+        }
         catch (ForbiddenException ex)
         {
             _deleteErrorMessage = ex.Message;
@@ -458,5 +627,7 @@
         public string? PseudonymSuffix { get; set; }
         public string? OriginalValueValidationRegex { get; set; }
         public bool AllowsMultiplePseudonyms { get; set; }
+        public string? ParentName { get; set; }
+        public bool EnsureParentPseudonymExists { get; set; }
     }
 }

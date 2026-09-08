@@ -23,7 +23,12 @@ public interface INamespaceAppService
     /// </exception>
     /// <exception cref="ArgumentException">
     /// <see cref="Namespace.OriginalValueValidationRegex"/> is set but not a valid regular
-    /// expression.
+    /// expression, <see cref="Namespace.ParentName"/> is the namespace's own name, or
+    /// <see cref="Namespace.ParentValidationMode"/> is set without a
+    /// <see cref="Namespace.ParentName"/>.
+    /// </exception>
+    /// <exception cref="NamespaceNotFoundException">
+    /// <see cref="Namespace.ParentName"/> is set but no such namespace exists.
     /// </exception>
     Task<Namespace> CreateAsync(
         Namespace namespaceToCreate,
@@ -55,7 +60,24 @@ public interface INamespaceAppService
     /// <see cref="CreateAsync"/>.
     /// </summary>
     /// <exception cref="NamespaceNotFoundException">No namespace named <paramref name="namespaceName"/> exists.</exception>
+    /// <exception cref="NamespaceHasChildrenException">
+    /// The namespace still has child namespaces, which must be deleted first.
+    /// </exception>
     Task DeleteAsync(
+        string namespaceName,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Lists the direct children of a namespace - those whose <see cref="Namespace.ParentName"/>
+    /// is <paramref name="namespaceName"/>. Non-recursive: callers wanting a full subtree call
+    /// this once per level. Requires read access to the parent namespace; the returned children
+    /// are additionally filtered to those the caller can read, exactly as
+    /// <see cref="GetAllAsync"/> does.
+    /// </summary>
+    /// <exception cref="NamespaceNotFoundException">No namespace named <paramref name="namespaceName"/> exists.</exception>
+    Task<IReadOnlyList<Namespace>> ListChildrenAsync(
         string namespaceName,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
@@ -68,6 +90,20 @@ public interface INamespaceAppService
 /// </summary>
 public class NamespaceAlreadyExistsException(string namespaceName)
     : Exception($"A namespace named '{namespaceName}' already exists.")
+{
+    public string NamespaceName { get; } = namespaceName;
+}
+
+/// <summary>
+/// Thrown when deleting a namespace that still has child namespaces. Deleting it would strand
+/// (or, with a cascading constraint, silently destroy) every pseudonymization level below it, so
+/// the children have to be deleted explicitly first.
+/// </summary>
+public class NamespaceHasChildrenException(string namespaceName)
+    : Exception(
+        $"The namespace '{namespaceName}' still has child namespaces and cannot be deleted. "
+            + "Delete its children first."
+    )
 {
     public string NamespaceName { get; } = namespaceName;
 }

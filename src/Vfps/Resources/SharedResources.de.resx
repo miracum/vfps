@@ -358,6 +358,45 @@
   <data name="App.Namespaces.AllowsMultiplePseudonyms" xml:space="preserve">
     <value>Mehrere Pseudonyme pro Originalwert zulassen</value>
   </data>
+  <data name="App.Namespaces.Parent" xml:space="preserve">
+    <value>Eltern-Namensraum</value>
+  </data>
+  <data name="App.Namespaces.ParentColumn" xml:space="preserve">
+    <value>Eltern</value>
+  </data>
+  <data name="App.Namespaces.NoParent" xml:space="preserve">
+    <value>Keiner (Wurzel-Namensraum)</value>
+  </data>
+  <data name="App.Namespaces.ParentHelp" xml:space="preserve">
+    <value>Macht diesen Namensraum zu einem Kind-Namensraum, dessen Originalwerte Pseudonyme des Eltern-Namensraums sind. Nach der Erstellung nicht mehr änderbar.</value>
+  </data>
+  <data name="App.Namespaces.EnsureParentPseudonymExists" xml:space="preserve">
+    <value>Originalwerte müssen im Eltern-Namensraum vorhanden sein</value>
+  </data>
+  <data name="App.Namespaces.EnsureParentPseudonymExistsHelp" xml:space="preserve">
+    <value>Lehnt die Pseudonym-Erstellung ab, sofern der Originalwert nicht bereits ein Pseudonym im Eltern-Namensraum ist.</value>
+  </data>
+  <data name="App.Namespaces.ValidatedBadge" xml:space="preserve">
+    <value>(validiert)</value>
+  </data>
+  <data name="App.Namespaces.HierarchyAction" xml:space="preserve">
+    <value>Hierarchie</value>
+  </data>
+  <data name="App.Namespaces.HierarchyTitle" xml:space="preserve">
+    <value>Hierarchie für '{0}'</value>
+  </data>
+  <data name="App.Namespaces.HierarchyDescription" xml:space="preserve">
+    <value>Die vollständige Pseudonym-Hierarchie, zu der dieser Namensraum gehört - von der Wurzel bis zu allen darunterliegenden Stufen. Es werden nur Namensräume angezeigt, die Sie lesen dürfen.</value>
+  </data>
+  <data name="App.Namespaces.HierarchySelected" xml:space="preserve">
+    <value>ausgewählt</value>
+  </data>
+  <data name="App.Namespaces.HierarchyStandalone" xml:space="preserve">
+    <value>Dieser Namensraum hat weder Eltern- noch Kind-Namensräume.</value>
+  </data>
+  <data name="App.Common.Close" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
   <data name="App.Namespaces.AllowsMultiplePseudonymsColumn" xml:space="preserve">
     <value>Mehrere Pseudonyme</value>
   </data>
@@ -447,6 +486,21 @@
   </data>
   <data name="App.Pseudonyms.CreateTitle" xml:space="preserve">
     <value>Pseudonym erstellen</value>
+  </data>
+  <data name="App.Pseudonyms.ChainAction" xml:space="preserve">
+    <value>Pseudonymisieren in…</value>
+  </data>
+  <data name="App.Pseudonyms.ChainTitle" xml:space="preserve">
+    <value>In einen Kind-Namensraum pseudonymisieren</value>
+  </data>
+  <data name="App.Pseudonyms.ChainDescription" xml:space="preserve">
+    <value>Erzeugt ein Pseudonym der nächsthöheren Stufe in einem Kind-Namensraum und verwendet dieses Pseudonym aus '{0}' als Originalwert.</value>
+  </data>
+  <data name="App.Pseudonyms.ChainOriginalValue" xml:space="preserve">
+    <value>Originalwert</value>
+  </data>
+  <data name="App.Pseudonyms.ChainTarget" xml:space="preserve">
+    <value>Kind-Namensraum</value>
   </data>
   <data name="App.Pseudonyms.CreatedAt" xml:space="preserve">
     <value>Erstellt am</value>

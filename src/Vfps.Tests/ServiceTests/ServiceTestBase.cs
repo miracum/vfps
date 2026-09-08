@@ -126,14 +126,15 @@ public class ServiceTestBase : IDisposable
         ) => Task.FromResult(CreateDbContext());
     }
 
-    protected static NamespaceAppService CreateNamespaceAppService(
+    protected NamespaceAppService CreateNamespaceAppService(
         INamespaceRepository namespaceRepository,
         AuthorizationConfig? config = null
     ) =>
         new(
             namespaceRepository,
             CreatePermissionChecker(config),
-            new PseudonymizationMethodsLookup()
+            new PseudonymizationMethodsLookup(),
+            new TestPseudonymContextFactory(BuildContextOptions)
         );
 
     protected virtual void Dispose(bool disposing)
