@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1787762617525,
+  "lastUpdate": 1788908068555,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -7014,6 +7014,66 @@ window.BENCHMARK_DATA = {
             "value": 1453.9785563605171,
             "unit": "ns",
             "range": "± 1.2296564286483394"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "67d3852d607a35e8637ce4977446261b545cf775",
+          "message": "feat: added support for multi-level namespaces (#299)\n\n* feat: added support for multi-level namespaces\n\n* fix: namespace e2e error\n\n* test\n\n* feat: ui for nested namespaces\n\n* ha-ready metrics\n\n* bom",
+          "timestamp": "2026-09-09T00:51:29+02:00",
+          "tree_id": "0ed504450e36f9d73218c1220efce6d6b9a82c4c",
+          "url": "https://github.com/miracum/vfps/commit/67d3852d607a35e8637ce4977446261b545cf775"
+        },
+        "date": 1788908068181,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1236.5201650347028,
+            "unit": "ns",
+            "range": "± 6.760264618060744"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 688.086893081665,
+            "unit": "ns",
+            "range": "± 2.2205352911463465"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 711.8190567152841,
+            "unit": "ns",
+            "range": "± 0.5933012164381118"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 1144.627192570613,
+            "unit": "ns",
+            "range": "± 5.554686728096809"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1350.8821719033378,
+            "unit": "ns",
+            "range": "± 2.5627203322323324"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 1297.654473231389,
+            "unit": "ns",
+            "range": "± 2.1403860942801516"
           }
         ]
       }
