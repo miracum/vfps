@@ -1,71 +1,42 @@
-using System.Diagnostics.Metrics;
-using Microsoft.Extensions.Logging;
-using Vfps.Data;
+using Vfps.Metrics;
 
 namespace Vfps;
 
 /// <summary>
-/// Periodically refreshes a per-namespace pseudonym count gauge from the database. Deliberately
-/// a Gauge set from a real query on a timer, not a counter incremented per pseudonym creation:
-/// an in-process counter would reset to 0 on every restart and would only ever reflect the
-/// handling replica's own share of requests in a horizontally-scaled deployment, neither of which
-/// represents "how many pseudonyms exist in this namespace" - a Gauge sourced from the shared
-/// database is correct regardless of restarts or replica count (every replica queries the same
-/// underlying data, so use max()/avg(), not sum(), when graphing across replicas).
+/// Drives <see cref="PseudonymCountMetrics"/> on every replica.
+///
+/// Runs everywhere and unconditionally, unlike the work it drives: the expensive recompute is
+/// rationed by the snapshot's own refresh claim (see
+/// <see cref="Data.IMetricSnapshotRepository.TryClaimRefreshAsync"/>), so what this actually does
+/// on almost every tick is one conditional UPDATE that matches nothing plus one single-row read.
+/// That's cheap enough to run far more often than the recompute interval, which is the point - it
+/// bounds how far behind the shared snapshot any individual replica's exported values can be.
 /// </summary>
 public class PseudonymCountMetricsBackgroundService(
     IServiceProvider serviceProvider,
-    ILogger<PseudonymCountMetricsBackgroundService> logger
+    TimeSpan? pollInterval = null
 ) : BackgroundService
 {
-    // COUNT(*) GROUP BY namespace_name is a full-scan-class query at the "hundreds of millions
-    // of rows" scale this service targets - kept infrequent (rather than matching
-    // MemoryCacheMetricsBackgroundService's 60s, which only reads in-memory cache stats) since
-    // this one pays a real, bounded database cost each tick.
-    private static readonly TimeSpan RefreshInterval = TimeSpan.FromMinutes(5);
-
-    // Dotted name is the OpenTelemetry convention; the Prometheus exporter renders it with
-    // underscores on export ("vfps_pseudonyms"), matching the metric name this service exposed
-    // under prometheus-net.
-    private static readonly Gauge<long> PseudonymsPerNamespace = Program.Meter.CreateGauge<long>(
-        "vfps.pseudonyms",
-        description: "Current number of pseudonyms per namespace, refreshed periodically from "
-            + "the database. A namespace with no pseudonyms yet simply has no series here."
-    );
+    // Only ever overridden by tests, which need a far shorter interval to observe a tick without a
+    // real-time wait - same pattern (and rationale) as StalledPseudonymizationJobWatchdogService's
+    // own checkInterval parameter.
+    private readonly TimeSpan _pollInterval = pollInterval ?? TimeSpan.FromSeconds(60);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(RefreshInterval);
-        do
-        {
-            await RefreshAsync(stoppingToken);
-        } while (await timer.WaitForNextTickAsync(stoppingToken));
-    }
-
-    private async Task RefreshAsync(CancellationToken cancellationToken)
-    {
+        using var timer = new PeriodicTimer(_pollInterval);
         try
         {
-            using var scope = serviceProvider.CreateScope();
-            var pseudonymRepository =
-                scope.ServiceProvider.GetRequiredService<IPseudonymRepository>();
-            var counts = await pseudonymRepository.CountAllGroupedByNamespaceAsync(
-                cancellationToken
-            );
-
-            foreach (var (namespaceName, count) in counts)
+            do
             {
-                PseudonymsPerNamespace.Record(
-                    count,
-                    new KeyValuePair<string, object?>("namespace", namespaceName)
-                );
-            }
+                using var scope = serviceProvider.CreateScope();
+                var metrics = scope.ServiceProvider.GetRequiredService<PseudonymCountMetrics>();
+                await metrics.RefreshAsync(stoppingToken);
+            } while (await timer.WaitForNextTickAsync(stoppingToken));
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (OperationCanceledException)
         {
-            // Best-effort: a transient DB issue here shouldn't crash the whole host over a
-            // metrics refresh - see the identical reasoning on S3BucketConfigurationBackgroundService.
-            logger.LogError(ex, "Failed to refresh the per-namespace pseudonym count metric.");
+            // expected on shutdown - WaitForNextTickAsync throws once stoppingToken is cancelled.
         }
     }
 }

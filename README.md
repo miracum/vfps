@@ -143,6 +143,55 @@ Upload a CSV file to pseudonymize or de-pseudonymize one or more columns as a ba
 
 See <https://github.com/miracum/charts/tree/master/charts/vfps> for a production-grade deployment on Kubernetes via Helm.
 
+### Running more than one replica
+
+vfps keeps no durable state of its own outside PostgreSQL, so replicas are interchangeable and can
+be scaled horizontally. A few things are the deployment's responsibility rather than the
+application's, and are easy to miss:
+
+- **The admin UI needs session affinity.** The UI is Blazor Server: each browser session is a
+  SignalR circuit living in one replica's memory. Without sticky sessions the initial page request
+  and the circuit's WebSocket can land on different replicas, and a circuit can't be resumed on a
+  different replica than the one that created it. Configure affinity at the ingress (a session
+  cookie) or, failing that, `sessionAffinity: ClientIP` on the Service. The gRPC and REST APIs are
+  stateless and need none of this. Auth cookies and antiforgery tokens *are* portable across
+  replicas - the Data Protection key ring is persisted to PostgreSQL whenever
+  `ConnectionStrings__PostgreSQL` is set (see the table above) - so affinity is about the circuit,
+  not about login.
+- **gRPC clients pin to a single replica.** A gRPC client opens one long-lived HTTP/2 connection,
+  and a plain ClusterIP Service load-balances connections, not requests - so one client's traffic
+  stays on whichever replica it first connected to. For traffic to actually spread, point clients at
+  the chart's headless Service with client-side load balancing (`dns:///` plus a `round_robin`
+  policy), or terminate gRPC at a proxy that balances per request.
+- **Size the connection pool for the replica count, not the replica.** Npgsql's pool is per process
+  and defaults to 100 connections, so N replicas can demand N x 100 against a PostgreSQL whose own
+  `max_connections` commonly defaults to 100. Set `Maximum Pool Size` explicitly in the connection
+  string, budget for `CsvProcessing__WorkerCount` on top of request traffic, and put PgBouncer in
+  front if the arithmetic doesn't fit.
+- **Caches are per-replica.** `Pseudonymization__Caching__*` is an in-process `MemoryCache`, so a
+  namespace deleted via one replica can still be served from another replica's cache until the
+  entry expires (`Pseudonymization__Caching__AbsoluteExpiration`, one hour by default). Namespaces
+  are immutable once created, so this only affects deletion; shorten the expiration if that window
+  matters to you.
+- **Give the pod time to drain.** On `SIGTERM` the process stops accepting new work and finishes
+  what's in flight, bounded by `ShutdownTimeout`. Kubernetes removes the pod from Service endpoints
+  asynchronously, so without a `preStop` delay some requests are still routed to a pod that has
+  already begun shutting down. Add a `preStop` sleep of a few seconds and keep
+  `terminationGracePeriodSeconds` > `ShutdownTimeout` > `CsvProcessing__JobServerShutdownTimeout`.
+  Note the runtime image is chiseled and has no shell, so a `preStop` `exec` handler won't work -
+  use the native `sleep` handler (Kubernetes 1.30+).
+- **Run migrations once, not per replica.** Leave `ForceRunDatabaseMigrations` off and run the
+  bundled `efbundle` and `efbundle-dataprotection` as a separate Job. Because that Job runs while
+  the previous version's pods are still serving, migrations have to be backwards-compatible with the
+  running version (expand/contract) for the upgrade to be non-disruptive.
+- **The per-namespace pseudonym count metric is computed by one replica and shared.**
+  `vfps_pseudonyms` comes from a `GROUP BY` count over the whole pseudonyms table, so it's
+  recomputed at most every 5 minutes by whichever replica wins an atomic claim on the
+  `metric_snapshots` row, and every other replica exports the stored result. All replicas therefore
+  report the same figure - graph it with `max()` or `avg()` across replicas rather than `sum()`.
+  A replica that claims the refresh and then dies before storing the result delays the next
+  recompute by one interval; nothing else is affected.
+
 ## Configuration
 
 Available configuration options which can be set as environment variables:
@@ -151,6 +200,7 @@ Available configuration options which can be set as environment variables:
 | -------------------------------------------------- | ------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `ConnectionStrings__PostgreSQL`                    | `string`     | `""`                | Connection string to the PostgreSQL database. See <https://www.npgsql.org/doc/connection-string-parameters.html> for options. Whenever this is set, it's also used to persist the ASP.NET Core Data Protection key ring so auth cookies/antiforgery tokens minted by one replica remain valid on another - **independent of `Authorization__IsEnabled`**, since Blazor Server's own circuit handshake relies on antiforgery regardless of whether OIDC auth is on. Deployments running the bundled migrations as a separate init job must run both `efbundle` and `efbundle-dataprotection` (not just `efbundle`), or the app fails at startup with `relation "data_protection_keys" does not exist`. |
 | `ForceRunDatabaseMigrations`                       | `bool`       | `false`             | Run database migrations as part of the startup. Only recommended when a single replica of the application is used.            |
+| `ShutdownTimeout`                                  | `TimeSpan`   | `"0.00:00:25"`      | How long the host waits for in-flight requests, Blazor circuits and background work to finish after `SIGTERM` before tearing down. Kept just under Kubernetes' default `terminationGracePeriodSeconds` of 30s so draining actually completes; raise both together (and add a `preStop` hook) if your clients need a longer drain - see [Running more than one replica](#running-more-than-one-replica). |
 | `Tracing__IsEnabled`                               | `bool`       | `false`             | Enable distributed tracing support.                                                                                           |
 | `Tracing__ServiceName`                             | `string`     | `"vfps"`            | Tracing service name.                                                                                                         |
 | `Tracing__RootSampler`                             | `string`     | `"AlwaysOnSampler"` | Tracing parent root sampler. One of `AlwaysOnSampler`, `AlwaysOffSampler`, `TraceIdRatioBasedSampler`                         |
@@ -189,6 +239,9 @@ Available configuration options which can be set as environment variables:
 | `S3__AllowedOrigins`          | `string[]` | `[]`         | Origins (e.g. `https://vfps.example.org`) allowed to PUT/GET objects directly against the bucket via presigned URLs, applied as an S3 bucket CORS rule on startup. The browser talks to the bucket on a different origin than vfps itself, so without this the browser blocks the upload with a CORS error before it reaches S3. Empty (the default) leaves the bucket's CORS configuration untouched. **Overwrites the bucket's entire existing CORS configuration** - use a bucket dedicated to vfps. |
 | `CsvProcessing__PseudonymizeBatchSize`     | `int`      | `1000`         | How many rows' worth of values go into one batched upsert round trip when pseudonymizing a CSV job. Doesn't apply to de-pseudonymization, which resolves concurrently instead. |
 | `CsvProcessing__StalledJobThreshold`       | `TimeSpan` | `"0.00:10:00"` | How long a CSV job can sit `Running` with no progress update before it's marked `Stalled` (its worker likely crashed, lost its database connection, or was killed by an app restart). |
+| `CsvProcessing__WorkerCount`               | `int`      | `4`            | How many CSV jobs one replica processes concurrently. Pinned rather than left at Hangfire's own default (`min(cores * 5, 20)`), which knows nothing about the shared Npgsql connection pool: a de-pseudonymizing job resolves each chunk via up to 20 concurrent lookups, so 20 workers would be up to 400 concurrent connection requests from one replica against a pool whose default maximum is 100. Raise it in step with `Maximum Pool Size`, and remember it multiplies by replica count against one shared database. |
+| `CsvProcessing__JobServerShutdownTimeout`  | `TimeSpan` | `"0.00:00:15"` | How long the Hangfire job server waits for in-flight jobs to wind down on shutdown. A CSV job can't checkpoint and resume, so this doesn't let one finish - it buys time to unwind cleanly and record its own outcome. Must stay comfortably below `ShutdownTimeout`. |
+| `CsvProcessing__OrphanedJobRecoveryDelay`  | `TimeSpan` | `"0.00:02:00"` | How long a job orphaned by a replica disappearing (rolling upgrade, OOM kill, node failure) waits before another replica picks it up and reprocesses it from the start. Hangfire's own default is 5 minutes, which races uncomfortably closely with `CsvProcessing__StalledJobThreshold`; 2 minutes makes re-dispatch the reliable winner, so an upgrade costs a job a couple of minutes rather than a `Stalled` status. Hangfire's heartbeat and server-check intervals are derived from this; values below 30s are clamped. |
 | `CsvProcessing__MissingValuePlaceholders`  | `string[]` | `["NA", "NULL"]` | Source values (matched case-insensitively, after trimming) treated as "no value" and passed through to the output unchanged instead of being pseudonymized/de-pseudonymized. A blank/whitespace-only cell is always treated this way regardless of this setting. Set to `[]` to only skip genuinely blank cells. |
 
 CSV job input/output bytes never pass through the vfps process itself: the admin UI uploads directly to a presigned S3 PUT URL and downloads directly from a presigned S3 GET URL, and the Hangfire background job (running in-process, no separate worker deployment) streams the file S3-to-S3. See `compose.yaml`'s `s3` profile for a local SeaweedFS setup usable for manual testing.

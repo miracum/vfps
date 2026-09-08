@@ -98,6 +98,54 @@ public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbCo
             columnMappingsProperty.HasColumnType("jsonb");
         }
 
+        // Same JSON-column treatment as ColumnMappings above: a MetricSnapshot's values are only
+        // ever read and written as a whole set, so they live in one column rather than a row per
+        // series - which is also what makes "replace wholesale" (and therefore a series that has
+        // gone away actually disappearing) a single write.
+        var metricValuesConverter = new ValueConverter<Dictionary<string, long>, string>(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v =>
+                JsonSerializer.Deserialize<Dictionary<string, long>>(
+                    v,
+                    (JsonSerializerOptions?)null
+                ) ?? new Dictionary<string, long>()
+        );
+        var metricValuesComparer = new ValueComparer<Dictionary<string, long>>(
+            (a, b) =>
+                JsonSerializer.Serialize(a, (JsonSerializerOptions?)null)
+                == JsonSerializer.Serialize(b, (JsonSerializerOptions?)null),
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null).GetHashCode(),
+            v =>
+                JsonSerializer.Deserialize<Dictionary<string, long>>(
+                    JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+                    (JsonSerializerOptions?)null
+                )!
+        );
+
+        modelBuilder.Entity<MetricSnapshot>().HasKey(s => s.Name);
+
+        var metricValuesProperty = modelBuilder.Entity<MetricSnapshot>().Property(s => s.Values);
+        metricValuesProperty.HasConversion(metricValuesConverter, metricValuesComparer);
+        if (Database.IsNpgsql())
+        {
+            metricValuesProperty.HasColumnType("jsonb");
+        }
+
+        // Seeded rather than created on demand: an upsert-if-missing would need its own race
+        // handling on first startup across replicas, whereas HasData puts the row there for both a
+        // migrated database and a test's EnsureCreated. DateTimeOffset.MinValue is simply "never
+        // computed", so the first replica to look wins the claim immediately.
+        modelBuilder
+            .Entity<MetricSnapshot>()
+            .HasData(
+                new MetricSnapshot
+                {
+                    Name = MetricSnapshot.PseudonymCountsName,
+                    Values = [],
+                    ComputedAt = DateTimeOffset.MinValue,
+                }
+            );
+
         // via https://blog.dangl.me/archive/handling-datetimeoffset-in-sqlite-with-entity-framework-core/
         // only really relevant for unit/integration-testing
         if (Database.IsSqlite())
@@ -130,4 +178,5 @@ public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbCo
     public DbSet<Pseudonym> Pseudonyms { get; set; }
     public DbSet<Namespace> Namespaces { get; set; }
     public DbSet<PseudonymizationJob> PseudonymizationJobs { get; set; }
+    public DbSet<MetricSnapshot> MetricSnapshots { get; set; }
 }
