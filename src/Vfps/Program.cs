@@ -399,9 +399,14 @@ if (s3Config.IsEnabled)
                 + "the same database, no separate storage is provisioned for it."
         );
 
-    // Hangfire's Postgres storage handles distributed locking itself, so every horizontally
-    // scaled replica can safely run AddHangfireServer() and pick up jobs with no extra
-    // coordination work needed - consistent with "no new service" for this feature.
+    // Hangfire's client and storage are registered on every instance, whether or not it
+    // processes jobs: enqueueing a job (IBackgroundJobClient) and rendering the dashboard both
+    // read from storage and need no local server. Only the processing loop below is optional -
+    // see CsvProcessingConfig.ProcessJobs.
+    //
+    // Hangfire's Postgres storage handles distributed locking itself, so every replica that does
+    // run a server can pick up jobs with no extra coordination work needed - consistent with
+    // "no new service" for this feature.
     builder.Services.AddHangfire(config =>
         config
             .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(postgresConnectionString))
@@ -412,28 +417,34 @@ if (s3Config.IsEnabled)
             // column name, malformed input) and will just fail again identically.
             .UseFilter(new AutomaticRetryAttribute { Attempts = 0 })
     );
-    builder.Services.AddHangfireServer(hangfireOptions =>
+    // Registered only on instances that are meant to do the work, so an API pod's rollout and
+    // resource budget stay independent of a running CSV job's.
+    if (csvProcessingConfig.ProcessJobs)
     {
-        // Every one of these is pinned rather than left at a Hangfire default, because the
-        // defaults are tuned for short jobs on a single server and this app runs long CSV jobs
-        // across a horizontally-scaled Deployment sharing one database. See CsvProcessingConfig
-        // for the reasoning behind each value.
-        hangfireOptions.WorkerCount = Math.Max(1, csvProcessingConfig.WorkerCount);
-        hangfireOptions.ShutdownTimeout = csvProcessingConfig.JobServerShutdownTimeout;
+        builder.Services.AddHangfireServer(hangfireOptions =>
+        {
+            // Every one of these is pinned rather than left at a Hangfire default, because the
+            // defaults are tuned for short jobs on a single server and this app runs long CSV
+            // jobs across a horizontally-scaled Deployment sharing one database. See
+            // CsvProcessingConfig for the reasoning behind each value.
+            hangfireOptions.WorkerCount = Math.Max(1, csvProcessingConfig.WorkerCount);
+            hangfireOptions.ShutdownTimeout = csvProcessingConfig.JobServerShutdownTimeout;
 
-        // Derived, not separately configurable: a heartbeat slower than the timeout it's checked
-        // against would have healthy servers declare each other dead and double-process jobs, so
-        // these three only make sense set together. The floor guards the same invariant against a
-        // recovery delay configured so low that the derived heartbeat can't keep up with it.
-        var recoveryDelay =
-            csvProcessingConfig.OrphanedJobRecoveryDelay < TimeSpan.FromSeconds(30)
-                ? TimeSpan.FromSeconds(30)
-                : csvProcessingConfig.OrphanedJobRecoveryDelay;
+            // Derived, not separately configurable: a heartbeat slower than the timeout it's
+            // checked against would have healthy servers declare each other dead and
+            // double-process jobs, so these three only make sense set together. The floor guards
+            // the same invariant against a recovery delay configured so low that the derived
+            // heartbeat can't keep up with it.
+            var recoveryDelay =
+                csvProcessingConfig.OrphanedJobRecoveryDelay < TimeSpan.FromSeconds(30)
+                    ? TimeSpan.FromSeconds(30)
+                    : csvProcessingConfig.OrphanedJobRecoveryDelay;
 
-        hangfireOptions.ServerTimeout = recoveryDelay;
-        hangfireOptions.ServerCheckInterval = recoveryDelay / 4;
-        hangfireOptions.HeartbeatInterval = recoveryDelay / 8;
-    });
+            hangfireOptions.ServerTimeout = recoveryDelay;
+            hangfireOptions.ServerCheckInterval = recoveryDelay / 4;
+            hangfireOptions.HeartbeatInterval = recoveryDelay / 8;
+        });
+    }
 }
 
 builder.Services.AddControllers(options =>
@@ -498,6 +509,18 @@ app.Use(
 );
 
 app.UseRequestLocalization();
+
+if (s3Config.IsEnabled && !csvProcessingConfig.ProcessJobs)
+{
+    // Deliberately noisy: "jobs sit in Queued forever" is an confusing symptom to diagnose, and
+    // this line is what distinguishes an instance that is not meant to process jobs (the normal
+    // setup for API pods alongside a dedicated worker Deployment) from a deployment where nothing
+    // processes them at all.
+    app.Logger.LogInformation(
+        "CsvProcessing:ProcessJobs is false - this instance accepts CSV jobs but does not process "
+            + "them. At least one instance must have it enabled, or jobs will queue forever."
+    );
+}
 
 if (!authConfig.IsEnabled)
 {

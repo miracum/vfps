@@ -42,6 +42,23 @@ public class CsvProcessingConfig
     public TimeSpan StalledJobThreshold { get; set; } = TimeSpan.FromMinutes(10);
 
     /// <summary>
+    /// Whether this instance actually runs CSV jobs, as opposed to only accepting them.
+    ///
+    /// Enqueueing a job, and the Hangfire dashboard, work either way - those need Hangfire's
+    /// client and storage, which are registered whenever S3 is enabled. This flag controls only
+    /// the processing loop, which is what lets a deployment run dedicated worker pods: set it to
+    /// false on the pods serving the API and admin UI, and true on a second Deployment running
+    /// the same image. That separation exists because one Deployment can only have one shutdown
+    /// window and one resource budget, and a long CSV job wants a long drain while an API pod
+    /// wants a short one.
+    ///
+    /// Left true by default so a single Deployment keeps behaving exactly as before. **If every
+    /// instance sets it to false, nothing processes jobs** and they queue forever - the admin UI's
+    /// job list shows them stuck in Queued, and the Hangfire dashboard's Servers page is empty.
+    /// </summary>
+    public bool ProcessJobs { get; set; } = true;
+
+    /// <summary>
     /// How many CSV jobs one replica processes concurrently (Hangfire's worker count for this
     /// app's job server). Pinned rather than left at Hangfire's own default of
     /// <c>min(ProcessorCount * 5, 20)</c>, because that default is chosen for short, cheap jobs
