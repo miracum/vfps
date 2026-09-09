@@ -1,0 +1,364 @@
+@using System.Security.Claims
+@using Vfps.Data.Models
+@inject INamespaceAccessGrantAppService GrantAppService
+@inject IStringLocalizer<SharedResources> Localizer
+
+@*
+    Who can do what in one namespace: a form to add a grant, then the grants scoped to this
+    namespace and, read-only, the ones covering every namespace (they apply here too, but belong
+    to no single namespace). The Access Control page manages the same grants across all
+    namespaces at once through the same app service - this is the per-namespace view of it.
+*@
+
+<div>
+    @if (_createError is not null)
+    {
+        <BbAlert Variant="AlertVariant.Danger" Class="mb-4">
+            <BbAlertTitle>@Localizer["App.AccessControl.AddGrantErrorTitle"]</BbAlertTitle>
+            <BbAlertDescription>@_createError</BbAlertDescription>
+        </BbAlert>
+    }
+    <EditForm Model="_newGrant" FormName="add-namespace-access-grant" OnValidSubmit="CreateGrantAsync">
+        <div class="grid gap-4 sm:grid-cols-2">
+            <BbField>
+                <BbFieldLabel For="newGrantType">@Localizer["App.AccessControl.GranteeType"]</BbFieldLabel>
+                <BbFieldContent>
+                    <select
+                        @bind="_newGrant.GranteeType"
+                        id="newGrantType"
+                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        <option value="@GranteeType.Role">@Localizer["App.AccessControl.GranteeTypeRole"]</option>
+                        <option value="@GranteeType.Email">@Localizer["App.AccessControl.GranteeTypeEmail"]</option>
+                    </select>
+                </BbFieldContent>
+            </BbField>
+            <BbField>
+                <BbFieldLabel For="newGrantGrantee">@Localizer["App.AccessControl.Grantee"]</BbFieldLabel>
+                <BbFieldContent>
+                    <BbInput
+                        @bind-Value="_newGrant.Grantee"
+                        Id="newGrantGrantee"
+                        Required="true"
+                        Placeholder="@(_newGrant.GranteeType == GranteeType.Email
+                            ? Localizer["App.AccessControl.GranteeEmailPlaceholder"].Value
+                            : Localizer["App.AccessControl.GranteeRolePlaceholder"].Value)"
+                    />
+                    <p class="mt-1 text-xs text-muted-foreground">
+                        @(_newGrant.GranteeType == GranteeType.Email
+                            ? Localizer["App.AccessControl.GranteeEmailHelp"]
+                            : Localizer["App.AccessControl.GranteeRoleHelp"])
+                    </p>
+                </BbFieldContent>
+            </BbField>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center gap-4">
+            <div class="flex items-center gap-2">
+                <BbSwitch @bind-Checked="_newGrant.CanRead" Id="newGrantCanRead" />
+                <label for="newGrantCanRead" class="text-sm">@Localizer["App.AccessControl.Read"]</label>
+            </div>
+            <div class="flex items-center gap-2">
+                <BbSwitch @bind-Checked="_newGrant.CanWrite" Id="newGrantCanWrite" />
+                <label for="newGrantCanWrite" class="text-sm">@Localizer["App.AccessControl.Write"]</label>
+            </div>
+            <div class="flex items-center gap-2">
+                <BbSwitch @bind-Checked="_newGrant.CanReverseLookup" Id="newGrantCanReverseLookup" />
+                <label for="newGrantCanReverseLookup" class="text-sm">
+                    @Localizer["App.AccessControl.ReverseLookup"]
+                </label>
+            </div>
+        </div>
+        <BbButton
+            id="addAccessGrantButton"
+            Type="ButtonType.Submit"
+            Loading="_isCreating"
+            Class="mt-4"
+        >
+            @Localizer["App.AccessControl.AddGrantAction"]
+        </BbButton>
+    </EditForm>
+
+    @* Below the add controls on purpose: the list grows as grants are added, and above them it
+       would push the form further down the dialog with every one. *@
+    <div class="mt-4 border-t pt-4">
+        @if (_error is not null)
+        {
+            <BbAlert Variant="AlertVariant.Danger" Class="mb-4">
+                <BbAlertTitle>@Localizer["App.AccessControl.GrantErrorTitle"]</BbAlertTitle>
+                <BbAlertDescription>@_error</BbAlertDescription>
+            </BbAlert>
+        }
+
+        @if (_scopedGrants.Count == 0)
+        {
+            <p class="text-sm text-muted-foreground">
+                @Localizer["App.AccessControl.NoGrantsForNamespace"]
+            </p>
+        }
+        else
+        {
+            <div class="space-y-2">
+                @foreach (var grant in _scopedGrants)
+                {
+                    <div class="rounded-md border border-border p-3">
+                        <div class="flex flex-wrap items-center justify-between gap-2">
+                            <div class="flex items-center gap-2">
+                                <BbBadge Variant="BadgeVariant.Secondary">
+                                    @GranteeTypeLabel(grant.GranteeType)
+                                </BbBadge>
+                                <span class="text-sm">@grant.Grantee</span>
+                            </div>
+                            <BbButton
+                                id="@($"deleteGrant-{grant.Id}")"
+                                Variant="ButtonVariant.Destructive"
+                                Size="ButtonSize.Small"
+                                OnClick="@(() => DeleteGrantAsync(grant))"
+                            >
+                                @Localizer["App.Common.Delete"]
+                            </BbButton>
+                        </div>
+                        <div class="mt-2 flex flex-wrap items-center gap-4">
+                            <div class="flex items-center gap-2">
+                                <BbSwitch
+                                    @bind-Checked="grant.CanRead"
+                                    @bind-Checked:after="@(() => SaveGrantAsync(grant))"
+                                    Id="@($"grant-{grant.Id}-read")"
+                                    Disabled="@(_savingGrantId == grant.Id)"
+                                />
+                                <label for="@($"grant-{grant.Id}-read")" class="text-sm">
+                                    @Localizer["App.AccessControl.Read"]
+                                </label>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <BbSwitch
+                                    @bind-Checked="grant.CanWrite"
+                                    @bind-Checked:after="@(() => SaveGrantAsync(grant))"
+                                    Id="@($"grant-{grant.Id}-write")"
+                                    Disabled="@(_savingGrantId == grant.Id)"
+                                />
+                                <label for="@($"grant-{grant.Id}-write")" class="text-sm">
+                                    @Localizer["App.AccessControl.Write"]
+                                </label>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <BbSwitch
+                                    @bind-Checked="grant.CanReverseLookup"
+                                    @bind-Checked:after="@(() => SaveGrantAsync(grant))"
+                                    Id="@($"grant-{grant.Id}-reverse-lookup")"
+                                    Disabled="@(_savingGrantId == grant.Id)"
+                                />
+                                <label for="@($"grant-{grant.Id}-reverse-lookup")" class="text-sm">
+                                    @Localizer["App.AccessControl.ReverseLookup"]
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+
+        @if (_globalGrants.Count > 0)
+        {
+            <div class="mt-4">
+                <p class="text-sm font-medium">@Localizer["App.AccessControl.GlobalGrantsTitle"]</p>
+                <p class="text-xs text-muted-foreground">
+                    @Localizer["App.AccessControl.GlobalGrantsDescription"]
+                </p>
+                <div class="mt-2 space-y-1">
+                    @foreach (var grant in _globalGrants)
+                    {
+                        <div class="flex flex-wrap items-center gap-2 text-sm">
+                            <BbBadge Variant="BadgeVariant.Outline">
+                                @GranteeTypeLabel(grant.GranteeType)
+                            </BbBadge>
+                            <span>@grant.Grantee</span>
+                            <span class="text-xs text-muted-foreground">@PermissionSummary(grant)</span>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    /// <summary>The namespace whose grants are being edited. Never null - grants covering every
+    /// namespace are managed on the Access Control page, and only shown here for context.</summary>
+    [Parameter, EditorRequired]
+    public string NamespaceName { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public ClaimsPrincipal User { get; set; } = null!;
+
+    /// <summary>
+    /// Raised after every write, so a host that shows access information of its own can refresh.
+    /// </summary>
+    [Parameter]
+    public EventCallback OnChanged { get; set; }
+
+    private readonly NewGrantModel _newGrant = new();
+    private List<NamespaceAccessGrant> _scopedGrants = [];
+    private List<NamespaceAccessGrant> _globalGrants = [];
+    private bool _isCreating;
+    private string? _createError;
+    private string? _error;
+    private Guid? _savingGrantId;
+
+    // The namespace the currently loaded grants belong to. Blazor reuses this component instance
+    // when the host reopens its dialog for a different namespace, so a parameter change has to
+    // reload rather than relying on OnInitializedAsync running again.
+    private string? _loadedFor;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.Equals(_loadedFor, NamespaceName, StringComparison.Ordinal))
+        {
+            _loadedFor = NamespaceName;
+            _error = null;
+            _createError = null;
+            await LoadAsync();
+        }
+    }
+
+    private async Task LoadAsync()
+    {
+        var grants = await GrantAppService.GetAllAsync(User, CancellationToken.None);
+
+        _scopedGrants =
+        [
+            .. grants
+                .Where(g => string.Equals(g.NamespaceName, NamespaceName, StringComparison.Ordinal))
+                .OrderBy(g => g.Grantee, StringComparer.Ordinal),
+        ];
+        _globalGrants =
+        [
+            .. grants
+                .Where(g => g.NamespaceName is null)
+                .OrderBy(g => g.Grantee, StringComparer.Ordinal),
+        ];
+    }
+
+    private async Task CreateGrantAsync()
+    {
+        _isCreating = true;
+        _createError = null;
+
+        try
+        {
+            await GrantAppService.CreateAsync(
+                NamespaceName,
+                _newGrant.GranteeType,
+                _newGrant.Grantee,
+                _newGrant.CanRead,
+                _newGrant.CanWrite,
+                _newGrant.CanReverseLookup,
+                User,
+                CancellationToken.None
+            );
+
+            _newGrant.Reset();
+            await LoadAsync();
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex)
+        {
+            _createError = ex.Message;
+        }
+        finally
+        {
+            _isCreating = false;
+        }
+    }
+
+    private async Task SaveGrantAsync(NamespaceAccessGrant grant)
+    {
+        _savingGrantId = grant.Id;
+        _error = null;
+
+        try
+        {
+            await GrantAppService.UpdateAsync(
+                grant.Id,
+                grant.CanRead,
+                grant.CanWrite,
+                grant.CanReverseLookup,
+                User,
+                CancellationToken.None
+            );
+            await OnChanged.InvokeAsync();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or UnauthorizedAccessException)
+        {
+            _error = ex.Message;
+
+            // The toggle has already flipped locally by the time this runs, so the row would
+            // otherwise keep showing a permission that was never persisted.
+            await LoadAsync();
+        }
+        finally
+        {
+            _savingGrantId = null;
+        }
+    }
+
+    private async Task DeleteGrantAsync(NamespaceAccessGrant grant)
+    {
+        _error = null;
+
+        try
+        {
+            await GrantAppService.DeleteAsync(grant.Id, User, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+
+        // Reloaded either way: on success to drop the row, on failure because the most likely
+        // cause is another admin having already deleted it.
+        await LoadAsync();
+        await OnChanged.InvokeAsync();
+    }
+
+    private string GranteeTypeLabel(GranteeType granteeType) =>
+        granteeType == GranteeType.Email
+            ? Localizer["App.AccessControl.GranteeTypeEmail"].Value
+            : Localizer["App.AccessControl.GranteeTypeRole"].Value;
+
+    private string PermissionSummary(NamespaceAccessGrant grant)
+    {
+        List<string> permissions = [];
+
+        if (grant.CanRead)
+        {
+            permissions.Add(Localizer["App.AccessControl.Read"].Value);
+        }
+
+        if (grant.CanWrite)
+        {
+            permissions.Add(Localizer["App.AccessControl.Write"].Value);
+        }
+
+        if (grant.CanReverseLookup)
+        {
+            permissions.Add(Localizer["App.AccessControl.ReverseLookup"].Value);
+        }
+
+        return string.Join(", ", permissions);
+    }
+
+    private sealed class NewGrantModel
+    {
+        public GranteeType GranteeType { get; set; } = GranteeType.Role;
+        public string Grantee { get; set; } = string.Empty;
+        public bool CanRead { get; set; } = true;
+        public bool CanWrite { get; set; }
+        public bool CanReverseLookup { get; set; }
+
+        /// <summary>
+        /// Clears the grantee only. The type and permission toggles are deliberately left as they
+        /// were: granting the same set to several roles in a row is the common case.
+        /// </summary>
+        public void Reset() => Grantee = string.Empty;
+    }
+}

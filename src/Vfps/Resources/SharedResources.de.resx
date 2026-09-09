@@ -58,17 +58,11 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="App.AccessControl.AddGrantDescription" xml:space="preserve">
-    <value>Eine Rolle - oder über die E-Mail-Adresse eine einzelne Person - für einen Namespace berechtigen. Berechtigungen sind additiv, Verbotsregeln gibt es nicht: Es gilt die Summe aus allem, was den Rollen und der E-Mail-Adresse einer Person gewährt wurde.</value>
-  </data>
   <data name="App.AccessControl.AddGrantErrorTitle" xml:space="preserve">
     <value>Berechtigung konnte nicht angelegt werden</value>
   </data>
-  <data name="App.AccessControl.AddGrantTitle" xml:space="preserve">
-    <value>Zugriff gewähren</value>
-  </data>
   <data name="App.AccessControl.AdminRolesDescription" xml:space="preserve">
-    <value>Voller Zugriff auf jeden Namespace, einschließlich Erstellen/Löschen von Namespaces. Wird über {0} gesetzt und ist hier nicht bearbeitbar - es ist die Grundlage dafür, dass sich überhaupt jemand anmelden und die untenstehenden Berechtigungen anlegen kann.</value>
+    <value>Vollzugriff auf alle Namespaces, einschließlich Anlegen und Löschen von Namespaces. Wird über {0} gesetzt und ist hier nicht änderbar - damit sich überhaupt jemand anmelden und allen anderen Zugriff erteilen kann.</value>
   </data>
   <data name="App.AccessControl.AdminRolesTitle" xml:space="preserve">
     <value>Admin-Rollen</value>
@@ -79,9 +73,6 @@
   <data name="App.AccessControl.AdminsOnlyTitle" xml:space="preserve">
     <value>Nur für Admins</value>
   </data>
-  <data name="App.AccessControl.AllNamespaces" xml:space="preserve">
-    <value>Alle Namespaces</value>
-  </data>
   <data name="App.AccessControl.DisabledDescription" xml:space="preserve">
     <value>{0} ist {1}, daher hat jede Anfrage vollen Lese-, Schreib- und Reverse-Lookup-Zugriff auf jeden Namespace, unabhängig von der Rolle.</value>
   </data>
@@ -89,7 +80,7 @@
     <value>Autorisierung ist deaktiviert</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessDescription" xml:space="preserve">
-    <value>Wer in jedem vorhandenen Namespace was darf - die Vereinigung der auf ihn bezogenen Berechtigungen und der für alle Namespaces geltenden, dieselbe Auflösung, die auch die Zugriffsprüfungen verwenden. Admins haben immer vollen Zugriff und werden hier nicht aufgeführt.</value>
+    <value>Wer in welchem vorhandenen Namespace was darf - die Vereinigung der auf ihn bezogenen Berechtigungen und derjenigen für alle Namespaces, genau so aufgelöst wie bei den Zugriffsprüfungen selbst. Administratoren haben immer Vollzugriff und werden hier nicht aufgeführt. Diese Seite ist schreibgeschützt: Berechtigungen werden je Namespace über "Zugriff konfigurieren" auf der Namespaces-Seite verwaltet.</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessTitle" xml:space="preserve">
     <value>Effektiver Zugriff pro Namespace</value>
@@ -121,26 +112,38 @@
   <data name="App.AccessControl.GranteeTypeRole" xml:space="preserve">
     <value>Rolle</value>
   </data>
-  <data name="App.AccessControl.GrantsDescription" xml:space="preserve">
-    <value>Das Umschalten einer Berechtigung wird sofort gespeichert. Hier gilt sie unmittelbar; andere Replicas übernehmen sie innerhalb der konfigurierten Cache-Dauer.</value>
-  </data>
-  <data name="App.AccessControl.GrantsTitle" xml:space="preserve">
-    <value>Berechtigungen</value>
-  </data>
-  <data name="App.AccessControl.NoGrants" xml:space="preserve">
-    <value>Noch keine Berechtigungen vergeben - nur Admins haben Zugriff.</value>
-  </data>
   <data name="App.AccessControl.NoNamespacesExist" xml:space="preserve">
     <value>Es sind noch keine Namespaces vorhanden.</value>
+  </data>
+  <data name="App.Common.Close" xml:space="preserve">
+    <value>Schließen</value>
+  </data>
+  <data name="App.Namespaces.ConfigureAccessAction" xml:space="preserve">
+    <value>Zugriff konfigurieren</value>
+  </data>
+  <data name="App.Namespaces.ConfigureAccessTitle" xml:space="preserve">
+    <value>Zugriff auf '{0}'</value>
+  </data>
+  <data name="App.Namespaces.ConfigureAccessDescription" xml:space="preserve">
+    <value>Welche Rollen und Benutzer in diesem Namespace lesen, schreiben und Pseudonyme zurückauflösen dürfen. Auf der Seite "Zugriffssteuerung" werden dieselben Berechtigungen für alle Namespaces gemeinsam verwaltet.</value>
+  </data>
+  <data name="App.AccessControl.NoGrantsForNamespace" xml:space="preserve">
+    <value>Noch keine Berechtigungen - nur Administratoren erreichen diesen Namespace.</value>
+  </data>
+  <data name="App.AccessControl.GlobalGrantsTitle" xml:space="preserve">
+    <value>Gilt hier ebenfalls: Berechtigungen für alle Namespaces</value>
+  </data>
+  <data name="App.AccessControl.GlobalGrantsDescription" xml:space="preserve">
+    <value>Nur zur Orientierung aufgeführt: Sie gelten auch für diesen Namespace, gehören aber zu keinem einzelnen Namespace.</value>
+  </data>
+  <data name="App.AccessControl.AddGrantAction" xml:space="preserve">
+    <value>Berechtigung hinzufügen</value>
   </data>
   <data name="App.AccessControl.Read" xml:space="preserve">
     <value>Lesen</value>
   </data>
   <data name="App.AccessControl.ReverseLookup" xml:space="preserve">
     <value>Reverse-Lookup</value>
-  </data>
-  <data name="App.AccessControl.Scope" xml:space="preserve">
-    <value>Namespace</value>
   </data>
   <data name="App.AccessControl.Write" xml:space="preserve">
     <value>Schreiben</value>
@@ -418,29 +421,32 @@
   <data name="App.Namespaces.ValidatedBadge" xml:space="preserve">
     <value>(validiert)</value>
   </data>
-  <data name="App.Namespaces.HierarchyAction" xml:space="preserve">
-    <value>Hierarchie</value>
-  </data>
   <data name="App.Namespaces.HierarchyTitle" xml:space="preserve">
-    <value>Hierarchie für '{0}'</value>
+    <value>Namespace-Hierarchie</value>
+  </data>
+  <data name="App.Namespaces.HierarchyEmpty" xml:space="preserve">
+    <value>Es sind noch keine Namespaces vorhanden.</value>
+  </data>
+  <data name="App.Namespaces.HierarchySelectHint" xml:space="preserve">
+    <value>Wählen Sie einen Namespace aus, um seine Details zu sehen.</value>
+  </data>
+  <data name="App.Namespaces.CreatedAt" xml:space="preserve">
+    <value>Erstellt am</value>
+  </data>
+  <data name="App.Namespaces.LastUpdated" xml:space="preserve">
+    <value>Zuletzt aktualisiert</value>
+  </data>
+  <data name="App.Namespaces.HierarchySearchPlaceholder" xml:space="preserve">
+    <value>Namespaces durchsuchen...</value>
+  </data>
+  <data name="App.Namespaces.HierarchyNoMatches" xml:space="preserve">
+    <value>Kein Namespace passt zu Ihrer Suche.</value>
   </data>
   <data name="App.Namespaces.HierarchyDescription" xml:space="preserve">
-    <value>Die vollständige Pseudonym-Hierarchie, zu der dieser Namensraum gehört - von der Wurzel bis zu allen darunterliegenden Stufen. Es werden nur Namensräume angezeigt, die Sie lesen dürfen.</value>
-  </data>
-  <data name="App.Namespaces.HierarchySelected" xml:space="preserve">
-    <value>ausgewählt</value>
-  </data>
-  <data name="App.Namespaces.HierarchyStandalone" xml:space="preserve">
-    <value>Dieser Namensraum hat weder Eltern- noch Kind-Namensräume.</value>
-  </data>
-  <data name="App.Common.Close" xml:space="preserve">
-    <value>Schließen</value>
+    <value>Alle Namespaces, die Sie lesen dürfen, nach übergeordnetem Namespace gegliedert. Für eine Kurzübersicht mit der Maus darüberfahren, für alle Details auswählen.</value>
   </data>
   <data name="App.Namespaces.AllowsMultiplePseudonymsColumn" xml:space="preserve">
     <value>Mehrere Pseudonyme</value>
-  </data>
-  <data name="App.Namespaces.AllTitle" xml:space="preserve">
-    <value>Alle Namespaces</value>
   </data>
   <data name="App.Namespaces.CreateDescription" xml:space="preserve">
     <value>Namespaces sind nach dem Erstellen unveränderlich - löschen und neu erstellen statt bearbeiten.</value>
@@ -486,9 +492,6 @@
   </data>
   <data name="App.Namespaces.Prefix" xml:space="preserve">
     <value>Präfix</value>
-  </data>
-  <data name="App.Namespaces.PseudonymsColumn" xml:space="preserve">
-    <value>Pseudonyme</value>
   </data>
   <data name="App.Namespaces.Suffix" xml:space="preserve">
     <value>Suffix</value>

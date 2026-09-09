@@ -1,29 +1,35 @@
 @page "/namespaces"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
+@using Microsoft.Extensions.Options
+@using Vfps.Config
 @using Vfps.Data.Models
 @using Vfps.PseudonymGenerators
 @inject INamespaceAppService NamespaceAppService
 @inject NavigationManager NavigationManager
 @inject PseudonymizationMethodsLookup MethodsLookup
 @inject INamespacePermissionChecker PermissionChecker
+@inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
+@inject IJSRuntime JS
+@inject ILogger<Namespaces> Logger
 @inject IStringLocalizer<SharedResources> Localizer
 
 <PageTitle>@Localizer["App.Nav.Namespaces"]</PageTitle>
 
 <div class="mx-auto max-w-5xl space-y-6">
-    <div class="flex items-center gap-2">
-        <LucideIcon Name="database" Size="24" Class="text-primary" />
-        <h1 class="text-2xl font-semibold tracking-tight">@Localizer["App.Nav.Namespaces"]</h1>
+    <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+            <LucideIcon Name="database" Size="24" Class="text-primary" />
+            <h1 class="text-2xl font-semibold tracking-tight">@Localizer["App.Nav.Namespaces"]</h1>
+        </div>
+        <BbButton
+            id="showCreateNamespaceFormButton"
+            Type="ButtonType.Button"
+            OnClick="ToggleCreateForm"
+        >
+            @Localizer["App.Namespaces.CreateTitle"]
+        </BbButton>
     </div>
-
-    @if (_errorMessage is not null)
-    {
-        <BbAlert Variant="AlertVariant.Danger">
-            <BbAlertTitle>@Localizer["App.Namespaces.CreateErrorTitle"]</BbAlertTitle>
-            <BbAlertDescription>@_errorMessage</BbAlertDescription>
-        </BbAlert>
-    }
 
     @if (_deleteErrorMessage is not null)
     {
@@ -47,6 +53,7 @@
                     <BbField Class="w-64">
                         <BbFieldContent>
                             <BbInput
+                                @ref="_deleteConfirmationInput"
                                 @bind-Value="_deleteConfirmationText"
                                 UpdateTiming="UpdateTiming.Immediate"
                                 Id="confirmDeleteNamespaceName"
@@ -71,15 +78,32 @@
         </BbAlert>
     }
 
-    <BbCard>
-        <BbCardHeader>
-            <BbCardTitle>@Localizer["App.Namespaces.CreateTitle"]</BbCardTitle>
-            <BbCardDescription>
-                @Localizer["App.Namespaces.CreateDescription"]
-            </BbCardDescription>
-        </BbCardHeader>
-        <BbCardContent>
-            @if (!_canCreateNamespace)
+    @* Controlled rather than trigger-driven: the same flag has to be able to close the dialog
+       from code once the namespace has actually been created. Width and height are set as a
+       plain style rather than through Class: BbDialogContent's own "max-w-lg" stays in the class
+       list either way (its class merging leaves both in place, and the library's own rule wins),
+       so a max-w-* class passed here has no effect at all - see the note in wwwroot/app.css. *@
+    <BbDialog Open="_showCreateForm" OpenChanged="OnCreateDialogOpenChanged">
+        <BbDialogContent style="max-width: 46rem;">
+            <BbDialogHeader>
+                <BbDialogTitle>@Localizer["App.Namespaces.CreateTitle"]</BbDialogTitle>
+                <BbDialogDescription>
+                    @Localizer["App.Namespaces.CreateDescription"]
+                </BbDialogDescription>
+            </BbDialogHeader>
+
+            @* The create error belongs in here rather than with the page's other alerts: while
+               the dialog is open its overlay covers the page, so an alert out there would be
+               invisible at exactly the moment it matters. *@
+            @if (_errorMessage is not null)
+            {
+                <BbAlert Variant="AlertVariant.Danger">
+                    <BbAlertTitle>@Localizer["App.Namespaces.CreateErrorTitle"]</BbAlertTitle>
+                    <BbAlertDescription>@_errorMessage</BbAlertDescription>
+                </BbAlert>
+            }
+
+            @if (!_isAdmin)
             {
                 <BbAlert Variant="AlertVariant.Warning" Class="mb-4">
                     <BbAlertTitle>@Localizer["App.Namespaces.NoPermissionTitle"]</BbAlertTitle>
@@ -94,46 +118,58 @@
                 OnValidSubmit="CreateNamespaceAsync"
             >
                 <DataAnnotationsValidator />
-                <fieldset disabled="@(!_canCreateNamespace)" class="contents">
-                    <div class="grid gap-4 sm:grid-cols-2">
-                        <BbField>
-                            <BbFieldLabel For="name">@Localizer["App.Common.Name"]</BbFieldLabel>
-                            <BbFieldContent>
+                <fieldset disabled="@(!_isAdmin)" class="contents">
+                    @* One field per row, label right-aligned in a narrow column and the control
+                       in a wide one - the layout the component library's own dialog example uses.
+                       col-span-3 is the one utility in it that the shipped blazorblueprint.css
+                       doesn't carry, so wwwroot/app.css defines it (see the note there). *@
+                    @* Only the fields scroll, so the header stays put and Create/Cancel remain
+                       reachable without scrolling to the bottom of a ten-row form. The right
+                       padding keeps the scrollbar off the inputs - it sits inside this box, hard
+                       against their right edge otherwise, and an overlay scrollbar paints over
+                       them outright. *@
+                    <div
+                        class="grid gap-4 py-4"
+                        style="max-height: 60vh; overflow-y: auto; padding-right: 1rem;"
+                    >
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <BbLabel For="name" Class="text-right">@Localizer["App.Common.Name"]</BbLabel>
+                            <div class="col-span-3">
                                 <BbInput
+                                    @ref="_createNameInput"
                                     @bind-Value="_newNamespace.Name"
                                     Id="name"
                                     Required="true"
                                 />
-                            </BbFieldContent>
-                        </BbField>
-                        <BbField>
-                            <BbFieldLabel For="description">@Localizer["App.Common.Description"]</BbFieldLabel>
-                            <BbFieldContent>
-                                <BbInput
-                                    @bind-Value="_newNamespace.Description"
-                                    Id="description"
-                                />
-                            </BbFieldContent>
-                        </BbField>
-                        <BbField>
-                            <BbFieldLabel For="method">@Localizer["App.Namespaces.GenerationMethod"]</BbFieldLabel>
-                            <BbFieldContent>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <BbLabel For="description" Class="text-right">@Localizer["App.Common.Description"]</BbLabel>
+                            <div class="col-span-3">
+                                <BbInput @bind-Value="_newNamespace.Description" Id="description" />
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <BbLabel For="method" Class="text-right">@Localizer["App.Namespaces.GenerationMethod"]</BbLabel>
+                            <div class="col-span-3">
                                 <select
                                     @bind="_selectedMethod"
                                     @bind:after="OnMethodChanged"
                                     id="method"
                                     class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                                 >
-                                    @foreach (var method in SelectablePseudonymGenerationMethods)
+                                    @foreach (var method in PseudonymGenerationMethodDisplay.Selectable)
                                     {
-                                        <option value="@method">@FriendlyMethodName(method)</option>
+                                        <option value="@method">
+                                            @PseudonymGenerationMethodDisplay.FriendlyName(method)
+                                        </option>
                                     }
                                 </select>
-                            </BbFieldContent>
-                        </BbField>
-                        <BbField>
-                            <BbFieldLabel For="length">@Localizer["App.Namespaces.Length"]</BbFieldLabel>
-                            <BbFieldContent>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 items-start gap-4">
+                            <BbLabel For="length" Class="text-right pt-2">@Localizer["App.Namespaces.Length"]</BbLabel>
+                            <div class="col-span-3">
                                 <BbNumericInput
                                     @bind-Value="_newNamespace.PseudonymLength"
                                     Id="length"
@@ -147,23 +183,23 @@
                                         @Localizer["App.Namespaces.FixedLengthNote", FixedPseudonymLength]
                                     </p>
                                 }
-                            </BbFieldContent>
-                        </BbField>
-                        <BbField>
-                            <BbFieldLabel For="prefix">@Localizer["App.Namespaces.Prefix"]</BbFieldLabel>
-                            <BbFieldContent>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <BbLabel For="prefix" Class="text-right">@Localizer["App.Namespaces.Prefix"]</BbLabel>
+                            <div class="col-span-3">
                                 <BbInput @bind-Value="_newNamespace.PseudonymPrefix" Id="prefix" />
-                            </BbFieldContent>
-                        </BbField>
-                        <BbField>
-                            <BbFieldLabel For="suffix">@Localizer["App.Namespaces.Suffix"]</BbFieldLabel>
-                            <BbFieldContent>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <BbLabel For="suffix" Class="text-right">@Localizer["App.Namespaces.Suffix"]</BbLabel>
+                            <div class="col-span-3">
                                 <BbInput @bind-Value="_newNamespace.PseudonymSuffix" Id="suffix" />
-                            </BbFieldContent>
-                        </BbField>
-                        <BbField Class="sm:col-span-2">
-                            <BbFieldLabel For="validationRegex">@Localizer["App.Namespaces.ValidationRegex"]</BbFieldLabel>
-                            <BbFieldContent>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 items-start gap-4">
+                            <BbLabel For="validationRegex" Class="text-right pt-2">@Localizer["App.Namespaces.ValidationRegex"]</BbLabel>
+                            <div class="col-span-3">
                                 <BbInput
                                     @bind-Value="_newNamespace.OriginalValueValidationRegex"
                                     Id="validationRegex"
@@ -171,24 +207,20 @@
                                 <p class="mt-1 text-xs text-muted-foreground">
                                     @Localizer["App.Namespaces.ValidationRegexHelp"]
                                 </p>
-                            </BbFieldContent>
-                        </BbField>
-                        <BbField Class="sm:col-span-2">
-                            <BbFieldContent>
-                                <div class="flex h-10 items-center gap-2">
-                                    <BbCheckbox
-                                        @bind-Checked="_newNamespace.AllowsMultiplePseudonyms"
-                                        Id="allowsMultiplePseudonyms"
-                                    />
-                                    <label for="allowsMultiplePseudonyms" class="text-sm">
-                                        @Localizer["App.Namespaces.AllowsMultiplePseudonyms"]
-                                    </label>
-                                </div>
-                            </BbFieldContent>
-                        </BbField>
-                        <BbField>
-                            <BbFieldLabel For="parentName">@Localizer["App.Namespaces.Parent"]</BbFieldLabel>
-                            <BbFieldContent>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 items-center gap-4">
+                            <BbLabel For="allowsMultiplePseudonyms" Class="text-right">@Localizer["App.Namespaces.AllowsMultiplePseudonyms"]</BbLabel>
+                            <div class="col-span-3">
+                                <BbSwitch
+                                    @bind-Checked="_newNamespace.AllowsMultiplePseudonyms"
+                                    Id="allowsMultiplePseudonyms"
+                                />
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 items-start gap-4">
+                            <BbLabel For="parentName" Class="text-right pt-2">@Localizer["App.Namespaces.Parent"]</BbLabel>
+                            <div class="col-span-3">
                                 <select
                                     @bind="_newNamespace.ParentName"
                                     id="parentName"
@@ -203,139 +235,179 @@
                                 <p class="mt-1 text-xs text-muted-foreground">
                                     @Localizer["App.Namespaces.ParentHelp"]
                                 </p>
-                            </BbFieldContent>
-                        </BbField>
-                        <BbField>
-                            <BbFieldContent>
-                                <div class="flex h-10 items-center gap-2">
-                                    <BbCheckbox
-                                        @bind-Checked="_newNamespace.EnsureParentPseudonymExists"
-                                        Id="ensureParentPseudonymExists"
-                                        Disabled="@string.IsNullOrEmpty(_newNamespace.ParentName)"
-                                    />
-                                    <label for="ensureParentPseudonymExists" class="text-sm">
-                                        @Localizer["App.Namespaces.EnsureParentPseudonymExists"]
-                                    </label>
-                                </div>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-4 items-start gap-4">
+                            <BbLabel For="ensureParentPseudonymExists" Class="text-right">@Localizer["App.Namespaces.EnsureParentPseudonymExists"]</BbLabel>
+                            <div class="col-span-3">
+                                <BbSwitch
+                                    @bind-Checked="_newNamespace.EnsureParentPseudonymExists"
+                                    Id="ensureParentPseudonymExists"
+                                    Disabled="@string.IsNullOrEmpty(_newNamespace.ParentName)"
+                                />
                                 <p class="mt-1 text-xs text-muted-foreground">
                                     @Localizer["App.Namespaces.EnsureParentPseudonymExistsHelp"]
                                 </p>
-                            </BbFieldContent>
-                        </BbField>
+                            </div>
+                        </div>
                     </div>
-                    <BbButton Type="ButtonType.Submit" Loading="_isCreating" Class="mt-4">
-                        @Localizer["App.Common.Create"]
-                    </BbButton>
+                    <BbDialogFooter Class="mt-4">
+                        <BbButton
+                            id="cancelCreateNamespaceButton"
+                            Type="ButtonType.Button"
+                            Variant="ButtonVariant.Outline"
+                            OnClick="CloseCreateForm"
+                        >
+                            @Localizer["App.Common.Cancel"]
+                        </BbButton>
+                        <BbButton Type="ButtonType.Submit" Loading="_isCreating">
+                            @Localizer["App.Common.Create"]
+                        </BbButton>
+                    </BbDialogFooter>
                 </fieldset>
             </EditForm>
-        </BbCardContent>
-    </BbCard>
+        </BbDialogContent>
+    </BbDialog>
 
-    @if (_hierarchySelection is not null)
+    @* Only rendered once a namespace has been picked, so the editor always has one to work on. *@
+    @if (_accessNamespaceName is not null)
     {
-        <BbCard>
-            <BbCardHeader>
-                <BbCardTitle>
-                    @Localizer["App.Namespaces.HierarchyTitle", _hierarchySelection.Name]
-                </BbCardTitle>
-                <BbCardDescription>
-                    @Localizer["App.Namespaces.HierarchyDescription"]
-                </BbCardDescription>
-            </BbCardHeader>
-            <BbCardContent Class="space-y-3">
-                @if (HierarchyRoot is { } root)
-                {
-                    <NamespaceTreeNode
-                        Node="root"
-                        ChildrenByParent="ChildrenByParent"
-                        SelectedName="@_hierarchySelection.Name"
+        <BbDialog Open="_showAccessDialog" OpenChanged="OnAccessDialogOpenChanged">
+            <BbDialogContent style="max-width: 42rem;">
+                <BbDialogHeader>
+                    <BbDialogTitle>
+                        @Localizer["App.Namespaces.ConfigureAccessTitle", _accessNamespaceName]
+                    </BbDialogTitle>
+                    <BbDialogDescription>
+                        @Localizer["App.Namespaces.ConfigureAccessDescription"]
+                    </BbDialogDescription>
+                </BbDialogHeader>
+                <div style="max-height: 60vh; overflow-y: auto; padding-right: 1rem;">
+                    <NamespaceAccessGrantsEditor
+                        NamespaceName="@_accessNamespaceName"
+                        User="_user"
                     />
-                    @if (ReferenceEquals(root, _hierarchySelection) && !ChildrenByParent.ContainsKey(root.Name))
-                    {
-                        <p class="text-sm text-muted-foreground">
-                            @Localizer["App.Namespaces.HierarchyStandalone"]
-                        </p>
-                    }
-                }
-                <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="HideHierarchy">
-                    @Localizer["App.Common.Close"]
-                </BbButton>
-            </BbCardContent>
-        </BbCard>
+                </div>
+                <BbDialogFooter>
+                    <BbButton
+                        id="closeNamespaceAccessButton"
+                        Type="ButtonType.Button"
+                        Variant="ButtonVariant.Outline"
+                        OnClick="CloseAccessDialog"
+                    >
+                        @Localizer["App.Common.Close"]
+                    </BbButton>
+                </BbDialogFooter>
+            </BbDialogContent>
+        </BbDialog>
     }
 
     <BbCard>
         <BbCardHeader>
-            <BbCardTitle>@Localizer["App.Namespaces.AllTitle"]</BbCardTitle>
+            <BbCardTitle>@Localizer["App.Namespaces.HierarchyTitle"]</BbCardTitle>
+            <BbCardDescription>
+                @Localizer["App.Namespaces.HierarchyDescription"]
+            </BbCardDescription>
         </BbCardHeader>
         <BbCardContent>
-            <BbDataGrid Items="@_namespaces" ShowPagination="false">
-                <Columns>
-                    <BbDataGridPropertyColumn Property="@(n => n.Name)" Title="@Localizer["App.Common.Name"]" />
-                    <BbDataGridPropertyColumn Property="@(n => n.Description)" Title="@Localizer["App.Common.Description"]" />
-                    <BbDataGridPropertyColumn
-                        Property="@(n => n.PseudonymGenerationMethod)"
-                        Title="@Localizer["App.Namespaces.GenerationMethodColumn"]"
-                    />
-                    <BbDataGridPropertyColumn Property="@(n => n.PseudonymLength)" Title="@Localizer["App.Namespaces.LengthColumn"]" />
-                    <BbDataGridPropertyColumn Property="@(n => n.PseudonymPrefix)" Title="@Localizer["App.Namespaces.Prefix"]" />
-                    <BbDataGridPropertyColumn Property="@(n => n.PseudonymSuffix)" Title="@Localizer["App.Namespaces.Suffix"]" />
-                    <BbDataGridTemplateColumn Title="@Localizer["App.Namespaces.AllowsMultiplePseudonymsColumn"]">
-                        <ChildContent Context="n">
-                            @if (n.AllowsMultiplePseudonyms)
+            @if (_namespaces.Count == 0)
+            {
+                <p class="text-sm text-muted-foreground">
+                    @Localizer["App.Namespaces.HierarchyEmpty"]
+                </p>
+            }
+            else
+            {
+                <div class="grid gap-4 md:grid-cols-2">
+                    <div>
+                        @* Our own search field rather than BbTreeView's ShowSearch one, for two
+                           reasons: the component only filters in its data-driven mode (this tree is
+                           declarative, which is what gives each node its hover card), and the input
+                           it renders updates on change - so its box would sit inert until focus left
+                           it. Debounced binding here filters as you type. *@
+                        <BbInput
+                            @bind-Value="_treeSearch"
+                            @bind-Value:after="OnTreeSearchChanged"
+                            UpdateTiming="UpdateTiming.Debounced"
+                            Id="namespaceSearch"
+                            Placeholder="@Localizer["App.Namespaces.HierarchySearchPlaceholder"]"
+                            AriaLabel="@Localizer["App.Namespaces.HierarchySearchPlaceholder"]"
+                            Class="mb-2 h-8 text-sm"
+                        />
+                        @* SelectionMode has to be set explicitly: the tree defaults to None, which
+                           reports no selection at all and would leave SelectedValueChanged silent.
+                           ExpandOnClick is deliberately left off so a click only ever selects a
+                           namespace - the chevron is what expands it. *@
+                        <BbTreeView
+                            TItem="Namespace"
+                            SelectionMode="BlazorBlueprint.Primitives.TreeSelectionMode.Single"
+                            SelectedValue="@_selectedNamespaceName"
+                            SelectedValueChanged="OnHierarchySelectionChanged"
+                            ExpandedValues="_expandedNamespaces"
+                            ExpandedValuesChanged="OnExpandedNamespacesChanged"
+                            ShowLines="true"
+                            AriaLabel="@Localizer["App.Namespaces.HierarchyTitle"]"
+                        >
+                            @foreach (var root in RootNamespaces)
                             {
-                                <LucideIcon Name="check" Size="16" />
+                                <NamespaceTreeNode
+                                    Node="root"
+                                    ChildrenByParent="ChildrenByParent"
+                                    VisibleNames="VisibleNamespaceNames"
+                                    TimeZone="_browserTimeZone"
+                                />
                             }
-                        </ChildContent>
-                    </BbDataGridTemplateColumn>
-                    <BbDataGridTemplateColumn Title="@Localizer["App.Namespaces.ParentColumn"]">
-                        <ChildContent Context="n">
-                            @if (!string.IsNullOrEmpty(n.ParentName))
-                            {
-                                <span class="text-sm">@n.ParentName</span>
-                                @if (n.ParentValidationMode == Vfps.Protos.ParentValidationMode.EnsureExists)
+                        </BbTreeView>
+                        @if (RootNamespaces.Count == 0)
+                        {
+                            <p class="text-sm text-muted-foreground">
+                                @Localizer["App.Namespaces.HierarchyNoMatches"]
+                            </p>
+                        }
+                    </div>
+
+                    <div id="namespaceDetails" class="rounded-md border border-border p-4">
+                        @if (SelectedNamespace is { } selected)
+                        {
+                            <NamespaceDetails Namespace="selected" TimeZone="_browserTimeZone" />
+                            <div class="mt-4 flex flex-wrap gap-2">
+                                <BbButton
+                                    Variant="ButtonVariant.Outline"
+                                    Size="ButtonSize.Small"
+                                    Href="@($"/ui/namespaces/{Uri.EscapeDataString(selected.Name)}/pseudonyms")"
+                                >
+                                    @Localizer["App.Common.Browse"]
+                                </BbButton>
+                                @if (CanConfigureAccess)
                                 {
-                                    <span class="ml-1 text-xs text-muted-foreground">
-                                        @Localizer["App.Namespaces.ValidatedBadge"]
-                                    </span>
+                                    <BbButton
+                                        id="configureNamespaceAccessButton"
+                                        Variant="ButtonVariant.Outline"
+                                        Size="ButtonSize.Small"
+                                        OnClick="() => OpenAccessDialog(selected)"
+                                    >
+                                        @Localizer["App.Namespaces.ConfigureAccessAction"]
+                                    </BbButton>
                                 }
-                            }
-                        </ChildContent>
-                    </BbDataGridTemplateColumn>
-                    <BbDataGridTemplateColumn Title="@Localizer["App.Namespaces.PseudonymsColumn"]">
-                        <ChildContent Context="n">
-                            <BbButton
-                                Variant="ButtonVariant.Outline"
-                                Size="ButtonSize.Small"
-                                Href="@($"/ui/namespaces/{Uri.EscapeDataString(n.Name)}/pseudonyms")"
-                            >
-                                @Localizer["App.Common.Browse"]
-                            </BbButton>
-                        </ChildContent>
-                    </BbDataGridTemplateColumn>
-                    <BbDataGridTemplateColumn Title="@Localizer["App.Common.Actions"]">
-                        <ChildContent Context="n">
-                            <BbButton
-                                id="@($"hierarchy-namespace-{n.Name}")"
-                                Variant="ButtonVariant.Outline"
-                                Size="ButtonSize.Small"
-                                Class="mr-2"
-                                OnClick="() => ShowHierarchy(n)"
-                            >
-                                @Localizer["App.Namespaces.HierarchyAction"]
-                            </BbButton>
-                            <BbButton
-                                id="@($"delete-namespace-{n.Name}")"
-                                Variant="ButtonVariant.Destructive"
-                                Size="ButtonSize.Small"
-                                OnClick="() => StartDeleteNamespace(n)"
-                            >
-                                @Localizer["App.Common.Delete"]
-                            </BbButton>
-                        </ChildContent>
-                    </BbDataGridTemplateColumn>
-                </Columns>
-            </BbDataGrid>
+                                <BbButton
+                                    id="deleteSelectedNamespaceButton"
+                                    Variant="ButtonVariant.Destructive"
+                                    Size="ButtonSize.Small"
+                                    OnClick="() => StartDeleteNamespace(selected)"
+                                >
+                                    @Localizer["App.Common.Delete"]
+                                </BbButton>
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="text-sm text-muted-foreground">
+                                @Localizer["App.Namespaces.HierarchySelectHint"]
+                            </p>
+                        }
+                    </div>
+                </div>
+            }
         </BbCardContent>
     </BbCard>
 </div>
@@ -354,10 +426,51 @@
     private string? _deleteErrorMessage;
     private bool _isCreating;
     private bool _isDeleting;
-    private bool _canCreateNamespace;
+    private ClaimsPrincipal _user = new();
 
-    // Set when a row's hierarchy button is clicked - drives the tree panel above the table.
-    private Namespace? _hierarchySelection;
+    // Creating a namespace and managing its access grants are both admin-only (the app services
+    // enforce it either way); mirrored here so the form is greyed out and the access button is
+    // absent rather than failing on use. Access grants additionally only mean anything with
+    // authorization switched on, which is the same pair of conditions the nav bar uses to decide
+    // whether to show the Access Control page at all.
+    private bool _isAdmin;
+    private bool CanConfigureAccess => _isAdmin && AuthorizationConfigOptions.Value.IsEnabled;
+
+    // Set when the access dialog is opened; kept after it closes so the dialog can animate out
+    // without its contents disappearing first.
+    private string? _accessNamespaceName;
+    private bool _showAccessDialog;
+
+    // The create form is opened from the header button rather than sitting on the page
+    // permanently, so the hierarchy is what greets you instead. Focusing the name field on the
+    // render that reveals the form scrolls it into view and lets typing start straight away, the
+    // same way the delete confirmation panel below does.
+    private bool _showCreateForm;
+    private BbInput? _createNameInput;
+    private bool _shouldFocusCreateName;
+
+    // Which tree nodes are expanded. Controlled rather than left to DefaultExpandAll, because
+    // that only auto-expands nodes registering during the tree's very first render: a namespace
+    // created from this page afterwards would leave its parent collapsed, hiding the namespace
+    // that was just created until a page reload. ReloadAsync expands each parent the first time
+    // it appears instead, which also leaves a node the user collapsed collapsed.
+    private HashSet<string> _expandedNamespaces = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _knownParents = new(StringComparer.Ordinal);
+
+    // The tree's own search box reports here rather than filtering by itself: BbTreeView only
+    // filters in its data-driven mode, and this tree is declarative (which is what gives each
+    // node a LabelTemplate, and with it the hover card). VisibleNamespaceNames below reproduces
+    // the rule the data-driven mode would have applied.
+    private string _treeSearch = string.Empty;
+
+    // The namespace whose node is selected in the hierarchy tree, by name. Held as a name rather
+    // than an entity because that is what BbTreeView binds to, and because it stays meaningful
+    // across the reload that follows a create or a delete.
+    private string? _selectedNamespaceName;
+
+    // Resolved from the browser on first render, exactly as the CSV jobs page does it; UTC until
+    // then, and permanently so if the browser's zone can't be resolved.
+    private TimeZoneInfo _browserTimeZone = TimeZoneInfo.Utc;
 
     /// <summary>
     /// Every namespace grouped by its parent's name. Built from the list this page already
@@ -374,44 +487,91 @@
                 StringComparer.Ordinal);
 
     /// <summary>
-    /// The top of the selected namespace's lineage, so the tree shows its ancestors as well as
-    /// its descendants. Stops at the highest namespace the caller can actually see: an ancestor
-    /// filtered out by read access simply isn't part of the tree, and its visible descendant
-    /// becomes the root of what's rendered.
+    /// Where the rendered tree starts. A namespace with no parent is a root, and so is one whose
+    /// parent isn't in the list: an ancestor the caller can't read is not part of the tree, so
+    /// its visible descendant has to stand in as a root or it would drop off the page entirely.
     /// </summary>
-    private Namespace? HierarchyRoot
+    private IReadOnlyList<Namespace> RootNamespaces
     {
         get
         {
-            if (_hierarchySelection is null)
+            var readable = _namespaces.Select(n => n.Name).ToHashSet(StringComparer.Ordinal);
+            var matching = VisibleNamespaceNames;
+
+            return
+            [
+                .. _namespaces
+                    .Where(n =>
+                        string.IsNullOrEmpty(n.ParentName) || !readable.Contains(n.ParentName)
+                    )
+                    .Where(n => matching is null || matching.Contains(n.Name))
+                    .OrderBy(n => n.Name, StringComparer.Ordinal),
+            ];
+        }
+    }
+
+    /// <summary>
+    /// The namespaces the search leaves on screen, or null when nothing is being searched for.
+    /// A namespace survives if its own name matches or one of its descendants does - the same
+    /// rule BbTreeView applies in its data-driven mode, which amounts to keeping every match plus
+    /// the ancestors leading down to it.
+    /// </summary>
+    private IReadOnlySet<string>? VisibleNamespaceNames
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_treeSearch))
             {
                 return null;
             }
 
             var byName = _namespaces.ToDictionary(n => n.Name, StringComparer.Ordinal);
-            var current = _hierarchySelection;
-            // Guards against a cycle that only a hand-edited database could produce - the API
-            // can't create one, since a parent is set once and must already exist.
-            var seen = new HashSet<string>(StringComparer.Ordinal) { current.Name };
+            var visible = new HashSet<string>(StringComparer.Ordinal);
 
-            while (
-                !string.IsNullOrEmpty(current.ParentName)
-                && byName.TryGetValue(current.ParentName, out var parent)
-                && seen.Add(parent.Name)
+            foreach (
+                var match in _namespaces.Where(n =>
+                    n.Name.Contains(_treeSearch, StringComparison.OrdinalIgnoreCase)
+                )
             )
             {
-                current = parent;
+                // Walk up to the root, adding the whole path. Add() returning false means this
+                // ancestor - and so everything above it - is already in, leaving nothing to do;
+                // that also stops a hand-edited parent cycle from looping forever.
+                var current = match;
+                while (
+                    visible.Add(current.Name)
+                    && !string.IsNullOrEmpty(current.ParentName)
+                    && byName.TryGetValue(current.ParentName, out var parent)
+                )
+                {
+                    current = parent;
+                }
             }
 
-            return current;
+            return visible;
         }
     }
+
+    private Namespace? SelectedNamespace =>
+        _selectedNamespaceName is null
+            ? null
+            : _namespaces.FirstOrDefault(n =>
+                string.Equals(n.Name, _selectedNamespaceName, StringComparison.Ordinal)
+            );
 
     // Set when a row's "Delete" button is clicked, cleared on cancel/confirm - drives the inline
     // confirmation panel rendered above the tables. Deliberately not a modal dialog (see
     // ConfirmDeleteNamespaceAsync's comment on DeleteNamespaceDialog.razor's removal).
     private Namespace? _pendingDelete;
     private string _deleteConfirmationText = string.Empty;
+
+    // The panel opens at the top of the page while the "Delete" button that opens it sits in the
+    // table further down, so on anything but a very short list it would be scrolled off-screen
+    // above the viewport and clicking Delete would look like it did nothing at all. Focusing the
+    // confirmation input on the render that reveals the panel scrolls it into view and lets the
+    // name be typed straight away.
+    private BbInput? _deleteConfirmationInput;
+    private bool _shouldFocusDeleteConfirmation;
 
     private bool IsDeleteConfirmed =>
         _pendingDelete is not null
@@ -424,34 +584,100 @@
             Enum.Parse<Vfps.Protos.PseudonymGenerationMethod>(_selectedMethod)
         );
 
-    // Derived from the enum itself, rather than a hand-maintained list, so a newly-added
-    // PseudonymGenerationMethod can't be forgotten here the way UUIDv7 previously was.
-    private static readonly IReadOnlyList<Vfps.Protos.PseudonymGenerationMethod> SelectablePseudonymGenerationMethods =
-        Enum.GetValues<Vfps.Protos.PseudonymGenerationMethod>()
-            .Where(method => method != Vfps.Protos.PseudonymGenerationMethod.Unspecified)
-            .ToArray();
-
-    private static string FriendlyMethodName(Vfps.Protos.PseudonymGenerationMethod method) =>
-        method switch
-        {
-            Vfps.Protos.PseudonymGenerationMethod.SecureRandomBase64UrlEncoded =>
-                "Secure random (base64url)",
-            Vfps.Protos.PseudonymGenerationMethod.Uuid4 => "UUIDv4",
-            Vfps.Protos.PseudonymGenerationMethod.Uuid7 => "UUIDv7",
-            Vfps.Protos.PseudonymGenerationMethod.FullRandomHexEncoded => "Full random (hex)",
-            Vfps.Protos.PseudonymGenerationMethod.FullRandomBase62Encoded => "Full random (Base62)",
-            Vfps.Protos.PseudonymGenerationMethod.FullRandomBase32Encoded => "Full random (Base32)",
-            _ => method.ToString(),
-        };
-
     protected override async Task OnInitializedAsync()
     {
         // Namespace creation has no existing namespace to scope a read/write grant to, so
         // NamespaceAppService.CreateAsync itself gates it on admin access only - mirrored here to
         // grey out the form instead of letting a non-admin fill it in only to hit a Forbidden
         // error on submit.
-        _canCreateNamespace = PermissionChecker.IsAdmin(await GetUserAsync());
+        _user = await GetUserAsync();
+        _isAdmin = PermissionChecker.IsAdmin(_user);
         await ReloadAsync();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await ResolveBrowserTimeZoneAsync();
+        }
+
+        if (_shouldFocusDeleteConfirmation && _deleteConfirmationInput is not null)
+        {
+            _shouldFocusDeleteConfirmation = false;
+            await _deleteConfirmationInput.FocusAsync();
+        }
+
+        if (_shouldFocusCreateName && _createNameInput is not null)
+        {
+            _shouldFocusCreateName = false;
+            await _createNameInput.FocusAsync();
+        }
+    }
+
+    private async Task ResolveBrowserTimeZoneAsync()
+    {
+        try
+        {
+            var ianaId = await JS.InvokeAsync<string>("vfpsTimeZone.get");
+            _browserTimeZone = TimeZoneInfo.FindSystemTimeZoneById(ianaId);
+        }
+        catch (Exception ex)
+            when (ex is Microsoft.JSInterop.JSException or TimeZoneNotFoundException)
+        {
+            // Falls back to the UTC already set as _browserTimeZone's default - a missing or
+            // unrecognized zone shouldn't break the page, just leave timestamps in UTC.
+            Logger.LogWarning(ex, "Failed to resolve the browser's time zone, defaulting to UTC");
+
+            return;
+        }
+
+        StateHasChanged();
+    }
+
+    private void ToggleCreateForm() => OnCreateDialogOpenChanged(!_showCreateForm);
+
+    // Also reached when the dialog closes itself - the overlay, the Escape key, or its own close
+    // button - so the reset belongs here rather than only on the Cancel button.
+    private void OnCreateDialogOpenChanged(bool open)
+    {
+        _showCreateForm = open;
+        _shouldFocusCreateName = open;
+
+        if (!open)
+        {
+            _errorMessage = null;
+        }
+    }
+
+    private void CloseCreateForm() => OnCreateDialogOpenChanged(false);
+
+    private void OnHierarchySelectionChanged(string? selectedName) =>
+        _selectedNamespaceName = selectedName;
+
+    private void OpenAccessDialog(Namespace forNamespace)
+    {
+        _accessNamespaceName = forNamespace.Name;
+        _showAccessDialog = true;
+    }
+
+    private void CloseAccessDialog() => OnAccessDialogOpenChanged(false);
+
+    // Also reached when the dialog closes itself - the overlay, Escape, or its own close button.
+    private void OnAccessDialogOpenChanged(bool open) => _showAccessDialog = open;
+
+    private void OnExpandedNamespacesChanged(HashSet<string> expanded) =>
+        _expandedNamespaces = expanded;
+
+    private void OnTreeSearchChanged()
+    {
+        // Expand the whole path down to each hit, so a match nested inside a collapsed parent
+        // still shows up. Nothing is collapsed again once the search is cleared: losing the
+        // expansion state the user set up themselves would be the worse of the two.
+        if (VisibleNamespaceNames is { } visible)
+        {
+            _expandedNamespaces.UnionWith(visible);
+        }
     }
 
     private void OnMethodChanged()
@@ -470,13 +696,21 @@
         var user = await GetUserAsync();
         _namespaces = await NamespaceAppService.GetAllAsync(user, CancellationToken.None);
 
-        // Re-resolve against the fresh list so the tree reflects newly created children, and
-        // closes itself if the namespace it was showing has since been deleted.
-        _hierarchySelection = _hierarchySelection is null
-            ? null
-            : _namespaces.FirstOrDefault(n =>
-                string.Equals(n.Name, _hierarchySelection.Name, StringComparison.Ordinal)
-            );
+        foreach (var parentName in ChildrenByParent.Keys)
+        {
+            if (_knownParents.Add(parentName))
+            {
+                _expandedNamespaces.Add(parentName);
+            }
+        }
+
+        // Drop a selection whose namespace has since been deleted, so the details panel doesn't
+        // go on describing something that no longer exists. SelectedNamespace resolves against
+        // the fresh list on every render, so one that is still there needs nothing done here.
+        if (SelectedNamespace is null)
+        {
+            _selectedNamespaceName = null;
+        }
     }
 
     private async Task CreateNamespaceAsync()
@@ -526,6 +760,11 @@
 
             _newNamespace = new NewNamespaceModel();
             await ReloadAsync();
+
+            // The namespace is in the tree behind the dialog now, so there's nothing left to look
+            // at in here - and leaving it open over a blanked-out form reads like the create
+            // didn't take. Creating several in a row costs one more click on the header button.
+            CloseCreateForm();
         }
         catch (NamespaceAlreadyExistsException ex)
         {
@@ -553,15 +792,12 @@
         }
     }
 
-    private void ShowHierarchy(Namespace selected) => _hierarchySelection = selected;
-
-    private void HideHierarchy() => _hierarchySelection = null;
-
     private void StartDeleteNamespace(Namespace namespaceToDelete)
     {
         _pendingDelete = namespaceToDelete;
         _deleteConfirmationText = string.Empty;
         _deleteErrorMessage = null;
+        _shouldFocusDeleteConfirmation = true;
     }
 
     private void CancelDeleteNamespace()

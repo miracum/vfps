@@ -58,17 +58,11 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <data name="App.AccessControl.AddGrantDescription" xml:space="preserve">
-    <value>Give a role - or one specific user, by email address - access to a namespace. Grants are additive and there are no deny rules: a caller gets everything granted to any of their roles plus everything granted to their email address.</value>
-  </data>
   <data name="App.AccessControl.AddGrantErrorTitle" xml:space="preserve">
     <value>Could not create the access grant</value>
   </data>
-  <data name="App.AccessControl.AddGrantTitle" xml:space="preserve">
-    <value>Grant access</value>
-  </data>
   <data name="App.AccessControl.AdminRolesDescription" xml:space="preserve">
-    <value>Full access to every namespace, including namespace create/delete. Set with {0} and not editable here - it is the bootstrap that lets somebody sign in and create the grants below.</value>
+    <value>Full access to every namespace, including namespace create/delete. Set with {0} and not editable here - it is the bootstrap that lets somebody sign in and grant everyone else their access.</value>
   </data>
   <data name="App.AccessControl.AdminRolesTitle" xml:space="preserve">
     <value>Admin roles</value>
@@ -79,9 +73,6 @@
   <data name="App.AccessControl.AdminsOnlyTitle" xml:space="preserve">
     <value>Admins only</value>
   </data>
-  <data name="App.AccessControl.AllNamespaces" xml:space="preserve">
-    <value>All namespaces</value>
-  </data>
   <data name="App.AccessControl.DisabledDescription" xml:space="preserve">
     <value>{0} is {1}, so every request has full read, write, and reverse-lookup access to every namespace regardless of role.</value>
   </data>
@@ -89,7 +80,7 @@
     <value>Authorization is disabled</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessDescription" xml:space="preserve">
-    <value>Who can do what in each existing namespace - the union of the grants scoped to it and the grants that apply to all namespaces, the same resolution the access checks themselves use. Admins always have full access and are not listed here.</value>
+    <value>Who can do what in each existing namespace - the union of the grants scoped to it and the grants that apply to all namespaces, the same resolution the access checks themselves use. Admins always have full access and are not listed here. This page is read-only: grants are managed one namespace at a time, under Configure access on the Namespaces page.</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessTitle" xml:space="preserve">
     <value>Effective access per namespace</value>
@@ -121,26 +112,38 @@
   <data name="App.AccessControl.GranteeTypeRole" xml:space="preserve">
     <value>Role</value>
   </data>
-  <data name="App.AccessControl.GrantsDescription" xml:space="preserve">
-    <value>Toggling a permission saves it right away. It applies immediately here; other replicas pick it up within the configured grant cache duration.</value>
-  </data>
-  <data name="App.AccessControl.GrantsTitle" xml:space="preserve">
-    <value>Access grants</value>
-  </data>
-  <data name="App.AccessControl.NoGrants" xml:space="preserve">
-    <value>No access grants yet - only admins have any access.</value>
-  </data>
   <data name="App.AccessControl.NoNamespacesExist" xml:space="preserve">
     <value>No namespaces exist yet.</value>
+  </data>
+  <data name="App.Common.Close" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="App.Namespaces.ConfigureAccessAction" xml:space="preserve">
+    <value>Configure access</value>
+  </data>
+  <data name="App.Namespaces.ConfigureAccessTitle" xml:space="preserve">
+    <value>Access to '{0}'</value>
+  </data>
+  <data name="App.Namespaces.ConfigureAccessDescription" xml:space="preserve">
+    <value>Which roles and users may read, write and reverse-look-up pseudonyms in this namespace. The Access Control page manages the same grants across every namespace at once.</value>
+  </data>
+  <data name="App.AccessControl.NoGrantsForNamespace" xml:space="preserve">
+    <value>No grants yet - only admins can reach this namespace.</value>
+  </data>
+  <data name="App.AccessControl.GlobalGrantsTitle" xml:space="preserve">
+    <value>Also applies here: grants covering every namespace</value>
+  </data>
+  <data name="App.AccessControl.GlobalGrantsDescription" xml:space="preserve">
+    <value>Listed for context only: they cover this namespace as well, but belong to no single namespace.</value>
+  </data>
+  <data name="App.AccessControl.AddGrantAction" xml:space="preserve">
+    <value>Add grant</value>
   </data>
   <data name="App.AccessControl.Read" xml:space="preserve">
     <value>Read</value>
   </data>
   <data name="App.AccessControl.ReverseLookup" xml:space="preserve">
     <value>Reverse lookup</value>
-  </data>
-  <data name="App.AccessControl.Scope" xml:space="preserve">
-    <value>Namespace</value>
   </data>
   <data name="App.AccessControl.Write" xml:space="preserve">
     <value>Write</value>
@@ -418,29 +421,32 @@
   <data name="App.Namespaces.ValidatedBadge" xml:space="preserve">
     <value>(validated)</value>
   </data>
-  <data name="App.Namespaces.HierarchyAction" xml:space="preserve">
-    <value>Hierarchy</value>
-  </data>
   <data name="App.Namespaces.HierarchyTitle" xml:space="preserve">
-    <value>Hierarchy for '{0}'</value>
+    <value>Namespace hierarchy</value>
+  </data>
+  <data name="App.Namespaces.HierarchyEmpty" xml:space="preserve">
+    <value>No namespaces exist yet.</value>
+  </data>
+  <data name="App.Namespaces.HierarchySelectHint" xml:space="preserve">
+    <value>Select a namespace to see its details.</value>
+  </data>
+  <data name="App.Namespaces.CreatedAt" xml:space="preserve">
+    <value>Created at</value>
+  </data>
+  <data name="App.Namespaces.LastUpdated" xml:space="preserve">
+    <value>Last updated</value>
+  </data>
+  <data name="App.Namespaces.HierarchySearchPlaceholder" xml:space="preserve">
+    <value>Search namespaces...</value>
+  </data>
+  <data name="App.Namespaces.HierarchyNoMatches" xml:space="preserve">
+    <value>No namespace matches your search.</value>
   </data>
   <data name="App.Namespaces.HierarchyDescription" xml:space="preserve">
-    <value>The full pseudonymization hierarchy this namespace belongs to, from its root down through every level below it. Only namespaces you can read are shown.</value>
-  </data>
-  <data name="App.Namespaces.HierarchySelected" xml:space="preserve">
-    <value>selected</value>
-  </data>
-  <data name="App.Namespaces.HierarchyStandalone" xml:space="preserve">
-    <value>This namespace has no parent and no children.</value>
-  </data>
-  <data name="App.Common.Close" xml:space="preserve">
-    <value>Close</value>
+    <value>Every namespace you can read, arranged under its parent. Hover a namespace for a summary, or select it to see its full details.</value>
   </data>
   <data name="App.Namespaces.AllowsMultiplePseudonymsColumn" xml:space="preserve">
     <value>Multiple pseudonyms</value>
-  </data>
-  <data name="App.Namespaces.AllTitle" xml:space="preserve">
-    <value>All namespaces</value>
   </data>
   <data name="App.Namespaces.CreateDescription" xml:space="preserve">
     <value>Namespaces are immutable once created - delete and re-create instead of editing.</value>
@@ -486,9 +492,6 @@
   </data>
   <data name="App.Namespaces.Prefix" xml:space="preserve">
     <value>Prefix</value>
-  </data>
-  <data name="App.Namespaces.PseudonymsColumn" xml:space="preserve">
-    <value>Pseudonyms</value>
   </data>
   <data name="App.Namespaces.Suffix" xml:space="preserve">
     <value>Suffix</value>

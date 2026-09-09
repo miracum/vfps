@@ -281,7 +281,9 @@ else
                         </BbAlertDescription>
                     </BbAlert>
                 }
-                <BbDataGrid Items="@_jobs" ShowPagination="false">
+                @* Explicit page size for the same reason as the namespaces grid: with the
+                   pager hidden, the grid's default would silently cut the list off at ten. *@
+                <BbDataGrid Items="@_jobs" ShowPagination="false" InitialPageSize="int.MaxValue">
                     <Columns>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Id"]">
                             <ChildContent Context="j">

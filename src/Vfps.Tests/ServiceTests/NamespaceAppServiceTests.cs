@@ -69,6 +69,31 @@ public class NamespaceAppServiceTests : ServiceTestBase
         await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task CreateAsync_WithBlankName_ShouldThrowArgumentException(string name)
+    {
+        // A nameless namespace can't be addressed in a URL and can't be named by a per-namespace
+        // access grant, so it's rejected here rather than left in the database. The Blazor form's
+        // Required attribute isn't enough on its own: a submit racing the form's post-create model
+        // reset arrives with the name already cleared, and the gRPC API doesn't validate it at all.
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var act = () =>
+            sut.CreateAsync(
+                new Data.Models.Namespace { Name = name, PseudonymLength = 16 },
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ArgumentException>();
+        (await namespaceRepository.GetAllAsync(CancellationToken.None))
+            .Should()
+            .NotContain(n => n.Name == name);
+    }
+
     [Fact]
     public async Task CreateAsync_WithInvalidOriginalValueValidationRegex_ShouldThrowArgumentException()
     {

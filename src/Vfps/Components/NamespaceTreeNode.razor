@@ -1,55 +1,52 @@
 @using Vfps.Data.Models
 
 @*
-    One node of a namespace hierarchy, rendering its own descendants by recursing into itself.
-    Driven entirely by the flat namespace list the page already loaded - a namespace carries its
+    One node of the namespace hierarchy, rendering its own descendants by recursing into itself.
+
+    This is BbTreeView's declarative mode: the node itself is a BbTreeItem, so expand/collapse,
+    selection, roving-tabindex keyboard navigation and the ARIA tree wiring all come from the
+    component library. Declarative mode rather than the data-driven one (Items + ParentField)
+    because only BbTreeItem exposes a LabelTemplate, which is what lets a node reveal its
+    details on hover.
+
+    The data is the flat namespace list the page already loaded: a namespace carries its
     ParentName, and namespace cardinality is low by design (see INamespaceRepository.GetAllAsync),
     so the whole tree is grouped in memory rather than costing a request per level.
 *@
 
-<div class="@(Depth == 0 ? "" : "ml-4 border-l border-border pl-3")">
-    <div class="flex items-center gap-1.5 py-1 @(IsSelected ? "font-semibold text-primary" : "")">
-        @if (Depth > 0)
+<BbTreeItem Value="@Node.Name" Icon="@Icon" IsLeaf="@(Children.Count == 0)">
+    <LabelTemplate>
+        @* AsChild="false" wraps the name in a div carrying the hover handlers, which matters
+           twice over here: plain markup can't consume the trigger context by itself, and the
+           tree's click handler deliberately ignores clicks originating from a button, link or
+           input - so a button-based trigger would stop the node from being selectable. *@
+        <BbHoverCard OpenDelay="250">
+            <BbHoverCardTrigger AsChild="false">
+                <span class="truncate">@Node.Name</span>
+            </BbHoverCardTrigger>
+            <BbHoverCardContent>
+                <NamespaceDetails Namespace="Node" TimeZone="TimeZone" />
+            </BbHoverCardContent>
+        </BbHoverCard>
+    </LabelTemplate>
+    <ChildContent>
+        @foreach (var child in Children)
         {
-            <LucideIcon Name="corner-down-right" Size="14" Class="shrink-0 text-muted-foreground" />
+            @* TimeZone needs no @ prefix (it's not a string), but SelectedName-style string
+               parameters would - a bare attribute value binds the literal text. *@
+            <NamespaceTreeNode
+                Node="child"
+                ChildrenByParent="ChildrenByParent"
+                VisibleNames="VisibleNames"
+                TimeZone="TimeZone"
+                Depth="Depth + 1"
+                Ancestry="NodeAncestry"
+            />
         }
-        else
-        {
-            <LucideIcon Name="database" Size="14" Class="shrink-0 text-muted-foreground" />
-        }
-        <span class="text-sm">@Node.Name</span>
-        @if (IsSelected)
-        {
-            <span class="rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
-                @Localizer["App.Namespaces.HierarchySelected"]
-            </span>
-        }
-        @if (Node.ParentValidationMode == Vfps.Protos.ParentValidationMode.EnsureExists)
-        {
-            <span class="text-xs text-muted-foreground">
-                @Localizer["App.Namespaces.ValidatedBadge"]
-            </span>
-        }
-    </div>
-
-    @foreach (var child in Children)
-    {
-        @* SelectedName needs the @ prefix: it's a string parameter, so a bare attribute value
-           would bind the literal text "SelectedName" instead of this component's own value. *@
-        <NamespaceTreeNode
-            Node="child"
-            ChildrenByParent="ChildrenByParent"
-            SelectedName="@SelectedName"
-            Depth="Depth + 1"
-            Ancestry="NodeAncestry"
-        />
-    }
-</div>
+    </ChildContent>
+</BbTreeItem>
 
 @code {
-    [Inject]
-    private IStringLocalizer<SharedResources> Localizer { get; set; } = null!;
-
     [Parameter, EditorRequired]
     public Namespace Node { get; set; } = null!;
 
@@ -57,8 +54,17 @@
     [Parameter, EditorRequired]
     public IReadOnlyDictionary<string, List<Namespace>> ChildrenByParent { get; set; } = null!;
 
+    /// <summary>
+    /// The namespaces the page's tree search leaves on screen, or null when no search is active.
+    /// Filtering happens here rather than in BbTreeView because the component only filters in its
+    /// data-driven mode - see VisibleNamespaceNames on the namespaces page.
+    /// </summary>
     [Parameter]
-    public string? SelectedName { get; set; }
+    public IReadOnlySet<string>? VisibleNames { get; set; }
+
+    /// <summary>The zone this node's hover card renders timestamps in.</summary>
+    [Parameter]
+    public TimeZoneInfo TimeZone { get; set; } = TimeZoneInfo.Utc;
 
     [Parameter]
     public int Depth { get; set; }
@@ -72,14 +78,20 @@
     [Parameter]
     public IReadOnlySet<string> Ancestry { get; set; } = new HashSet<string>(StringComparer.Ordinal);
 
-    private bool IsSelected =>
-        string.Equals(Node.Name, SelectedName, StringComparison.Ordinal);
+    private string Icon => Depth == 0 ? "database" : "corner-down-right";
 
     private HashSet<string> NodeAncestry =>
         new(Ancestry, StringComparer.Ordinal) { Node.Name };
 
-    private IEnumerable<Namespace> Children =>
+    private List<Namespace> Children =>
         ChildrenByParent.TryGetValue(Node.Name, out var children)
-            ? children.Where(c => !Ancestry.Contains(c.Name) && c.Name != Node.Name)
+            ?
+            [
+                .. children.Where(c =>
+                    !Ancestry.Contains(c.Name)
+                    && c.Name != Node.Name
+                    && (VisibleNames is null || VisibleNames.Contains(c.Name))
+                ),
+            ]
             : [];
 }

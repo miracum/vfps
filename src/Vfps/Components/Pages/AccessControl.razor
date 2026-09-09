@@ -77,184 +77,6 @@
 
         <BbCard>
             <BbCardHeader>
-                <BbCardTitle>@Localizer["App.AccessControl.AddGrantTitle"]</BbCardTitle>
-                <BbCardDescription>
-                    @Localizer["App.AccessControl.AddGrantDescription"]
-                </BbCardDescription>
-            </BbCardHeader>
-            <BbCardContent>
-                @if (_createError is not null)
-                {
-                    <BbAlert Variant="AlertVariant.Danger" Class="mb-4">
-                        <BbAlertTitle>@Localizer["App.AccessControl.AddGrantErrorTitle"]</BbAlertTitle>
-                        <BbAlertDescription>@_createError</BbAlertDescription>
-                    </BbAlert>
-                }
-                <EditForm Model="_newGrant" FormName="create-access-grant" OnValidSubmit="CreateGrantAsync">
-                    <div class="grid gap-4 sm:grid-cols-3">
-                        <BbField>
-                            <BbFieldLabel For="grantNamespace">@Localizer["App.AccessControl.Scope"]</BbFieldLabel>
-                            <BbFieldContent>
-                                <select
-                                    @bind="_newGrant.NamespaceName"
-                                    id="grantNamespace"
-                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    <option value="">@Localizer["App.AccessControl.AllNamespaces"]</option>
-                                    @foreach (var candidate in _namespaces)
-                                    {
-                                        <option value="@candidate.Name">@candidate.Name</option>
-                                    }
-                                </select>
-                            </BbFieldContent>
-                        </BbField>
-                        <BbField>
-                            <BbFieldLabel For="granteeType">@Localizer["App.AccessControl.GranteeType"]</BbFieldLabel>
-                            <BbFieldContent>
-                                <select
-                                    @bind="_newGrant.GranteeType"
-                                    id="granteeType"
-                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                                >
-                                    <option value="@GranteeType.Role">@Localizer["App.AccessControl.GranteeTypeRole"]</option>
-                                    <option value="@GranteeType.Email">@Localizer["App.AccessControl.GranteeTypeEmail"]</option>
-                                </select>
-                            </BbFieldContent>
-                        </BbField>
-                        <BbField>
-                            <BbFieldLabel For="grantee">@Localizer["App.AccessControl.Grantee"]</BbFieldLabel>
-                            <BbFieldContent>
-                                <BbInput
-                                    @bind-Value="_newGrant.Grantee"
-                                    Id="grantee"
-                                    Required="true"
-                                    Placeholder="@(_newGrant.GranteeType == GranteeType.Email
-                                        ? Localizer["App.AccessControl.GranteeEmailPlaceholder"].Value
-                                        : Localizer["App.AccessControl.GranteeRolePlaceholder"].Value)"
-                                />
-                                <p class="mt-1 text-xs text-muted-foreground">
-                                    @(_newGrant.GranteeType == GranteeType.Email
-                                        ? Localizer["App.AccessControl.GranteeEmailHelp"]
-                                        : Localizer["App.AccessControl.GranteeRoleHelp"])
-                                </p>
-                            </BbFieldContent>
-                        </BbField>
-                    </div>
-                    <div class="mt-4 flex flex-wrap items-center gap-6">
-                        <div class="flex items-center gap-2">
-                            <BbCheckbox @bind-Checked="_newGrant.CanRead" Id="newGrantCanRead" />
-                            <label for="newGrantCanRead" class="text-sm">@Localizer["App.AccessControl.Read"]</label>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <BbCheckbox @bind-Checked="_newGrant.CanWrite" Id="newGrantCanWrite" />
-                            <label for="newGrantCanWrite" class="text-sm">@Localizer["App.AccessControl.Write"]</label>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <BbCheckbox
-                                @bind-Checked="_newGrant.CanReverseLookup"
-                                Id="newGrantCanReverseLookup"
-                            />
-                            <label for="newGrantCanReverseLookup" class="text-sm">
-                                @Localizer["App.AccessControl.ReverseLookup"]
-                            </label>
-                        </div>
-                    </div>
-                    <BbButton
-                        id="createAccessGrantButton"
-                        Type="ButtonType.Submit"
-                        Loading="_isCreating"
-                        Class="mt-4"
-                    >
-                        @Localizer["App.Common.Create"]
-                    </BbButton>
-                </EditForm>
-            </BbCardContent>
-        </BbCard>
-
-        <BbCard>
-            <BbCardHeader>
-                <BbCardTitle>@Localizer["App.AccessControl.GrantsTitle"]</BbCardTitle>
-                <BbCardDescription>@Localizer["App.AccessControl.GrantsDescription"]</BbCardDescription>
-            </BbCardHeader>
-            <BbCardContent>
-                @if (_grantError is not null)
-                {
-                    <BbAlert Variant="AlertVariant.Danger" Class="mb-4">
-                        <BbAlertTitle>@Localizer["App.AccessControl.GrantErrorTitle"]</BbAlertTitle>
-                        <BbAlertDescription>@_grantError</BbAlertDescription>
-                    </BbAlert>
-                }
-                @if (_grants.Count == 0)
-                {
-                    <p class="text-sm text-muted-foreground">@Localizer["App.AccessControl.NoGrants"]</p>
-                }
-                else
-                {
-                    <BbDataGrid Items="@_grants" ShowPagination="false">
-                        <Columns>
-                            <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.Scope"]">
-                                <ChildContent Context="grant">
-                                    @(grant.NamespaceName
-                                        ?? Localizer["App.AccessControl.AllNamespaces"].Value)
-                                </ChildContent>
-                            </BbDataGridTemplateColumn>
-                            <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.GranteeType"]">
-                                <ChildContent Context="grant">
-                                    <BbBadge Variant="BadgeVariant.Secondary">
-                                        @GranteeTypeLabel(grant.GranteeType)
-                                    </BbBadge>
-                                </ChildContent>
-                            </BbDataGridTemplateColumn>
-                            <BbDataGridPropertyColumn
-                                Property="@(g => g.Grantee)"
-                                Title="@Localizer["App.AccessControl.Grantee"]"
-                            />
-                            <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.Read"]">
-                                <ChildContent Context="grant">
-                                    <BbCheckbox
-                                        @bind-Checked="grant.CanRead"
-                                        @bind-Checked:after="@(() => SaveGrantAsync(grant))"
-                                        Disabled="@(_savingGrantId == grant.Id)"
-                                    />
-                                </ChildContent>
-                            </BbDataGridTemplateColumn>
-                            <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.Write"]">
-                                <ChildContent Context="grant">
-                                    <BbCheckbox
-                                        @bind-Checked="grant.CanWrite"
-                                        @bind-Checked:after="@(() => SaveGrantAsync(grant))"
-                                        Disabled="@(_savingGrantId == grant.Id)"
-                                    />
-                                </ChildContent>
-                            </BbDataGridTemplateColumn>
-                            <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.ReverseLookup"]">
-                                <ChildContent Context="grant">
-                                    <BbCheckbox
-                                        @bind-Checked="grant.CanReverseLookup"
-                                        @bind-Checked:after="@(() => SaveGrantAsync(grant))"
-                                        Disabled="@(_savingGrantId == grant.Id)"
-                                    />
-                                </ChildContent>
-                            </BbDataGridTemplateColumn>
-                            <BbDataGridTemplateColumn Title="@Localizer["App.Common.Actions"]">
-                                <ChildContent Context="grant">
-                                    <BbButton
-                                        Variant="ButtonVariant.Destructive"
-                                        Size="ButtonSize.Small"
-                                        OnClick="@(() => DeleteGrantAsync(grant))"
-                                    >
-                                        @Localizer["App.Common.Delete"]
-                                    </BbButton>
-                                </ChildContent>
-                            </BbDataGridTemplateColumn>
-                        </Columns>
-                    </BbDataGrid>
-                }
-            </BbCardContent>
-        </BbCard>
-
-        <BbCard>
-            <BbCardHeader>
                 <BbCardTitle>@Localizer["App.AccessControl.EffectiveAccessTitle"]</BbCardTitle>
                 <BbCardDescription>
                     @Localizer["App.AccessControl.EffectiveAccessDescription"]
@@ -267,7 +89,7 @@
                 }
                 else
                 {
-                    <BbDataGrid Items="@_namespaces" ShowPagination="false">
+                    <BbDataGrid Items="@_namespaces" ShowPagination="false" InitialPageSize="int.MaxValue">
                         <Columns>
                             <BbDataGridPropertyColumn Property="@(n => n.Name)" Title="@Localizer["App.Nav.Namespaces"]" />
                             <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.Read"]">
@@ -300,16 +122,7 @@
     private ClaimsPrincipal _user = new();
     private bool _isAdmin;
     private IReadOnlyList<Namespace> _namespaces = [];
-    private List<NamespaceAccessGrant> _grants = [];
-
-    private readonly NewGrantModel _newGrant = new();
-    private bool _isCreating;
-    private string? _createError;
-
-    // Shared by the inline permission toggles and the delete button - both act on the grid below
-    // the banner, so one banner for both is less noise than two that can never be shown together.
-    private string? _grantError;
-    private Guid? _savingGrantId;
+    private IReadOnlyList<NamespaceAccessGrant> _grants = [];
 
     protected override async Task OnInitializedAsync()
     {
@@ -328,102 +141,8 @@
         // An admin's own listing is the full set - GetAllAsync filters to what the caller can
         // read, and a non-admin has already been turned away above.
         _namespaces = await NamespaceAppService.GetAllAsync(_user, CancellationToken.None);
-        _grants = [.. await GrantAppService.GetAllAsync(_user, CancellationToken.None)];
+        _grants = await GrantAppService.GetAllAsync(_user, CancellationToken.None);
     }
-
-    private async Task CreateGrantAsync()
-    {
-        _isCreating = true;
-        _createError = null;
-
-        try
-        {
-            await GrantAppService.CreateAsync(
-                // The select's "all namespaces" option is an empty string, which is not the same
-                // thing as a namespace named "" - null is what the grant table stores for it.
-                string.IsNullOrEmpty(_newGrant.NamespaceName) ? null : _newGrant.NamespaceName,
-                _newGrant.GranteeType,
-                _newGrant.Grantee,
-                _newGrant.CanRead,
-                _newGrant.CanWrite,
-                _newGrant.CanReverseLookup,
-                _user,
-                CancellationToken.None
-            );
-
-            _newGrant.Reset();
-            await LoadAsync();
-        }
-        catch (Exception ex)
-        {
-            _createError = ex.Message;
-        }
-        finally
-        {
-            _isCreating = false;
-        }
-    }
-
-    private async Task SaveGrantAsync(NamespaceAccessGrant grant)
-    {
-        _savingGrantId = grant.Id;
-        _grantError = null;
-
-        try
-        {
-            await GrantAppService.UpdateAsync(
-                grant.Id,
-                grant.CanRead,
-                grant.CanWrite,
-                grant.CanReverseLookup,
-                _user,
-                CancellationToken.None
-            );
-        }
-        catch (InvalidOperationException ex)
-        {
-            _grantError = ex.Message;
-
-            // The checkbox has already flipped locally by the time this runs, so the grid would
-            // otherwise keep showing a permission that was never persisted.
-            await LoadAsync();
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            _grantError = ex.Message;
-
-            // The checkbox has already flipped locally by the time this runs, so the grid would
-            // otherwise keep showing a permission that was never persisted.
-            await LoadAsync();
-        }
-        finally
-        {
-            _savingGrantId = null;
-        }
-    }
-
-    private async Task DeleteGrantAsync(NamespaceAccessGrant grant)
-    {
-        _grantError = null;
-
-        try
-        {
-            await GrantAppService.DeleteAsync(grant.Id, _user, CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            _grantError = ex.Message;
-        }
-
-        // Reloaded either way: on success to drop the row, on failure because the most likely
-        // cause is another admin having already deleted it.
-        await LoadAsync();
-    }
-
-    private string GranteeTypeLabel(GranteeType granteeType) =>
-        granteeType == GranteeType.Email
-            ? Localizer["App.AccessControl.GranteeTypeEmail"].Value
-            : Localizer["App.AccessControl.GranteeTypeRole"].Value;
 
     /// <summary>
     /// Everyone holding a given permission on a namespace: the grants scoped to it plus the ones
@@ -444,21 +163,4 @@
                 .Distinct(StringComparer.Ordinal)
                 .OrderBy(g => g, StringComparer.Ordinal),
         ];
-
-    private sealed class NewGrantModel
-    {
-        /// <summary>Empty for a grant covering every namespace - see CreateGrantAsync.</summary>
-        public string NamespaceName { get; set; } = string.Empty;
-        public GranteeType GranteeType { get; set; } = GranteeType.Role;
-        public string Grantee { get; set; } = string.Empty;
-        public bool CanRead { get; set; } = true;
-        public bool CanWrite { get; set; }
-        public bool CanReverseLookup { get; set; }
-
-        /// <summary>
-        /// Clears the grantee only. The scope, type and permission checkboxes are deliberately
-        /// left as they were: granting the same set to several roles in a row is the common case.
-        /// </summary>
-        public void Reset() => Grantee = string.Empty;
-    }
 }

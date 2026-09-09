@@ -31,6 +31,15 @@ public class NamespaceAppService(
             throw new ForbiddenException("Creating a namespace requires admin access.");
         }
 
+        // The Blazor create form marks the name as required, but a submit that raced the form's
+        // post-create model reset could still arrive with it cleared - and the gRPC/JSON API has
+        // no such check of its own. A nameless namespace is unusable once created: nothing can
+        // address it in a URL and no per-namespace access grant can name it.
+        if (string.IsNullOrWhiteSpace(namespaceToCreate.Name))
+        {
+            throw new ArgumentException("A namespace name is required.", nameof(namespaceToCreate));
+        }
+
         if (namespaceToCreate.PseudonymLength <= 0)
         {
             throw new ArgumentOutOfRangeException(
