@@ -380,7 +380,15 @@
                 CancellationToken.None
             );
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
+        {
+            _grantError = ex.Message;
+
+            // The checkbox has already flipped locally by the time this runs, so the grid would
+            // otherwise keep showing a permission that was never persisted.
+            await LoadAsync();
+        }
+        catch (UnauthorizedAccessException ex)
         {
             _grantError = ex.Message;
 
