@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Vfps.Config;
+using Vfps.Data.Models;
 
 namespace Vfps.Tests.ServiceTests;
 
@@ -135,18 +136,8 @@ public class NamespaceAppServiceTests : ServiceTestBase
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
         var sut = CreateNamespaceAppService(
             namespaceRepository,
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        ReadRoles = ["can-read-existing"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-read-existing", read: true)
         );
 
         var result = await sut.GetAllAsync(
@@ -164,18 +155,8 @@ public class NamespaceAppServiceTests : ServiceTestBase
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
         var sut = CreateNamespaceAppService(
             namespaceRepository,
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        ReadRoles = ["can-read-existing"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-read-existing", read: true)
         );
 
         var act = () =>
@@ -194,18 +175,8 @@ public class NamespaceAppServiceTests : ServiceTestBase
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
         var sut = CreateNamespaceAppService(
             namespaceRepository,
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        ReadRoles = ["can-read-existing"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-read-existing", read: true)
         );
 
         var result = await sut.GetAsync(
@@ -452,15 +423,12 @@ public class NamespaceAppServiceTests : ServiceTestBase
     public async Task ListChildrenAsync_ShouldOmitChildrenTheCallerCannotRead()
     {
         var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
-        var config = new AuthorizationConfig
-        {
-            IsEnabled = true,
-            NamespaceRules =
-            [
-                new NamespaceRule { Namespace = "existingNamespace", ReadRoles = ["reader"] },
-                new NamespaceRule { Namespace = "visible-child", ReadRoles = ["reader"] },
-            ],
-        };
+        var config = new AuthorizationConfig { IsEnabled = true };
+        NamespaceAccessGrant[] grants =
+        [
+            Grants.ForRole("existingNamespace", "reader", read: true),
+            Grants.ForRole("visible-child", "reader", read: true),
+        ];
         var admin = CreateNamespaceAppService(
             namespaceRepository,
             new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
@@ -479,7 +447,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
             );
         }
 
-        var sut = CreateNamespaceAppService(namespaceRepository, config);
+        var sut = CreateNamespaceAppService(namespaceRepository, config, grants);
         var children = await sut.ListChildrenAsync(
             "existingNamespace",
             UserWithRoles("reader"),

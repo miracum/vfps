@@ -135,8 +135,10 @@ public class NamespaceAppService(
         var namespaces = await namespaceRepository.GetAllAsync(cancellationToken);
 
         // No single target namespace to gate GetAll on - filter the result set per-row against
-        // the caller's resolved rules instead.
-        return [.. namespaces.Where(n => permissionChecker.HasReadAccess(user, n.Name))];
+        // the caller's resolved grants instead. Resolved once up front rather than per row: every
+        // row would otherwise re-resolve the same caller against the same grant set.
+        var permissions = await permissionChecker.ResolveAsync(user, cancellationToken);
+        return [.. namespaces.Where(n => permissions.HasReadAccess(n.Name))];
     }
 
     /// <inheritdoc/>
@@ -150,7 +152,7 @@ public class NamespaceAppService(
             await namespaceRepository.FindAsync(namespaceName, cancellationToken)
             ?? throw new NamespaceNotFoundException(namespaceName);
 
-        if (!permissionChecker.HasReadAccess(user, namespaceName))
+        if (!await permissionChecker.HasReadAccessAsync(user, namespaceName, cancellationToken))
         {
             throw new ForbiddenException(
                 $"Read access to namespace '{namespaceName}' is required."
@@ -212,7 +214,8 @@ public class NamespaceAppService(
             throw new NamespaceNotFoundException(namespaceName);
         }
 
-        if (!permissionChecker.HasReadAccess(user, namespaceName))
+        var permissions = await permissionChecker.ResolveAsync(user, cancellationToken);
+        if (!permissions.HasReadAccess(namespaceName))
         {
             throw new ForbiddenException(
                 $"Read access to namespace '{namespaceName}' is required."
@@ -223,6 +226,6 @@ public class NamespaceAppService(
 
         // Filtered per-row, exactly as GetAllAsync does - a caller who can read the parent but
         // not a given child simply doesn't see that child.
-        return [.. children.Where(n => permissionChecker.HasReadAccess(user, n.Name))];
+        return [.. children.Where(n => permissions.HasReadAccess(n.Name))];
     }
 }

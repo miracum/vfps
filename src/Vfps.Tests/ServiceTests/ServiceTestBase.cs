@@ -3,6 +3,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Vfps.Config;
+using Vfps.Data.Models;
 using Vfps.PseudonymGenerators;
 
 namespace Vfps.Tests.ServiceTests;
@@ -87,25 +88,39 @@ public class ServiceTestBase : IDisposable
 
     /// <summary>
     /// A permission checker with authorization disabled (the default) - every check passes,
-    /// matching this codebase's off-by-default idiom. Pass a populated <see cref="AuthorizationConfig"/>
-    /// to test actual enforcement.
+    /// matching this codebase's off-by-default idiom. Pass a populated
+    /// <see cref="AuthorizationConfig"/> and the <paramref name="grants"/> to resolve against
+    /// (see <see cref="Grants"/>) to test actual enforcement.
     /// </summary>
     protected static INamespacePermissionChecker CreatePermissionChecker(
-        AuthorizationConfig? config = null
-    ) => new NamespacePermissionChecker(Options.Create(config ?? new AuthorizationConfig()));
+        AuthorizationConfig? config = null,
+        params NamespaceAccessGrant[] grants
+    ) =>
+        new NamespacePermissionChecker(
+            Options.Create(config ?? new AuthorizationConfig()),
+            new StaticNamespaceAccessGrantCache(grants)
+        );
 
     protected PseudonymAppService CreatePseudonymAppService(
         INamespaceRepository namespaceRepository,
         IPseudonymRepository pseudonymRepository,
-        AuthorizationConfig? config = null
+        AuthorizationConfig? config = null,
+        params NamespaceAccessGrant[] grants
     ) =>
         new(
             namespaceRepository,
             pseudonymRepository,
-            CreatePermissionChecker(config),
+            CreatePermissionChecker(config, grants),
             new PseudonymizationMethodsLookup(),
             new TestPseudonymContextFactory(BuildContextOptions)
         );
+
+    /// <summary>
+    /// The same factory the app services get in production - handed out so a test can exercise a
+    /// component that reads the database through one directly (e.g. NamespaceAccessGrantCache).
+    /// </summary>
+    protected IDbContextFactory<PseudonymContext> ContextFactory =>
+        new TestPseudonymContextFactory(BuildContextOptions);
 
     /// <summary>
     /// Every "new" DbContext this factory produces shares the same open SQLite connection as
@@ -128,11 +143,12 @@ public class ServiceTestBase : IDisposable
 
     protected NamespaceAppService CreateNamespaceAppService(
         INamespaceRepository namespaceRepository,
-        AuthorizationConfig? config = null
+        AuthorizationConfig? config = null,
+        params NamespaceAccessGrant[] grants
     ) =>
         new(
             namespaceRepository,
-            CreatePermissionChecker(config),
+            CreatePermissionChecker(config, grants),
             new PseudonymizationMethodsLookup(),
             new TestPseudonymContextFactory(BuildContextOptions)
         );

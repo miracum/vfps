@@ -133,6 +133,41 @@ Create namespaces and browse or delete existing ones.
   <img src="docs/img/ui-namespaces-light.png" alt="Namespaces page in light mode" width="49%" />
 </p>
 
+### Access Control
+
+Grant roles and individual users read, write and reverse-lookup access per namespace. Only admins
+(`Authorization__AdminRoles`) can open this page, and only while `Authorization__IsEnabled` is
+`true` - with authorization off, every request already has full access to everything.
+
+A grant names one **scope** (a single namespace, or _All namespaces_ - which also covers namespaces
+created later) and one **grantee**:
+
+- a **role**, matched against the caller's `Authorization__RoleClaimType` claims exactly as the
+  identity provider emits them; or
+- an **email address**, matched against the caller's `email` claim, granting that one person access
+  regardless of which roles they hold. This is only as trustworthy as your IdP's own email
+  handling: a realm that lets users set an arbitrary, unverified address on themselves effectively
+  lets them claim someone else's grants.
+
+Grants are additive and there are no deny rules - a caller gets the union of everything granted to
+any of their roles and to their email address, and the absence of a grant is the denial.
+Reverse-lookup (revealing a pseudonym's original value) is a separate, more tightly-scoped
+permission than read: read access alone never reveals original values. Grants are **not** inherited
+down a [namespace hierarchy](#multi-level-namespaces) - like the generation settings a namespace
+carries, access is set per namespace.
+
+Toggling a permission saves it immediately. It takes effect at once on the replica handling the
+request; other replicas pick it up within `Authorization__GrantCacheDuration` (30s by default).
+
+#### Migrating from `Authorization__NamespaceRules`
+
+The static `Authorization__NamespaceRules` section is gone and is **not** imported automatically -
+an upgrade leaves every non-admin without access until an admin re-creates the equivalent grants on
+the Access Control page. Each old rule maps directly: the rule's `Namespace` becomes the grant's
+scope (`"*"` becomes _All namespaces_), and each role in `ReadRoles`/`WriteRoles`/
+`ReverseLookupRoles` becomes a role grant with the matching permission ticked. Remove the
+`Authorization__NamespaceRules__*` variables from your deployment; they are now ignored.
+
 ### CSV Processing
 
 Upload a CSV file to pseudonymize or de-pseudonymize one or more columns as a background job. Files are streamed directly to and from S3-compatible object storage.
@@ -223,13 +258,13 @@ Available configuration options which can be set as environment variables:
 | `Authorization__ClientSecret`                      | `string`     | `""`                | Confidential client secret used by the admin UI's Authorization Code flow.                                                    |
 | `Authorization__RoleClaimType`                     | `string`     | `"roles"`           | Which claim on the validated token carries the caller's roles/groups.                                                         |
 | `Authorization__UsePushedAuthorizationRequests`    | `bool`       | `true`              | Use RFC 9126 Pushed Authorization Requests when the authority advertises support for them. Set to `false` against older IdPs (e.g. pre-Quarkus Keycloak, before ~v19) whose PAR endpoint incorrectly rejects `redirect_uri`, which otherwise breaks every login with `invalid_request: Invalid parameter: redirect_uri`. |
-| `Authorization__AdminRoles__0`, `__1`, ...          | `string`     | -                   | Roles granting full access: all namespaces, plus namespace create/delete.                                                     |
-| `Authorization__NamespaceRules__0__Namespace`      | `string`     | -                   | Namespace name this rule applies to, or `"*"` for all namespaces.                                                             |
-| `Authorization__NamespaceRules__0__ReadRoles__0`, ... | `string`  | -                   | Roles granting read access (namespace browsing, pseudonym list) to the namespace above.                                       |
-| `Authorization__NamespaceRules__0__WriteRoles__0`, ... | `string` | -                   | Roles granting write access to the namespace above.                                                                           |
-| `Authorization__NamespaceRules__0__ReverseLookupRoles__0`, ... | `string` | -            | Roles granting reverse-lookup access (revealing a pseudonym's original value) to the namespace above - a separate, more tightly-scoped grant than read access. |
+| `Authorization__AdminRoles__0`, `__1`, ...          | `string`     | -                   | Roles granting full access: all namespaces, plus namespace create/delete, plus managing every access grant. This is the only access setting that stays in configuration - somebody has to be an admin before there is any UI to grant anything from. |
+| `Authorization__GrantCacheDuration`                | `TimeSpan`   | `"0.00:00:30"`      | How long a replica may answer permission checks from its in-memory snapshot of the access grants before re-reading them. The replica an admin makes a change on applies it immediately; this bounds how long the *other* replicas can still honour a grant that was just edited or revoked. Set to `"0"` to read the grants on every check instead, at the cost of a database round trip per permission check - including one per pseudonym `Create`. |
 
-`NamespaceRules` as indexed env vars gets unwieldy for more than a couple of namespaces; mounting a JSON file (e.g. via `appsettings.Production.json` or a config provider pointed at a mounted file) for this section is a reasonable alternative for larger rule sets.
+Per-namespace access is **not** configuration: it lives in the database and is managed from the
+admin UI's [Access Control](#access-control) page. Earlier releases configured it through an
+`Authorization__NamespaceRules__*` section, which no longer exists - see
+[Migrating from `Authorization__NamespaceRules`](#migrating-from-authorizationnamespacerules).
 
 | Variable                     | Type     | Default        | Description                                                                                                              |
 | ---------------------------- | -------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |

@@ -34,7 +34,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         PseudonymizationJobRepository Repository,
         IAmazonS3 S3,
         IBackgroundJobClient BackgroundJobClient
-    ) CreateSut(AuthorizationConfig? config = null)
+    ) CreateSut(AuthorizationConfig? config = null, params NamespaceAccessGrant[] grants)
     {
         var repository = new PseudonymizationJobRepository(InMemoryPseudonymContext);
         var s3 = A.Fake<IAmazonS3>();
@@ -49,7 +49,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
 
         var sut = new PseudonymizationJobAppService(
             repository,
-            CreatePermissionChecker(config),
+            CreatePermissionChecker(config, grants),
             s3,
             backgroundJobClient,
             Options.Create(new S3Config { Bucket = Bucket })
@@ -79,18 +79,8 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
     public async Task CreateJobAsync_WithWriteAccess_ShouldCreateJobAndReturnPresignedUrl()
     {
         var (sut, _, _, _) = CreateSut(
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        WriteRoles = ["can-write"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-write", write: true)
         );
 
         var request = new CreateCsvJobRequest(
@@ -161,18 +151,8 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         // Depseudonymize reveals original values, so it must be gated on reverse-lookup access,
         // not write access - even though write access alone is enough for a Pseudonymize job.
         var (sut, _, _, _) = CreateSut(
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        WriteRoles = ["can-write"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-write", write: true)
         );
 
         var request = new CreateCsvJobRequest(
@@ -193,18 +173,8 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
     public async Task CreateJobAsync_DepseudonymizeWithReverseLookupAccess_ShouldCreateJob()
     {
         var (sut, _, _, _) = CreateSut(
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        ReverseLookupRoles = ["can-reverse-lookup"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-reverse-lookup", reverseLookup: true)
         );
 
         var request = new CreateCsvJobRequest(
@@ -228,18 +198,8 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
     public async Task GetAsync_AsNonCreatorNonAdmin_ShouldThrowForbidden()
     {
         var (sut, _, _, _) = CreateSut(
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        WriteRoles = ["can-write"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-write", write: true)
         );
 
         var request = new CreateCsvJobRequest(
@@ -264,18 +224,8 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
     public async Task ListAsync_AsNonAdmin_ShouldOnlyReturnOwnJobs()
     {
         var (sut, _, _, _) = CreateSut(
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        WriteRoles = ["can-write"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-write", write: true)
         );
 
         var request = new CreateCsvJobRequest(
@@ -331,18 +281,8 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
     public async Task ClearFinishedAsync_AsNonAdmin_ShouldOnlyDeleteOwnFinishedJobs()
     {
         var (sut, repository, _, _) = CreateSut(
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        WriteRoles = ["can-write"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-write", write: true)
         );
 
         var request = new CreateCsvJobRequest(
@@ -386,19 +326,8 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
     public async Task ClearFinishedAsync_AsAdmin_ShouldDeleteEveryonesFinishedJobs()
     {
         var (sut, repository, _, _) = CreateSut(
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                AdminRoles = ["admin"],
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        WriteRoles = ["can-write"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] },
+            Grants.ForRole("existingNamespace", "can-write", write: true)
         );
 
         var request = new CreateCsvJobRequest(
@@ -580,18 +509,8 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
     public async Task GetDownloadUrlAsync_WithDepseudonymizeDirection_ShouldNameFileAfterInputPlusSuffix()
     {
         var (sut, repository, s3, _) = CreateSut(
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        ReverseLookupRoles = ["can-reverse-lookup"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-reverse-lookup", reverseLookup: true)
         );
 
         var request = new CreateCsvJobRequest(

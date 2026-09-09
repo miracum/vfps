@@ -800,18 +800,8 @@ public class PseudonymAppServiceTests : ServiceTestBase
         var sut = CreatePseudonymAppService(
             namespaceRepository,
             pseudonymRepository,
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        ReadRoles = ["read-only"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "read-only", read: true)
         );
 
         var page = await sut.SearchAsync(
@@ -835,19 +825,9 @@ public class PseudonymAppServiceTests : ServiceTestBase
         var sut = CreatePseudonymAppService(
             namespaceRepository,
             pseudonymRepository,
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        ReadRoles = ["read-only"],
-                        ReverseLookupRoles = ["can-reverse-lookup"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "read-only", read: true),
+            Grants.ForRole("existingNamespace", "can-reverse-lookup", reverseLookup: true)
         );
 
         var page = await sut.SearchAsync(
@@ -873,19 +853,9 @@ public class PseudonymAppServiceTests : ServiceTestBase
         var sut = CreatePseudonymAppService(
             namespaceRepository,
             pseudonymRepository,
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        ReadRoles = ["read-only"],
-                        ReverseLookupRoles = ["can-reverse-lookup"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "read-only", read: true),
+            Grants.ForRole("existingNamespace", "can-reverse-lookup", reverseLookup: true)
         );
 
         // Searching for a substring of the original value must not surface it as a match unless
@@ -922,18 +892,8 @@ public class PseudonymAppServiceTests : ServiceTestBase
         var sut = CreatePseudonymAppService(
             namespaceRepository,
             pseudonymRepository,
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        ReadRoles = ["read-only"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "read-only", read: true)
         );
 
         var page = await sut.SearchAsync(
@@ -994,18 +954,8 @@ public class PseudonymAppServiceTests : ServiceTestBase
         var sut = CreatePseudonymAppService(
             namespaceRepository,
             pseudonymRepository,
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        ReadRoles = ["read-only"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "read-only", read: true)
         );
 
         var act = () =>
@@ -1027,18 +977,8 @@ public class PseudonymAppServiceTests : ServiceTestBase
         var sut = CreatePseudonymAppService(
             namespaceRepository,
             pseudonymRepository,
-            new AuthorizationConfig
-            {
-                IsEnabled = true,
-                NamespaceRules =
-                [
-                    new NamespaceRule
-                    {
-                        Namespace = "existingNamespace",
-                        ReverseLookupRoles = ["can-reverse-lookup"],
-                    },
-                ],
-            }
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-reverse-lookup", reverseLookup: true)
         );
 
         var result = await sut.ReverseLookupAsync(
