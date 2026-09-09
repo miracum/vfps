@@ -146,8 +146,6 @@ services:
       # kics-scan ignore-line
       Authorization__ClientSecret: "vfps-web-secret"
       Authorization__AdminRoles__0: "vfps-admin"
-      Authorization__NamespaceRules__0__Namespace: "development"
-      Authorization__NamespaceRules__0__ReadRoles__0: "vfps-ns-development-read"
       # requires externally-reachable seaweedfs. host.docker-internal doesnt quite work.
       #S3__IsEnabled: "true"
       S3__ServiceUrl: "http://host.docker.internal:9000"

@@ -31,7 +31,7 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
-        if (!permissionChecker.HasWriteAccess(user, namespaceName))
+        if (!await permissionChecker.HasWriteAccessAsync(user, namespaceName, cancellationToken))
         {
             throw new ForbiddenException(
                 $"Write access to namespace '{namespaceName}' is required."
@@ -290,7 +290,7 @@ public class PseudonymAppService(
         var _ =
             await namespaceRepository.FindAsync(namespaceName, cancellationToken)
             ?? throw new NamespaceNotFoundException(namespaceName);
-        if (!permissionChecker.HasReadAccess(user, namespaceName))
+        if (!await permissionChecker.HasReadAccessAsync(user, namespaceName, cancellationToken))
         {
             throw new ForbiddenException(
                 $"Read access to namespace '{namespaceName}' is required."
@@ -349,14 +349,17 @@ public class PseudonymAppService(
         var _ =
             await namespaceRepository.FindAsync(namespaceName, cancellationToken)
             ?? throw new NamespaceNotFoundException(namespaceName);
-        if (!permissionChecker.HasReadAccess(user, namespaceName))
+        // Both checks come from one resolve: read gates the search at all, reverse-lookup
+        // decides whether the original values are included in what comes back.
+        var permissions = await permissionChecker.ResolveAsync(user, cancellationToken);
+        if (!permissions.HasReadAccess(namespaceName))
         {
             throw new ForbiddenException(
                 $"Read access to namespace '{namespaceName}' is required."
             );
         }
 
-        var canRevealOriginalValues = permissionChecker.HasReverseLookupAccess(user, namespaceName);
+        var canRevealOriginalValues = permissions.HasReverseLookupAccess(namespaceName);
         var effectiveTake = take <= 0 ? DefaultPageSize : take;
 
         var (pseudonyms, totalCount) = await pseudonymRepository.SearchByNamespaceAsync(
@@ -389,7 +392,13 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
-        if (!permissionChecker.HasReverseLookupAccess(user, namespaceName))
+        if (
+            !await permissionChecker.HasReverseLookupAccessAsync(
+                user,
+                namespaceName,
+                cancellationToken
+            )
+        )
         {
             throw new ForbiddenException(
                 $"Reverse-lookup access to namespace '{namespaceName}' is required."

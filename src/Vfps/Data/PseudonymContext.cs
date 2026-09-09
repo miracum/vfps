@@ -31,6 +31,41 @@ public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbCo
 
         modelBuilder.Entity<Namespace>().HasIndex(n => n.ParentName);
 
+        // Cascade (unlike the parent/child relationship above): a namespace's access rules have
+        // no meaning once the namespace is gone, and letting them linger would silently re-grant
+        // access if a namespace were ever re-created under the same name.
+        modelBuilder
+            .Entity<NamespaceAccessGrant>()
+            .HasOne(g => g.Namespace)
+            .WithMany(n => n.AccessGrants)
+            .HasForeignKey(g => g.NamespaceName)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Two partial indexes rather than one over the whole triple: PostgreSQL treats NULLs as
+        // distinct in a unique index, so a plain unique index would happily accept any number of
+        // duplicate "all namespaces" (namespace_name IS NULL) grants for the same grantee. The
+        // NULL and non-NULL cases therefore get their own index each. NamespaceAccessGrantAppService
+        // rejects duplicates up front for a readable error; these are what hold the line under a
+        // race between two admins.
+        modelBuilder
+            .Entity<NamespaceAccessGrant>()
+            .HasIndex(g => new
+            {
+                g.NamespaceName,
+                g.GranteeType,
+                g.Grantee,
+            })
+            .HasDatabaseName("ix_namespace_access_grants_namespace_grantee")
+            .HasFilter("namespace_name IS NOT NULL")
+            .IsUnique();
+
+        modelBuilder
+            .Entity<NamespaceAccessGrant>()
+            .HasIndex(g => new { g.GranteeType, g.Grantee })
+            .HasDatabaseName("ix_namespace_access_grants_global_grantee")
+            .HasFilter("namespace_name IS NULL")
+            .IsUnique();
+
         // SequenceNumber is part of the key (rather than just (NamespaceName, OriginalValue)) so
         // a multi-psn namespace (Namespace.AllowsMultiplePseudonyms) can store more than one
         // pseudonym per original value. It's always 0 for a namespace that never allows more than
@@ -179,4 +214,5 @@ public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbCo
     public DbSet<Namespace> Namespaces { get; set; }
     public DbSet<PseudonymizationJob> PseudonymizationJobs { get; set; }
     public DbSet<MetricSnapshot> MetricSnapshots { get; set; }
+    public DbSet<NamespaceAccessGrant> NamespaceAccessGrants { get; set; }
 }

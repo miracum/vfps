@@ -18,4 +18,19 @@ public static class ClaimsPrincipalExtensions
     /// </remarks>
     public static string GetSubject(this ClaimsPrincipal user) =>
         user.FindFirstValue("sub") ?? "anonymous";
+
+    /// <summary>
+    /// The authenticated user's email address, or null if the IdP didn't issue one.
+    /// </summary>
+    /// <remarks>
+    /// Read raw, for the same reason as <see cref="GetSubject"/>: "email" is a standard OIDC
+    /// claim every provider spells the same way, unlike role claim naming (which is why
+    /// <see cref="Config.AuthorizationConfig.RoleClaimType"/> exists), and
+    /// <c>MapInboundClaims = false</c> keeps it from being rewritten to the long
+    /// <see cref="ClaimTypes.Email"/> URI. Backs email-based
+    /// <see cref="Data.Models.NamespaceAccessGrant"/>s, so those are only as trustworthy as the
+    /// IdP's own email handling - a realm that lets users set an arbitrary, unverified email on
+    /// themselves effectively lets them claim anyone else's grants.
+    /// </remarks>
+    public static string? GetEmail(this ClaimsPrincipal user) => user.FindFirstValue("email");
 }

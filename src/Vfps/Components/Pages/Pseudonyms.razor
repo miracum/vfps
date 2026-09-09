@@ -254,7 +254,11 @@
     protected override async Task OnInitializedAsync()
     {
         var user = await GetUserAsync();
-        _hasReverseLookupAccess = PermissionChecker.HasReverseLookupAccess(user, NamespaceName);
+        _hasReverseLookupAccess = await PermissionChecker.HasReverseLookupAccessAsync(
+            user,
+            NamespaceName,
+            CancellationToken.None
+        );
 
         try
         {

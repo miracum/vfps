@@ -58,20 +58,29 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="App.AccessControl.AddGrantDescription" xml:space="preserve">
+    <value>Eine Rolle - oder über die E-Mail-Adresse eine einzelne Person - für einen Namespace berechtigen. Berechtigungen sind additiv, Verbotsregeln gibt es nicht: Es gilt die Summe aus allem, was den Rollen und der E-Mail-Adresse einer Person gewährt wurde.</value>
+  </data>
+  <data name="App.AccessControl.AddGrantErrorTitle" xml:space="preserve">
+    <value>Berechtigung konnte nicht angelegt werden</value>
+  </data>
+  <data name="App.AccessControl.AddGrantTitle" xml:space="preserve">
+    <value>Zugriff gewähren</value>
+  </data>
   <data name="App.AccessControl.AdminRolesDescription" xml:space="preserve">
-    <value>Voller Zugriff auf jeden Namespace, einschließlich Erstellen/Löschen von Namespaces.</value>
+    <value>Voller Zugriff auf jeden Namespace, einschließlich Erstellen/Löschen von Namespaces. Wird über {0} gesetzt und ist hier nicht bearbeitbar - es ist die Grundlage dafür, dass sich überhaupt jemand anmelden und die untenstehenden Berechtigungen anlegen kann.</value>
   </data>
   <data name="App.AccessControl.AdminRolesTitle" xml:space="preserve">
     <value>Admin-Rollen</value>
   </data>
   <data name="App.AccessControl.AdminsOnlyDescription" xml:space="preserve">
-    <value>Zum Anzeigen der Namespace-Zugriffsregeln ist eine der konfigurierten Admin-Rollen erforderlich.</value>
+    <value>Zum Verwalten des Namespace-Zugriffs ist eine der konfigurierten Admin-Rollen erforderlich.</value>
   </data>
   <data name="App.AccessControl.AdminsOnlyTitle" xml:space="preserve">
     <value>Nur für Admins</value>
   </data>
   <data name="App.AccessControl.AllNamespaces" xml:space="preserve">
-    <value>Alle Namespaces (*)</value>
+    <value>Alle Namespaces</value>
   </data>
   <data name="App.AccessControl.DisabledDescription" xml:space="preserve">
     <value>{0} ist {1}, daher hat jede Anfrage vollen Lese-, Schreib- und Reverse-Lookup-Zugriff auf jeden Namespace, unabhängig von der Rolle.</value>
@@ -80,19 +89,46 @@
     <value>Autorisierung ist deaktiviert</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessDescription" xml:space="preserve">
-    <value>Aufgelöste Rollen für jeden vorhandenen Namespace - die Vereinigung aus einer für ihn spezifischen Regel und der Wildcard-Regel oben, dieselbe Auflösung, die Namespace-/Pseudonym-Zugriffsprüfungen verwenden.</value>
+    <value>Wer in jedem vorhandenen Namespace was darf - die Vereinigung der auf ihn bezogenen Berechtigungen und der für alle Namespaces geltenden, dieselbe Auflösung, die auch die Zugriffsprüfungen verwenden. Admins haben immer vollen Zugriff und werden hier nicht aufgeführt.</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessTitle" xml:space="preserve">
     <value>Effektiver Zugriff pro Namespace</value>
   </data>
-  <data name="App.AccessControl.NamespaceRulesDescription" xml:space="preserve">
-    <value>Unverarbeitete {0}-Einträge. Ein Namespace von {1} gilt für jeden Namespace, zusätzlich zu einer für ihn spezifischen Regel.</value>
+  <data name="App.AccessControl.GrantErrorTitle" xml:space="preserve">
+    <value>Änderung konnte nicht gespeichert werden</value>
   </data>
-  <data name="App.AccessControl.NamespaceRulesTitle" xml:space="preserve">
-    <value>Konfigurierte Namespace-Regeln</value>
+  <data name="App.AccessControl.Grantee" xml:space="preserve">
+    <value>Berechtigt</value>
   </data>
-  <data name="App.AccessControl.NoNamespaceRules" xml:space="preserve">
-    <value>Keine Namespace-Regeln konfiguriert - nur Admins haben Zugriff.</value>
+  <data name="App.AccessControl.GranteeEmailHelp" xml:space="preserve">
+    <value>Eine einzelne Person, unabhängig von ihren Rollen berechtigt.</value>
+  </data>
+  <data name="App.AccessControl.GranteeEmailPlaceholder" xml:space="preserve">
+    <value>user@example.org</value>
+  </data>
+  <data name="App.AccessControl.GranteeRoleHelp" xml:space="preserve">
+    <value>Eine OIDC-Rolle oder -Gruppe, genau so, wie sie der Identity Provider ausstellt.</value>
+  </data>
+  <data name="App.AccessControl.GranteeRolePlaceholder" xml:space="preserve">
+    <value>vfps-ns-example-read</value>
+  </data>
+  <data name="App.AccessControl.GranteeType" xml:space="preserve">
+    <value>Art</value>
+  </data>
+  <data name="App.AccessControl.GranteeTypeEmail" xml:space="preserve">
+    <value>E-Mail</value>
+  </data>
+  <data name="App.AccessControl.GranteeTypeRole" xml:space="preserve">
+    <value>Rolle</value>
+  </data>
+  <data name="App.AccessControl.GrantsDescription" xml:space="preserve">
+    <value>Das Umschalten einer Berechtigung wird sofort gespeichert. Hier gilt sie unmittelbar; andere Replicas übernehmen sie innerhalb der konfigurierten Cache-Dauer.</value>
+  </data>
+  <data name="App.AccessControl.GrantsTitle" xml:space="preserve">
+    <value>Berechtigungen</value>
+  </data>
+  <data name="App.AccessControl.NoGrants" xml:space="preserve">
+    <value>Noch keine Berechtigungen vergeben - nur Admins haben Zugriff.</value>
   </data>
   <data name="App.AccessControl.NoNamespacesExist" xml:space="preserve">
     <value>Es sind noch keine Namespaces vorhanden.</value>
@@ -102,6 +138,9 @@
   </data>
   <data name="App.AccessControl.ReverseLookup" xml:space="preserve">
     <value>Reverse-Lookup</value>
+  </data>
+  <data name="App.AccessControl.Scope" xml:space="preserve">
+    <value>Namespace</value>
   </data>
   <data name="App.AccessControl.Write" xml:space="preserve">
     <value>Schreiben</value>

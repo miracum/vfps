@@ -58,20 +58,29 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
+  <data name="App.AccessControl.AddGrantDescription" xml:space="preserve">
+    <value>Give a role - or one specific user, by email address - access to a namespace. Grants are additive and there are no deny rules: a caller gets everything granted to any of their roles plus everything granted to their email address.</value>
+  </data>
+  <data name="App.AccessControl.AddGrantErrorTitle" xml:space="preserve">
+    <value>Could not create the access grant</value>
+  </data>
+  <data name="App.AccessControl.AddGrantTitle" xml:space="preserve">
+    <value>Grant access</value>
+  </data>
   <data name="App.AccessControl.AdminRolesDescription" xml:space="preserve">
-    <value>Full access to every namespace, including namespace create/delete.</value>
+    <value>Full access to every namespace, including namespace create/delete. Set with {0} and not editable here - it is the bootstrap that lets somebody sign in and create the grants below.</value>
   </data>
   <data name="App.AccessControl.AdminRolesTitle" xml:space="preserve">
     <value>Admin roles</value>
   </data>
   <data name="App.AccessControl.AdminsOnlyDescription" xml:space="preserve">
-    <value>Viewing namespace access rules requires one of the configured admin roles.</value>
+    <value>Managing namespace access requires one of the configured admin roles.</value>
   </data>
   <data name="App.AccessControl.AdminsOnlyTitle" xml:space="preserve">
     <value>Admins only</value>
   </data>
   <data name="App.AccessControl.AllNamespaces" xml:space="preserve">
-    <value>All namespaces (*)</value>
+    <value>All namespaces</value>
   </data>
   <data name="App.AccessControl.DisabledDescription" xml:space="preserve">
     <value>{0} is {1}, so every request has full read, write, and reverse-lookup access to every namespace regardless of role.</value>
@@ -80,19 +89,46 @@
     <value>Authorization is disabled</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessDescription" xml:space="preserve">
-    <value>Resolved roles for each existing namespace - the union of any rule specific to it and the wildcard rule above, the same resolution namespace/pseudonym access checks use.</value>
+    <value>Who can do what in each existing namespace - the union of the grants scoped to it and the grants that apply to all namespaces, the same resolution the access checks themselves use. Admins always have full access and are not listed here.</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessTitle" xml:space="preserve">
     <value>Effective access per namespace</value>
   </data>
-  <data name="App.AccessControl.NamespaceRulesDescription" xml:space="preserve">
-    <value>Raw {0} entries. A namespace of {1} applies to every namespace, in addition to any rule specific to it.</value>
+  <data name="App.AccessControl.GrantErrorTitle" xml:space="preserve">
+    <value>Could not save the change</value>
   </data>
-  <data name="App.AccessControl.NamespaceRulesTitle" xml:space="preserve">
-    <value>Configured namespace rules</value>
+  <data name="App.AccessControl.Grantee" xml:space="preserve">
+    <value>Grantee</value>
   </data>
-  <data name="App.AccessControl.NoNamespaceRules" xml:space="preserve">
-    <value>No namespace rules configured - only admins have any access.</value>
+  <data name="App.AccessControl.GranteeEmailHelp" xml:space="preserve">
+    <value>One user, granted access regardless of which roles they hold.</value>
+  </data>
+  <data name="App.AccessControl.GranteeEmailPlaceholder" xml:space="preserve">
+    <value>user@example.org</value>
+  </data>
+  <data name="App.AccessControl.GranteeRoleHelp" xml:space="preserve">
+    <value>An OIDC role or group, exactly as your identity provider emits it.</value>
+  </data>
+  <data name="App.AccessControl.GranteeRolePlaceholder" xml:space="preserve">
+    <value>vfps-ns-example-read</value>
+  </data>
+  <data name="App.AccessControl.GranteeType" xml:space="preserve">
+    <value>Grantee type</value>
+  </data>
+  <data name="App.AccessControl.GranteeTypeEmail" xml:space="preserve">
+    <value>Email</value>
+  </data>
+  <data name="App.AccessControl.GranteeTypeRole" xml:space="preserve">
+    <value>Role</value>
+  </data>
+  <data name="App.AccessControl.GrantsDescription" xml:space="preserve">
+    <value>Toggling a permission saves it right away. It applies immediately here; other replicas pick it up within the configured grant cache duration.</value>
+  </data>
+  <data name="App.AccessControl.GrantsTitle" xml:space="preserve">
+    <value>Access grants</value>
+  </data>
+  <data name="App.AccessControl.NoGrants" xml:space="preserve">
+    <value>No access grants yet - only admins have any access.</value>
   </data>
   <data name="App.AccessControl.NoNamespacesExist" xml:space="preserve">
     <value>No namespaces exist yet.</value>
@@ -102,6 +138,9 @@
   </data>
   <data name="App.AccessControl.ReverseLookup" xml:space="preserve">
     <value>Reverse lookup</value>
+  </data>
+  <data name="App.AccessControl.Scope" xml:space="preserve">
+    <value>Namespace</value>
   </data>
   <data name="App.AccessControl.Write" xml:space="preserve">
     <value>Write</value>

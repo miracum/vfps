@@ -47,13 +47,16 @@ public class PseudonymizationJobAppService(
         CancellationToken cancellationToken
     )
     {
+        // Resolved once for the whole job: a job's column mappings routinely span several
+        // namespaces, and every one of them is checked against the same caller.
+        var permissions = await permissionChecker.ResolveAsync(user, cancellationToken);
+
         // Depseudonymize reveals original values, so it's gated the same as the manual
         // reverse-lookup textbox (reverse-lookup access), not merely write access.
         Func<string, bool> hasAccess = request.Direction switch
         {
-            PseudonymizationJobDirection.Depseudonymize => namespaceName =>
-                permissionChecker.HasReverseLookupAccess(user, namespaceName),
-            _ => namespaceName => permissionChecker.HasWriteAccess(user, namespaceName),
+            PseudonymizationJobDirection.Depseudonymize => permissions.HasReverseLookupAccess,
+            _ => permissions.HasWriteAccess,
         };
         var requiredAccessDescription = request.Direction switch
         {

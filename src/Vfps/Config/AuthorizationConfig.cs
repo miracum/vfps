@@ -1,10 +1,13 @@
 namespace Vfps.Config;
 
 /// <summary>
-/// Declarative, config-driven authorization: who's an admin (full access, incl. namespace
-/// create/delete) and which OIDC roles/groups grant read/write/reverse-lookup access to which
-/// namespaces. No database-backed grant table or admin UI for managing this - deliberately out
-/// of scope for now.
+/// The OIDC wiring, plus who counts as an admin (full access, incl. namespace create/delete).
+///
+/// Per-namespace access is deliberately *not* here: it lives in the database as
+/// <see cref="Data.Models.NamespaceAccessGrant"/> rows that admins manage in the UI, so granting
+/// a role - or one specific user, by email - access to a namespace doesn't need a config change
+/// and a restart. <see cref="AdminRoles"/> stays configuration because it's the bootstrap:
+/// somebody has to be an admin before there is any UI to grant anything from.
 /// </summary>
 public class AuthorizationConfig
 {
@@ -36,16 +39,13 @@ public class AuthorizationConfig
     /// <summary>Roles granting full access: all namespaces, namespace create/delete.</summary>
     public List<string> AdminRoles { get; set; } = [];
 
-    public List<NamespaceRule> NamespaceRules { get; set; } = [];
-}
-
-/// <summary>
-/// Grants for one namespace (or all namespaces, via <see cref="Namespace"/> = "*").
-/// </summary>
-public class NamespaceRule
-{
-    public required string Namespace { get; set; }
-    public List<string> ReadRoles { get; set; } = [];
-    public List<string> WriteRoles { get; set; } = [];
-    public List<string> ReverseLookupRoles { get; set; } = [];
+    /// <summary>
+    /// How long a replica may serve namespace access grants from its in-memory snapshot before
+    /// re-reading them - see <see cref="Authorization.INamespaceAccessGrantCache"/>. The replica
+    /// an admin makes a change on applies it immediately regardless; this only bounds how long
+    /// the *other* replicas can still honour a grant that was just edited or revoked. Set to zero
+    /// to read the grants on every check instead, at the cost of a database round trip per
+    /// permission check (including one per pseudonym Create).
+    /// </summary>
+    public TimeSpan GrantCacheDuration { get; set; } = TimeSpan.FromSeconds(30);
 }

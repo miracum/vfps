@@ -47,4 +47,11 @@ public class Namespace : TracksCreationAndUpdates
     public ICollection<Namespace> Children { get; set; } = [];
 
     public ICollection<Pseudonym> Pseudonyms { get; set; } = [];
+
+    /// <summary>
+    /// The access rules scoped to this namespace. Deleting the namespace deletes them along with
+    /// it (ON DELETE CASCADE), so a namespace re-created under the same name never silently
+    /// inherits the grants of its predecessor.
+    /// </summary>
+    public ICollection<NamespaceAccessGrant> AccessGrants { get; set; } = [];
 }

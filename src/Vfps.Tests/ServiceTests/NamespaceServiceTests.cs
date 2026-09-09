@@ -55,18 +55,8 @@ public class NamespaceServiceTests : ServiceTestBase
         var restrictedSut = new Services.NamespaceService(
             CreateNamespaceAppService(
                 namespaceRepository,
-                new AuthorizationConfig
-                {
-                    IsEnabled = true,
-                    NamespaceRules =
-                    [
-                        new NamespaceRule
-                        {
-                            Namespace = "existingNamespace",
-                            ReadRoles = ["can-read-existing"],
-                        },
-                    ],
-                }
+                new AuthorizationConfig { IsEnabled = true },
+                Grants.ForRole("existingNamespace", "can-read-existing", read: true)
             )
         );
         var request = new NamespaceServiceGetRequest { Name = "existingNamespace" };

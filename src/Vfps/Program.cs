@@ -235,10 +235,19 @@ builder.Services.AddScoped<IMetricSnapshotRepository, MetricSnapshotRepository>(
 builder.Services.AddScoped<PseudonymCountMetrics>();
 builder.Services.AddHostedService<PseudonymCountMetricsBackgroundService>();
 
-// Authorization: fully declarative, off by default (see Config/AuthorizationConfig.cs) - matches
-// the existing Tracing/Pseudonymization:Caching:*:IsEnabled idiom in this codebase.
+// Authorization: off by default (see Config/AuthorizationConfig.cs) - matches the existing
+// Tracing/Pseudonymization:Caching:*:IsEnabled idiom in this codebase. Configuration carries the
+// OIDC wiring and the bootstrap admin roles only; per-namespace access lives in the database as
+// NamespaceAccessGrant rows managed from the admin UI.
 builder.Services.Configure<AuthorizationConfig>(builder.Configuration.GetSection("Authorization"));
+
+// A singleton, like the permission checker that reads it: the grant set is process-wide state,
+// not per-request, and caching it there is what keeps a permission check off the database on the
+// pseudonym-create hot path.
+builder.Services.AddSingleton<INamespaceAccessGrantCache, NamespaceAccessGrantCache>();
 builder.Services.AddSingleton<INamespacePermissionChecker, NamespacePermissionChecker>();
+builder.Services.AddScoped<INamespaceAccessGrantRepository, NamespaceAccessGrantRepository>();
+builder.Services.AddScoped<INamespaceAccessGrantAppService, NamespaceAccessGrantAppService>();
 
 var authConfig = new AuthorizationConfig();
 builder.Configuration.GetSection("Authorization").Bind(authConfig);
