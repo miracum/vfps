@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.12.0](https://github.com/miracum/vfps/compare/v1.11.0...v1.12.0) (2026-09-09)
+
+
+### Features
+
+* added support for multi-level namespaces ([#299](https://github.com/miracum/vfps/issues/299)) ([67d3852](https://github.com/miracum/vfps/commit/67d3852d607a35e8637ce4977446261b545cf775))
+* seperate csv worker pods ([#301](https://github.com/miracum/vfps/issues/301)) ([0731329](https://github.com/miracum/vfps/commit/0731329d7b17aa1e6e271f2a8e1ff09ac9e61715))
+* ui-based ACL config ([#302](https://github.com/miracum/vfps/issues/302)) ([d4b8d45](https://github.com/miracum/vfps/commit/d4b8d45e4349affd07c8190bf861df98faa460b2))
+
+
+### Miscellaneous Chores
+
+* **deps:** update all digest updates ([#290](https://github.com/miracum/vfps/issues/290)) ([5b85fc3](https://github.com/miracum/vfps/commit/5b85fc362401d889dcb0351fe547c041c05ef70b))
+* **deps:** update registry.k8s.io/kubectl docker tag to v1.37.0 ([#297](https://github.com/miracum/vfps/issues/297)) ([869f8ea](https://github.com/miracum/vfps/commit/869f8eae303105a09706f02def57a92e0555ae4c))
+
 ## [1.11.0](https://github.com/miracum/vfps/compare/v1.10.2...v1.11.0) (2026-08-26)
 
 
