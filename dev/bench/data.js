@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1788939542579,
+  "lastUpdate": 1788946930464,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -7134,6 +7134,66 @@ window.BENCHMARK_DATA = {
             "value": 1287.5038834980555,
             "unit": "ns",
             "range": "± 3.1047601417768953"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d4b8d45e4349affd07c8190bf861df98faa460b2",
+          "message": "feat: ui-based ACL config (#302)\n\n* feat: ui-based ACL config\n\n* Potential fix for pull request finding 'CodeQL / Generic catch clause'\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>\n\n---------\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>",
+          "timestamp": "2026-09-09T11:39:25+02:00",
+          "tree_id": "630aecd3b9fc448482ce67b0ec9a27bb8f1e55fc",
+          "url": "https://github.com/miracum/vfps/commit/d4b8d45e4349affd07c8190bf861df98faa460b2"
+        },
+        "date": 1788946930063,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1192.1633789355938,
+            "unit": "ns",
+            "range": "± 3.97151457981906"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 691.2377953211467,
+            "unit": "ns",
+            "range": "± 2.8878558237852796"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 711.506804784139,
+            "unit": "ns",
+            "range": "± 0.6127023783355976"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 1126.5669753734883,
+            "unit": "ns",
+            "range": "± 1.3717926545168024"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1255.5089958508809,
+            "unit": "ns",
+            "range": "± 0.8402631127098779"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 1209.1457931811992,
+            "unit": "ns",
+            "range": "± 1.8035415291977346"
           }
         ]
       }
