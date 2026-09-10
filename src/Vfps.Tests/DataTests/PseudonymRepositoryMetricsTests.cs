@@ -87,4 +87,20 @@ public class PseudonymRepositoryMetricsTests : ServiceTests.ServiceTestBase
 
         counts[namespaceName].Should().Be(1);
     }
+
+    [Fact]
+    public async Task CountAllGroupedByNamespaceAsync_ForANamespaceWithNoPseudonyms_ShouldReportZero()
+    {
+        // A GROUP BY over pseudonyms can't produce a row for a namespace that has none, so the
+        // zero is filled in from the namespace list. Asserted directly because it's the whole
+        // reason that second query exists.
+        var emptyNamespace = await CreateTestNamespaceAsync();
+        var sut = new PseudonymRepository(InMemoryPseudonymContext);
+
+        var counts = await sut.CountAllGroupedByNamespaceAsync(
+            TestContext.Current.CancellationToken
+        );
+
+        counts.Should().ContainKey(emptyNamespace).WhoseValue.Should().Be(0);
+    }
 }

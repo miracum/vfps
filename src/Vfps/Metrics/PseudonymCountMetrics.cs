@@ -1,4 +1,5 @@
 using System.Diagnostics.Metrics;
+using Hangfire;
 using Vfps.Data;
 using Vfps.Data.Models;
 
@@ -12,7 +13,7 @@ namespace Vfps.Metrics;
 /// exist in this namespace".
 ///
 /// The count itself is a full-scan-class GROUP BY over the largest table in the schema, so it's
-/// computed by one replica and shared through a <see cref="MetricSnapshot"/> row rather than
+/// computed by one replica and shared through <see cref="PseudonymCount"/> rows rather than
 /// recomputed everywhere - otherwise this one metric's database cost would grow with the replica
 /// count, i.e. scaling out for availability would make the deployment less resilient rather than
 /// more. Every replica then exports the same stored values, which is what makes the series
@@ -26,12 +27,12 @@ namespace Vfps.Metrics;
 /// "exactly one replica per interval" is the scheduler's guarantee rather than something this class
 /// coordinates itself.</item>
 /// <item><see cref="PublishFromSnapshotAsync"/> runs on every replica on a short timer (see
-/// <see cref="PseudonymCountMetricsBackgroundService"/>) and only reads the stored row.</item>
+/// <see cref="PseudonymCountMetricsBackgroundService"/>) and only reads the stored rows.</item>
 /// </list>
 /// </summary>
 public class PseudonymCountMetrics(
     IPseudonymRepository pseudonymRepository,
-    IMetricSnapshotRepository snapshotRepository,
+    IPseudonymCountRepository countRepository,
     ILogger<PseudonymCountMetrics> logger
 )
 {
@@ -55,7 +56,8 @@ public class PseudonymCountMetrics(
             "vfps.pseudonyms",
             ObserveCounts,
             description: "Current number of pseudonyms per namespace, refreshed periodically from "
-                + "the database. A namespace with no pseudonyms yet simply has no series here."
+                + "the database. Every existing namespace is reported, including empty ones, which "
+                + "report zero; a series disappears only when its namespace does."
         );
 
     private static IEnumerable<Measurement<long>> ObserveCounts() =>
@@ -75,16 +77,18 @@ public class PseudonymCountMetrics(
     /// Program.cs), so a failed run isn't retried - the next scheduled tick is the retry, and a
     /// recompute that's a few minutes late is not worth a retry storm against the largest table in
     /// the schema. The previously stored values stay untouched and keep being exported meanwhile.
+    ///
+    /// DisableConcurrentExecution because the write replaces the whole set: a second run overlapping
+    /// a first (only reachable if one hangs long enough to still be going at the next tick) could
+    /// otherwise interleave inserts and deletes. The timeout is generous relative to the ~300ms this
+    /// normally takes, and short enough that a waiter fails visibly instead of piling up.
     /// </remarks>
+    [DisableConcurrentExecution(timeoutInSeconds: 60)]
     public async Task RecomputeAsync(CancellationToken cancellationToken)
     {
         var counts = await pseudonymRepository.CountAllGroupedByNamespaceAsync(cancellationToken);
 
-        await snapshotRepository.WriteAsync(
-            MetricSnapshot.PseudonymCountsName,
-            counts,
-            cancellationToken
-        );
+        await countRepository.ReplaceAllAsync(counts, DateTimeOffset.UtcNow, cancellationToken);
 
         logger.LogDebug(
             "Recomputed the per-namespace pseudonym count metric for {NamespaceCount} namespaces.",
@@ -100,10 +104,7 @@ public class PseudonymCountMetrics(
     {
         try
         {
-            latestCounts = await snapshotRepository.ReadAsync(
-                MetricSnapshot.PseudonymCountsName,
-                cancellationToken
-            );
+            latestCounts = await countRepository.GetAllAsync(cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {

@@ -236,11 +236,12 @@ application's, and are easy to miss:
   this up via `worker.enabled`.
 - **The per-namespace pseudonym count metric is computed by one replica and shared.**
   `vfps_pseudonyms` comes from a `GROUP BY` count over the whole pseudonyms table, so it's
-  recomputed at most every 5 minutes by whichever replica wins an atomic claim on the
-  `metric_snapshots` row, and every other replica exports the stored result. All replicas therefore
-  report the same figure - graph it with `max()` or `avg()` across replicas rather than `sum()`.
-  A replica that claims the refresh and then dies before storing the result delays the next
-  recompute by one interval; nothing else is affected.
+  recomputed every 5 minutes by a Hangfire recurring job - dispatched to a single server per tick,
+  which is what keeps one replica paying for it - and written to the `pseudonym_counts` table, one
+  row per namespace. Every replica reads that table on a short timer and exports the stored result,
+  so all of them report the same figure: graph it with `max()` or `avg()` across replicas rather
+  than `sum()`. A failed recompute is visible on the `/hangfire` dashboard and leaves the previous
+  counts in place until the next tick succeeds.
 
 ## Configuration
 

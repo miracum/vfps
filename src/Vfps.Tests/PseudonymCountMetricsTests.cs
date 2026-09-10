@@ -57,7 +57,7 @@ public class PseudonymCountMetricsTests : ServiceTestBase
     private PseudonymCountMetrics CreateSut(IPseudonymRepository? pseudonymRepository = null) =>
         new(
             pseudonymRepository ?? new PseudonymRepository(InMemoryPseudonymContext),
-            new MetricSnapshotRepository(InMemoryPseudonymContext),
+            new PseudonymCountRepository(InMemoryPseudonymContext),
             NullLogger<PseudonymCountMetrics>.Instance
         );
 
@@ -148,21 +148,41 @@ public class PseudonymCountMetricsTests : ServiceTestBase
     }
 
     [Fact]
-    public async Task RecomputeAsync_ForANamespaceWithNoPseudonymsLeft_ShouldStopReportingIt()
+    public async Task RecomputeAsync_ForANamespaceWithNoPseudonymsLeft_ShouldReportZero()
     {
-        // The snapshot is replaced wholesale rather than merged, so a namespace that drops out of
-        // the query result stops being reported instead of staying pinned at its last count - the
-        // reason this uses an ObservableGauge rather than recording into a plain Gauge.
+        // An existing namespace is always reported, even at zero: "this namespace exists and is
+        // empty" is a fact worth being able to see on a dashboard, and it distinguishes an empty
+        // namespace from one that has been deleted (which does drop out - see below).
         var namespaceName = await CreateTestNamespaceAsync();
         await AddPseudonymAsync(namespaceName, "only-value");
+        var sut = CreateSut();
 
+        await RecomputeAndPublishAsync(sut);
+        ObserveGauge()[namespaceName].Should().Be(1);
+
+        await InMemoryPseudonymContext
+            .Pseudonyms.Where(pseudonym => pseudonym.NamespaceName == namespaceName)
+            .ExecuteDeleteAsync(TestContext.Current.CancellationToken);
+        await RecomputeAndPublishAsync(sut);
+
+        ObserveGauge()[namespaceName].Should().Be(0);
+    }
+
+    [Fact]
+    public async Task RecomputeAsync_ForADeletedNamespace_ShouldStopReportingIt()
+    {
+        // The snapshot is replaced wholesale rather than merged, so a namespace that no longer
+        // exists stops being reported instead of staying pinned at its last count - the reason this
+        // uses an ObservableGauge rather than recording into a plain Gauge.
+        var namespaceName = await CreateTestNamespaceAsync();
+        await AddPseudonymAsync(namespaceName, "only-value");
         var sut = CreateSut();
 
         await RecomputeAndPublishAsync(sut);
         ObserveGauge().Should().ContainKey(namespaceName);
 
         await InMemoryPseudonymContext
-            .Pseudonyms.Where(pseudonym => pseudonym.NamespaceName == namespaceName)
+            .Namespaces.Where(ns => ns.Name == namespaceName)
             .ExecuteDeleteAsync(TestContext.Current.CancellationToken);
         await RecomputeAndPublishAsync(sut);
 
@@ -177,15 +197,15 @@ public class PseudonymCountMetricsTests : ServiceTestBase
         await AddPseudonymAsync(namespaceName, "v2");
 
         // Stands in for the Hangfire recurring job having run on some replica: the background
-        // service only reads, so without a stored snapshot there'd be nothing for it to publish.
+        // service only reads, so without stored counts there'd be nothing for it to publish.
         await CreateSut().RecomputeAsync(TestContext.Current.CancellationToken);
 
         var services = new ServiceCollection();
         services.AddSingleton<IPseudonymRepository>(
             new PseudonymRepository(InMemoryPseudonymContext)
         );
-        services.AddSingleton<IMetricSnapshotRepository>(
-            new MetricSnapshotRepository(InMemoryPseudonymContext)
+        services.AddSingleton<IPseudonymCountRepository>(
+            new PseudonymCountRepository(InMemoryPseudonymContext)
         );
         services.AddLogging();
         services.AddScoped<PseudonymCountMetrics>();
@@ -201,17 +221,17 @@ public class PseudonymCountMetricsTests : ServiceTestBase
     }
 
     [Fact]
-    public async Task PublishFromSnapshotAsync_WhenTheSnapshotIsUnreadable_ShouldNotThrow()
+    public async Task PublishFromSnapshotAsync_WhenTheCountsAreUnreadable_ShouldNotThrow()
     {
         // Best-effort by design: this runs on a timer on every replica, so a failing read must never
         // be the thing that takes one down. Logged and swallowed.
-        var snapshotRepository = A.Fake<IMetricSnapshotRepository>();
-        A.CallTo(() => snapshotRepository.ReadAsync(A<string>._, A<CancellationToken>._))
+        var countRepository = A.Fake<IPseudonymCountRepository>();
+        A.CallTo(() => countRepository.GetAllAsync(A<CancellationToken>._))
             .Throws(new InvalidOperationException("database is down"));
 
         var sut = new PseudonymCountMetrics(
             new PseudonymRepository(InMemoryPseudonymContext),
-            snapshotRepository,
+            countRepository,
             NullLogger<PseudonymCountMetrics>.Instance
         );
 
@@ -222,16 +242,16 @@ public class PseudonymCountMetricsTests : ServiceTestBase
     }
 
     [Fact]
-    public async Task RecomputeAsync_WhenTheSnapshotIsUnwritable_ShouldThrow()
+    public async Task RecomputeAsync_WhenTheCountsAreUnwritable_ShouldThrow()
     {
         // The deliberate asymmetry with PublishFromSnapshotAsync above: this one is a Hangfire job,
         // and throwing is how the failure reaches the dashboard instead of only the logs. Swallowing
         // here would leave a permanently stale gauge looking perfectly healthy.
-        var snapshotRepository = A.Fake<IMetricSnapshotRepository>();
+        var countRepository = A.Fake<IPseudonymCountRepository>();
         A.CallTo(() =>
-                snapshotRepository.WriteAsync(
-                    A<string>._,
+                countRepository.ReplaceAllAsync(
                     A<IReadOnlyDictionary<string, long>>._,
+                    A<DateTimeOffset>._,
                     A<CancellationToken>._
                 )
             )
@@ -239,7 +259,7 @@ public class PseudonymCountMetricsTests : ServiceTestBase
 
         var sut = new PseudonymCountMetrics(
             new PseudonymRepository(InMemoryPseudonymContext),
-            snapshotRepository,
+            countRepository,
             NullLogger<PseudonymCountMetrics>.Instance
         );
 

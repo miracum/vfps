@@ -241,10 +241,10 @@ builder.Services.AddScoped<IPseudonymAppService, PseudonymAppService>();
 builder.Services.AddHostedService<InitNamespacesBackgroundService>();
 
 // The per-namespace pseudonym count is too expensive to recompute on every replica, so one
-// replica computes it and the rest read the result out of a MetricSnapshot row - see
-// PseudonymCountMetrics. The background service runs everywhere and unconditionally; which replica
-// pays the cost is settled by the snapshot's own refresh claim, not by configuration.
-builder.Services.AddScoped<IMetricSnapshotRepository, MetricSnapshotRepository>();
+// replica computes it and the rest read the result out of the pseudonym_counts table - see
+// PseudonymCountMetrics. The background service that reads runs everywhere and unconditionally;
+// which replica pays for the recompute is settled by Hangfire's recurring job scheduler below.
+builder.Services.AddScoped<IPseudonymCountRepository, PseudonymCountRepository>();
 builder.Services.AddScoped<PseudonymCountMetrics>();
 builder.Services.AddHostedService<PseudonymCountMetricsBackgroundService>();
 
