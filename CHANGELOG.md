@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.0](https://github.com/miracum/vfps/compare/v1.12.0...v1.13.0) (2026-09-10)
+
+
+### Features
+
+* **ui:** themeing and ui updates ([#303](https://github.com/miracum/vfps/issues/303)) ([60bd2bb](https://github.com/miracum/vfps/commit/60bd2bb66f6b9fab232e9586b8d7ff632b67e18c))
+
 ## [1.12.0](https://github.com/miracum/vfps/compare/v1.11.0...v1.12.0) (2026-09-09)
 
 
