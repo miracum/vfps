@@ -125,7 +125,7 @@
     <value>Zugriff auf '{0}'</value>
   </data>
   <data name="App.Namespaces.ConfigureAccessDescription" xml:space="preserve">
-    <value>Welche Rollen und Benutzer in diesem Namespace lesen, schreiben und Pseudonyme zurückauflösen dürfen. Auf der Seite "Zugriffssteuerung" werden dieselben Berechtigungen für alle Namespaces gemeinsam verwaltet.</value>
+    <value>Welche Rollen und Benutzer in diesem Namespace lesen, schreiben und Pseudonyme zurückauflösen dürfen.</value>
   </data>
   <data name="App.AccessControl.NoGrantsForNamespace" xml:space="preserve">
     <value>Noch keine Berechtigungen - nur Administratoren erreichen diesen Namespace.</value>

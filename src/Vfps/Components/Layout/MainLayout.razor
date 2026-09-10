@@ -1,5 +1,6 @@
 @inherits LayoutComponentBase
 @using PopoverAlign = BlazorBlueprint.Primitives.PopoverAlign
+@using StringInfo = System.Globalization.StringInfo
 @using Microsoft.Extensions.Options
 @using Vfps.Config
 @inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
@@ -54,7 +55,7 @@
                             <BbPopover>
                                 <BbPopoverTrigger AsChild="false" class="rounded-full cursor-pointer">
                                     <BbAvatar Size="AvatarSize.Small">
-                                        <BbAvatarFallback>@Initials(context.User.Identity?.Name)</BbAvatarFallback>
+                                        <BbAvatarFallback>@Initials(context.User)</BbAvatarFallback>
                                     </BbAvatar>
                                 </BbPopoverTrigger>
                                 <BbPopoverContent Align="PopoverAlign.End">
@@ -239,19 +240,65 @@
     private IReadOnlyList<string> Roles(ClaimsPrincipal user) =>
         user.FindAll(AuthorizationConfigOptions.Value.RoleClaimType).Select(c => c.Value).ToList();
 
-    private static string Initials(string? name)
+    // The avatar placeholder: the given name's initial followed by the family name's. Read from
+    // the "given_name"/"family_name" claims rather than Identity.Name, which is the *login* name
+    // here - NameClaimType is "preferred_username" (see Program.cs), so a username like "chgl"
+    // would otherwise render as a meaningless "CH". Both claims arrive with the "profile" scope
+    // the OIDC handler requests by default, via the userinfo endpoint.
+    private static string Initials(ClaimsPrincipal user)
+    {
+        var given = user.FindFirstValue("given_name");
+        var family = user.FindFirstValue("family_name");
+
+        if (!string.IsNullOrWhiteSpace(given) && !string.IsNullOrWhiteSpace(family))
+        {
+            return (FirstLetter(given) + FirstLetter(family)).ToUpperInvariant();
+        }
+
+        // Not every IdP fills in both halves of a user's name, and the split claims are absent
+        // entirely for a bearer token that never went through userinfo. Fall back to whichever
+        // single name is on offer, then to the login name, so the avatar is never blank.
+        var fallback = new[] { given, family, DisplayName(user), user.Identity?.Name }.FirstOrDefault(
+            candidate => !string.IsNullOrWhiteSpace(candidate)
+        );
+
+        return InitialsFromFullName(fallback);
+    }
+
+    private static string InitialsFromFullName(string? name)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
             return "?";
         }
 
-        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return parts.Length switch
-        {
-            0 => "?",
-            1 => parts[0][..Math.Min(2, parts[0].Length)].ToUpperInvariant(),
-            _ => $"{parts[0][0]}{parts[^1][0]}".ToUpperInvariant(),
-        };
+        // A null separator splits on any whitespace, so a tab- or newline-separated name isn't
+        // mistaken for a single word.
+        var parts = name.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 1
+            ? FirstLetters(parts[0], 2).ToUpperInvariant()
+            : (FirstLetter(parts[0]) + FirstLetter(parts[^1])).ToUpperInvariant();
     }
+
+    /// <summary>
+    /// The leading <paramref name="count"/> user-perceived characters of <paramref name="value"/>.
+    /// Text elements rather than chars, so a name beginning with a surrogate pair or a combining
+    /// accent is never sliced in half into an unrenderable fragment.
+    /// </summary>
+    private static string FirstLetters(string value, int count)
+    {
+        var trimmed = value.Trim();
+        var taken = 0;
+        var index = 0;
+
+        while (taken < count && index < trimmed.Length)
+        {
+            index += StringInfo.GetNextTextElementLength(trimmed, index);
+            taken++;
+        }
+
+        return trimmed[..index];
+    }
+
+    private static string FirstLetter(string value) => FirstLetters(value, 1);
 }

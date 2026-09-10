@@ -236,11 +236,12 @@ application's, and are easy to miss:
   this up via `worker.enabled`.
 - **The per-namespace pseudonym count metric is computed by one replica and shared.**
   `vfps_pseudonyms` comes from a `GROUP BY` count over the whole pseudonyms table, so it's
-  recomputed at most every 5 minutes by whichever replica wins an atomic claim on the
-  `metric_snapshots` row, and every other replica exports the stored result. All replicas therefore
-  report the same figure - graph it with `max()` or `avg()` across replicas rather than `sum()`.
-  A replica that claims the refresh and then dies before storing the result delays the next
-  recompute by one interval; nothing else is affected.
+  recomputed every 5 minutes by a Hangfire recurring job - dispatched to a single server per tick,
+  which is what keeps one replica paying for it - and written to the `pseudonym_counts` table, one
+  row per namespace. Every replica reads that table on a short timer and exports the stored result,
+  so all of them report the same figure: graph it with `max()` or `avg()` across replicas rather
+  than `sum()`. A failed recompute is visible on the `/hangfire` dashboard and leaves the previous
+  counts in place until the next tick succeeds.
 
 ## Configuration
 
@@ -277,7 +278,7 @@ admin UI's [Access Control](#access-control) page. Earlier releases configured i
 
 | Variable                     | Type     | Default        | Description                                                                                                              |
 | ---------------------------- | -------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `S3__IsEnabled`               | `bool`   | `false`        | Enable CSV pseudonymization jobs (admin UI upload/download + the Hangfire job runner). **Off by default** - also requires `ConnectionStrings__PostgreSQL` (Hangfire reuses the same database for its job storage). |
+| `S3__IsEnabled`               | `bool`   | `false`        | Enable CSV pseudonymization jobs (admin UI upload/download + the Hangfire job runner). **Off by default** - also requires `ConnectionStrings__PostgreSQL`, since Hangfire reuses the same database for its job storage. Note that Hangfire itself (and its `/hangfire` dashboard) is enabled by any deployment with a PostgreSQL connection string, independent of this setting - it also schedules internal housekeeping such as the pseudonym-count metric recompute. |
 | `S3__ServiceUrl`              | `string` | `""`           | S3-compatible endpoint URL, e.g. a local MinIO instance or a real AWS/S3-compatible endpoint.                            |
 | `S3__AccessKey`               | `string` | `""`           | Access key for the bucket above.                                                                                         |
 | `S3__SecretKey`               | `string` | `""`           | Secret key for the bucket above.                                                                                         |
@@ -289,7 +290,7 @@ admin UI's [Access Control](#access-control) page. Earlier releases configured i
 | `S3__AllowedOrigins`          | `string[]` | `[]`         | Origins (e.g. `https://vfps.example.org`) allowed to PUT/GET objects directly against the bucket via presigned URLs, applied as an S3 bucket CORS rule on startup. The browser talks to the bucket on a different origin than vfps itself, so without this the browser blocks the upload with a CORS error before it reaches S3. Empty (the default) leaves the bucket's CORS configuration untouched. **Overwrites the bucket's entire existing CORS configuration** - use a bucket dedicated to vfps. |
 | `CsvProcessing__PseudonymizeBatchSize`     | `int`      | `1000`         | How many rows' worth of values go into one batched upsert round trip when pseudonymizing a CSV job. Doesn't apply to de-pseudonymization, which resolves concurrently instead. |
 | `CsvProcessing__StalledJobThreshold`       | `TimeSpan` | `"0.00:10:00"` | How long a CSV job can sit `Running` with no progress update before it's marked `Stalled` (its worker likely crashed, lost its database connection, or was killed by an app restart). |
-| `CsvProcessing__ProcessJobs`               | `bool`     | `true`         | Whether this instance runs CSV jobs, as opposed to only accepting them. Enqueueing and the Hangfire dashboard work either way - this controls only the processing loop, which is what allows dedicated worker pods: set it to `false` on the pods serving the API and admin UI, and `true` on a second deployment of the same image. **If every instance sets it to `false`, jobs queue forever** with no error. |
+| `CsvProcessing__ProcessJobs`               | `bool`     | `true`         | Whether this instance runs CSV jobs, as opposed to only accepting them. Enqueueing and the Hangfire dashboard work either way - this controls only which Hangfire queues the instance serves (`false` serves internal housekeeping such as the pseudonym-count recompute, but not the queue CSV jobs land in), which is what allows dedicated worker pods: set it to `false` on the pods serving the API and admin UI, and `true` on a second deployment of the same image. **If every instance sets it to `false`, jobs queue forever** with no error. |
 | `CsvProcessing__WorkerCount`               | `int`      | `4`            | How many CSV jobs one replica processes concurrently. Pinned rather than left at Hangfire's own default (`min(cores * 5, 20)`), which knows nothing about the shared Npgsql connection pool: a de-pseudonymizing job resolves each chunk via up to 20 concurrent lookups, so 20 workers would be up to 400 concurrent connection requests from one replica against a pool whose default maximum is 100. Raise it in step with `Maximum Pool Size`, and remember it multiplies by replica count against one shared database. |
 | `CsvProcessing__JobServerShutdownTimeout`  | `TimeSpan` | `"0.00:00:15"` | How long the Hangfire job server waits for in-flight jobs to wind down on shutdown. A CSV job can't checkpoint and resume, so this doesn't let one finish - it buys time to unwind cleanly and record its own outcome. Must stay comfortably below `ShutdownTimeout`. |
 | `CsvProcessing__OrphanedJobRecoveryDelay`  | `TimeSpan` | `"0.00:02:00"` | How long a job orphaned by a replica disappearing (rolling upgrade, OOM kill, node failure) waits before another replica picks it up and reprocesses it from the start. Hangfire's own default is 5 minutes, which races uncomfortably closely with `CsvProcessing__StalledJobThreshold`; 2 minutes makes re-dispatch the reliable winner, so an upgrade costs a job a couple of minutes rather than a `Stalled` status. Hangfire's heartbeat and server-check intervals are derived from this; values below 30s are clamped. |

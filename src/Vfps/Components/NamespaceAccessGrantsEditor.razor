@@ -73,8 +73,14 @@
             Type="ButtonType.Submit"
             Loading="_isCreating"
             Class="mt-4"
+            IconPosition="IconPosition.Start"
         >
-            @Localizer["App.AccessControl.AddGrantAction"]
+            <Icon>
+                <LucideIcon Name="plus" Size="16" />
+            </Icon>
+            <ChildContent>
+                @Localizer["App.AccessControl.AddGrantAction"]
+            </ChildContent>
         </BbButton>
     </EditForm>
 

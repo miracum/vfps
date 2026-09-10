@@ -1,4 +1,5 @@
 using System.Diagnostics.Metrics;
+using Hangfire;
 using Vfps.Data;
 using Vfps.Data.Models;
 
@@ -12,27 +13,29 @@ namespace Vfps.Metrics;
 /// exist in this namespace".
 ///
 /// The count itself is a full-scan-class GROUP BY over the largest table in the schema, so it's
-/// computed by one replica and shared through a <see cref="MetricSnapshot"/> row rather than
+/// computed by one replica and shared through <see cref="PseudonymCount"/> rows rather than
 /// recomputed everywhere - otherwise this one metric's database cost would grow with the replica
 /// count, i.e. scaling out for availability would make the deployment less resilient rather than
 /// more. Every replica then exports the same stored values, which is what makes the series
 /// consistent across pods (any aggregation agrees, and there are no orphaned series left behind on
 /// a replica that computed it once) and what lets a freshly started replica export a real value
 /// immediately instead of nothing until its first recompute.
+///
+/// The two halves are driven separately, and that split is the whole design:
+/// <list type="bullet">
+/// <item><see cref="RecomputeAsync"/> is a Hangfire recurring job (registered in Program.cs), so
+/// "exactly one replica per interval" is the scheduler's guarantee rather than something this class
+/// coordinates itself.</item>
+/// <item><see cref="PublishFromSnapshotAsync"/> runs on every replica on a short timer (see
+/// <see cref="PseudonymCountMetricsBackgroundService"/>) and only reads the stored rows.</item>
+/// </list>
 /// </summary>
 public class PseudonymCountMetrics(
     IPseudonymRepository pseudonymRepository,
-    IMetricSnapshotRepository snapshotRepository,
-    ILogger<PseudonymCountMetrics> logger,
-    TimeSpan? recomputeInterval = null
+    IPseudonymCountRepository countRepository,
+    ILogger<PseudonymCountMetrics> logger
 )
 {
-    // How stale the stored snapshot has to be before a replica recomputes it. Infrequent, because
-    // this is the expensive half - unlike the read, which every replica does on a far shorter
-    // interval (see PseudonymCountMetricsBackgroundService). Only ever overridden by tests - same
-    // pattern (and rationale) as StalledPseudonymizationJobWatchdogService's own checkInterval.
-    private readonly TimeSpan _recomputeInterval = recomputeInterval ?? TimeSpan.FromMinutes(5);
-
     // Replaced wholesale on every read rather than mutated key by key, so a namespace that no
     // longer exists (or no longer has any pseudonyms) simply stops being reported instead of being
     // pinned at its last observed value forever.
@@ -53,7 +56,8 @@ public class PseudonymCountMetrics(
             "vfps.pseudonyms",
             ObserveCounts,
             description: "Current number of pseudonyms per namespace, refreshed periodically from "
-                + "the database. A namespace with no pseudonyms yet simply has no series here."
+                + "the database. Every existing namespace is reported, including empty ones, which "
+                + "report zero; a series disappears only when its namespace does."
         );
 
     private static IEnumerable<Measurement<long>> ObserveCounts() =>
@@ -63,48 +67,53 @@ public class PseudonymCountMetrics(
         ));
 
     /// <summary>
-    /// Recomputes the snapshot if this replica wins the claim and it's due, then republishes the
-    /// gauge from whatever the stored snapshot currently holds. Safe (and expected) to call far
-    /// more often than the recompute interval: the claim is what keeps the expensive half rare.
+    /// Runs the expensive count and stores the result. Invoked by the Hangfire recurring job, which
+    /// is what limits this to one replica per interval.
     /// </summary>
-    public async Task RefreshAsync(CancellationToken cancellationToken)
+    /// <remarks>
+    /// Deliberately lets exceptions escape, unlike <see cref="PublishFromSnapshotAsync"/>: as a
+    /// Hangfire job, a throw is how the failure gets recorded and surfaced on the dashboard rather
+    /// than only in the logs. The global AutomaticRetryAttribute is set to 0 attempts (see
+    /// Program.cs), so a failed run isn't retried - the next scheduled tick is the retry, and a
+    /// recompute that's a few minutes late is not worth a retry storm against the largest table in
+    /// the schema. The previously stored values stay untouched and keep being exported meanwhile.
+    ///
+    /// DisableConcurrentExecution because the write replaces the whole set: a second run overlapping
+    /// a first (only reachable if one hangs long enough to still be going at the next tick) could
+    /// otherwise interleave inserts and deletes. The timeout is generous relative to the ~300ms this
+    /// normally takes, and short enough that a waiter fails visibly instead of piling up.
+    /// </remarks>
+    [DisableConcurrentExecution(timeoutInSeconds: 60)]
+    public async Task RecomputeAsync(CancellationToken cancellationToken)
+    {
+        var counts = await pseudonymRepository.CountAllGroupedByNamespaceAsync(cancellationToken);
+
+        await countRepository.ReplaceAllAsync(counts, DateTimeOffset.UtcNow, cancellationToken);
+
+        logger.LogDebug(
+            "Recomputed the per-namespace pseudonym count metric for {NamespaceCount} namespaces.",
+            counts.Count
+        );
+    }
+
+    /// <summary>
+    /// Republishes the gauge from whatever the stored snapshot currently holds. Runs on every
+    /// replica, including the one that just recomputed - a single read of a single row.
+    /// </summary>
+    public async Task PublishFromSnapshotAsync(CancellationToken cancellationToken)
     {
         try
         {
-            if (
-                await snapshotRepository.TryClaimRefreshAsync(
-                    MetricSnapshot.PseudonymCountsName,
-                    _recomputeInterval,
-                    cancellationToken
-                )
-            )
-            {
-                var counts = await pseudonymRepository.CountAllGroupedByNamespaceAsync(
-                    cancellationToken
-                );
-
-                await snapshotRepository.WriteAsync(
-                    MetricSnapshot.PseudonymCountsName,
-                    counts,
-                    cancellationToken
-                );
-            }
-
-            // Read back unconditionally, including on the ticks where another replica did the
-            // computing - that read is the only reason every replica can export the same values.
-            latestCounts = await snapshotRepository.ReadAsync(
-                MetricSnapshot.PseudonymCountsName,
-                cancellationToken
-            );
+            latestCounts = await countRepository.GetAllAsync(cancellationToken);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
             // Best-effort: a transient DB issue here shouldn't take anything else down over a
-            // metrics refresh - see the identical reasoning on S3BucketConfigurationBackgroundService.
+            // metrics read - see the identical reasoning on S3BucketConfigurationBackgroundService.
             // The previous snapshot is deliberately left in place rather than cleared: a failed
-            // refresh means "we don't know any more", and a slightly stale count is a better answer
-            // to that than a series that vanishes on every transient blip.
-            logger.LogError(ex, "Failed to refresh the per-namespace pseudonym count metric.");
+            // read means "we don't know any more", and a slightly stale count is a better answer to
+            // that than a series that vanishes on every transient blip.
+            logger.LogError(ex, "Failed to publish the per-namespace pseudonym count metric.");
         }
     }
 }

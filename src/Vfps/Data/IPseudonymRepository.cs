@@ -108,11 +108,10 @@ public interface IPseudonymRepository
     );
 
     /// <summary>
-    /// Counts all pseudonyms, grouped by namespace, in one query. Same full-scan-class cost
-    /// as <see cref="CountByNamespaceAsync"/> (across every namespace instead of one) - only
-    /// called by <see cref="PseudonymCountMetricsBackgroundService"/>'s periodic metrics
-    /// refresh, never on a request path. A namespace with zero pseudonyms is simply absent
-    /// from the result rather than present with a zero count.
+    /// Counts all pseudonyms, grouped by namespace. Same full-scan-class cost as
+    /// <see cref="CountByNamespaceAsync"/> (across every namespace instead of one) - only called by
+    /// the pseudonym-count metric's recompute, never on a request path. Every existing namespace is
+    /// present in the result, including those with no pseudonyms at all, which report zero.
     /// </summary>
     Task<IReadOnlyDictionary<string, long>> CountAllGroupedByNamespaceAsync(
         CancellationToken cancellationToken

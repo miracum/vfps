@@ -21,7 +21,7 @@ Operator-facing guidance that came out of this lives in the README under
 | Hangfire dead-server detection shortened to 2min (`CsvProcessing__OrphanedJobRecoveryDelay`), heartbeat and check interval derived from it | Hangfire's 5min default races with `CsvProcessing__StalledJobThreshold` (10min); whenever the stall watchdog won, a job that was about to be re-dispatched got flagged `Stalled` instead. |
 | Hangfire `ShutdownTimeout` made explicit (`CsvProcessing__JobServerShutdownTimeout`) | So it can be kept ordered below the host's `ShutdownTimeout`, which in turn sits below the pod's grace period. |
 | CSV jobs run in a dedicated worker Deployment when the chart's `worker.enabled` is set (`CsvProcessing__ProcessJobs`) | Hangfire's processing loop is now registered independently of its client and dashboard, so API pods can accept and display jobs without running any. One Deployment can only have one shutdown window and one resource budget; splitting lets jobs drain for minutes while API pods keep rolling in seconds. Defaults to enabled everywhere, so a single-Deployment install is unchanged. |
-| `vfps_pseudonyms` is now computed once and shared through a `metric_snapshots` row (new migration), and the instrument changed to an `ObservableGauge` | The `GROUP BY` count over the whole pseudonyms table ran on *every* replica every 5 minutes, so scaling out multiplied this metric's database cost by the replica count. One replica now wins an atomic claim (a single conditional `UPDATE` - no lock, lease or leader election) and stores the result; the rest read it. Every replica reports identical values, no stale series are stranded on a replica that computed it once, and a freshly started replica exports a real value immediately instead of nothing until its first recompute. |
+| `vfps_pseudonyms` is now computed once and shared through the `pseudonym_counts` table, and the instrument changed to an `ObservableGauge` | The `GROUP BY` count over the whole pseudonyms table ran on *every* replica every 5 minutes, so scaling out multiplied this metric's database cost by the replica count. A Hangfire recurring job now computes it on one replica per tick and stores one row per namespace; the rest read it. Every replica reports identical values, no stale series are stranded on a replica that computed it once, and a freshly started replica exports a real value immediately instead of nothing until its first recompute. |
 
 ## Deferred
 
@@ -129,8 +129,14 @@ CloudNativePG or an external managed PostgreSQL for deployments that actually ne
 ### 8. Separate the CSV job workers
 
 Done, in chart 3.4.0: `worker.enabled` runs jobs in a second Deployment of the same image and
-switches the API pods to accept-only. No Hangfire queue was needed - with the API pods running no
-server at all, every server is a worker, so the default queue suffices.
+switches the API pods to accept-only.
+
+This originally needed no Hangfire queues at all - with the API pods running no server whatsoever,
+every server was a worker and the default queue sufficed. That stopped being true once the
+pseudonym-count metric became a recurring job: every pod now runs a server, so "does this pod
+process CSV jobs?" had to become a property of the queues it serves rather than of whether it has a
+server. `CsvProcessing__ProcessJobs=false` pods serve only the `metrics` queue; job-processing pods
+serve `default` (where CSV jobs land) ahead of it, so a metrics tick never delays a CSV job.
 
 The workers get their own `terminationGracePeriodSeconds` (600 against the API pods' 60), resources,
 replicas, PDB and scheduling, which is the whole point: a killed CSV job has to be re-dispatched and
