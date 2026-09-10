@@ -1,0 +1,115 @@
+@using Vfps.Data.Models
+
+@*
+    Everything worth knowing about a single namespace, as a compact label/value list. Shared by
+    the hierarchy tree's hover card and its details panel so the two can't drift apart - they
+    differ only in where they're rendered, not in what they show.
+
+    Rows whose value is empty (prefix, suffix, validation regex) are left out entirely rather
+    than rendered as blanks, which keeps the hover card short for the common case.
+*@
+
+<div class="space-y-2">
+    <div>
+        <p class="text-sm font-semibold">@Namespace.Name</p>
+        @if (!string.IsNullOrWhiteSpace(Namespace.Description))
+        {
+            <p class="text-xs text-muted-foreground">@Namespace.Description</p>
+        }
+    </div>
+
+    <div class="space-y-1 text-xs">
+        <div class="flex items-start justify-between gap-3">
+            <span class="text-muted-foreground">@Localizer["App.Namespaces.CreatedAt"]</span>
+            <span class="text-right">@FormatTimestamp(Namespace.CreatedAt)</span>
+        </div>
+        <div class="flex items-start justify-between gap-3">
+            <span class="text-muted-foreground">@Localizer["App.Namespaces.LastUpdated"]</span>
+            <span class="text-right">@FormatTimestamp(Namespace.LastUpdatedAt)</span>
+        </div>
+        <div class="flex items-start justify-between gap-3">
+            <span class="text-muted-foreground">@Localizer["App.Namespaces.GenerationMethodColumn"]</span>
+            <span class="text-right">
+                @PseudonymGenerationMethodDisplay.FriendlyName(Namespace.PseudonymGenerationMethod)
+            </span>
+        </div>
+        <div class="flex items-start justify-between gap-3">
+            <span class="text-muted-foreground">@Localizer["App.Namespaces.LengthColumn"]</span>
+            <span class="text-right">@Namespace.PseudonymLength</span>
+        </div>
+        @if (!string.IsNullOrEmpty(Namespace.PseudonymPrefix))
+        {
+            <div class="flex items-start justify-between gap-3">
+                <span class="text-muted-foreground">@Localizer["App.Namespaces.Prefix"]</span>
+                <span class="text-right font-mono">@Namespace.PseudonymPrefix</span>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(Namespace.PseudonymSuffix))
+        {
+            <div class="flex items-start justify-between gap-3">
+                <span class="text-muted-foreground">@Localizer["App.Namespaces.Suffix"]</span>
+                <span class="text-right font-mono">@Namespace.PseudonymSuffix</span>
+            </div>
+        }
+        @if (!string.IsNullOrEmpty(Namespace.OriginalValueValidationRegex))
+        {
+            <div class="flex items-start justify-between gap-3">
+                <span class="text-muted-foreground">@Localizer["App.Namespaces.ValidationRegex"]</span>
+                <span class="text-right font-mono">@Namespace.OriginalValueValidationRegex</span>
+            </div>
+        }
+        <div class="flex items-start justify-between gap-3">
+            <span class="text-muted-foreground">@Localizer["App.Namespaces.AllowsMultiplePseudonymsColumn"]</span>
+            <span class="text-right">
+                @if (Namespace.AllowsMultiplePseudonyms)
+                {
+                    <LucideIcon Name="check" Size="14" />
+                }
+                else
+                {
+                    @NotSet
+                }
+            </span>
+        </div>
+        <div class="flex items-start justify-between gap-3">
+            <span class="text-muted-foreground">@Localizer["App.Namespaces.ParentColumn"]</span>
+            <span class="text-right">
+                @if (string.IsNullOrEmpty(Namespace.ParentName))
+                {
+                    @Localizer["App.Namespaces.NoParent"]
+                }
+                else
+                {
+                    @Namespace.ParentName
+                    @if (Namespace.ParentValidationMode == Vfps.Protos.ParentValidationMode.EnsureExists)
+                    {
+                        <span class="ml-1 text-muted-foreground">
+                            @Localizer["App.Namespaces.ValidatedBadge"]
+                        </span>
+                    }
+                }
+            </span>
+        </div>
+    </div>
+</div>
+
+@code {
+    /// <summary>An en dash, for a value the namespace simply doesn't have.</summary>
+    private const string NotSet = "–";
+
+    [Inject]
+    private IStringLocalizer<SharedResources> Localizer { get; set; } = null!;
+
+    [Parameter, EditorRequired]
+    public Namespace Namespace { get; set; } = null!;
+
+    /// <summary>
+    /// The zone timestamps are rendered in. Defaults to UTC, which is also what the page falls
+    /// back to when the browser's own zone can't be resolved.
+    /// </summary>
+    [Parameter]
+    public TimeZoneInfo TimeZone { get; set; } = TimeZoneInfo.Utc;
+
+    private string FormatTimestamp(DateTimeOffset timestamp) =>
+        TimeZoneInfo.ConvertTime(timestamp, TimeZone).ToString("yyyy-MM-dd HH:mm:ss");
+}

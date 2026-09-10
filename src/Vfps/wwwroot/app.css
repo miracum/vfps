@@ -48,3 +48,33 @@ body {
 .issue-text-stalled {
     color: #b45309; /* Tailwind amber-700 */
 }
+
+/*
+ * The one Tailwind utility the namespace create dialog's row layout needs that the shipped
+ * blazorblueprint.css doesn't carry (see the note above on why this project has no Tailwind build
+ * of its own). It sits on a plain div rather than on a Bb component's Class parameter, so the
+ * class-merging problem described above doesn't apply here - the rule just has to exist.
+ */
+.col-span-3 {
+    grid-column: span 3 / span 3;
+}
+
+/*
+ * The header's moon/sun swap (MainLayout.razor), keyed off the same .dark class on <html> that
+ * themeToggle.js flips. This started out as Tailwind's own dark:hidden / dark:block, but
+ * BlazorBlueprint's components never use those two utilities themselves, so neither is in the
+ * shipped bundle and both silently did nothing - the moon stayed visible and the sun stayed
+ * hidden in *both* themes. Plain class names of our own rather than emulated Tailwind ones:
+ * nothing here is a Tailwind utility, and an escaped colon isn't a kebab-case selector either.
+ */
+.theme-icon-dark {
+    display: none;
+}
+
+.dark .theme-icon-light {
+    display: none;
+}
+
+.dark .theme-icon-dark {
+    display: block;
+}

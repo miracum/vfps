@@ -65,11 +65,24 @@ builder.Services.AddHealthChecks().AddDbContextCheck<PseudonymContext>();
 // terminationGracePeriodSeconds (and, for gRPC and Blazor clients to actually be routed away
 // before the drain starts, a preStop hook) - see the deployment notes in the README.
 builder.Services.Configure<HostOptions>(hostOptions =>
+{
+    // Hosted services otherwise stop one after another in reverse registration order, and
+    // GenericWebHostService (Kestrel) is registered last by WebApplicationBuilder - so Kestrel's
+    // connection drain runs first and can spend the entire ShutdownTimeout above on its own. A
+    // Blazor circuit's WebSocket is a long-running request, so a single open browser tab is
+    // enough for that to happen. Everything queued behind the drain then gets an already-expired
+    // token: Hangfire's BackgroundJobServerHostedService.StopAsync rethrows it as an unhandled
+    // OperationCanceledException, killing an otherwise-clean shutdown with a non-zero exit code
+    // (its server itself has long since stopped - it hooks ApplicationStopping directly). None of
+    // these services depend on another having stopped first, so stopping them concurrently costs
+    // nothing and gives each one the full budget instead of Kestrel's leftovers.
+    hostOptions.ServicesStopConcurrently = true;
+
     hostOptions.ShutdownTimeout = builder.Configuration.GetValue(
         "ShutdownTimeout",
         TimeSpan.FromSeconds(25)
-    )
-);
+    );
+});
 
 // A dedicated metrics port (separate from the app's public HTTP/gRPC listeners) keeps /metrics
 // off the internet-facing endpoints - only an in-cluster scraper needs to reach it. Kept as a

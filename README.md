@@ -135,9 +135,13 @@ Create namespaces and browse or delete existing ones.
 
 ### Access Control
 
-Grant roles and individual users read, write and reverse-lookup access per namespace. Only admins
-(`Authorization__AdminRoles`) can open this page, and only while `Authorization__IsEnabled` is
-`true` - with authorization off, every request already has full access to everything.
+Roles and individual users are granted read, write and reverse-lookup access per namespace. Only
+admins (`Authorization__AdminRoles`) can see any of this, and only while `Authorization__IsEnabled`
+is `true` - with authorization off, every request already has full access to everything.
+
+Grants are made on the **Namespaces** page: select a namespace in the hierarchy and use _Configure
+access_. The **Access Control** page is a read-only overview - the admin roles, and who effectively
+holds which permission on each namespace.
 
 A grant names one **scope** (a single namespace, or _All namespaces_ - which also covers namespaces
 created later) and one **grantee**:
@@ -159,13 +163,18 @@ carries, access is set per namespace.
 Toggling a permission saves it immediately. It takes effect at once on the replica handling the
 request; other replicas pick it up within `Authorization__GrantCacheDuration` (30s by default).
 
+Grants scoped to _All namespaces_ can no longer be created or changed through the UI, since the
+per-namespace dialog only edits grants belonging to the namespace it was opened for. Existing ones
+keep working, and are listed for context wherever they apply.
+
 #### Migrating from `Authorization__NamespaceRules`
 
 The static `Authorization__NamespaceRules` section is gone and is **not** imported automatically -
-an upgrade leaves every non-admin without access until an admin re-creates the equivalent grants on
-the Access Control page. Each old rule maps directly: the rule's `Namespace` becomes the grant's
-scope (`"*"` becomes _All namespaces_), and each role in `ReadRoles`/`WriteRoles`/
-`ReverseLookupRoles` becomes a role grant with the matching permission ticked. Remove the
+an upgrade leaves every non-admin without access until an admin re-creates the equivalent grants
+with _Configure access_ on the Namespaces page. Each old rule maps directly: the rule's `Namespace`
+becomes the namespace whose access is being configured, and each role in `ReadRoles`/`WriteRoles`/
+`ReverseLookupRoles` becomes a role grant with the matching permission switched on. A rule scoped
+to `"*"` has no UI equivalent any more and has to be re-created per namespace. Remove the
 `Authorization__NamespaceRules__*` variables from your deployment; they are now ignored.
 
 ### CSV Processing

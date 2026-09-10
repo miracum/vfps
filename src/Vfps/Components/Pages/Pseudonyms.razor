@@ -169,7 +169,18 @@
                     InitialPageSize="PageSize"
                 >
                     <Columns>
-                        <BbDataGridPropertyColumn Property="@(p => p.PseudonymValue)" Title="@Localizer["App.Pseudonyms.PseudonymLabel"]" />
+                        @* A property column with a cell template rather than a template column:
+                           the pseudonym stays sortable and filterable like any other property,
+                           it just renders in the same <code> style as the original value beside
+                           it - the two are the same kind of value and read better matching. *@
+                        <BbDataGridPropertyColumn
+                            Property="@(p => p.PseudonymValue)"
+                            Title="@Localizer["App.Pseudonyms.PseudonymLabel"]"
+                        >
+                            <CellTemplate Context="p">
+                                <code class="rounded bg-muted px-1.5 py-0.5 text-xs">@p.PseudonymValue</code>
+                            </CellTemplate>
+                        </BbDataGridPropertyColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.Pseudonyms.OriginalValueLabel"]">
                             <ChildContent Context="p">
                                 @if (p.OriginalValue is { } revealed)
