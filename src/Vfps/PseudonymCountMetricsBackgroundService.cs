@@ -3,14 +3,18 @@ using Vfps.Metrics;
 namespace Vfps;
 
 /// <summary>
-/// Drives <see cref="PseudonymCountMetrics"/> on every replica.
+/// Keeps this replica's <see cref="PseudonymCountMetrics"/> gauge in step with the shared snapshot.
 ///
-/// Runs everywhere and unconditionally, unlike the work it drives: the expensive recompute is
-/// rationed by the snapshot's own refresh claim (see
-/// <see cref="Data.IMetricSnapshotRepository.TryClaimRefreshAsync"/>), so what this actually does
-/// on almost every tick is one conditional UPDATE that matches nothing plus one single-row read.
-/// That's cheap enough to run far more often than the recompute interval, which is the point - it
-/// bounds how far behind the shared snapshot any individual replica's exported values can be.
+/// Runs everywhere and unconditionally, and deliberately does *not* compute anything: the expensive
+/// recompute is a Hangfire recurring job that runs on one replica per interval (see Program.cs), so
+/// all this does per tick is a single-row read. That's cheap enough to run far more often than the
+/// recompute, which is the point - it bounds how far behind the shared snapshot any individual
+/// replica's exported values can be, and it's what lets a freshly started replica export a real
+/// value immediately rather than nothing until the next recompute.
+///
+/// Not folded into the Hangfire job itself precisely because it has to happen on every replica: a
+/// job runs on whichever server picks it up, which would leave every other replica exporting stale
+/// or absent series.
 /// </summary>
 public class PseudonymCountMetricsBackgroundService(
     IServiceProvider serviceProvider,
@@ -31,7 +35,7 @@ public class PseudonymCountMetricsBackgroundService(
             {
                 using var scope = serviceProvider.CreateScope();
                 var metrics = scope.ServiceProvider.GetRequiredService<PseudonymCountMetrics>();
-                await metrics.RefreshAsync(stoppingToken);
+                await metrics.PublishFromSnapshotAsync(stoppingToken);
             } while (await timer.WaitForNextTickAsync(stoppingToken));
         }
         catch (OperationCanceledException)

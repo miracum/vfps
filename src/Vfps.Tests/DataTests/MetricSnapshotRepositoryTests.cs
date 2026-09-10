@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Vfps.Data.Models;
 
 namespace Vfps.Tests.DataTests;
@@ -5,64 +6,6 @@ namespace Vfps.Tests.DataTests;
 public class MetricSnapshotRepositoryTests : ServiceTests.ServiceTestBase
 {
     private MetricSnapshotRepository CreateSut() => new(InMemoryPseudonymContext);
-
-    [Fact]
-    public async Task TryClaimRefreshAsync_OnTheSeededRow_ShouldSucceedOnceAndThenRefuse()
-    {
-        // The seeded ComputedAt is DateTimeOffset.MinValue ("never computed"), so the first caller
-        // always wins - and having won, bumps the timestamp out of range for everyone else until
-        // the interval has passed. This is the entire mechanism that stops every replica from
-        // running the count query at once, so it's worth asserting directly.
-        var sut = CreateSut();
-
-        var first = await sut.TryClaimRefreshAsync(
-            MetricSnapshot.PseudonymCountsName,
-            TimeSpan.FromMinutes(5),
-            TestContext.Current.CancellationToken
-        );
-        var second = await sut.TryClaimRefreshAsync(
-            MetricSnapshot.PseudonymCountsName,
-            TimeSpan.FromMinutes(5),
-            TestContext.Current.CancellationToken
-        );
-
-        first.Should().BeTrue();
-        second.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task TryClaimRefreshAsync_OnceTheIntervalHasPassed_ShouldSucceedAgain()
-    {
-        var sut = CreateSut();
-        await sut.TryClaimRefreshAsync(
-            MetricSnapshot.PseudonymCountsName,
-            TimeSpan.FromMinutes(5),
-            TestContext.Current.CancellationToken
-        );
-
-        // TimeSpan.Zero means "anything older than right now is due", which is how a caller a full
-        // interval later sees the row.
-        var claimedAgain = await sut.TryClaimRefreshAsync(
-            MetricSnapshot.PseudonymCountsName,
-            TimeSpan.Zero,
-            TestContext.Current.CancellationToken
-        );
-
-        claimedAgain.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task TryClaimRefreshAsync_ForAnUnknownSnapshot_ShouldRefuse()
-    {
-        var claimed = await CreateSut()
-            .TryClaimRefreshAsync(
-                "no-such-snapshot",
-                TimeSpan.Zero,
-                TestContext.Current.CancellationToken
-            );
-
-        claimed.Should().BeFalse();
-    }
 
     [Fact]
     public async Task WriteAsync_ThenReadAsync_ShouldRoundTripTheValues()
@@ -106,6 +49,45 @@ public class MetricSnapshotRepositoryTests : ServiceTests.ServiceTestBase
             TestContext.Current.CancellationToken
         );
         read.Should().BeEquivalentTo(new Dictionary<string, long> { ["kept"] = 5 });
+    }
+
+    [Fact]
+    public async Task WriteAsync_ShouldStampComputedAt()
+    {
+        // The seeded value is DateTimeOffset.MinValue ("never computed"). Nothing schedules off this
+        // column any more - Hangfire owns the interval - but it's what an operator checks to tell a
+        // genuinely low count from a recompute that's been failing, so it has to actually move.
+        var before = DateTimeOffset.UtcNow;
+
+        await CreateSut()
+            .WriteAsync(
+                MetricSnapshot.PseudonymCountsName,
+                new Dictionary<string, long> { ["alpha"] = 1 },
+                TestContext.Current.CancellationToken
+            );
+
+        var snapshot = await InMemoryPseudonymContext.MetricSnapshots.SingleAsync(
+            candidate => candidate.Name == MetricSnapshot.PseudonymCountsName,
+            TestContext.Current.CancellationToken
+        );
+        snapshot.ComputedAt.Should().BeOnOrAfter(before);
+    }
+
+    [Fact]
+    public async Task WriteAsync_ForAnUnknownSnapshot_ShouldAffectNothing()
+    {
+        // No row is created for an unrecognised name - snapshot rows are seeded via HasData, so a
+        // name with no row is a bug in the caller, not a row waiting to be inserted.
+        await CreateSut()
+            .WriteAsync(
+                "no-such-snapshot",
+                new Dictionary<string, long> { ["alpha"] = 1 },
+                TestContext.Current.CancellationToken
+            );
+
+        var read = await CreateSut()
+            .ReadAsync("no-such-snapshot", TestContext.Current.CancellationToken);
+        read.Should().BeEmpty();
     }
 
     [Fact]

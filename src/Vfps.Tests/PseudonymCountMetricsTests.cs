@@ -54,16 +54,24 @@ public class PseudonymCountMetricsTests : ServiceTestBase
         InMemoryPseudonymContext.ChangeTracker.Clear();
     }
 
-    private PseudonymCountMetrics CreateSut(
-        IPseudonymRepository? pseudonymRepository = null,
-        TimeSpan? recomputeInterval = null
-    ) =>
+    private PseudonymCountMetrics CreateSut(IPseudonymRepository? pseudonymRepository = null) =>
         new(
             pseudonymRepository ?? new PseudonymRepository(InMemoryPseudonymContext),
             new MetricSnapshotRepository(InMemoryPseudonymContext),
-            NullLogger<PseudonymCountMetrics>.Instance,
-            recomputeInterval
+            NullLogger<PseudonymCountMetrics>.Instance
         );
+
+    /// <summary>
+    /// One full cycle: the recompute the Hangfire recurring job runs, then the snapshot read every
+    /// replica does on its own timer. Separate calls in production, on different machines - so a
+    /// test that wants "the gauge now reflects the database" has to do both.
+    /// </summary>
+    private async Task RecomputeAndPublishAsync(PseudonymCountMetrics? sut = null)
+    {
+        sut ??= CreateSut();
+        await sut.RecomputeAsync(TestContext.Current.CancellationToken);
+        await sut.PublishFromSnapshotAsync(TestContext.Current.CancellationToken);
+    }
 
     /// <summary>
     /// Collects one observation from the "vfps.pseudonyms" observable gauge, keyed by its namespace
@@ -101,7 +109,7 @@ public class PseudonymCountMetricsTests : ServiceTestBase
     }
 
     [Fact]
-    public async Task RefreshAsync_ShouldPublishCountsPerNamespace()
+    public async Task RecomputeAsync_ShouldPublishCountsPerNamespace()
     {
         var namespaceA = await CreateTestNamespaceAsync();
         var namespaceB = await CreateTestNamespaceAsync();
@@ -109,7 +117,7 @@ public class PseudonymCountMetricsTests : ServiceTestBase
         await AddPseudonymAsync(namespaceA, "a2");
         await AddPseudonymAsync(namespaceB, "b1");
 
-        await CreateSut().RefreshAsync(TestContext.Current.CancellationToken);
+        await RecomputeAndPublishAsync();
 
         var observed = ObserveGauge();
         observed[namespaceA].Should().Be(2);
@@ -117,20 +125,20 @@ public class PseudonymCountMetricsTests : ServiceTestBase
     }
 
     [Fact]
-    public async Task RefreshAsync_WhenAnotherReplicaHoldsTheClaim_ShouldPublishWithoutQuerying()
+    public async Task PublishFromSnapshotAsync_OnAReplicaThatDidNotRecompute_ShouldStillExportTheCounts()
     {
-        // The whole point of the shared snapshot: a replica that didn't win the claim still exports
-        // the same values, without paying for the count query itself.
+        // The whole point of the shared snapshot: a replica that never ran the recurring job still
+        // exports the same values, without paying for the count query itself. That's what makes the
+        // series agree across pods instead of only existing on whichever one Hangfire picked.
         var namespaceName = await CreateTestNamespaceAsync();
         await AddPseudonymAsync(namespaceName, "v1");
 
-        // Stands in for the replica that won the claim and stored the result.
-        await CreateSut(recomputeInterval: TimeSpan.FromMinutes(5))
-            .RefreshAsync(TestContext.Current.CancellationToken);
+        // Stands in for the replica Hangfire dispatched the recurring job to.
+        await CreateSut().RecomputeAsync(TestContext.Current.CancellationToken);
 
         var otherReplicaRepository = A.Fake<IPseudonymRepository>();
-        await CreateSut(otherReplicaRepository, TimeSpan.FromMinutes(5))
-            .RefreshAsync(TestContext.Current.CancellationToken);
+        await CreateSut(otherReplicaRepository)
+            .PublishFromSnapshotAsync(TestContext.Current.CancellationToken);
 
         A.CallTo(() =>
                 otherReplicaRepository.CountAllGroupedByNamespaceAsync(A<CancellationToken>._)
@@ -140,7 +148,7 @@ public class PseudonymCountMetricsTests : ServiceTestBase
     }
 
     [Fact]
-    public async Task RefreshAsync_ForANamespaceWithNoPseudonymsLeft_ShouldStopReportingIt()
+    public async Task RecomputeAsync_ForANamespaceWithNoPseudonymsLeft_ShouldStopReportingIt()
     {
         // The snapshot is replaced wholesale rather than merged, so a namespace that drops out of
         // the query result stops being reported instead of staying pinned at its last count - the
@@ -148,27 +156,29 @@ public class PseudonymCountMetricsTests : ServiceTestBase
         var namespaceName = await CreateTestNamespaceAsync();
         await AddPseudonymAsync(namespaceName, "only-value");
 
-        // TimeSpan.Zero so every call is due to recompute rather than being refused by its own
-        // previous claim.
-        var sut = CreateSut(recomputeInterval: TimeSpan.Zero);
+        var sut = CreateSut();
 
-        await sut.RefreshAsync(TestContext.Current.CancellationToken);
+        await RecomputeAndPublishAsync(sut);
         ObserveGauge().Should().ContainKey(namespaceName);
 
         await InMemoryPseudonymContext
             .Pseudonyms.Where(pseudonym => pseudonym.NamespaceName == namespaceName)
             .ExecuteDeleteAsync(TestContext.Current.CancellationToken);
-        await sut.RefreshAsync(TestContext.Current.CancellationToken);
+        await RecomputeAndPublishAsync(sut);
 
         ObserveGauge().Should().NotContainKey(namespaceName);
     }
 
     [Fact]
-    public async Task BackgroundService_ShouldRefreshOnItsOwnTimer()
+    public async Task BackgroundService_ShouldPublishTheStoredSnapshotOnItsOwnTimer()
     {
         var namespaceName = await CreateTestNamespaceAsync();
         await AddPseudonymAsync(namespaceName, "v1");
         await AddPseudonymAsync(namespaceName, "v2");
+
+        // Stands in for the Hangfire recurring job having run on some replica: the background
+        // service only reads, so without a stored snapshot there'd be nothing for it to publish.
+        await CreateSut().RecomputeAsync(TestContext.Current.CancellationToken);
 
         var services = new ServiceCollection();
         services.AddSingleton<IPseudonymRepository>(
@@ -191,15 +201,37 @@ public class PseudonymCountMetricsTests : ServiceTestBase
     }
 
     [Fact]
-    public async Task RefreshAsync_WhenTheSnapshotIsUnreadable_ShouldNotThrow()
+    public async Task PublishFromSnapshotAsync_WhenTheSnapshotIsUnreadable_ShouldNotThrow()
     {
-        // Best-effort by design: a metrics refresh must never be the thing that takes a replica
-        // down, so a failing repository is logged and swallowed.
+        // Best-effort by design: this runs on a timer on every replica, so a failing read must never
+        // be the thing that takes one down. Logged and swallowed.
+        var snapshotRepository = A.Fake<IMetricSnapshotRepository>();
+        A.CallTo(() => snapshotRepository.ReadAsync(A<string>._, A<CancellationToken>._))
+            .Throws(new InvalidOperationException("database is down"));
+
+        var sut = new PseudonymCountMetrics(
+            new PseudonymRepository(InMemoryPseudonymContext),
+            snapshotRepository,
+            NullLogger<PseudonymCountMetrics>.Instance
+        );
+
+        var act = async () =>
+            await sut.PublishFromSnapshotAsync(TestContext.Current.CancellationToken);
+
+        await act.Should().NotThrowAsync();
+    }
+
+    [Fact]
+    public async Task RecomputeAsync_WhenTheSnapshotIsUnwritable_ShouldThrow()
+    {
+        // The deliberate asymmetry with PublishFromSnapshotAsync above: this one is a Hangfire job,
+        // and throwing is how the failure reaches the dashboard instead of only the logs. Swallowing
+        // here would leave a permanently stale gauge looking perfectly healthy.
         var snapshotRepository = A.Fake<IMetricSnapshotRepository>();
         A.CallTo(() =>
-                snapshotRepository.TryClaimRefreshAsync(
+                snapshotRepository.WriteAsync(
                     A<string>._,
-                    A<TimeSpan>._,
+                    A<IReadOnlyDictionary<string, long>>._,
                     A<CancellationToken>._
                 )
             )
@@ -211,8 +243,8 @@ public class PseudonymCountMetricsTests : ServiceTestBase
             NullLogger<PseudonymCountMetrics>.Instance
         );
 
-        var act = async () => await sut.RefreshAsync(TestContext.Current.CancellationToken);
+        var act = async () => await sut.RecomputeAsync(TestContext.Current.CancellationToken);
 
-        await act.Should().NotThrowAsync();
+        await act.Should().ThrowAsync<InvalidOperationException>();
     }
 }

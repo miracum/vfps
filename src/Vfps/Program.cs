@@ -414,59 +414,86 @@ if (s3Config.IsEnabled)
     builder.Services.AddHostedService<S3BucketConfigurationBackgroundService>();
     builder.Services.AddHostedService<StalledPseudonymizationJobWatchdogService>();
 
-    var postgresConnectionString =
-        builder.Configuration.GetConnectionString("PostgreSQL")
-        ?? throw new InvalidOperationException(
+    // Hangfire itself is registered further down for every deployment, not just this one - but CSV
+    // jobs are the only feature that *cannot* work without it, so the missing-connection-string
+    // failure is raised here, where it can name the setting that pulled it in.
+    if (string.IsNullOrEmpty(builder.Configuration.GetConnectionString("PostgreSQL")))
+    {
+        throw new InvalidOperationException(
             "S3:IsEnabled requires ConnectionStrings:PostgreSQL to also be set - Hangfire reuses "
                 + "the same database, no separate storage is provisioned for it."
         );
+    }
+}
 
-    // Hangfire's client and storage are registered on every instance, whether or not it
-    // processes jobs: enqueueing a job (IBackgroundJobClient) and rendering the dashboard both
-    // read from storage and need no local server. Only the processing loop below is optional -
-    // see CsvProcessingConfig.ProcessJobs.
+// Hangfire is registered whenever a PostgreSQL connection string is available, independent of any
+// individual feature that happens to use it: CSV processing (optional, see S3:IsEnabled) is no
+// longer its only consumer now that the pseudonym-count metric is a recurring job too, and gating
+// shared infrastructure on one of its consumers is what previously made "is the dashboard mapped?"
+// depend on an unrelated setting. The connection string is the honest gate - it's the one thing
+// Hangfire genuinely cannot start without - and it's absent only where there's no PostgreSQL at
+// all, i.e. the integration tests, which swap in SQLite.
+var hangfireConnectionString = builder.Configuration.GetConnectionString("PostgreSQL");
+var isHangfireEnabled = !string.IsNullOrEmpty(hangfireConnectionString);
+
+if (isHangfireEnabled)
+{
+    // Hangfire's client and storage are registered on every instance, whether or not it processes
+    // jobs: enqueueing a job (IBackgroundJobClient) and rendering the dashboard both read from
+    // storage and need no local server.
     //
     // Hangfire's Postgres storage handles distributed locking itself, so every replica that does
     // run a server can pick up jobs with no extra coordination work needed - consistent with
     // "no new service" for this feature.
     builder.Services.AddHangfire(config =>
         config
-            .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(postgresConnectionString))
+            .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(hangfireConnectionString))
             // CsvPseudonymizationJobRunner already handles its own failures (marks the job
             // Failed with a sanitized message, logs the full exception server-side) - Hangfire's
             // default of 10 automatic retries would silently re-run the whole job (tying up a
             // worker slot each time) even though most failures here are deterministic (a bad
-            // column name, malformed input) and will just fail again identically.
+            // column name, malformed input) and will just fail again identically. The metrics
+            // recompute relies on this too: its retry is simply the next scheduled tick.
             .UseFilter(new AutomaticRetryAttribute { Attempts = 0 })
     );
-    // Registered only on instances that are meant to do the work, so an API pod's rollout and
-    // resource budget stay independent of a running CSV job's.
-    if (csvProcessingConfig.ProcessJobs)
+
+    // Which queues this instance serves is what preserves CsvProcessing:ProcessJobs now that every
+    // instance runs a server. The metrics queue is served everywhere - the recurring job is
+    // enqueued once per interval regardless of how many servers listen, so "every replica can pick
+    // it up" costs nothing and means a deployment of nothing but ProcessJobs=false pods still gets
+    // its counts recomputed. The default queue, where CSV jobs land, stays opt-in.
+    var servedQueues = new List<string> { HangfireQueues.Metrics };
+    if (s3Config.IsEnabled && csvProcessingConfig.ProcessJobs)
     {
-        builder.Services.AddHangfireServer(hangfireOptions =>
-        {
-            // Every one of these is pinned rather than left at a Hangfire default, because the
-            // defaults are tuned for short jobs on a single server and this app runs long CSV
-            // jobs across a horizontally-scaled Deployment sharing one database. See
-            // CsvProcessingConfig for the reasoning behind each value.
-            hangfireOptions.WorkerCount = Math.Max(1, csvProcessingConfig.WorkerCount);
-            hangfireOptions.ShutdownTimeout = csvProcessingConfig.JobServerShutdownTimeout;
-
-            // Derived, not separately configurable: a heartbeat slower than the timeout it's
-            // checked against would have healthy servers declare each other dead and
-            // double-process jobs, so these three only make sense set together. The floor guards
-            // the same invariant against a recovery delay configured so low that the derived
-            // heartbeat can't keep up with it.
-            var recoveryDelay =
-                csvProcessingConfig.OrphanedJobRecoveryDelay < TimeSpan.FromSeconds(30)
-                    ? TimeSpan.FromSeconds(30)
-                    : csvProcessingConfig.OrphanedJobRecoveryDelay;
-
-            hangfireOptions.ServerTimeout = recoveryDelay;
-            hangfireOptions.ServerCheckInterval = recoveryDelay / 4;
-            hangfireOptions.HeartbeatInterval = recoveryDelay / 8;
-        });
+        // First in the list is first served: a long CSV job shouldn't wait behind a metrics tick.
+        servedQueues.Insert(0, HangfireQueues.Default);
     }
+
+    builder.Services.AddHangfireServer(hangfireOptions =>
+    {
+        hangfireOptions.Queues = [.. servedQueues];
+
+        // Every one of these is pinned rather than left at a Hangfire default, because the
+        // defaults are tuned for short jobs on a single server and this app runs long CSV
+        // jobs across a horizontally-scaled Deployment sharing one database. See
+        // CsvProcessingConfig for the reasoning behind each value.
+        hangfireOptions.WorkerCount = Math.Max(1, csvProcessingConfig.WorkerCount);
+        hangfireOptions.ShutdownTimeout = csvProcessingConfig.JobServerShutdownTimeout;
+
+        // Derived, not separately configurable: a heartbeat slower than the timeout it's
+        // checked against would have healthy servers declare each other dead and
+        // double-process jobs, so these three only make sense set together. The floor guards
+        // the same invariant against a recovery delay configured so low that the derived
+        // heartbeat can't keep up with it.
+        var recoveryDelay =
+            csvProcessingConfig.OrphanedJobRecoveryDelay < TimeSpan.FromSeconds(30)
+                ? TimeSpan.FromSeconds(30)
+                : csvProcessingConfig.OrphanedJobRecoveryDelay;
+
+        hangfireOptions.ServerTimeout = recoveryDelay;
+        hangfireOptions.ServerCheckInterval = recoveryDelay / 4;
+        hangfireOptions.HeartbeatInterval = recoveryDelay / 8;
+    });
 }
 
 builder.Services.AddControllers(options =>
@@ -653,11 +680,11 @@ if (app.Environment.IsDevelopment())
     app.MapGrpcReflectionService();
 }
 
-if (s3Config.IsEnabled)
+if (isHangfireEnabled)
 {
-    // Only mapped when Hangfire itself is registered (see the AddHangfire/AddHangfireServer
-    // block above, also gated on s3Config.IsEnabled) - mapping the dashboard without those
-    // services registered throws "Unable to find the required services" on every request.
+    // Gated on the same condition as the AddHangfire/AddHangfireServer block above rather than on
+    // any one feature - mapping the dashboard without those services registered throws "Unable to
+    // find the required services" on every request.
     var permissionChecker = app.Services.GetRequiredService<INamespacePermissionChecker>();
     var dashboardOptions = new DashboardOptions
     {
@@ -681,6 +708,25 @@ if (s3Config.IsEnabled)
     {
         app.MapHangfireDashboardWithNoAuthorizationFilters("/hangfire", dashboardOptions);
     }
+
+    // The per-namespace pseudonym count, recomputed on a schedule for the whole deployment rather
+    // than by each replica for itself - see PseudonymCountMetrics for why it's a shared snapshot at
+    // all. Hangfire owning the schedule is the entire point: a recurring job is dispatched to one
+    // server per tick, so "exactly one replica pays for this query" needs no lease, lock or
+    // leader election of the app's own.
+    //
+    // AddOrUpdate is idempotent and keyed by the job id, so every replica running this at startup
+    // converges on one recurring job rather than creating N of them - and an id that changes would
+    // orphan the old entry in the dashboard, so it's a constant, not something derived.
+    app.Services.GetRequiredService<IRecurringJobManager>()
+        .AddOrUpdate<PseudonymCountMetrics>(
+            "pseudonym-count-metrics",
+            HangfireQueues.Metrics,
+            metrics => metrics.RecomputeAsync(CancellationToken.None),
+            // Hangfire substitutes a real token tied to job cancellation for CancellationToken.None
+            // above; the literal is just how the expression tree names the parameter.
+            Cron.MinuteInterval(PseudonymCountRecomputeIntervalMinutes)
+        );
 }
 
 app.MapControllers();
@@ -706,6 +752,15 @@ app.Run();
 
 public partial class Program
 {
+    /// <summary>
+    /// How often the per-namespace pseudonym count is recomputed, in minutes. Matches the interval
+    /// this metric used before it became a Hangfire recurring job. Infrequent on purpose: it's a
+    /// full-scan-class GROUP BY over the largest table in the schema, and every replica reads the
+    /// stored result on a far shorter timer regardless (see PseudonymCountMetricsBackgroundService),
+    /// so a longer interval here costs freshness but never consistency.
+    /// </summary>
+    internal const int PseudonymCountRecomputeIntervalMinutes = 5;
+
     internal static readonly ActivitySource ActivitySource = new("Vfps");
 
     internal static readonly Meter Meter = new("Vfps");

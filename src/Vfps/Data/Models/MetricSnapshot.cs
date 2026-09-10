@@ -10,10 +10,6 @@ namespace Vfps.Data.Models;
 /// wholesale" - the thing that lets a series which no longer exists actually disappear - a single
 /// write rather than a diff.
 ///
-/// <see cref="ComputedAt"/> doubles as the refresh claim: a replica takes the right to recompute by
-/// conditionally bumping it (see
-/// <see cref="IMetricSnapshotRepository.TryClaimRefreshAsync"/>), so exactly one replica pays the
-/// cost per interval without any lock, lease or leader-election machinery.
 /// </summary>
 public class MetricSnapshot
 {
@@ -40,11 +36,10 @@ public class MetricSnapshot
     public Dictionary<string, long> Values { get; set; } = [];
 
     /// <summary>
-    /// When a replica last claimed the right to recompute this snapshot - not necessarily when
-    /// <see cref="Values"/> was last successfully written. A replica that claims and then dies
-    /// before writing leaves this bumped with stale values, which just delays the next recompute by
-    /// one interval; the alternative (claim after computing) would let every replica compute at
-    /// once, which is the entire cost this is here to avoid.
+    /// When <see cref="Values"/> was last successfully written, stamped by the same statement that
+    /// writes them. Not load-bearing - scheduling the recompute is Hangfire's job (see Program.cs),
+    /// and nothing reads this to decide anything - but it's what tells an operator staring at a
+    /// suspicious count whether the snapshot is current or the recompute has been failing.
     /// </summary>
     public DateTimeOffset ComputedAt { get; set; }
 }
