@@ -60,17 +60,21 @@ body {
 }
 
 /*
- * The dark-mode variants behind the header's moon/sun swap (MainLayout.razor). Same story as
- * col-span-3 above: BlazorBlueprint's own components never use "dark:hidden" or "dark:block", so
- * neither utility is in the shipped bundle and both silently did nothing - the moon stayed
- * visible and the sun stayed hidden in *both* themes. Written out here against the same .dark
- * class on <html> that themeToggle.js flips. The descendant selector also outranks the plain
- * .hidden on the sun icon, which is what lets it appear at all.
+ * The header's moon/sun swap (MainLayout.razor), keyed off the same .dark class on <html> that
+ * themeToggle.js flips. This started out as Tailwind's own dark:hidden / dark:block, but
+ * BlazorBlueprint's components never use those two utilities themselves, so neither is in the
+ * shipped bundle and both silently did nothing - the moon stayed visible and the sun stayed
+ * hidden in *both* themes. Plain class names of our own rather than emulated Tailwind ones:
+ * nothing here is a Tailwind utility, and an escaped colon isn't a kebab-case selector either.
  */
-.dark .dark\:hidden {
+.theme-icon-dark {
     display: none;
 }
 
-.dark .dark\:block {
+.dark .theme-icon-light {
+    display: none;
+}
+
+.dark .theme-icon-dark {
     display: block;
 }
