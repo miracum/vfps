@@ -149,9 +149,11 @@ created later) and one **grantee**:
 - a **role**, matched against the caller's `Authorization__RoleClaimType` claims exactly as the
   identity provider emits them; or
 - an **email address**, matched against the caller's `email` claim, granting that one person access
-  regardless of which roles they hold. This is only as trustworthy as your IdP's own email
-  handling: a realm that lets users set an arbitrary, unverified address on themselves effectively
-  lets them claim someone else's grants.
+  regardless of which roles they hold. **Only a verified address matches**: the caller's token must
+  also carry `email_verified: true`, since an unconfirmed address is a self-asserted string and a
+  realm allowing self-registration or an unverified address change would otherwise let anyone claim
+  someone else's grants. An identity provider that issues no `email_verified` claim at all
+  therefore never matches an email grant - use role grants there.
 
 Grants are additive and there are no deny rules - a caller gets the union of everything granted to
 any of their roles and to their email address, and the absence of a grant is the denial.

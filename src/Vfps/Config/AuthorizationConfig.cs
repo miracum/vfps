@@ -48,4 +48,24 @@ public class AuthorizationConfig
     /// permission check (including one per pseudonym Create).
     /// </summary>
     public TimeSpan GrantCacheDuration { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// How long a sign-in may keep serving an already-open admin UI tab before that tab is sent
+    /// back through the login flow - see <see cref="Authorization.SessionLifetime"/> for why an
+    /// open Blazor circuit needs a limit of its own at all.
+    ///
+    /// The trip through the IdP is silent whenever its own session is still valid, so the cost of
+    /// a shorter value is a page reload, and what it buys is a shorter window in which a disabled
+    /// account or a withdrawn admin role still works in a tab someone left open. Eight hours
+    /// covers a working day without asking anyone to sign in twice. Set to zero to switch the
+    /// limit off entirely, leaving the auth cookie's own expiry as the only bound.
+    /// </summary>
+    public TimeSpan MaxSessionAge { get; set; } = TimeSpan.FromHours(8);
+
+    /// <summary>
+    /// How often an open tab checks itself against <see cref="MaxSessionAge"/>. The check is a
+    /// claim comparison with no I/O behind it, so this only decides how far past the limit a tab
+    /// can run before it notices. Values below a second are clamped.
+    /// </summary>
+    public TimeSpan SessionRevalidationInterval { get; set; } = TimeSpan.FromMinutes(5);
 }

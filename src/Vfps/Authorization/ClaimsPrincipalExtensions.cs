@@ -20,17 +20,36 @@ public static class ClaimsPrincipalExtensions
         user.FindFirstValue("sub") ?? "anonymous";
 
     /// <summary>
-    /// The authenticated user's email address, or null if the IdP didn't issue one.
+    /// The authenticated user's email address, but only once the IdP reports it as verified -
+    /// null otherwise, including when the IdP issues no email at all.
     /// </summary>
     /// <remarks>
-    /// Read raw, for the same reason as <see cref="GetSubject"/>: "email" is a standard OIDC
-    /// claim every provider spells the same way, unlike role claim naming (which is why
-    /// <see cref="Config.AuthorizationConfig.RoleClaimType"/> exists), and
-    /// <c>MapInboundClaims = false</c> keeps it from being rewritten to the long
-    /// <see cref="ClaimTypes.Email"/> URI. Backs email-based
-    /// <see cref="Data.Models.NamespaceAccessGrant"/>s, so those are only as trustworthy as the
-    /// IdP's own email handling - a realm that lets users set an arbitrary, unverified email on
-    /// themselves effectively lets them claim anyone else's grants.
+    /// Read raw, for the same reason as <see cref="GetSubject"/>: "email" and "email_verified"
+    /// are standard OIDC claims every provider spells the same way, unlike role claim naming
+    /// (which is why <see cref="Config.AuthorizationConfig.RoleClaimType"/> exists), and
+    /// <c>MapInboundClaims = false</c> keeps them from being rewritten to the long
+    /// <see cref="ClaimTypes.Email"/> URI.
+    ///
+    /// Requiring the verification is what makes email-based
+    /// <see cref="Data.Models.NamespaceAccessGrant"/>s safe to honour at all. Without it, an
+    /// address is a self-asserted string: on a realm that permits self-registration or an
+    /// unverified address change - the Keycloak default for self-registration - anyone could
+    /// take over anyone else's grants by typing their address into a profile page. An IdP that
+    /// issues no email_verified claim therefore yields no email identity here, and no email
+    /// grant ever matches, which is the safe direction to fail in. Role grants are unaffected.
     /// </remarks>
-    public static string? GetEmail(this ClaimsPrincipal user) => user.FindFirstValue("email");
+    public static string? GetEmail(this ClaimsPrincipal user) =>
+        IsEmailVerified(user) ? user.FindFirstValue("email") : null;
+
+    /// <summary>
+    /// Whether the IdP vouches for the email address it issued. Absent counts as unverified: the
+    /// claim is only meaningful when it is there and true.
+    /// </summary>
+    /// <remarks>
+    /// OIDC defines email_verified as a JSON boolean, which arrives here as the string "true" or
+    /// "false" - <see cref="bool.TryParse(string, out bool)"/> accepts either in any casing, and
+    /// treats anything else (a provider sending 1/0, say) as unverified rather than guessing.
+    /// </remarks>
+    private static bool IsEmailVerified(ClaimsPrincipal user) =>
+        bool.TryParse(user.FindFirstValue("email_verified"), out var isVerified) && isVerified;
 }

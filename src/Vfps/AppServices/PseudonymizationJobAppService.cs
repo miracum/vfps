@@ -47,34 +47,12 @@ public class PseudonymizationJobAppService(
         CancellationToken cancellationToken
     )
     {
-        // Resolved once for the whole job: a job's column mappings routinely span several
-        // namespaces, and every one of them is checked against the same caller.
-        var permissions = await permissionChecker.ResolveAsync(user, cancellationToken);
-
-        // Depseudonymize reveals original values, so it's gated the same as the manual
-        // reverse-lookup textbox (reverse-lookup access), not merely write access.
-        Func<string, bool> hasAccess = request.Direction switch
-        {
-            PseudonymizationJobDirection.Depseudonymize => permissions.HasReverseLookupAccess,
-            _ => permissions.HasWriteAccess,
-        };
-        var requiredAccessDescription = request.Direction switch
-        {
-            PseudonymizationJobDirection.Depseudonymize => "Reverse-lookup",
-            _ => "Write",
-        };
-
-        foreach (
-            var namespaceName in request
-                .ColumnMappings.Select(m => m.Namespace)
-                .Distinct()
-                .Where(namespaceName => !hasAccess(namespaceName))
-        )
-        {
-            throw new ForbiddenException(
-                $"{requiredAccessDescription} access to namespace '{namespaceName}' is required."
-            );
-        }
+        await EnsureNamespaceAccessAsync(
+            request.ColumnMappings.Select(m => m.Namespace),
+            request.Direction,
+            user,
+            cancellationToken
+        );
 
         var jobId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
@@ -119,6 +97,11 @@ public class PseudonymizationJobAppService(
     {
         var job = await GetOwnedJobAsync(jobId, user, cancellationToken);
 
+        // Re-checked, not taken on trust from CreateJobAsync: this is the call that actually
+        // sets the job running, and a grant can have been revoked in between - including while
+        // the caller's upload was in flight, which for a large file is a long time.
+        await EnsureCurrentNamespaceAccessAsync(job, user, cancellationToken);
+
         long totalBytes;
         try
         {
@@ -161,7 +144,13 @@ public class PseudonymizationJobAppService(
         Guid jobId,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
-    ) => await GetOwnedJobAsync(jobId, user, cancellationToken);
+    )
+    {
+        var job = await GetOwnedJobAsync(jobId, user, cancellationToken);
+        await EnsureCurrentNamespaceAccessAsync(job, user, cancellationToken);
+
+        return job;
+    }
 
     /// <inheritdoc/>
     public async Task<IReadOnlyList<PseudonymizationJob>> ListAsync(
@@ -217,6 +206,13 @@ public class PseudonymizationJobAppService(
     {
         var job = await GetOwnedJobAsync(jobId, user, cancellationToken);
 
+        // The output is the sensitive artefact - for a de-pseudonymization job it is the original
+        // values themselves - and it stays in the bucket until the retention rule expires it
+        // (S3Config.ObjectRetentionDays, 30 days by default). Ownership alone must not keep it
+        // downloadable: without this, revoking someone's reverse-lookup access would leave every
+        // job they ran while they held it still fetchable, one presigned URL at a time.
+        await EnsureCurrentNamespaceAccessAsync(job, user, cancellationToken);
+
         if (job.Status != PseudonymizationJobStatus.Completed || job.OutputObjectKey is null)
         {
             throw new InvalidOperationException(
@@ -270,6 +266,64 @@ public class PseudonymizationJobAppService(
     {
         var createdBy = permissionChecker.IsAdmin(user) ? null : user.GetSubject();
         return await jobRepository.DeleteFinishedAsync(createdBy, cancellationToken);
+    }
+
+    /// <summary>
+    /// Checks that the caller holds, right now, the access this job's own column mappings demand.
+    ///
+    /// Permissions are checked at creation, but a grant can be revoked at any point in a job's
+    /// life and ownership alone must not keep the door open afterwards - so every operation that
+    /// acts on a stored job re-checks rather than trusting the check made when it was submitted.
+    /// ListAsync and CancelAsync deliberately don't: seeing a row for your own job (its file
+    /// name, status and counts - never a pseudonym or an original value) is not access to the
+    /// data, and being able to stop a job you started is a de-escalation, not a privilege.
+    /// </summary>
+    private Task EnsureCurrentNamespaceAccessAsync(
+        PseudonymizationJob job,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    ) =>
+        EnsureNamespaceAccessAsync(
+            job.ColumnMappings.Select(m => m.Namespace),
+            job.Direction,
+            user,
+            cancellationToken
+        );
+
+    private async Task EnsureNamespaceAccessAsync(
+        IEnumerable<string> namespaceNames,
+        PseudonymizationJobDirection direction,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        // Resolved once for the whole job: a job's column mappings routinely span several
+        // namespaces, and every one of them is checked against the same caller.
+        var permissions = await permissionChecker.ResolveAsync(user, cancellationToken);
+
+        // Depseudonymize reveals original values, so it's gated the same as the manual
+        // reverse-lookup textbox (reverse-lookup access), not merely write access.
+        Func<string, bool> hasAccess = direction switch
+        {
+            PseudonymizationJobDirection.Depseudonymize => permissions.HasReverseLookupAccess,
+            _ => permissions.HasWriteAccess,
+        };
+        var requiredAccessDescription = direction switch
+        {
+            PseudonymizationJobDirection.Depseudonymize => "Reverse-lookup",
+            _ => "Write",
+        };
+
+        foreach (
+            var namespaceName in namespaceNames
+                .Distinct(StringComparer.Ordinal)
+                .Where(namespaceName => !hasAccess(namespaceName))
+        )
+        {
+            throw new ForbiddenException(
+                $"{requiredAccessDescription} access to namespace '{namespaceName}' is required."
+            );
+        }
     }
 
     private async Task<PseudonymizationJob> GetOwnedJobAsync(

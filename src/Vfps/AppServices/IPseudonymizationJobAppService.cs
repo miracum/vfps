@@ -34,7 +34,11 @@ public interface IPseudonymizationJobAppService
         CancellationToken cancellationToken
     );
 
-    /// <summary>Requires the caller to be the job's creator, or an admin.</summary>
+    /// <summary>
+    /// Requires the caller to be the job's creator, or an admin, and to still hold the access
+    /// every namespace the job touches demands - re-checked here rather than trusted from when
+    /// the job was created, since a grant can be revoked in between.
+    /// </summary>
     Task<PseudonymizationJob> GetAsync(
         Guid jobId,
         ClaimsPrincipal user,
@@ -54,7 +58,12 @@ public interface IPseudonymizationJobAppService
     /// </summary>
     Task CancelAsync(Guid jobId, ClaimsPrincipal user, CancellationToken cancellationToken);
 
-    /// <summary>Presigned S3 GET URL for a completed job's output file.</summary>
+    /// <summary>
+    /// Presigned S3 GET URL for a completed job's output file. Requires the caller to be the
+    /// job's creator, or an admin, and to still hold the access the job's namespaces demand -
+    /// for a de-pseudonymization job the output is the original values, and it outlives the job
+    /// run by the bucket's retention period.
+    /// </summary>
     Task<string> GetDownloadUrlAsync(
         Guid jobId,
         ClaimsPrincipal user,

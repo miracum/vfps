@@ -10,12 +10,27 @@ public class NamespacePermissionCheckerTests
     private static ClaimsPrincipal UserWithRoles(params string[] roles) =>
         new(new ClaimsIdentity(roles.Select(r => new Claim("roles", r))));
 
+    // Carries email_verified, as a real IdP does for a confirmed address: an email grant only
+    // matches a verified one (see ClaimsPrincipalExtensions.GetEmail).
     private static ClaimsPrincipal UserWithEmail(string email, params string[] roles) =>
+        UserWithEmail(email, isVerified: true, roles);
+
+    private static ClaimsPrincipal UserWithEmail(
+        string email,
+        bool isVerified,
+        params string[] roles
+    ) =>
         new(
             new ClaimsIdentity(
-                roles.Select(r => new Claim("roles", r)).Append(new Claim("email", email))
+                roles
+                    .Select(r => new Claim("roles", r))
+                    .Append(new Claim("email", email))
+                    .Append(new Claim("email_verified", isVerified ? "true" : "false"))
             )
         );
+
+    private static ClaimsPrincipal UserWithUnverifiableEmail(string email) =>
+        new(new ClaimsIdentity([new Claim("email", email)]));
 
     private static NamespacePermissionChecker CreateSut(
         AuthorizationConfig config,
@@ -188,6 +203,56 @@ public class NamespacePermissionCheckerTests
         (await sut.HasReadAccessAsync(UserWithRoles("some-role"), "ns1", CancellationToken.None))
             .Should()
             .BeFalse();
+    }
+
+    // An address nobody has confirmed is a self-asserted string. On a realm that allows
+    // self-registration or an unverified address change, honouring one would let anyone take
+    // over anyone else's grants by typing their address into a profile page.
+    [Fact]
+    public async Task EmailGrant_DoesNotApplyWhenTheEmailIsNotVerified()
+    {
+        var sut = CreateSut(
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForEmail("ns1", "user@example.org", read: true, write: true)
+        );
+        var user = UserWithEmail("user@example.org", isVerified: false);
+
+        (await sut.HasReadAccessAsync(user, "ns1", CancellationToken.None)).Should().BeFalse();
+        (await sut.HasWriteAccessAsync(user, "ns1", CancellationToken.None)).Should().BeFalse();
+    }
+
+    // An IdP that issues no email_verified claim at all gets no email identity either - failing
+    // closed, rather than trusting an address nothing vouches for.
+    [Fact]
+    public async Task EmailGrant_DoesNotApplyWhenTheIdpIssuesNoVerificationClaim()
+    {
+        var sut = CreateSut(
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForEmail("ns1", "user@example.org", read: true)
+        );
+
+        (
+            await sut.HasReadAccessAsync(
+                UserWithUnverifiableEmail("user@example.org"),
+                "ns1",
+                CancellationToken.None
+            )
+        )
+            .Should()
+            .BeFalse();
+    }
+
+    // Role grants never depended on the email claim and must keep working for the same caller.
+    [Fact]
+    public async Task RoleGrant_StillAppliesToACallerWhoseEmailIsUnverified()
+    {
+        var sut = CreateSut(
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("ns1", "reader", read: true)
+        );
+        var user = UserWithEmail("user@example.org", isVerified: false, "reader");
+
+        (await sut.HasReadAccessAsync(user, "ns1", CancellationToken.None)).Should().BeTrue();
     }
 
     [Fact]

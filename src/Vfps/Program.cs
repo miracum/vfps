@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -337,6 +338,21 @@ if (authConfig.IsEnabled)
             options.PushedAuthorizationBehavior = authConfig.UsePushedAuthorizationRequests
                 ? PushedAuthorizationBehavior.UseIfAvailable
                 : PushedAuthorizationBehavior.Disable;
+
+            // Records when this sign-in happened, because nothing else does. The principal that
+            // reaches the auth cookie carries no timestamp: this handler's default ClaimActions
+            // delete iat/nbf/exp, and auth_time is optional in OIDC and not emitted by the realm
+            // this is tested against. SessionRevalidatingAuthenticationStateProvider needs one to
+            // bound how long an open Blazor circuit may keep serving the principal.
+            options.Events.OnTokenValidated = context =>
+            {
+                if (context.Principal?.Identity is ClaimsIdentity identity)
+                {
+                    identity.AddClaim(SessionLifetime.StampFor(DateTimeOffset.UtcNow));
+                }
+
+                return Task.CompletedTask;
+            };
         })
         .AddJwtBearer(options =>
         {
@@ -347,6 +363,14 @@ if (authConfig.IsEnabled)
             options.TokenValidationParameters.NameClaimType = "preferred_username";
             options.TokenValidationParameters.RoleClaimType = authConfig.RoleClaimType;
         });
+
+    // Replaces Blazor's default ServerAuthenticationStateProvider, which hands a circuit the
+    // principal it was created with and then never revisits it. Registered only inside this
+    // block: with authorization off there is no identity to revalidate in the first place.
+    builder.Services.AddScoped<
+        AuthenticationStateProvider,
+        SessionRevalidatingAuthenticationStateProvider
+    >();
 
     // Gates the Hangfire dashboard (mapped further down, wherever Hangfire itself is enabled)
     // behind an admin role rather than merely a login. The dashboard lists every job's arguments

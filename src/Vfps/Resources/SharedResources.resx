@@ -92,7 +92,7 @@
     <value>Grantee</value>
   </data>
   <data name="App.AccessControl.GranteeEmailHelp" xml:space="preserve">
-    <value>One user, granted access regardless of which roles they hold.</value>
+    <value>One user, granted access regardless of which roles they hold. Only applies to users whose identity provider reports their email address as verified.</value>
   </data>
   <data name="App.AccessControl.GranteeEmailPlaceholder" xml:space="preserve">
     <value>user@example.org</value>

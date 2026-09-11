@@ -92,7 +92,7 @@
     <value>Berechtigt</value>
   </data>
   <data name="App.AccessControl.GranteeEmailHelp" xml:space="preserve">
-    <value>Eine einzelne Person, unabhängig von ihren Rollen berechtigt.</value>
+    <value>Eine einzelne Person, unabhängig von ihren Rollen berechtigt. Gilt nur für Benutzer, deren E-Mail-Adresse vom Identity Provider als verifiziert gemeldet wird.</value>
   </data>
   <data name="App.AccessControl.GranteeEmailPlaceholder" xml:space="preserve">
     <value>user@example.org</value>
