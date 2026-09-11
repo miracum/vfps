@@ -408,3 +408,8 @@ megalinter-reports/
 
 # used by NBomber
 reports/
+
+# Helm chart dependencies downloaded by `helm dependency build`/`update` (see charts/vfps/Chart.lock,
+# which pins their exact versions/digests and stays checked in) - CI re-fetches these before
+# linting/installing/packaging the chart, so they don't need to be vendored here.
+charts/*/charts/

@@ -35,6 +35,21 @@ jobs:
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
+  chart:
+    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@43744b86b4ae1ff771be94eed83e8b853fe81d19 # v1.27.1
+    permissions:
+      contents: read
+      packages: write # to push the chart and its signature/attestation to ghcr.io
+      id-token: write # for keyless chart signing and OIDC-based attestations
+      attestations: write # to publish build provenance attestations
+      artifact-metadata: write # required by actions/attest-build-provenance
+    with:
+      chart-path: charts/vfps
+      lint-config: .github/ct/ct.yaml
+      install-config: .github/ct/install.yaml
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+
   add-code-coverage:
     runs-on: ubuntu-24.04
     name: add code coverage

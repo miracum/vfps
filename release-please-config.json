@@ -36,6 +36,14 @@
         {
           "type": "generic",
           "path": "README.md"
+        },
+        {
+          "type": "generic",
+          "path": "charts/vfps/Chart.yaml"
+        },
+        {
+          "type": "generic",
+          "path": "charts/vfps/values.yaml"
         }
       ]
     }

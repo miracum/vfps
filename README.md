@@ -185,7 +185,7 @@ Upload a CSV file to pseudonymize or de-pseudonymize one or more columns as a ba
 
 ## Production-grade deployment
 
-See <https://github.com/miracum/charts/tree/master/charts/vfps> for a production-grade deployment on Kubernetes via Helm.
+See [charts/vfps](charts/vfps) for a production-grade deployment on Kubernetes via Helm.
 
 ### Running more than one replica
 
