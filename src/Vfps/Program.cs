@@ -87,8 +87,9 @@ builder.Services.Configure<HostOptions>(hostOptions =>
 // A dedicated metrics port (separate from the app's public HTTP/gRPC listeners) keeps /metrics
 // off the internet-facing endpoints - only an in-cluster scraper needs to reach it. Kept as a
 // second, code-configured Kestrel listener alongside the appsettings.json-configured Http/
-// HttpGrpc endpoints, rather than folding it into those, so a request to /metrics is only ever
-// reachable on this port (enforced by the "metrics port" guard middleware below). Port 0 (used by
+// HttpGrpc endpoints, rather than folding it into those. The separation is enforced in both
+// directions by the "metrics port" guard middleware below - /metrics answers only on this port,
+// and this port answers nothing but /metrics. Port 0 (used by
 // appsettings.Test.json) makes Kestrel bind an ephemeral OS-assigned port, matching the prior
 // prometheus-net MetricServer's own Port=0 behavior for parallel test runs.
 var metricsPort = builder.Configuration.GetValue<ushort>("MetricsPort", 8082);
@@ -536,18 +537,25 @@ forwardedHeadersOptions.KnownIPNetworks.Clear();
 forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeadersOptions);
 
-// Keeps /metrics off the app's public-facing ports: ASP.NET Core routing doesn't care which
-// Kestrel listener accepted a connection, so without this, traffic arriving on the Http/HttpGrpc
-// listeners could reach the Prometheus exporter too - defeating the point of a separate metrics
-// port. Checks the actual accepted connection's local port rather than a Host-header match, since
-// the Host header can desync from the real port behind port-forwarding/NAT. When MetricsPort is 0
-// (appsettings.Test.json), Kestrel binds an ephemeral port, so metricsPort never matches a real
-// connection's LocalPort and /metrics is simply unreachable - fine, since nothing scrapes it in
-// tests.
+// Keeps /metrics off the app's public-facing ports, and everything else off the metrics port.
+// The second half is the one with teeth: ASP.NET Core routing is indifferent to which Kestrel
+// listener accepted a connection, so without this the admin UI, the Hangfire dashboard, the
+// REST/FHIR API and the gRPC services are all served on the metrics port too - and a deployment
+// that scopes that port more loosely than the API ports (the bundled chart's NetworkPolicy does)
+// would be publishing the whole pseudonymization API through it. See MetricsPortGuard for the
+// decision itself, kept there as a pure function so it can be unit-tested.
+//
+// Placed ahead of UsePathBase/routing so a rejected request never reaches an endpoint at all.
 app.Use(
     async (context, next) =>
     {
-        if (context.Request.Path == "/metrics" && context.Connection.LocalPort != metricsPort)
+        if (
+            MetricsPortGuard.ShouldReject(
+                context.Request.Path,
+                context.Connection.LocalPort,
+                metricsPort
+            )
+        )
         {
             context.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
@@ -673,7 +681,7 @@ app.MapHealthChecks(
 
 app.MapHealthChecks("/livez", new HealthCheckOptions { Predicate = _ => false });
 
-app.MapPrometheusScrapingEndpoint();
+app.MapPrometheusScrapingEndpoint(MetricsPortGuard.MetricsPath);
 
 if (app.Environment.IsDevelopment())
 {
