@@ -1,0 +1,59 @@
+{{- if and .Values.networkPolicy.enabled .Values.worker.enabled }}
+# Worker pods take no API traffic - the Services select app.kubernetes.io/component: api, and
+# worker-service.yaml exists purely for Prometheus scraping (see the comment there). So unlike
+# networkpolicy.yaml, there's no http/grpc rule here at all: ingress is limited to http-metrics,
+# and only while something would actually scrape it.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "vfps.fullname" . }}-worker
+  labels:
+    {{- include "vfps.labels" . | nindent 4 }}
+    app.kubernetes.io/component: worker
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "vfps.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: worker
+  policyTypes:
+    - Ingress
+    - Egress
+  {{- if .Values.networkPolicy.allowExternalEgress }}
+  egress:
+    - {}
+  {{- else }}
+  egress:
+    {{- if .Values.networkPolicy.extraEgress }}
+    {{- include "common.tplvalues.render" (dict "value" .Values.networkPolicy.extraEgress "context" $) | nindent 4 }}
+    {{- else }}
+    []
+    {{- end }}
+  {{- end }}
+  {{- if .Values.serviceMonitor.enabled }}
+  ingress:
+    - ports:
+        - port: http-metrics
+      from:
+      {{- if not .Values.networkPolicy.metrics.allowExternal }}
+        - podSelector:
+            matchLabels:
+              {{ include "vfps.fullname" . }}-client: "true"
+      {{- end }}
+      {{- if .Values.networkPolicy.metrics.ingressNSMatchLabels }}
+        - namespaceSelector:
+            matchLabels:
+              {{- range $key, $value := .Values.networkPolicy.metrics.ingressNSMatchLabels }}
+              {{ $key | quote }}: {{ $value | quote }}
+              {{- end }}
+          {{- if .Values.networkPolicy.metrics.ingressNSPodMatchLabels }}
+          podSelector:
+            matchLabels:
+              {{- range $key, $value := .Values.networkPolicy.metrics.ingressNSPodMatchLabels }}
+              {{ $key | quote }}: {{ $value | quote }}
+              {{- end }}
+          {{- end }}
+      {{- end }}
+  {{- else }}
+  ingress: []
+  {{- end }}
+{{- end }}

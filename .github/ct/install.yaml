@@ -1,0 +1,8 @@
+# chart-testing config for the "install" job in ci.yaml's standard-chart-publish.yaml call.
+#
+# The default `helm install` timeout is too tight for this chart: the bundled postgres
+# subchart plus the migrations Job's "wait-for-migrations-job" init container (see
+# docs/deployment/high-availability.md) can take longer than that to become ready on a
+# freshly-created kind cluster. Carried over from the chart's previous home in the
+# miracum/charts monorepo, where the same setting was needed for the same reason.
+helm-extra-args: --timeout 600s
