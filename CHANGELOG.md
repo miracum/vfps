@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.2](https://github.com/miracum/vfps/compare/v1.13.1...v1.13.2) (2026-09-11)
+
+
+### Build
+
+* helm chart ([#307](https://github.com/miracum/vfps/issues/307)) ([a2c4972](https://github.com/miracum/vfps/commit/a2c4972ea9ad2104dcf1398a3af7282cd323bf4c))
+
 ## [1.13.1](https://github.com/miracum/vfps/compare/v1.13.0...v1.13.1) (2026-09-10)
 
 
