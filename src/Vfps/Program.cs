@@ -649,13 +649,16 @@ if (authConfig.IsEnabled)
             "/authentication/login",
             (string? returnUrl) =>
                 Results.Challenge(
-                    // An empty (not just null) returnUrl must also fall back to "/ui" - it's
-                    // what NavigationManager.ToBaseRelativePath produces for a page outside the
-                    // "/ui" base (e.g. a bare "/" request), and an empty RedirectUri here never
-                    // completes OIDC sign-in, causing an infinite login/redirect loop.
+                    // Never the raw query value: this endpoint is anonymous, and RedirectUri is
+                    // what ASP.NET Core's remote-authentication handler redirects to once sign-in
+                    // completes - verbatim, with no local-URL check of its own. See ReturnUrl,
+                    // which also keeps the empty-value case covered: an empty (not just null)
+                    // returnUrl is what NavigationManager.ToBaseRelativePath produces for a page
+                    // outside the "/ui" base (e.g. a bare "/" request), and an empty RedirectUri
+                    // never completes OIDC sign-in, causing an infinite login/redirect loop.
                     new AuthenticationProperties
                     {
-                        RedirectUri = string.IsNullOrEmpty(returnUrl) ? "/ui" : returnUrl,
+                        RedirectUri = ReturnUrl.Resolve(returnUrl),
                     },
                     [OpenIdConnectDefaults.AuthenticationScheme]
                 )
@@ -698,7 +701,10 @@ app.MapGet(
             }
         );
 
-        return Results.LocalRedirect(string.IsNullOrEmpty(redirectUri) ? "/ui" : redirectUri);
+        // LocalRedirect already refuses to send the browser off-site, but it does so by throwing
+        // - which would turn a doctored link into a 500 rather than a language switch. Resolving
+        // first keeps the same guarantee and answers the way every other bad input here does.
+        return Results.LocalRedirect(ReturnUrl.Resolve(redirectUri));
     }
 );
 
