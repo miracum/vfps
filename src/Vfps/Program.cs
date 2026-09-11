@@ -301,6 +301,19 @@ if (authConfig.IsEnabled)
             // browser actually receives.
             options.LoginPath = "/authentication/login";
             options.ReturnUrlParameter = "returnUrl";
+
+            // The forbidden counterpart of LoginPath, and the same trap: AccessDeniedPath
+            // defaults to a nonexistent "/Account/AccessDenied", so an authenticated non-admin
+            // who types in /hangfire (the HangfireDashboard policy below admits admins only) is
+            // bounced to a 404 instead of being told no. There is no access-denied page in this
+            // app to point it at - "signed in, but not an admin" is rendered in-page everywhere
+            // else, see AccessControl.razor - so answer the request honestly rather than
+            // redirecting somewhere that doesn't exist.
+            options.Events.OnRedirectToAccessDenied = context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            };
         })
         .AddOpenIdConnect(options =>
         {
@@ -335,13 +348,38 @@ if (authConfig.IsEnabled)
             options.TokenValidationParameters.RoleClaimType = authConfig.RoleClaimType;
         });
 
-    // Gates the Hangfire dashboard (mapped further down, only when S3/CSV jobs are enabled)
-    // behind the same login as the rest of the UI - RequireAuthenticatedUser() here is what
-    // makes an unauthenticated request get a real challenge/redirect to the OIDC login flow via
-    // ASP.NET Core's own authorization middleware, instead of the bare "Unauthorized" page
-    // Hangfire's own IDashboardAuthorizationFilter mechanism would otherwise render.
+    // Gates the Hangfire dashboard (mapped further down, wherever Hangfire itself is enabled)
+    // behind an admin role rather than merely a login. The dashboard lists every job's arguments
+    // and parameters - for a CSV job that means the uploaded file's own name, the S3 object keys
+    // it reads and writes, and any failure detail - so "is signed in" is too low a bar: an
+    // account holding no namespace grants at all would otherwise read all of it.
+    //
+    // RequireAuthenticatedUser() stays alongside the admin check because the two do different
+    // jobs here: it is what turns an *unauthenticated* request into a real challenge/redirect
+    // into the OIDC login flow via ASP.NET Core's own authorization middleware, instead of the
+    // bare "Unauthorized" page Hangfire's own IDashboardAuthorizationFilter mechanism would
+    // render. An authenticated non-admin then gets a 403 from that same middleware.
+    //
+    // The admin test goes through INamespacePermissionChecker rather than a RequireRole over the
+    // configured admin role names, so it stays the one check used everywhere else in the app -
+    // the one that already knows about Authorization:RoleClaimType. It is resolved per request
+    // from the endpoint's own HttpContext (which is what AuthorizationHandlerContext.Resource is
+    // for an endpoint-routed request), since this policy has to be registered here, before the
+    // container that singleton lives in exists. Anything other than an HttpContext resource
+    // fails the assertion rather than skipping it - the dashboard is not a thing to fail open.
     builder.Services.AddAuthorization(options =>
-        options.AddPolicy("HangfireDashboard", policy => policy.RequireAuthenticatedUser())
+        options.AddPolicy(
+            "HangfireDashboard",
+            policy =>
+                policy
+                    .RequireAuthenticatedUser()
+                    .RequireAssertion(context =>
+                        context.Resource is HttpContext httpContext
+                        && httpContext
+                            .RequestServices.GetRequiredService<INamespacePermissionChecker>()
+                            .IsAdmin(context.User)
+                    )
+        )
     );
 }
 
@@ -700,6 +738,11 @@ if (isHangfireEnabled)
         // admin" when Authorization:IsEnabled=false, matching the rest of the app's
         // off-by-default, fully-open behavior) - rather than a hardcoded "admin" role name that
         // doesn't match Authorization:AdminRoles/RoleClaimType.
+        //
+        // Belt and braces now that the HangfireDashboard policy above admits admins only: on the
+        // authorized path this can no longer evaluate to anything but false. Kept so that
+        // loosening that policy can never silently hand a non-admin write access to the
+        // dashboard's job controls as well as sight of it.
         IsReadOnlyFunc = dashboardContext =>
             !permissionChecker.IsAdmin(dashboardContext.GetHttpContext().User),
     };
