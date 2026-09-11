@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.3](https://github.com/miracum/vfps/compare/v1.13.2...v1.13.3) (2026-09-11)
+
+
+### Bug Fixes
+
+* validate csv processing by row count ([#309](https://github.com/miracum/vfps/issues/309)) ([57cfa22](https://github.com/miracum/vfps/commit/57cfa2294e355e90da3f262543206830c120dd61))
+
 ## [1.13.2](https://github.com/miracum/vfps/compare/v1.13.1...v1.13.2) (2026-09-11)
 
 
