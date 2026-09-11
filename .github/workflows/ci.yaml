@@ -89,6 +89,11 @@ jobs:
       # ghcr.io/miracum/vfps/vfps, matching the .../charts/<name> layout used elsewhere in the org
       # (e.g. recruit's chart).
       registry: ghcr.io/${{ github.repository }}/charts
+      # stable per PR (no commit sha), like recruit's own PR chart publishing, so every push to
+      # the same PR overwrites this one OCI tag instead of piling up a new prerelease version per
+      # commit. Empty on every other event, which falls back to the workflow's own default:
+      # release events use the release tag, everything else uses Chart.yaml's version.
+      version: ${{ github.event_name == 'pull_request' && format('0.0.0-pr{0}', github.event.pull_request.number) || '' }}
       lint-config: .github/ct/ct.yaml
       install-config: .github/ct/install.yaml
       # force ct install to run even when the PR doesn't touch charts/vfps/ itself, as long as it
