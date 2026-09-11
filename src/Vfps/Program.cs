@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
@@ -87,8 +88,9 @@ builder.Services.Configure<HostOptions>(hostOptions =>
 // A dedicated metrics port (separate from the app's public HTTP/gRPC listeners) keeps /metrics
 // off the internet-facing endpoints - only an in-cluster scraper needs to reach it. Kept as a
 // second, code-configured Kestrel listener alongside the appsettings.json-configured Http/
-// HttpGrpc endpoints, rather than folding it into those, so a request to /metrics is only ever
-// reachable on this port (enforced by the "metrics port" guard middleware below). Port 0 (used by
+// HttpGrpc endpoints, rather than folding it into those. The separation is enforced in both
+// directions by the "metrics port" guard middleware below - /metrics answers only on this port,
+// and this port answers nothing but /metrics. Port 0 (used by
 // appsettings.Test.json) makes Kestrel bind an ephemeral OS-assigned port, matching the prior
 // prometheus-net MetricServer's own Port=0 behavior for parallel test runs.
 var metricsPort = builder.Configuration.GetValue<ushort>("MetricsPort", 8082);
@@ -300,6 +302,19 @@ if (authConfig.IsEnabled)
             // browser actually receives.
             options.LoginPath = "/authentication/login";
             options.ReturnUrlParameter = "returnUrl";
+
+            // The forbidden counterpart of LoginPath, and the same trap: AccessDeniedPath
+            // defaults to a nonexistent "/Account/AccessDenied", so an authenticated non-admin
+            // who types in /hangfire (the HangfireDashboard policy below admits admins only) is
+            // bounced to a 404 instead of being told no. There is no access-denied page in this
+            // app to point it at - "signed in, but not an admin" is rendered in-page everywhere
+            // else, see AccessControl.razor - so answer the request honestly rather than
+            // redirecting somewhere that doesn't exist.
+            options.Events.OnRedirectToAccessDenied = context =>
+            {
+                context.Response.StatusCode = StatusCodes.Status403Forbidden;
+                return Task.CompletedTask;
+            };
         })
         .AddOpenIdConnect(options =>
         {
@@ -323,6 +338,21 @@ if (authConfig.IsEnabled)
             options.PushedAuthorizationBehavior = authConfig.UsePushedAuthorizationRequests
                 ? PushedAuthorizationBehavior.UseIfAvailable
                 : PushedAuthorizationBehavior.Disable;
+
+            // Records when this sign-in happened, because nothing else does. The principal that
+            // reaches the auth cookie carries no timestamp: this handler's default ClaimActions
+            // delete iat/nbf/exp, and auth_time is optional in OIDC and not emitted by the realm
+            // this is tested against. SessionRevalidatingAuthenticationStateProvider needs one to
+            // bound how long an open Blazor circuit may keep serving the principal.
+            options.Events.OnTokenValidated = context =>
+            {
+                if (context.Principal?.Identity is ClaimsIdentity identity)
+                {
+                    identity.AddClaim(SessionLifetime.StampFor(DateTimeOffset.UtcNow));
+                }
+
+                return Task.CompletedTask;
+            };
         })
         .AddJwtBearer(options =>
         {
@@ -334,13 +364,46 @@ if (authConfig.IsEnabled)
             options.TokenValidationParameters.RoleClaimType = authConfig.RoleClaimType;
         });
 
-    // Gates the Hangfire dashboard (mapped further down, only when S3/CSV jobs are enabled)
-    // behind the same login as the rest of the UI - RequireAuthenticatedUser() here is what
-    // makes an unauthenticated request get a real challenge/redirect to the OIDC login flow via
-    // ASP.NET Core's own authorization middleware, instead of the bare "Unauthorized" page
-    // Hangfire's own IDashboardAuthorizationFilter mechanism would otherwise render.
+    // Replaces Blazor's default ServerAuthenticationStateProvider, which hands a circuit the
+    // principal it was created with and then never revisits it. Registered only inside this
+    // block: with authorization off there is no identity to revalidate in the first place.
+    builder.Services.AddScoped<
+        AuthenticationStateProvider,
+        SessionRevalidatingAuthenticationStateProvider
+    >();
+
+    // Gates the Hangfire dashboard (mapped further down, wherever Hangfire itself is enabled)
+    // behind an admin role rather than merely a login. The dashboard lists every job's arguments
+    // and parameters - for a CSV job that means the uploaded file's own name, the S3 object keys
+    // it reads and writes, and any failure detail - so "is signed in" is too low a bar: an
+    // account holding no namespace grants at all would otherwise read all of it.
+    //
+    // RequireAuthenticatedUser() stays alongside the admin check because the two do different
+    // jobs here: it is what turns an *unauthenticated* request into a real challenge/redirect
+    // into the OIDC login flow via ASP.NET Core's own authorization middleware, instead of the
+    // bare "Unauthorized" page Hangfire's own IDashboardAuthorizationFilter mechanism would
+    // render. An authenticated non-admin then gets a 403 from that same middleware.
+    //
+    // The admin test goes through INamespacePermissionChecker rather than a RequireRole over the
+    // configured admin role names, so it stays the one check used everywhere else in the app -
+    // the one that already knows about Authorization:RoleClaimType. It is resolved per request
+    // from the endpoint's own HttpContext (which is what AuthorizationHandlerContext.Resource is
+    // for an endpoint-routed request), since this policy has to be registered here, before the
+    // container that singleton lives in exists. Anything other than an HttpContext resource
+    // fails the assertion rather than skipping it - the dashboard is not a thing to fail open.
     builder.Services.AddAuthorization(options =>
-        options.AddPolicy("HangfireDashboard", policy => policy.RequireAuthenticatedUser())
+        options.AddPolicy(
+            "HangfireDashboard",
+            policy =>
+                policy
+                    .RequireAuthenticatedUser()
+                    .RequireAssertion(context =>
+                        context.Resource is HttpContext httpContext
+                        && httpContext
+                            .RequestServices.GetRequiredService<INamespacePermissionChecker>()
+                            .IsAdmin(context.User)
+                    )
+        )
     );
 }
 
@@ -536,18 +599,25 @@ forwardedHeadersOptions.KnownIPNetworks.Clear();
 forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeadersOptions);
 
-// Keeps /metrics off the app's public-facing ports: ASP.NET Core routing doesn't care which
-// Kestrel listener accepted a connection, so without this, traffic arriving on the Http/HttpGrpc
-// listeners could reach the Prometheus exporter too - defeating the point of a separate metrics
-// port. Checks the actual accepted connection's local port rather than a Host-header match, since
-// the Host header can desync from the real port behind port-forwarding/NAT. When MetricsPort is 0
-// (appsettings.Test.json), Kestrel binds an ephemeral port, so metricsPort never matches a real
-// connection's LocalPort and /metrics is simply unreachable - fine, since nothing scrapes it in
-// tests.
+// Keeps /metrics off the app's public-facing ports, and everything else off the metrics port.
+// The second half is the one with teeth: ASP.NET Core routing is indifferent to which Kestrel
+// listener accepted a connection, so without this the admin UI, the Hangfire dashboard, the
+// REST/FHIR API and the gRPC services are all served on the metrics port too - and a deployment
+// that scopes that port more loosely than the API ports (the bundled chart's NetworkPolicy does)
+// would be publishing the whole pseudonymization API through it. See MetricsPortGuard for the
+// decision itself, kept there as a pure function so it can be unit-tested.
+//
+// Placed ahead of UsePathBase/routing so a rejected request never reaches an endpoint at all.
 app.Use(
     async (context, next) =>
     {
-        if (context.Request.Path == "/metrics" && context.Connection.LocalPort != metricsPort)
+        if (
+            MetricsPortGuard.ShouldReject(
+                context.Request.Path,
+                context.Connection.LocalPort,
+                metricsPort
+            )
+        )
         {
             context.Response.StatusCode = StatusCodes.Status404NotFound;
             return;
@@ -603,13 +673,16 @@ if (authConfig.IsEnabled)
             "/authentication/login",
             (string? returnUrl) =>
                 Results.Challenge(
-                    // An empty (not just null) returnUrl must also fall back to "/ui" - it's
-                    // what NavigationManager.ToBaseRelativePath produces for a page outside the
-                    // "/ui" base (e.g. a bare "/" request), and an empty RedirectUri here never
-                    // completes OIDC sign-in, causing an infinite login/redirect loop.
+                    // Never the raw query value: this endpoint is anonymous, and RedirectUri is
+                    // what ASP.NET Core's remote-authentication handler redirects to once sign-in
+                    // completes - verbatim, with no local-URL check of its own. See ReturnUrl,
+                    // which also keeps the empty-value case covered: an empty (not just null)
+                    // returnUrl is what NavigationManager.ToBaseRelativePath produces for a page
+                    // outside the "/ui" base (e.g. a bare "/" request), and an empty RedirectUri
+                    // never completes OIDC sign-in, causing an infinite login/redirect loop.
                     new AuthenticationProperties
                     {
-                        RedirectUri = string.IsNullOrEmpty(returnUrl) ? "/ui" : returnUrl,
+                        RedirectUri = ReturnUrl.Resolve(returnUrl),
                     },
                     [OpenIdConnectDefaults.AuthenticationScheme]
                 )
@@ -652,7 +725,10 @@ app.MapGet(
             }
         );
 
-        return Results.LocalRedirect(string.IsNullOrEmpty(redirectUri) ? "/ui" : redirectUri);
+        // LocalRedirect already refuses to send the browser off-site, but it does so by throwing
+        // - which would turn a doctored link into a 500 rather than a language switch. Resolving
+        // first keeps the same guarantee and answers the way every other bad input here does.
+        return Results.LocalRedirect(ReturnUrl.Resolve(redirectUri));
     }
 );
 
@@ -673,7 +749,7 @@ app.MapHealthChecks(
 
 app.MapHealthChecks("/livez", new HealthCheckOptions { Predicate = _ => false });
 
-app.MapPrometheusScrapingEndpoint();
+app.MapPrometheusScrapingEndpoint(MetricsPortGuard.MetricsPath);
 
 if (app.Environment.IsDevelopment())
 {
@@ -692,6 +768,11 @@ if (isHangfireEnabled)
         // admin" when Authorization:IsEnabled=false, matching the rest of the app's
         // off-by-default, fully-open behavior) - rather than a hardcoded "admin" role name that
         // doesn't match Authorization:AdminRoles/RoleClaimType.
+        //
+        // Belt and braces now that the HangfireDashboard policy above admits admins only: on the
+        // authorized path this can no longer evaluate to anything but false. Kept so that
+        // loosening that policy can never silently hand a non-admin write access to the
+        // dashboard's job controls as well as sight of it.
         IsReadOnlyFunc = dashboardContext =>
             !permissionChecker.IsAdmin(dashboardContext.GetHttpContext().User),
     };

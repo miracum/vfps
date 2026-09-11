@@ -27,7 +27,7 @@ public class NavigationManagerExtensionsTests
     }
 
     [Fact]
-    public void BuildLoginUrl_WithUriInsideBase_ShouldIncludeReturnUrl()
+    public void BuildLoginUrl_WithUriInsideBase_ShouldReturnAnAbsolutePathOnThisSite()
     {
         var navigationManager = new TestNavigationManager(
             "http://localhost/ui/",
@@ -36,12 +36,13 @@ public class NavigationManagerExtensionsTests
 
         var url = navigationManager.BuildLoginUrl();
 
-        url.Should().StartWith("/ui/authentication/login?returnUrl=");
-        url.Should().NotBe("/ui/authentication/login?returnUrl=");
+        // "/ui/namespaces", not the bare "namespaces" ToBaseRelativePath hands back: relative
+        // would resolve against the OIDC callback's own path rather than the UI's base.
+        url.Should().Be("/ui/authentication/login?returnUrl=%2Fui%2Fnamespaces");
     }
 
     [Fact]
-    public void BuildLoginUrl_WithUriOutsideBase_ShouldReturnEmptyReturnUrl()
+    public void BuildLoginUrl_WithUriOutsideBase_ShouldFallBackToTheUiRoot()
     {
         // e.g. a bare "/" request, which never goes through the app's own "/ui" PathBase
         // handling - see the method's own doc comment on why this must not blindly delegate to
@@ -54,6 +55,27 @@ public class NavigationManagerExtensionsTests
 
         var url = navigationManager.BuildLoginUrl();
 
-        url.Should().Be("/ui/authentication/login?returnUrl=");
+        url.Should().Be("/ui/authentication/login?returnUrl=%2Fui");
+    }
+
+    // The two halves of the login redirect have to agree: the login endpoint only honours
+    // absolute local paths (see ReturnUrl), so a returnUrl built here that it would reject would
+    // send every UI-initiated login back to the home page instead of the page it started on -
+    // silently, and only once signed in.
+    [Theory]
+    [InlineData("http://localhost/ui/namespaces", "/ui/namespaces")]
+    [InlineData("http://localhost/ui/", "/ui")]
+    [InlineData("http://localhost/", "/ui")]
+    public void BuildLoginUrl_ShouldProduceAReturnUrlTheLoginEndpointHonours(
+        string currentUri,
+        string expected
+    )
+    {
+        var navigationManager = new TestNavigationManager("http://localhost/ui/", currentUri);
+
+        var url = navigationManager.BuildLoginUrl();
+        var returnUrl = Uri.UnescapeDataString(url.Split("returnUrl=")[1]);
+
+        ReturnUrl.Resolve(returnUrl).Should().Be(expected);
     }
 }

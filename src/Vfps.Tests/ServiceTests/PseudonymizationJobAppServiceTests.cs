@@ -575,4 +575,146 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
             .ResponseHeaderOverrides.ContentDisposition.Should()
             .Contain($"{job.Id}-pseudonymized.csv");
     }
+
+    // --- access is re-checked on every operation, not just at creation -----------------------
+
+    private static CreateCsvJobRequest JobIn(
+        string namespaceName,
+        PseudonymizationJobDirection direction = PseudonymizationJobDirection.Pseudonymize
+    ) =>
+        new(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = namespaceName }],
+            direction
+        );
+
+    [Fact]
+    public async Task GetDownloadUrlAsync_AfterTheCallersGrantWasRevoked_ShouldThrowForbidden()
+    {
+        var authorizationOn = new AuthorizationConfig { IsEnabled = true };
+        var (sut, repository, _, _) = CreateSut(
+            authorizationOn,
+            Grants.ForRole("existingNamespace", "writer", write: true)
+        );
+        var alice = UserWithSubject("alice", "writer");
+
+        var (job, _) = await sut.CreateJobAsync(
+            JobIn("existingNamespace"),
+            alice,
+            CancellationToken.None
+        );
+        await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
+
+        // Her own job, on the same data - but the grant that let her run it is gone. Without the
+        // re-check she could keep minting presigned URLs for its output until the bucket's
+        // retention rule expired the object.
+        var (afterRevocation, _, _, _) = CreateSut(authorizationOn);
+
+        var act = () => afterRevocation.GetDownloadUrlAsync(job.Id, alice, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task GetDownloadUrlAsync_WhileTheGrantStillHolds_ShouldReturnTheUrl()
+    {
+        var (sut, repository, _, _) = CreateSut(
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "writer", write: true)
+        );
+        var alice = UserWithSubject("alice", "writer");
+
+        var (job, _) = await sut.CreateJobAsync(
+            JobIn("existingNamespace"),
+            alice,
+            CancellationToken.None
+        );
+        await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
+
+        var url = await sut.GetDownloadUrlAsync(job.Id, alice, CancellationToken.None);
+
+        url.Should().Be("https://example.invalid/presigned");
+    }
+
+    // De-pseudonymization output is the original values, so losing reverse-lookup access has to
+    // close the download even though write access (which the caller keeps here) once created it.
+    [Fact]
+    public async Task GetDownloadUrlAsync_AfterReverseLookupAccessWasRevoked_ShouldThrowForbidden()
+    {
+        var authorizationOn = new AuthorizationConfig { IsEnabled = true };
+        var (sut, repository, _, _) = CreateSut(
+            authorizationOn,
+            Grants.ForRole("existingNamespace", "analyst", write: true, reverseLookup: true)
+        );
+        var alice = UserWithSubject("alice", "analyst");
+
+        var (job, _) = await sut.CreateJobAsync(
+            JobIn("existingNamespace", PseudonymizationJobDirection.Depseudonymize),
+            alice,
+            CancellationToken.None
+        );
+        await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
+
+        var (afterRevocation, _, _, _) = CreateSut(
+            authorizationOn,
+            Grants.ForRole("existingNamespace", "analyst", write: true)
+        );
+
+        var act = () => afterRevocation.GetDownloadUrlAsync(job.Id, alice, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task MarkUploadCompleteAsync_AfterTheCallersGrantWasRevoked_ShouldNotEnqueueTheJob()
+    {
+        var authorizationOn = new AuthorizationConfig { IsEnabled = true };
+        var (sut, _, _, _) = CreateSut(
+            authorizationOn,
+            Grants.ForRole("existingNamespace", "writer", write: true)
+        );
+        var alice = UserWithSubject("alice", "writer");
+
+        var (job, _) = await sut.CreateJobAsync(
+            JobIn("existingNamespace"),
+            alice,
+            CancellationToken.None
+        );
+
+        // Revoked while the upload was in flight - for a large file, a long window.
+        var (afterRevocation, _, _, backgroundJobClient) = CreateSut(authorizationOn);
+
+        var act = () =>
+            afterRevocation.MarkUploadCompleteAsync(job.Id, alice, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        A.CallTo(() => backgroundJobClient.Create(A<Job>._, A<IState>._)).MustNotHaveHappened();
+    }
+
+    // Deliberately not re-checked: a row showing your own job's file name, status and counts is
+    // not access to the data, and a job that vanished from the list would be a worse answer than
+    // one whose download is refused.
+    [Fact]
+    public async Task ListAsync_AfterTheCallersGrantWasRevoked_ShouldStillListTheirOwnJob()
+    {
+        var authorizationOn = new AuthorizationConfig { IsEnabled = true };
+        var (sut, _, _, _) = CreateSut(
+            authorizationOn,
+            Grants.ForRole("existingNamespace", "writer", write: true)
+        );
+        var alice = UserWithSubject("alice", "writer");
+
+        var (job, _) = await sut.CreateJobAsync(
+            JobIn("existingNamespace"),
+            alice,
+            CancellationToken.None
+        );
+
+        var (afterRevocation, _, _, _) = CreateSut(authorizationOn);
+        var jobs = await afterRevocation.ListAsync(alice, CancellationToken.None);
+
+        jobs.Should().ContainSingle(j => j.Id == job.Id);
+    }
 }

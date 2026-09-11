@@ -9,6 +9,7 @@
 @inject IOptions<S3Config> S3ConfigOptions
 @inject IServiceProvider ServiceProvider
 @inject INamespaceAppService NamespaceAppService
+@inject INamespacePermissionChecker PermissionChecker
 @inject IJSRuntime JS
 @inject NavigationManager NavigationManager
 @inject ILogger<CsvJobs> Logger
@@ -418,7 +419,12 @@ else
                                             @Localizer["App.Common.Cancel"]
                                         </BbButton>
                                     }
-                                    @if (j.HangfireJobId is not null)
+                                    @* Admins only: the Hangfire dashboard is gated on an admin
+                                       role (see Program.cs), so for anyone else this button
+                                       could only ever lead to a 403. A job's own creator still
+                                       sees its status, progress and failure reason in this grid
+                                       - the dashboard adds Hangfire's internal view of it. *@
+                                    @if (_isAdmin && j.HangfireJobId is not null)
                                     {
                                         <BbButton
                                             Variant="ButtonVariant.Outline"
@@ -455,6 +461,7 @@ else
     private bool _isCreating;
     private string? _createError;
     private IReadOnlyList<PseudonymizationJob> _jobs = [];
+    private bool _isAdmin;
     private bool _showClearFinishedConfirm;
     private bool _isClearingFinished;
 
@@ -483,6 +490,7 @@ else
         _jobAppService = ServiceProvider.GetRequiredService<IPseudonymizationJobAppService>();
 
         var user = await GetUserAsync();
+        _isAdmin = PermissionChecker.IsAdmin(user);
         _namespaces = await NamespaceAppService.GetAllAsync(user, CancellationToken.None);
 
         await ReloadJobsAsync();
