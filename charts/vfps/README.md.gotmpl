@@ -11,14 +11,18 @@
 ## Installation
 
 ```sh
-helm repo add miracum https://miracum.github.io/charts
-helm repo update
-helm install --create-namespace vfps miracum/vfps -n vfps
+helm install --create-namespace vfps oci://ghcr.io/miracum/vfps/charts/vfps -n vfps
 ```
 
 > **Warning**
-> By default, the included [PostgreSQL Helm chart](https://github.com/bitnami/charts/tree/master/bitnami/postgresql#upgrading)
-> auto-generates a random password for the database which may cause problems when upgrading the chart (see [here for details](https://github.com/bitnami/charts/tree/master/bitnami/postgresql#upgrading)).
+> By default, the included [PostgreSQL Helm chart](https://github.com/CloudPirates-io/helm-charts/tree/main/charts/postgres#postgresql-authentication)
+> auto-generates a random password for the database if `postgres.auth.password` (or an existing
+> secret via `postgres.auth.existingSecret`) isn't set. On a real `helm upgrade` this is safe: the
+> chart looks up and reuses the password already in the running secret. That lookup only works
+> against a live cluster, though, so anything that renders the chart without one - `helm
+> template`, or a GitOps controller that diffs/applies templated manifests instead of running
+> `helm upgrade` itself - can't see the existing password and may generate and apply a new one,
+> locking vfps out of its own database until the secret and the app agree again.
 
 ## Usage
 

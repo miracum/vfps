@@ -85,6 +85,10 @@ jobs:
       artifact-metadata: write # required by actions/attest-build-provenance
     with:
       chart-path: charts/vfps
+      # published as ghcr.io/miracum/vfps/charts/vfps rather than the default
+      # ghcr.io/miracum/vfps/vfps, matching the .../charts/<name> layout used elsewhere in the org
+      # (e.g. recruit's chart).
+      registry: ghcr.io/${{ github.repository }}/charts
       lint-config: .github/ct/ct.yaml
       install-config: .github/ct/install.yaml
       # force ct install to run even when the PR doesn't touch charts/vfps/ itself, as long as it
