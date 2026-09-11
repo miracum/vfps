@@ -387,6 +387,21 @@ public class CsvPseudonymizationJobRunner(
                 rows += chunk.Count;
             }
 
+            // Every row consumed from the input must end up written to the output - a
+            // (de-)pseudonymized file with a different row count than its input would mean rows
+            // were silently dropped or duplicated somewhere in the chunking/flush logic above.
+            // That's a correctness bug serious enough to fail the job over rather than complete
+            // it and let a caller unknowingly rely on a truncated/corrupted file. Only reached on
+            // a natural end-of-input - the early `return rows` above on cancellation is
+            // intentionally exempt, since fewer output rows than input rows is expected there.
+            if (rows != totalRowsRead)
+            {
+                throw new InvalidOperationException(
+                    $"Row count mismatch: read {totalRowsRead} row(s) from the input but wrote "
+                        + $"{rows} row(s) to the output."
+                );
+            }
+
             await jobRepository.UpdateProgressAsync(
                 job.Id,
                 countingStream.BytesRead,
