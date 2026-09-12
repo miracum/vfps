@@ -198,9 +198,16 @@ application's, and are easy to miss:
 - **The admin UI needs session affinity.** The UI is Blazor Server: each browser session is a
   SignalR circuit living in one replica's memory. Without sticky sessions the initial page request
   and the circuit's WebSocket can land on different replicas, and a circuit can't be resumed on a
-  different replica than the one that created it. Configure affinity at the ingress (a session
-  cookie) or, failing that, `sessionAffinity: ClientIP` on the Service. The gRPC and REST APIs are
-  stateless and need none of this. Auth cookies and antiforgery tokens *are* portable across
+  different replica than the one that created it - which shows up in the browser console as
+  `Failed to start the connection` / `No Connection with that ID: Status code '404'`. Configure
+  cookie affinity in your ingress controller or, failing that, `sessionAffinity: ClientIP` on the
+  Service. Check which object the controller reads its annotations from: Traefik's
+  `traefik.ingress.kubernetes.io/service.sticky.cookie*` annotations belong on the **Service** and
+  are ignored on the Ingress, while ingress-nginx's `nginx.ingress.kubernetes.io/affinity*` go on
+  the Ingress. The gRPC and REST APIs are stateless and need none of this - and because the UI and
+  the REST API share port 8080, affinity applied to a Service carrying both will pin REST clients
+  that keep a cookie jar too. The chart's `service.ui.enabled` creates a separate UI Service to
+  hold the affinity, leaving API traffic evenly balanced. Auth cookies and antiforgery tokens *are* portable across
   replicas - the Data Protection key ring is persisted to PostgreSQL whenever
   `ConnectionStrings__PostgreSQL` is set (see the table above) - so affinity is about the circuit,
   not about login.

@@ -1,0 +1,39 @@
+{{- if .Values.service.ui.enabled }}
+# Selects the same pods as the main Service and exposes only the http port. It exists so the admin
+# UI's session affinity has somewhere to live that does not also apply to the REST API: affinity is
+# configured per Service (Traefik's sticky cookie, `sessionAffinity`), and the UI and the FHIR
+# endpoints share port 8080 - so affinity on the main Service also hands a sticky cookie to REST
+# clients, and any client with a cookie jar (a long-lived .NET HttpClient keeps one by default)
+# then pins itself to one replica for its lifetime. Route the UI's paths here, the API's to the
+# main Service, via ingress.hosts[].paths[].serviceName.
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "vfps.fullname" . }}-ui
+  labels:
+    {{- include "vfps.labels" . | nindent 4 }}
+    # deliberately not `api`: keeps this Service out of the ServiceMonitor's component selector,
+    # which would otherwise match it and find no http-metrics port to scrape.
+    app.kubernetes.io/component: ui
+  {{- with .Values.service.ui.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  type: {{ .Values.service.type }}
+  {{- with .Values.service.ui.sessionAffinity }}
+  sessionAffinity: {{ . }}
+  {{- end }}
+  {{- with .Values.service.ui.sessionAffinityConfig }}
+  sessionAffinityConfig:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  ports:
+    - port: {{ .Values.service.port }}
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "vfps.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+{{- end }}

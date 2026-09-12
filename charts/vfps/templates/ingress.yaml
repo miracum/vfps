@@ -35,7 +35,7 @@ spec:
             pathType: {{ default "ImplementationSpecific" .pathType }}
             backend:
               service:
-                name: {{ $fullName }}
+                name: {{ include "common.tplvalues.render" (dict "value" (default $fullName .serviceName) "context" $) }}
                 port:
                   name: {{ default "http" .portName }}
         {{- end }}
