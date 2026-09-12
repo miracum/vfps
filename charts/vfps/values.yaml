@@ -143,6 +143,10 @@ securityContext:
 service:
   # -- the type of service
   type: ClusterIP
+  # -- annotations to set on the Service.
+  annotations: {}
+    # traefik.ingress.kubernetes.io/service.sticky.cookie: "true"
+    # traefik.ingress.kubernetes.io/service.sticky.cookie.name: vfps-affinity
   # -- the port for the main endpoint which supports HTTP1, HTTP2, and HTTP3
   port: 8080
   # -- the port which supports HTTP2 only, to accept plaintext gRPC calls
@@ -151,13 +155,33 @@ service:
   metricsPort: 8082
   # -- session affinity for the Service. The admin UI is Blazor Server: each browser session is a
   # SignalR circuit living in one replica's memory and cannot be resumed on another, so with more
-  # than one replica the UI needs affinity. Prefer cookie-based affinity at the ingress where the
-  # controller supports it (see `ingress.annotations`) - `ClientIP` here is the fallback, and is
-  # coarse when clients arrive behind a shared NAT. The gRPC and REST APIs are stateless and need
-  # none of this.
+  # than one replica the UI needs affinity. Prefer cookie-based affinity from your ingress
+  # controller where it supports it (set via `service.annotations` or `ingress.annotations`,
+  # depending on the controller) - `ClientIP` here is the fallback, and is coarse when clients
+  # arrive behind a shared NAT. The gRPC and REST APIs are stateless and need none of this.
   sessionAffinity: None
   # -- configuration for `service.sessionAffinity`, e.g. `clientIP.timeoutSeconds`
   sessionAffinityConfig: {}
+  # -- a second Service for the admin UI, selecting the same pods as the main Service but exposing
+  # only the `http` port. It exists so the UI's affinity has somewhere to live that does not also
+  # apply to the REST API: affinity is configured per Service, and the UI and the FHIR endpoints
+  # share port 8080 - so affinity on the main Service also hands a sticky cookie to REST clients,
+  # and any client keeping a cookie jar (a long-lived .NET `HttpClient` does by default) then pins
+  # itself to one replica for its lifetime. Point the UI's ingress paths at it with
+  # `ingress.hosts[].paths[].serviceName`. Note that this splits routing only - both Services
+  # select the same pods, so it is not isolation or independent scaling.
+  ui:
+    # -- create the separate UI Service. Only meaningful with more than one replica.
+    enabled: false
+    # -- annotations to set on the UI Service, e.g. an ingress controller's sticky-cookie family
+    annotations: {}
+      # traefik.ingress.kubernetes.io/service.sticky.cookie: "true"
+      # traefik.ingress.kubernetes.io/service.sticky.cookie.name: vfps-affinity
+    # -- session affinity for the UI Service - the fallback where the ingress controller cannot do
+    # cookie affinity, without pinning API clients too
+    sessionAffinity: None
+    # -- configuration for `service.ui.sessionAffinity`, e.g. `clientIP.timeoutSeconds`
+    sessionAffinityConfig: {}
 
 ingress:
   # -- create an Ingress for the application
@@ -168,10 +192,20 @@ ingress:
   annotations: {}
     # kubernetes.io/ingress.class: nginx
     # kubernetes.io/tls-acme: "true"
-  # -- list of ingress hosts. `paths` and its fields (`path`, `pathType`, `portName`) are optional per host
-  # and default to `path: /`, `pathType: ImplementationSpecific`, `portName: http` if unset.
+  # -- list of ingress hosts. `paths` and its fields (`path`, `pathType`, `portName`, `serviceName`)
+  # are optional per host and default to `path: /`, `pathType: ImplementationSpecific`,
+  # `portName: http`, and the main Service if unset. `serviceName` may contain templates (rendered
+  # the same as `Values.extraEnv` elsewhere in this chart); it is what sends the UI's paths to
+  # `service.ui` while the API's paths stay on the main Service - see the high availability section
+  # of this README for the full example.
   hosts:
     - host: vfps.127.0.0.1.nip.io
+      # paths:
+      #   - path: /v1
+      #     pathType: Prefix
+      #   - path: /
+      #     pathType: Prefix
+      #     serviceName: '{{ include "vfps.fullname" . }}-ui'
   # -- TLS configuration
   tls: []
   #  - secretName: chart-example-tls

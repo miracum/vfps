@@ -17,8 +17,23 @@ resources:
 database:
   additionalConnectionStringParameters: "Timeout=60;Max Auto Prepare=5;Maximum Pool Size=50;"
 
+service:
+  ui:
+    enabled: true
+    annotations:
+      traefik.ingress.kubernetes.io/service.sticky.cookie: "true"
+      traefik.ingress.kubernetes.io/service.sticky.cookie.name: vfps-affinity
+
 ingress:
   enabled: true
+  hosts:
+    - host: vfps.127.0.0.1.nip.io
+      paths:
+        - path: /v1
+          pathType: Prefix
+        - path: /
+          pathType: Prefix
+          serviceName: '{{ include "vfps.fullname" . }}-ui'
 
 appsettings: |
   {

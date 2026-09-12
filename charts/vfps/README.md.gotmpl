@@ -98,9 +98,29 @@ topologySpreadConstraints:
         app.kubernetes.io/instance: vfps
         app.kubernetes.io/component: api
 
-# the admin UI is Blazor Server and needs affinity - prefer cookie affinity on your ingress
+# the admin UI is Blazor Server and needs affinity - but the REST API shares its port, so give the
+# UI its own Service to carry the stickiness and route only the UI's paths there. Traefik reads
+# these annotations from the Service, not the Ingress:
 service:
-  sessionAffinity: ClientIP
+  ui:
+    enabled: true
+    annotations:
+      traefik.ingress.kubernetes.io/service.sticky.cookie: "true"
+      traefik.ingress.kubernetes.io/service.sticky.cookie.name: vfps-affinity
+      traefik.ingress.kubernetes.io/service.sticky.cookie.httponly: "true"
+      traefik.ingress.kubernetes.io/service.sticky.cookie.secure: "true"
+      traefik.ingress.kubernetes.io/service.sticky.cookie.samesite: lax
+
+ingress:
+  enabled: true
+  hosts:
+    - host: vfps.example.com
+      paths:
+        - path: /v1          # REST/FHIR - stays on the main, unsticky Service
+          pathType: Prefix
+        - path: /            # the Blazor UI
+          pathType: Prefix
+          serviceName: '{{`{{ include "vfps.fullname" . }}`}}-ui'
 
 # the bundled PostgreSQL is a single instance; point at an HA database instead
 postgres:
@@ -113,10 +133,27 @@ database:
 A few things are worth knowing beyond turning those on:
 
 - **The admin UI needs session affinity; the APIs don't.** Each browser session is a Blazor Server
-  circuit held in one replica's memory and can't be resumed on another. Cookie-based affinity at
-  the ingress is better than `service.sessionAffinity=ClientIP`, which is coarse when clients share
-  a NAT. Auth cookies and antiforgery tokens *are* portable across replicas, since vfps persists
-  the ASP.NET Data Protection key ring to PostgreSQL.
+  circuit held in one replica's memory and can't be resumed on another. Without affinity the
+  browser's SignalR negotiate lands on one replica and the WebSocket that follows on another, which
+  surfaces as `Failed to start the connection` / `No Connection with that ID: Status code '404'`
+  after a few reloads. Cookie-based affinity from the ingress controller is better than
+  `service.sessionAffinity=ClientIP`, which is coarse when clients share a NAT. Auth cookies and
+  antiforgery tokens *are* portable across replicas, since vfps persists the ASP.NET Data
+  Protection key ring to PostgreSQL - affinity is about the circuit, not about login.
+- **Mind which object the affinity annotations belong on.** Traefik's
+  `traefik.ingress.kubernetes.io/service.*` family (including `service.sticky.cookie`) is read from
+  the *Service*; on the Ingress it is silently ignored, which looks exactly like having configured
+  no affinity at all. ingress-nginx's `nginx.ingress.kubernetes.io/affinity` family goes on the
+  Ingress, via `ingress.annotations`.
+- **Give the UI its own Service rather than making the whole port sticky.** The Blazor UI and the
+  REST/FHIR API share port 8080, and affinity is configured per Service - so stickiness set on the
+  main Service also hands a sticky cookie to REST clients. Clients that keep a cookie jar (a
+  long-lived .NET `HttpClient` does by default) then pin themselves to one replica for the process
+  lifetime, which is the same load-imbalance trap as the gRPC point below and just as invisible.
+  `service.ui.enabled` creates a `<fullname>-ui` Service, selecting the same pods and exposing only
+  `http`, to carry the affinity; route the UI's paths to it with `ingress.hosts[].paths[].serviceName`
+  as above. Both Services select the same pods, so this splits routing only - it is not isolation
+  or independent scaling.
 - **gRPC clients pin to one replica.** A gRPC client opens a single long-lived HTTP/2 connection and
   a ClusterIP Service balances connections, not requests. Point clients at the headless Service with
   client-side load balancing - `dns:///vfps-headless:8081` plus a `round_robin` policy, as in the
