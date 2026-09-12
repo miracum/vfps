@@ -23,8 +23,8 @@ dependencies:
     version: 0.1.1
 deprecated: false
 kubeVersion: ">= 1.19.0"
-version: 1.13.3 # x-release-please-version
-appVersion: 1.13.3 # x-release-please-version
+version: 1.13.4 # x-release-please-version
+appVersion: 1.13.4 # x-release-please-version
 annotations:
   artifacthub.io/license: Apache-2.0
   artifacthub.io/containsSecurityUpdates: "false"
@@ -42,4 +42,4 @@ annotations:
     # When using the list of objects option the valid supported kinds are
     # added, changed, deprecated, removed, fixed and security.
     - kind: changed
-      description: updated ghcr.io/miracum/vfps to v1.13.3 # x-release-please-version
+      description: updated ghcr.io/miracum/vfps to v1.13.4 # x-release-please-version

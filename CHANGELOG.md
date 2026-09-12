@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.13.4](https://github.com/miracum/vfps/compare/v1.13.3...v1.13.4) (2026-09-12)
+
+
+### Bug Fixes
+
+* option to set the service annotations in the chart and dedicated ui service (same pod as rest) ([#311](https://github.com/miracum/vfps/issues/311)) ([8b33346](https://github.com/miracum/vfps/commit/8b3334691b345887cb2dcec5b79b3327f6a6ea2f))
+
 ## [1.13.3](https://github.com/miracum/vfps/compare/v1.13.2...v1.13.3) (2026-09-11)
 
 
