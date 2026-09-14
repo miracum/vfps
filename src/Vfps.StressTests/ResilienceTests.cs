@@ -54,7 +54,11 @@ public class ResilienceTests
             RetryableStatusCodes = { StatusCode.Unavailable },
         };
 
-    [Fact]
+    // Explicit so a plain `dotnet test` - at the solution level or on this project - skips it. It
+    // needs a live kind cluster with Chaos Mesh and CloudNativePG standing behind it, and takes the
+    // better part of twenty minutes; without this it would be run by accident far more often than on
+    // purpose. tests/chaos/ha/run.sh opts in with `-explicit only`.
+    [Fact(Explicit = true)]
     public async Task VfpsKeepsEveryPseudonymItPromisedThroughChaos()
     {
         var cancellationToken = TestContext.Current.CancellationToken;

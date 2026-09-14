@@ -4,10 +4,16 @@ name: ha chaos testing
 # replicas spread across three zones, backed by a replicated CloudNativePG cluster - and breaks it on
 # purpose while asserting that no pseudonym it already handed out is lost or changes identity.
 #
-# See docs/testing/ha-chaos-testing.md. Deliberately not run on pull requests: it takes the best part
-# of an hour, and a chaos test that gates merges is a chaos test that gets disabled.
+# See docs/testing/ha-chaos-testing.md. Not run on every pull request - it takes the best part of an
+# hour, and a chaos test that gates merges is a chaos test that gets disabled. Apply the `ha-chaos`
+# label to a PR to opt that PR in; it then runs a trimmed scenario set on every push until the label
+# is removed. Requiring a label also means a forked PR cannot burn an hour of runner time unless a
+# maintainer asks for it.
 
 on:
+  pull_request:
+    branches: [master]
+    types: [labeled, synchronize, reopened]
   workflow_dispatch:
     inputs:
       image-tag:
@@ -27,7 +33,6 @@ on:
         required: false
         type: string
   schedule:
-    # weekly, Sunday at 03:17
     - cron: "17 03 * * 0"
 
 permissions:
@@ -35,13 +40,19 @@ permissions:
 
 concurrency:
   group: ha-chaos-${{ github.ref }}
-  cancel-in-progress: false
+  # Superseding a PR run is what you want when someone pushes twice in a row; superseding a
+  # scheduled run against master just loses the result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   ha-chaos:
     name: ha chaos testing
     runs-on: ubuntu-24.04
     timeout-minutes: 75
+    # Every event except a pull request runs unconditionally; a pull request needs the label.
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'ha-chaos')
     permissions:
       contents: read
     steps:
@@ -105,7 +116,21 @@ jobs:
           SCENARIOS: ${{ inputs.scenarios }}
           RESILIENCE_RATE_PER_SECOND: ${{ inputs.rate-per-second }}
           RESILIENCE_ERROR_BUDGET: ${{ inputs.error-budget }}
-        run: ./tests/chaos/ha/run.sh all
+          IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
+        run: |
+          # A labelled PR gets a trimmed run: the baseline it needs to mean anything, the pod-kill,
+          # and the CloudNativePG failover that decides P2/P3. The rollout, partition and drain
+          # scenarios are the slowest and the least likely to regress from an application change, so
+          # they are left to the weekly run. An explicit `scenarios` input always wins.
+          if [ -z "${SCENARIOS}" ] && [ "${IS_PULL_REQUEST}" = "true" ]; then
+            export SCENARIOS="baseline,vfps-pod-kill,cnpg-primary-kill"
+            export DURATION_BASELINE=60
+            export DURATION_VFPS_POD_KILL=90
+            export DURATION_CNPG_PRIMARY_KILL=150
+            echo "pull request: running the trimmed scenario set (${SCENARIOS})"
+          fi
+
+          ./tests/chaos/ha/run.sh all
 
       - name: Upload artifacts
         if: always()

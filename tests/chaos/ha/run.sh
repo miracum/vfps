@@ -354,11 +354,12 @@ collect() {
   awk '/----BEGIN TIMELINE CSV----/{flag=1;next}/----END TIMELINE CSV----/{flag=0}flag' \
     "${ARTIFACT_DIR}/resilience.log" >"${ARTIFACT_DIR}/load-timeline.csv" || true
 
-  # Closes a silent-pass hole: a Job whose trait filter matched nothing would exit 0 and report a
-  # green run without ever having issued a request. The timeline only exists if the test really ran,
-  # so requiring at least one data row underneath the header is a cheap proof that it did.
+  # Closes a silent-pass hole: a Job that selected no test - a mistyped trait, or a missing
+  # `-explicit only` against the [Fact(Explicit = true)] marker - would exit 0 and report a green run
+  # without ever having issued a request. The test emits its timeline before it asserts, so the CSV
+  # is present even for a run that failed P1/P2/P3; its absence means the load window never finished.
   if [[ "$(wc -l <"${ARTIFACT_DIR}/load-timeline.csv" 2>/dev/null || echo 0)" -lt 2 ]]; then
-    fail "no load timeline in the Job output - the resilience test did not run (check the -trait filter)"
+    fail "no load timeline in the Job output - the resilience test did not run, or died before the load window finished"
   fi
 
   log "collecting diagnostics"

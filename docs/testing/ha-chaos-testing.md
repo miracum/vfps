@@ -141,9 +141,18 @@ about how long the run is.
 
 ## 6. Load generator
 
-`src/Vfps.StressTests/ResilienceTests.cs`, tagged `[Trait("Category", "Resilience")]` and selected
-with `-trait Category=Resilience`, so it never runs alongside the ordinary stress simulation. It runs
-as a Job in its own namespace (`vfps-loadgen`) and reaches the service at
+`src/Vfps.StressTests/ResilienceTests.cs`. It is marked `[Fact(Explicit = true)]`, so a plain
+`dotnet test` - at the solution level or on this project - **skips it**: it needs a live kind cluster
+with Chaos Mesh and CloudNativePG behind it and takes the better part of twenty minutes, so it should
+only ever run on purpose. The Job opts in with `-explicit only`, alongside
+`-trait Category=Resilience`.
+
+A skipped explicit test is reported as *skipped* rather than *not discovered*, so the assembly still
+exits 0 and a solution-wide `dotnet test` does not fail on it. That also means forgetting
+`-explicit only` would give a green Job that ran nothing - which is precisely what the timeline guard
+in §6 catches, since a skipped test emits no CSV.
+
+It runs as a Job in its own namespace (`vfps-loadgen`) and reaches the service at
 `dns:///vfps-headless.vfps.svc.cluster.local:8081` - the only way to exercise the client-side
 round-robin load balancing the HA notes §4 recommend. A ClusterIP Service balances connections rather
 than requests, so one long-lived HTTP/2 connection would pin the whole run to a single replica and
@@ -214,10 +223,27 @@ docker buildx build --load -t ghcr.io/miracum/vfps:ci .
 docker buildx build --load --target=stress-test -t ghcr.io/miracum/vfps/stress-test:ci .
 ```
 
-In CI it is `workflow_dispatch` plus a weekly schedule, never on pull requests - it takes the best
-part of an hour, and a chaos test that gates merges is a chaos test that gets disabled. The dispatch
-form takes `image-tag` (test a released image rather than building from the checkout), `scenarios`,
-`rate-per-second` and `error-budget`.
+A plain `dotnet test Vfps.slnx` is unaffected by any of this - the resilience test is explicit and
+gets skipped.
+
+In CI it is `workflow_dispatch` plus a weekly schedule. The dispatch form takes `image-tag` (test a
+released image rather than building from the checkout), `scenarios`, `rate-per-second` and
+`error-budget`.
+
+### On a pull request
+
+Not on every PR - it takes the best part of an hour, and a chaos test that gates merges is a chaos
+test that gets disabled. **Apply the `ha-chaos` label** to opt a PR in; it then runs on every push
+until the label is removed, and `cancel-in-progress` supersedes a run when you push again.
+
+A labelled PR gets a trimmed set - `baseline,vfps-pod-kill,cnpg-primary-kill` with shorter durations,
+about 6 minutes of load against the weekly run's 17. That keeps the baseline it needs to mean
+anything and the CloudNativePG failover that decides P2/P3, and leaves the rollout, partition and
+drain scenarios - the slowest, and the least likely to regress from an application change - to the
+weekly run. A `scenarios` input always wins over this.
+
+Requiring a label also means a forked PR cannot spend an hour of runner time unless a maintainer asks
+for it.
 
 ### Calibrate the error budget before trusting P1
 
@@ -241,6 +267,22 @@ P3 violation.
 
 A chaos failure you cannot reconstruct after the cluster is gone is a chaos failure you will end up
 ignoring.
+
+### Why the timeline comes out through stdout
+
+`kubectl cp` is the obvious alternative and does not work here. It shells out to `tar` via
+`kubectl exec`, which needs a **running** container - and the Job's pod terminates at exactly the
+moment the timeline becomes complete, because finishing the test is what ends the container. There is
+also no file to copy: the test writes the CSV to stdout between markers and never touches the
+filesystem.
+
+Container stdout is persisted by the kubelet and stays readable through `kubectl logs` long after the
+container has exited, which is the property that matters. Getting a real file out instead would mean
+a PVC plus a second pod to mount it after the Job ends - a lot of moving parts for ~40 KB that is
+already being captured in `resilience.log` regardless.
+
+The test emits the timeline **before** it asserts, so the CSV is present even for a run that failed
+P1, P2 or P3 - which is the run you actually want it for.
 
 ## 9. Risks
 

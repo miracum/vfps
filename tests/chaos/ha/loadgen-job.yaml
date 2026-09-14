@@ -36,6 +36,11 @@ spec:
             - /opt/vfps-stress/Vfps.StressTests.dll
             - -trait
             - Category=Resilience
+            # The test is marked [Fact(Explicit = true)] so a plain `dotnet test` skips it. This is
+            # the opt-in. Drop it and the Job exits 0 having run nothing - which run.sh catches,
+            # because a skipped test produces no timeline CSV.
+            - -explicit
+            - only
           env:
             # dns:/// plus the headless Service is what gives the gRPC client round-robin load
             # balancing across replicas. A ClusterIP Service balances connections rather than
