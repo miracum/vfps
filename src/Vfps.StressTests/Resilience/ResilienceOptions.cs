@@ -30,9 +30,28 @@ public sealed record ResilienceOptions
     public required TimeSpan SettleDuration { get; init; }
 
     /// <summary>
-    /// Ceiling on concurrently outstanding calls. During a network partition every in-flight call
-    /// can block for the connection string's full <c>Timeout=60</c>, so without a ceiling one
-    /// 20-second partition at 50/s would leave a thousand threads' worth of tasks outstanding.
+    /// Deadline applied to every load-phase call, covering the client's whole retry sequence.
+    /// <para>
+    /// Without one, P1 cannot tell "served in 8ms" from "served in 22 seconds" - vfps answers
+    /// both with <c>OK</c>. A database failover then shows up not as failures but as latency, and
+    /// the only thing that eventually registers is <see cref="MaxInFlight"/> saturating, which
+    /// turns a graded availability measure into a cliff. A deadline is also simply what a real
+    /// caller would set: a pseudonymization call that takes twenty seconds has failed, whatever
+    /// status code eventually comes back.
+    /// </para>
+    /// <para>
+    /// Keep <c>MaxInFlight</c> comfortably above <c>RatePerSecond * CallDeadline</c>, or the
+    /// ceiling starts shedding before the deadline has a chance to fire and the cliff comes back.
+    /// </para>
+    /// </summary>
+    public required TimeSpan CallDeadline { get; init; }
+
+    /// <summary>
+    /// Ceiling on concurrently outstanding calls, as a backstop against unbounded task growth
+    /// rather than as a load-management device - <see cref="CallDeadline"/> is what bounds a
+    /// stalled call now. Sized well above <c>RatePerSecond * CallDeadline</c> so that shedding
+    /// means the harness itself is the bottleneck, which is a test-validity problem and reported
+    /// as one.
     /// </summary>
     public required int MaxInFlight { get; init; }
 
@@ -59,7 +78,8 @@ public sealed record ResilienceOptions
             RatePerSecond = EnvInt("RESILIENCE_RATE_PER_SECOND", 50),
             LoadDuration = TimeSpan.FromSeconds(EnvInt("RESILIENCE_LOAD_SECONDS", 960)),
             SettleDuration = TimeSpan.FromSeconds(EnvInt("RESILIENCE_SETTLE_SECONDS", 60)),
-            MaxInFlight = EnvInt("RESILIENCE_MAX_IN_FLIGHT", 200),
+            CallDeadline = TimeSpan.FromSeconds(EnvInt("RESILIENCE_CALL_DEADLINE_SECONDS", 5)),
+            MaxInFlight = EnvInt("RESILIENCE_MAX_IN_FLIGHT", 500),
             LedgerCapacity = EnvInt("RESILIENCE_LEDGER_CAPACITY", 2000),
             ErrorBudget = EnvDouble("RESILIENCE_ERROR_BUDGET", 0.005),
             VerificationConcurrency = EnvInt("RESILIENCE_VERIFY_CONCURRENCY", 16),

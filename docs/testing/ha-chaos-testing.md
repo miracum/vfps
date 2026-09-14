@@ -30,7 +30,7 @@ The test therefore gates on three properties:
 
 | | Property | How it is measured | Budget |
 | --- | --- | --- | --- |
-| **P1** | **Availability.** Calls succeed within a bounded client retry budget. | Failure count over the load window. | `RESILIENCE_ERROR_BUDGET`, which **must be calibrated** - see §7. |
+| **P1** | **Availability.** Calls succeed within a bounded client retry budget **and a per-call deadline**. | Failure count over the load window, plus the longest run of seconds with no successful call. | `RESILIENCE_ERROR_BUDGET`, which **must be calibrated** - see §7. |
 | **P2** | **Pseudonym stability.** Every `(original → pseudonym)` pair observed before chaos re-`Create`s to the byte-identical pseudonym afterwards. | Sampled ledger, replayed in a verification pass. | **Zero.** |
 | **P3** | **Reverse lookup survives.** `Get(namespace, pseudonym_value)` for that same sample still returns its original value. | Same verification pass. | **Zero.** |
 
@@ -44,6 +44,16 @@ worth recording now that it is gone.
 **The retry policy is deliberately narrow.** The old test retried `StatusCode.Internal` alongside
 `Unavailable`. `Internal` is how a genuine server-side failure surfaces, so retrying it hides
 precisely what is under test. `ResilienceTests` retries `Unavailable` only.
+
+**Every call carries a deadline.** vfps answers an 8ms call and a 22-second call with the same
+`OK`, so without one, P1 cannot see a stall at all - the first run in CI returned **zero failed
+RPCs** while latency climbed past twenty seconds, and the only thing that eventually registered was
+the in-flight ceiling saturating. That turns a graded availability measure into a cliff whose height
+depends on how the harness was sized rather than on how the service behaved. A deadline is also
+simply what a real caller sets: a pseudonymization call that takes twenty seconds has failed,
+whatever status eventually comes back. `RESILIENCE_MAX_IN_FLIGHT` must stay well above
+`RatePerSecond * CallDeadline`, or the ceiling fires first and the cliff returns; the test says so
+explicitly when shedding outweighs real failures.
 
 **The load profile is an open model.** The old test used `KeepConstant(copies: 100)`, a closed
 model: every virtual user waits for its own response before issuing the next request. When the

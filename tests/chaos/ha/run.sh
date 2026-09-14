@@ -41,11 +41,19 @@ LOAD_MARGIN_SECONDS="${LOAD_MARGIN_SECONDS:-60}"
 
 RESILIENCE_RATE_PER_SECOND="${RESILIENCE_RATE_PER_SECOND:-50}"
 RESILIENCE_SETTLE_SECONDS="${RESILIENCE_SETTLE_SECONDS:-60}"
-RESILIENCE_MAX_IN_FLIGHT="${RESILIENCE_MAX_IN_FLIGHT:-200}"
+# Deadline on every load-phase call. Without one, vfps answers an 8ms call and a 22-second call
+# identically with OK, and P1 can only register a stall once the in-flight ceiling saturates.
+RESILIENCE_CALL_DEADLINE_SECONDS="${RESILIENCE_CALL_DEADLINE_SECONDS:-5}"
+# Backstop, not a load-management device - keep it well above rate x deadline.
+RESILIENCE_MAX_IN_FLIGHT="${RESILIENCE_MAX_IN_FLIGHT:-500}"
 # Placeholder, not a calibrated value - see ResilienceOptions.ErrorBudget.
 RESILIENCE_ERROR_BUDGET="${RESILIENCE_ERROR_BUDGET:-0.005}"
 
 VFPS_GRPC_ADDRESS="${VFPS_GRPC_ADDRESS:-dns:///vfps-headless.${NAMESPACE}.svc.cluster.local:8081}"
+
+# Set by the dispatcher once the scenario budgets are summed; declared here so `set -u` holds and
+# the overrun check below stays inert when it is unknown.
+LOAD_SECONDS=0
 
 FAILURES=()
 
@@ -206,6 +214,7 @@ start_loadgen() {
   export RESILIENCE_LOAD_SECONDS="${load_seconds}"
   export LOADGEN_IMAGE VFPS_GRPC_ADDRESS RESILIENCE_RATE_PER_SECOND
   export RESILIENCE_SETTLE_SECONDS RESILIENCE_ERROR_BUDGET RESILIENCE_MAX_IN_FLIGHT
+  export RESILIENCE_CALL_DEADLINE_SECONDS
 
   envsubst <"${SCRIPT_DIR}/loadgen-job.yaml" | kubectl apply -f -
   kubectl wait --for=condition=Ready pod \
@@ -238,7 +247,13 @@ scenario_cnpg_primary_kill() {
   local deadline=$((SECONDS + DURATION_CNPG_PRIMARY_KILL))
   local round=0 primary
 
-  while ((SECONDS < deadline)); do
+  # A round is a kill plus a full recovery, and wait_cnpg_ready can legitimately run past the
+  # scenario budget. Starting one without room for it lets chaos bleed into the settle window and
+  # the verification pass that follows - which is the one stretch that has to be quiet, because
+  # P2/P3 are zero-tolerance.
+  local round_reserve="${CNPG_ROUND_RESERVE_SECONDS:-90}"
+
+  while ((SECONDS + round_reserve < deadline)); do
     round=$((round + 1))
     primary="$(kubectl get pods -n "${NAMESPACE}" \
       -l 'cnpg.io/cluster=vfps-db,cnpg.io/instanceRole=primary' \
@@ -325,7 +340,15 @@ run_scenarios() {
     esac
   done
 
-  log "all scenarios finished after $((SECONDS - started))s"
+  local elapsed=$((SECONDS - started))
+  log "all scenarios finished after ${elapsed}s"
+
+  # The load window is sized from the scenario budgets, but a scenario that waits on cluster health
+  # can outlast its own. If chaos outlives the load window it has spilled into the settle period,
+  # and any P2/P3 result from that run is suspect rather than reassuring.
+  if ((LOAD_SECONDS > 0 && elapsed > LOAD_SECONDS)); then
+    fail "scenarios ran ${elapsed}s, past the ${LOAD_SECONDS}s load window - chaos overlapped the settle and verification phases"
+  fi
 }
 
 collect() {
@@ -411,6 +434,7 @@ main() {
       wait_steady_state
       ;;
     scenarios)
+      LOAD_SECONDS="${load_seconds}"
       start_loadgen "${load_seconds}"
       run_scenarios
       ;;
@@ -429,6 +453,7 @@ main() {
       install_chaos_mesh
       install_vfps
       wait_steady_state
+      LOAD_SECONDS="${load_seconds}"
       start_loadgen "${load_seconds}"
       run_scenarios
       collect

@@ -23,10 +23,11 @@ public class ResilienceTests
     /// would hide precisely what this test exists to measure.
     /// </para>
     /// <para>
-    /// <see cref="StatusCode.DeadlineExceeded"/> would also be safe to retry here - <c>Create</c> is
-    /// idempotent, so a duplicate attempt returns the same pseudonym rather than minting a second
-    /// one - but no deadline is set on these calls, so it would never fire. Left out rather than
-    /// carried as decoration.
+    /// <see cref="StatusCode.DeadlineExceeded"/> is deliberately <em>not</em> retried, even though
+    /// it would be safe to - <c>Create</c> is idempotent, so a duplicate attempt returns the same
+    /// pseudonym rather than minting a second one. A gRPC deadline covers the whole retry sequence,
+    /// so retrying after it expires is impossible anyway, and a call that blew its deadline is a
+    /// caller-visible failure that P1 should count rather than paper over.
     /// </para>
     /// </summary>
     private static RetryPolicy LoadRetryPolicy =>
@@ -94,6 +95,7 @@ public class ResilienceTests
                             Namespace = options.NamespaceName,
                             OriginalValue = originalValue,
                         },
+                        deadline: DateTime.UtcNow.Add(options.CallDeadline),
                         cancellationToken: callCancellationToken
                     );
 
@@ -113,13 +115,30 @@ public class ResilienceTests
         );
 
         Log(
-            $"load window complete: {report.Ok} ok, {report.Failed} failed, {report.Shed} shed "
-                + $"({report.FailureRate:P3} against a {options.ErrorBudget:P3} budget)"
+            $"load window complete: {report.Total} offered, {report.Ok} ok, {report.Failed} failed, "
+                + $"{report.Shed} shed ({report.FailureRate:P3} against a {options.ErrorBudget:P3} budget)"
         );
+        Log($"longest run of seconds with no successful call: {report.LongestOutageSeconds}s");
 
-        foreach (var (status, count) in report.FailuresByStatus.OrderByDescending(entry => entry.Value))
+        foreach (
+            var (status, count) in report.FailuresByStatus.OrderByDescending(entry => entry.Value)
+        )
         {
             Log($"  failures {status,-20} {count}");
+        }
+
+        // Shedding is meant to be a backstop. When it dominates, the harness ran out of in-flight
+        // slots before the deadline could fire, which says more about how this run was configured
+        // than about how vfps behaved - and the budget stops being a measure of the service.
+        if (report.Shed > report.Failed)
+        {
+            Log(
+                $"NOTE: shed ({report.Shed}) exceeds failed ({report.Failed}). The in-flight ceiling "
+                    + $"({options.MaxInFlight}) was reached before the {options.CallDeadline.TotalSeconds:F0}s "
+                    + "call deadline could bound the backlog. Raise RESILIENCE_MAX_IN_FLIGHT above "
+                    + $"RatePerSecond x CallDeadline (>= {options.RatePerSecond * options.CallDeadline.TotalSeconds:F0}) "
+                    + "before reading the failure rate as a property of the service."
+            );
         }
 
         Log($"settling for {options.SettleDuration} before verification");
@@ -169,7 +188,13 @@ public class ResilienceTests
             .Should()
             .BeLessThanOrEqualTo(
                 options.ErrorBudget,
-                "calls failing after the client's retry budget is exhausted are visible to callers"
+                "calls failing after the client's retry budget is exhausted are visible to callers "
+                    + "({0} offered, {1} ok, {2} failed, {3} shed, longest outage {4}s)",
+                report.Total,
+                report.Ok,
+                report.Failed,
+                report.Shed,
+                report.LongestOutageSeconds
             );
     }
 

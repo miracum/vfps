@@ -60,6 +60,8 @@ spec:
               value: "${RESILIENCE_ERROR_BUDGET}"
             - name: RESILIENCE_MAX_IN_FLIGHT
               value: "${RESILIENCE_MAX_IN_FLIGHT}"
+            - name: RESILIENCE_CALL_DEADLINE_SECONDS
+              value: "${RESILIENCE_CALL_DEADLINE_SECONDS}"
           resources:
             requests:
               cpu: 250m

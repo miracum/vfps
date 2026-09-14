@@ -202,6 +202,13 @@ public sealed record LoadReport
     public required IReadOnlyDictionary<StatusCode, int> FailuresByStatus { get; init; }
     public required string TimelineCsv { get; init; }
 
+    /// <summary>
+    /// Longest run of consecutive seconds in which load was offered and nothing succeeded - the
+    /// closest thing here to "how long was it actually down?", and a far more useful number than an
+    /// aggregate percentage, which smears a single hard outage across the whole run.
+    /// </summary>
+    public required int LongestOutageSeconds { get; init; }
+
     public long Total => Ok + Failed + Shed;
 
     /// <summary>
@@ -219,6 +226,8 @@ public sealed record LoadReport
         long ok = 0;
         long failed = 0;
         long shed = 0;
+        var longestOutage = 0;
+        var currentOutage = 0;
 
         for (var second = 0; second < buckets.Length; second++)
         {
@@ -236,6 +245,20 @@ public sealed record LoadReport
             ok += bucket.Ok;
             failed += bucket.Failed;
             shed += bucket.Shed;
+
+            // Seconds where nothing was offered (before the first tick, after the window closes)
+            // break the run rather than extending it - an outage means load was flowing and none of
+            // it worked.
+            var offered = bucket.Ok + bucket.Failed + bucket.Shed;
+            if (offered > 0 && bucket.Ok == 0)
+            {
+                currentOutage++;
+                longestOutage = Math.Max(longestOutage, currentOutage);
+            }
+            else
+            {
+                currentOutage = 0;
+            }
         }
 
         return new LoadReport
@@ -245,6 +268,7 @@ public sealed record LoadReport
             Shed = shed,
             FailuresByStatus = failuresByStatus,
             TimelineCsv = csv.ToString(),
+            LongestOutageSeconds = longestOutage,
         };
     }
 }
