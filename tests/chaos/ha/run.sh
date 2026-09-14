@@ -168,6 +168,9 @@ install_chaos_mesh() {
 }
 
 install_vfps() {
+  log "fetching chart dependencies"
+  helm dependency build "${CHART_PATH}"
+
   log "installing vfps from ${CHART_PATH} (image ${VFPS_IMAGE})"
   helm upgrade --install vfps "${CHART_PATH}" \
     --namespace "${NAMESPACE}" --create-namespace \

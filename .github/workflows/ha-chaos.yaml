@@ -64,14 +64,27 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
-      - name: Install kind
+      - name: Install tooling
         env:
           # renovate: datasource=github-releases depName=kubernetes-sigs/kind
           KIND_VERSION: v0.33.0
         run: |
+          # The runner image already ships a kind, but pin it anyway: this test is sensitive to
+          # cluster behaviour, and silently changing Kubernetes version underneath it whenever the
+          # runner image rolls is exactly the kind of drift that makes a chaos result unreadable.
           curl -fsSLo ./kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
           sudo install -m 0755 ./kind /usr/local/bin/kind
+
+          # envsubst, used to render the load generator Job. Not in the runner image's documented
+          # package list, and run.sh needs it - installing here rather than finding out ten minutes
+          # into a run. No-op if it turns out to be present already.
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends gettext-base
+
           kind version
+          helm version --short
+          kubectl version --client
+          envsubst --version | head -1
 
       - name: Build images
         env:
