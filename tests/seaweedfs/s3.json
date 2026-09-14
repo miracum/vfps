@@ -8,13 +8,7 @@
           "secretKey": "vfps-minio-secret"
         }
       ],
-      "actions": [
-        "Read",
-        "Write",
-        "List",
-        "Tagging",
-        "Admin"
-      ]
+      "actions": ["Read", "Write", "List", "Tagging", "Admin"]
     }
   ]
 }

@@ -34,6 +34,15 @@ using Vfps.PseudonymGenerators;
 using Vfps.Services;
 using Vfps.Tracing;
 
+// `migrate` applies pending EF Core migrations and exits. This is what the container image ships
+// instead of the two `dotnet ef migrations bundle` executables it used to carry - see
+// DatabaseMigrator for why. Checked before CreateBuilder so a migration run never binds Kestrel,
+// reaches an OIDC discovery endpoint or S3, or starts Hangfire's job server.
+if (args is ["migrate", ..])
+{
+    return await DatabaseMigrator.RunAsync(args[1..]);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
@@ -148,33 +157,15 @@ void ConfigureNpgsqlResilience(NpgsqlDbContextOptionsBuilder npgsqlOptions) =>
         errorCodesToAdd: null
     );
 
-void ConfigurePseudonymContext(IServiceProvider isp, DbContextOptionsBuilder options)
-{
-    var config = isp.GetService<IConfiguration>()!;
-
-    var backingStore =
-        config.GetValue<string>("Pseudonymization:BackingStore")
-        ?? throw new InvalidOperationException(
-            "Failed to get backing store config. Make sure Pseudonymization:BackingStore is set"
-        );
-
-    var connString =
-        config.GetConnectionString(backingStore)
-        ?? throw new InvalidOperationException(
-            $"Failed to get connection string for '{backingStore}' backing store"
-        );
-
-    switch (backingStore.ToLowerInvariant())
-    {
-        case "postgresql":
-            options.UseNpgsql(connString, ConfigureNpgsqlResilience);
-            break;
-        default:
-            throw new InvalidOperationException(
-                $"Unsupported backing store specified: {backingStore}"
-            );
-    }
-}
+// Backing-store selection itself lives in DatabaseMigrator so the `migrate` subcommand resolves
+// the exact same connection string this does; the resilience configuration below is the part
+// only the long-running app wants.
+void ConfigurePseudonymContext(IServiceProvider isp, DbContextOptionsBuilder options) =>
+    DatabaseMigrator.ConfigurePseudonymContext(
+        isp.GetRequiredService<IConfiguration>(),
+        options,
+        ConfigureNpgsqlResilience
+    );
 
 // A factory, not a plain AddDbContext - PseudonymAppService's "trusted" methods
 // (CreateTrustedAsync/ReverseLookupTrustedAsync) use IDbContextFactory<PseudonymContext>
@@ -830,6 +821,10 @@ if (shouldRunDatabaseMigrations)
 }
 
 app.Run();
+
+// Explicit because the `migrate` path above returns an exit code, which makes this entry point
+// int-returning.
+return 0;
 
 public partial class Program
 {

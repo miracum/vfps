@@ -1,0 +1,63 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: vfps-db
+  namespace: vfps
+spec:
+  instances: 3
+  primaryUpdateStrategy: unsupervised
+
+  bootstrap:
+    initdb:
+      database: vfps
+      # Must match `database.username` in vfps-ha-values.yaml. The chart reads the username from
+      # values rather than from the generated secret, so a mismatch here fails at connect time
+      # instead of at render time.
+      owner: vfps_admin
+
+  storage:
+    size: 2Gi
+    storageClass: standard # kind's built-in local-path provisioner
+
+  postgresql:
+    parameters:
+      # Budgeted against `Maximum Pool Size=25` per replica. Three API replicas, each with a
+      # pseudonym pool, a Data Protection context and Hangfire's own storage pool, comfortably
+      # exceeds PostgreSQL's stock 100 - and connection exhaustion looks exactly like an
+      # availability failure, which would make this test blame vfps for a capacity misconfiguration.
+      max_connections: "200"
+
+    # The single most important setting in this file.
+    #
+    # Under CloudNativePG's default asynchronous streaming replication, a promoted standby may be
+    # behind the primary's last acknowledged commit - so a pseudonym vfps already returned to a
+    # caller can simply be gone after a failover. That is precisely the P2/P3 violation this test
+    # asserts against, which would make the test both flaky and right to fail: a real defect
+    # indistinguishable from noise.
+    #
+    # Requiring one standby to acknowledge every commit means promotion cannot lose an acknowledged
+    # write, which is what makes those assertions legitimately zero-tolerance.
+    #
+    # Consequence for the chaos schedule: with three instances and number=1, losing the primary
+    # leaves two and writes continue, but losing a primary *and* a standby leaves one, quorum is
+    # unreachable, and writes block indefinitely. That is correct PostgreSQL behaviour rather than a
+    # vfps bug, so run.sh never overlaps database chaos with itself.
+    synchronous:
+      method: any
+      number: 1
+      dataDurability: required
+
+  affinity:
+    enablePodAntiAffinity: true
+    topologyKey: kubernetes.io/hostname
+    # One instance per worker. During the node-drain scenario the evicted instance therefore has
+    # nowhere to reschedule and the cluster runs 2/3 until run.sh uncordons - deliberate, and still
+    # above the synchronous quorum.
+    podAntiAffinityType: required
+
+  resources:
+    requests:
+      memory: 256Mi
+      cpu: 100m
+    limits:
+      memory: 512Mi

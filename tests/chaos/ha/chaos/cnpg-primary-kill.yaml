@@ -1,0 +1,25 @@
+# Kills the current PostgreSQL primary, forcing a real CloudNativePG failover: promotion of a
+# standby, CNPG repointing the -rw Service, and vfps riding it out on its EnableRetryOnFailure
+# policy. This is the scenario P2 and P3 are really about.
+#
+# Deliberately one-shot rather than a Schedule. Repeated failovers on a timer could take down a
+# second instance before the first promotion has finished re-establishing synchronous replication,
+# leaving one instance, no quorum, and blocked writes - correct PostgreSQL behaviour, but a
+# self-inflicted stall rather than a test of vfps. run.sh applies this once, waits for the cluster
+# to report three ready instances again, and only then repeats.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: PodChaos
+metadata:
+  name: cnpg-primary-kill
+  namespace: vfps
+spec:
+  action: pod-kill
+  mode: one
+  selector:
+    namespaces:
+      - vfps
+    labelSelectors:
+      cnpg.io/cluster: vfps-db
+      # `role: primary` is the older spelling of this label and is deprecated in favour of
+      # cnpg.io/instanceRole as of CloudNativePG 1.24.
+      cnpg.io/instanceRole: primary

@@ -5,10 +5,6 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     ASPNETCORE_ENVIRONMENT="Production" \
     DOTNET_ENVIRONMENT="Production"
 
-COPY .config/ .
-
-RUN dotnet tool restore
-
 COPY src/Directory.Build.props src/
 COPY src/Vfps/Vfps.csproj src/Vfps/
 COPY src/Vfps/packages.lock.json src/Vfps/
@@ -20,42 +16,17 @@ COPY . .
 RUN <<EOF
 dotnet build src/Vfps/Vfps.csproj \
     --no-restore \
+    --runtime=linux-x64 \
+    --no-self-contained \
     --configuration=Release
 
 dotnet publish src/Vfps/Vfps.csproj \
     --no-restore \
     --no-build \
+    --runtime=linux-x64 \
+    --no-self-contained \
     --configuration=Release \
     -o /build/publish
-
-# dotnet-ef has no --environment flag - it only reads ASPNETCORE_ENVIRONMENT/DOTNET_ENVIRONMENT,
-# defaulting to "Development" (and thus appsettings.Development.json) when neither is set. That
-# file enables Authorization/S3 by default for local `dotnet run`, and evaluating it here - with
-# no Postgres/MinIO actually reachable in this build sandbox - previously crashed the whole
-# design-time host before EF could discover the DbContext. Bundled migrations run in Production
-# anyway, so building them under that same environment is also just the more correct choice.
-#
-# Two DbContexts now have migrations (PseudonymContext, DataProtectionKeyContext), and
-# `migrations bundle` errors out ("More than one DbContext was found") without an explicit
-# --context, so this produces one bundle executable per context.
-# --runtime/--target-runtime pin this to the same linux-x64 RID as the restore/build/publish
-# steps above - without it, dotnet-ef's own internal project evaluation resolves no RID at all,
-# which conflicts with the RID-specific packages.lock.json section under RestoreLockedMode.
-dotnet ef migrations bundle \
-    --project=src/Vfps/Vfps.csproj \
-    --startup-project=src/Vfps/Vfps.csproj \
-    --context=PseudonymContext \
-    --configuration=Release \
-    --verbose \
-    -o /build/efbundle
-
-dotnet ef migrations bundle \
-    --project=src/Vfps/Vfps.csproj \
-    --startup-project=src/Vfps/Vfps.csproj \
-    --context=DataProtectionKeyContext \
-    --configuration=Release \
-    --verbose \
-    -o /build/efbundle-dataprotection
 EOF
 
 FROM build AS build-test
@@ -88,11 +59,9 @@ EOF
 
 FROM build AS stress-test
 WORKDIR /opt/vfps-stress
-# https://github.com/hadolint/hadolint/pull/815 isn't yet in mega-linter
-# hadolint ignore=DL3022
-COPY --from=registry.k8s.io/kubectl:v1.37.0@sha256:5ed410ebac5dc976cc717098994dcdb29bbbd38f6bd65f582311f5be4ba719cf /bin/kubectl /usr/bin/kubectl
-
-COPY tests/chaos/chaos.yaml /tmp/
+# kubectl and a baked-in copy of the chaos manifests used to live here, for the Argo Workflows
+# templates that applied and removed chaos from inside the cluster. tests/chaos/ha/run.sh now drives
+# chaos from outside it with the runner's own kubeconfig, so this image only has to run tests.
 COPY --from=build-stress-test /build/publish .
 # currently running into <https://github.com/dotnet/runtime/issues/80619>
 # when running as non-root.
@@ -111,6 +80,4 @@ ENV DOTNET_ENVIRONMENT="Production" \
     ASPNETCORE_URLS="" \
     DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
 COPY --from=build /build/publish .
-COPY --from=build /build/efbundle .
-COPY --from=build /build/efbundle-dataprotection .
 CMD ["/opt/vfps/Vfps.dll"]

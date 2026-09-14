@@ -1,0 +1,17 @@
+# Four nodes, because a single-node cluster makes most of the HA story untestable:
+# topologySpreadConstraints collapse into a no-op, CloudNativePG's three instances all land on the
+# same kubelet, and there is nothing to drain. The synthetic zone labels let the chart's documented
+# zone-spread example be exercised as documented rather than approximated with hostname spreading.
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+nodes:
+  - role: control-plane
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone-a
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone-b
+  - role: worker
+    labels:
+      topology.kubernetes.io/zone: zone-c

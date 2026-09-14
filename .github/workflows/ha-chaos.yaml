@@ -1,0 +1,159 @@
+name: ha chaos testing
+
+# Stands vfps up in the configuration docs/deployment/high-availability.md argues for - three
+# replicas spread across three zones, backed by a replicated CloudNativePG cluster - and breaks it on
+# purpose while asserting that no pseudonym it already handed out is lost or changes identity.
+#
+# See docs/testing/ha-chaos-testing.md. Not run on every pull request - it takes the best part of an
+# hour, and a chaos test that gates merges is a chaos test that gets disabled. Apply the `ha-chaos`
+# label to a PR to opt that PR in; it then runs a trimmed scenario set on every push until the label
+# is removed. Requiring a label also means a forked PR cannot burn an hour of runner time unless a
+# maintainer asks for it.
+
+on:
+  pull_request:
+    branches: [master]
+    types: [labeled, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      image-tag:
+        description: "released vfps image tag to test instead of building from this checkout"
+        required: false
+        type: string
+      scenarios:
+        description: "comma-separated scenario list (default: all). Use 'baseline' alone to calibrate the error budget."
+        required: false
+        type: string
+      rate-per-second:
+        description: "offered request rate for the load generator (default: 50)"
+        required: false
+        type: string
+      max-outage-seconds:
+        description: "P1: longest tolerated run of seconds with no successful call (default: 30)"
+        required: false
+        type: string
+  schedule:
+    - cron: "17 03 * * 0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ha-chaos-${{ github.ref }}
+  # Superseding a PR run is what you want when someone pushes twice in a row; superseding a
+  # scheduled run against master just loses the result.
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ha-chaos:
+    name: ha chaos testing
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    # Every event except a pull request runs unconditionally; a pull request needs the label.
+    if: >-
+      github.event_name != 'pull_request' ||
+      contains(github.event.pull_request.labels.*.name, 'ha-chaos')
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      - name: Install tooling
+        env:
+          # renovate: datasource=github-releases depName=kubernetes-sigs/kind
+          KIND_VERSION: v0.33.0
+        run: |
+          # The runner image already ships a kind, but pin it anyway: this test is sensitive to
+          # cluster behaviour, and silently changing Kubernetes version underneath it whenever the
+          # runner image rolls is exactly the kind of drift that makes a chaos result unreadable.
+          curl -fsSLo ./kind "https://kind.sigs.k8s.io/dl/${KIND_VERSION}/kind-linux-amd64"
+          sudo install -m 0755 ./kind /usr/local/bin/kind
+
+          # envsubst, used to render the load generator Job. Not in the runner image's documented
+          # package list, and run.sh needs it - installing here rather than finding out ten minutes
+          # into a run. No-op if it turns out to be present already.
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends gettext-base
+
+          kind version
+          helm version --short
+          kubectl version --client
+          envsubst --version | head -1
+
+      - name: Build images
+        env:
+          IMAGE_TAG: ${{ inputs.image-tag }}
+        run: |
+          # The load generator carries the resilience test itself, so it is always built from this
+          # checkout. The application image is only built here when no released tag was requested -
+          # testing master's HA behaviour means testing master's image, not the last release.
+          docker buildx build \
+            --load \
+            --target=stress-test \
+            --cache-from=type=gha \
+            --cache-to=type=gha,mode=max \
+            -t ghcr.io/miracum/vfps/stress-test:ci \
+            .
+
+          if [ -n "${IMAGE_TAG}" ]; then
+            echo "testing released image tag ${IMAGE_TAG}"
+            {
+              echo "VFPS_IMAGE_TAG=${IMAGE_TAG}"
+              echo "LOAD_VFPS_IMAGE=false"
+            } >> "${GITHUB_ENV}"
+          else
+            docker buildx build \
+              --load \
+              --cache-from=type=gha \
+              --cache-to=type=gha,mode=max \
+              -t ghcr.io/miracum/vfps:ci \
+              .
+            {
+              echo "VFPS_IMAGE_TAG=ci"
+              echo "LOAD_VFPS_IMAGE=true"
+            } >> "${GITHUB_ENV}"
+          fi
+
+          docker image ls
+
+      - name: Run the HA chaos test
+        env:
+          ARTIFACT_DIR: ${{ github.workspace }}/ha-chaos-artifacts
+          # Empty values fall through to the defaults in run.sh.
+          SCENARIOS: ${{ inputs.scenarios }}
+          RESILIENCE_RATE_PER_SECOND: ${{ inputs.rate-per-second }}
+          RESILIENCE_MAX_OUTAGE_SECONDS: ${{ inputs.max-outage-seconds }}
+          IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
+        run: |
+          # A labelled PR gets a trimmed run: the baseline it needs to mean anything, the pod-kill,
+          # and the CloudNativePG failover that decides P2/P3. The rollout, partition and drain
+          # scenarios are the slowest and the least likely to regress from an application change, so
+          # they are left to the weekly run. An explicit `scenarios` input always wins.
+          if [ -z "${SCENARIOS}" ] && [ "${IS_PULL_REQUEST}" = "true" ]; then
+            export SCENARIOS="baseline,vfps-pod-kill,cnpg-primary-kill"
+            export DURATION_BASELINE=60
+            export DURATION_VFPS_POD_KILL=90
+            export DURATION_CNPG_PRIMARY_KILL=150
+            # Two disruptions instead of five, so the total-unavailability allowance shrinks with
+            # them. The longest-outage gate is deliberately left alone: it is a duration, so it
+            # means the same thing whichever scenario set ran.
+            export RESILIENCE_MAX_UNAVAILABLE_SECONDS=60
+            echo "pull request: running the trimmed scenario set (${SCENARIOS})"
+          fi
+
+          ./tests/chaos/ha/run.sh all
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: ha-chaos-artifacts
+          path: ha-chaos-artifacts/
+          retention-days: 14
+          if-no-files-found: warn

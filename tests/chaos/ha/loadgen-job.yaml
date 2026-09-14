@@ -1,0 +1,81 @@
+# The in-cluster half of the test. Runs in its own namespace so that no chaos selector scoped to
+# `vfps` can ever reach it: the ledger of issued pseudonyms lives in this one pod's memory for the
+# whole run, which makes it the single thing in the cluster that must not be disrupted.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: vfps-resilience
+  namespace: vfps-loadgen
+spec:
+  # A retry would restart the load window from zero, halfway through a chaos schedule that is
+  # already underway - the rerun would measure a different experiment than the one being run.
+  backoffLimit: 0
+  activeDeadlineSeconds: ${JOB_DEADLINE_SECONDS}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: vfps-resilience
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      # Pinned to the control-plane node, which the node-drain scenario never targets. The ledger of
+      # issued pseudonyms lives in this pod's memory for the whole run, so an eviction would not just
+      # interrupt the load - it would destroy the only record of what the service promised callers,
+      # and take P2/P3 down with it.
+      nodeSelector:
+        node-role.kubernetes.io/control-plane: ""
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: resilience
+          image: ${LOADGEN_IMAGE}
+          imagePullPolicy: IfNotPresent
+          args:
+            - /opt/vfps-stress/Vfps.StressTests.dll
+            - -trait
+            - Category=Resilience
+            # The test is marked [Fact(Explicit = true)] so a plain `dotnet test` skips it. This is
+            # the opt-in. Drop it and the Job exits 0 having run nothing - which run.sh catches,
+            # because a skipped test produces no timeline CSV.
+            - -explicit
+            - only
+          env:
+            # dns:/// plus the headless Service is what gives the gRPC client round-robin load
+            # balancing across replicas. A ClusterIP Service balances connections rather than
+            # requests, so one long-lived HTTP/2 connection would pin the entire run to a single
+            # replica and make the pod-kill scenario far easier to pass than it should be.
+            - name: VFPS_GRPC_ADDRESS
+              value: ${VFPS_GRPC_ADDRESS}
+            - name: RESILIENCE_NAMESPACE
+              value: resilience
+            - name: RESILIENCE_RATE_PER_SECOND
+              value: "${RESILIENCE_RATE_PER_SECOND}"
+            - name: RESILIENCE_LOAD_SECONDS
+              value: "${RESILIENCE_LOAD_SECONDS}"
+            - name: RESILIENCE_SETTLE_SECONDS
+              value: "${RESILIENCE_SETTLE_SECONDS}"
+            - name: RESILIENCE_MAX_OUTAGE_SECONDS
+              value: "${RESILIENCE_MAX_OUTAGE_SECONDS}"
+            - name: RESILIENCE_MAX_UNAVAILABLE_SECONDS
+              value: "${RESILIENCE_MAX_UNAVAILABLE_SECONDS}"
+            - name: RESILIENCE_MAX_IN_FLIGHT
+              value: "${RESILIENCE_MAX_IN_FLIGHT}"
+            - name: RESILIENCE_CALL_DEADLINE_SECONDS
+              value: "${RESILIENCE_CALL_DEADLINE_SECONDS}"
+          resources:
+            requests:
+              cpu: 250m
+              memory: 256Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            # The stress-test image runs as root: see the DOTNET_BUNDLE_EXTRACT_BASE_DIR note in the
+            # Dockerfile's stress-test stage.
+            runAsNonRoot: false
