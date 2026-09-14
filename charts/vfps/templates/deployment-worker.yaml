@@ -169,6 +169,7 @@ spec:
               subPath: appsettings.Production.json
           {{- end }}
           {{- include "vfps.dataProtection.volumeMounts" . | nindent 12 }}
+          {{- include "vfps.database.tls.volumeMounts" . | nindent 12 }}
           {{- if .Values.extraVolumeMounts }}
             {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
           {{- end }}
@@ -179,6 +180,7 @@ spec:
             name: {{ include "vfps.fullname" . }}-appsettings
         {{- end }}
         {{- include "vfps.dataProtection.volumes" . | nindent 8 }}
+        {{- include "vfps.database.tls.volumes" . | nindent 8 }}
         {{- if .Values.extraVolumes }}
         {{- toYaml .Values.extraVolumes | nindent 8 }}
         {{- end }}

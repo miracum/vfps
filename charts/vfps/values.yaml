@@ -60,8 +60,16 @@ migrationsJob:
   # cleaned up, any later pod restart or rescheduling on the same chart version blocks in init
   # waiting for a job that no longer exists.
   ttlSecondsAfterFinished: -1
-  # -- extra environment variables to set on the migrations job container
+  # -- extra environment variables for the migrations job, applied to both the container that
+  # runs the migration and the one that prints the resulting schema. The libpq settings the
+  # latter needs for a TLS connection are derived from `database.tls` and do not belong here.
   extraEnv: []
+  # -- extra volumeMounts for the migrations job, applied to both the container that runs the
+  # migration and the one that prints the resulting schema. The database TLS material configured
+  # under `database.tls` is mounted automatically and does not need to be listed here.
+  extraVolumeMounts: []
+  # -- extra volumes for the migrations job
+  extraVolumes: []
   # -- set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if primary.resources is set (primary.resources is recommended for production).
   # More information: <https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15>
   resourcesPreset: "small"
@@ -418,6 +426,47 @@ database:
   # outage. Budget roughly `replicaCount * (Maximum Pool Size)` plus the CSV job workers, and raise
   # both this and the server's `max_connections` together (or put PgBouncer in front).
   additionalConnectionStringParameters: "Timeout=60;Max Auto Prepare=5;Maximum Pool Size=50;"
+
+  tls:
+    # -- Npgsql `SSL Mode` for the database connection: one of `Disable`, `Allow`, `Prefer`,
+    # `Require`, `VerifyCA`, `VerifyFull`. Empty (the default) adds nothing to the connection
+    # string, leaving Npgsql's own default in place - which opportunistically encrypts but
+    # verifies nothing, and silently falls back to plaintext against a server that offers no TLS.
+    #
+    # `VerifyFull` is the one to want: it verifies the server's certificate chain *and* that its
+    # name matches the host being connected to. It needs `certificateAuthority` below unless the
+    # server's certificate is signed by a CA already in the container's trust store.
+    #
+    # Applies to every component that opens a database connection - the API Deployment, the worker
+    # Deployment, and the migrations Job - which is why it lives here rather than in
+    # `additionalConnectionStringParameters`. Setting `SSL Mode` there as well is rejected.
+    mode: ""
+
+    certificateAuthority:
+      existingSecret:
+        # -- name of a Secret holding the CA certificate that signed the database server's
+        # certificate. For CloudNativePG this is the cluster's `<cluster-name>-ca` Secret. Only
+        # the key named below is projected into the pod, never the whole Secret - a CNPG CA Secret
+        # also contains `ca.key`, which signs every certificate in that cluster.
+        name: ""
+        # -- key within the Secret holding the PEM CA certificate
+        key: "ca.crt"
+
+    clientCertificate:
+      existingSecret:
+        # -- name of a Secret holding a client certificate, for mutual TLS. Optional: set this
+        # only when the server authenticates clients by certificate (`cert` in `pg_hba.conf`),
+        # which replaces the password entirely. The certificate's Common Name must equal the
+        # database role vfps connects as (`database.username`).
+        #
+        # The private key must not be passphrase-protected: the passphrase would have to travel
+        # in the connection string, which is a plain value in the pod spec.
+        name: ""
+        # -- key within the Secret holding the PEM client certificate
+        certificateKey: "tls.crt"
+        # -- key within the Secret holding the PEM private key
+        privateKeyKey: "tls.key"
+
 
 dataProtection:
   # -- certificates encrypting the ASP.NET Core Data Protection key ring at rest.

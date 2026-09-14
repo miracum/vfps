@@ -82,6 +82,10 @@ spec:
           volumeMounts:
             - mountPath: /tmp
               name: tmp-volume
+            {{- include "vfps.database.tls.volumeMounts" . | nindent 12 }}
+            {{- with .Values.migrationsJob.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
       containers:
         - name: {{ include "vfps.fullname" . }}-migrations
           image: {{ include "vfps.waitForDatabaseInitContainerImage" . }}
@@ -109,14 +113,40 @@ spec:
                 secretKeyRef:
                   name: {{ include "vfps.database.db-secret-name" . }}
                   key: {{ include "vfps.database.db-secret-key" . }}
+            {{- include "vfps.database.tls.libpq-env" . | nindent 12 }}
+            {{- if .Values.migrationsJob.extraEnv }}
+            {{- toYaml .Values.migrationsJob.extraEnv | nindent 12 }}
+            {{- end }}
           command: ["/bin/sh", "-c"]
           args:
             - |
+              # libpq refuses a private key readable by group or world, which every Secret mount
+              # is - it is owned by root while this container runs as a non-root user, so the
+              # mode cannot simply be tightened. Copying to a 0600 file in the emptyDir is the
+              # only way psql will accept the key. Npgsql has no such rule, which is why the
+              # migrate container above reads the mounted key directly.
+              if [ -n "${VFPS_PGSSLKEY_SOURCE:-}" ]; then
+                cp "${VFPS_PGSSLKEY_SOURCE}" /tmp/client.key;
+                chmod 600 /tmp/client.key;
+                PGSSLKEY=/tmp/client.key;
+                export PGSSLKEY;
+              fi;
               echo "Schemas in ${PGDATABASE}:";
               psql -c "\dn";
               echo "Tables in ${PGDATABASE}:";
               psql -c "\dt *.*";
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp-volume
+            {{- include "vfps.database.tls.volumeMounts" . | nindent 12 }}
+            {{- with .Values.migrationsJob.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
       volumes:
         - name: tmp-volume
           emptyDir: {}
+        {{- include "vfps.database.tls.volumes" . | nindent 8 }}
+        {{- with .Values.migrationsJob.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
 {{- end }}
