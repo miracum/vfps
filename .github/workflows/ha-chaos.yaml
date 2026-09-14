@@ -28,8 +28,8 @@ on:
         description: "offered request rate for the load generator (default: 50)"
         required: false
         type: string
-      error-budget:
-        description: "P1 failure-rate budget as a fraction, e.g. 0.005 (default: 0.005)"
+      max-outage-seconds:
+        description: "P1: longest tolerated run of seconds with no successful call (default: 30)"
         required: false
         type: string
   schedule:
@@ -128,7 +128,7 @@ jobs:
           # Empty values fall through to the defaults in run.sh.
           SCENARIOS: ${{ inputs.scenarios }}
           RESILIENCE_RATE_PER_SECOND: ${{ inputs.rate-per-second }}
-          RESILIENCE_ERROR_BUDGET: ${{ inputs.error-budget }}
+          RESILIENCE_MAX_OUTAGE_SECONDS: ${{ inputs.max-outage-seconds }}
           IS_PULL_REQUEST: ${{ github.event_name == 'pull_request' }}
         run: |
           # A labelled PR gets a trimmed run: the baseline it needs to mean anything, the pod-kill,
@@ -140,6 +140,10 @@ jobs:
             export DURATION_BASELINE=60
             export DURATION_VFPS_POD_KILL=90
             export DURATION_CNPG_PRIMARY_KILL=150
+            # Two disruptions instead of five, so the total-unavailability allowance shrinks with
+            # them. The longest-outage gate is deliberately left alone: it is a duration, so it
+            # means the same thing whichever scenario set ran.
+            export RESILIENCE_MAX_UNAVAILABLE_SECONDS=60
             echo "pull request: running the trimmed scenario set (${SCENARIOS})"
           fi
 

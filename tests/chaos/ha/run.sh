@@ -24,7 +24,7 @@ VFPS_IMAGE="${VFPS_IMAGE_REGISTRY}/${VFPS_IMAGE_REPOSITORY}:${VFPS_IMAGE_TAG}"
 LOADGEN_IMAGE="${LOADGEN_IMAGE:-ghcr.io/miracum/vfps/stress-test:ci}"
 
 # Scenarios to run, in order. Trim this to shorten a local run - `SCENARIOS=baseline` is how you
-# calibrate RESILIENCE_ERROR_BUDGET against an undisturbed cluster.
+# check the ambient error floor against an undisturbed cluster.
 SCENARIOS="${SCENARIOS:-baseline,vfps-pod-kill,cnpg-primary-kill,db-network-partition,rollout,drain}"
 
 DURATION_BASELINE="${DURATION_BASELINE:-120}"
@@ -46,8 +46,10 @@ RESILIENCE_SETTLE_SECONDS="${RESILIENCE_SETTLE_SECONDS:-60}"
 RESILIENCE_CALL_DEADLINE_SECONDS="${RESILIENCE_CALL_DEADLINE_SECONDS:-5}"
 # Backstop, not a load-management device - keep it well above rate x deadline.
 RESILIENCE_MAX_IN_FLIGHT="${RESILIENCE_MAX_IN_FLIGHT:-500}"
-# Placeholder, not a calibrated value - see ResilienceOptions.ErrorBudget.
-RESILIENCE_ERROR_BUDGET="${RESILIENCE_ERROR_BUDGET:-0.005}"
+# P1 is gated on durations, not a failure rate: a rate is a function of run length, so the same
+# failover would score 9.5% on the trimmed run and 3.4% on the weekly one. See ResilienceOptions.
+RESILIENCE_MAX_OUTAGE_SECONDS="${RESILIENCE_MAX_OUTAGE_SECONDS:-30}"
+RESILIENCE_MAX_UNAVAILABLE_SECONDS="${RESILIENCE_MAX_UNAVAILABLE_SECONDS:-150}"
 
 VFPS_GRPC_ADDRESS="${VFPS_GRPC_ADDRESS:-dns:///vfps-headless.${NAMESPACE}.svc.cluster.local:8081}"
 
@@ -213,7 +215,8 @@ start_loadgen() {
   export JOB_DEADLINE_SECONDS=$((load_seconds + RESILIENCE_SETTLE_SECONDS + 900))
   export RESILIENCE_LOAD_SECONDS="${load_seconds}"
   export LOADGEN_IMAGE VFPS_GRPC_ADDRESS RESILIENCE_RATE_PER_SECOND
-  export RESILIENCE_SETTLE_SECONDS RESILIENCE_ERROR_BUDGET RESILIENCE_MAX_IN_FLIGHT
+  export RESILIENCE_SETTLE_SECONDS RESILIENCE_MAX_IN_FLIGHT
+  export RESILIENCE_MAX_OUTAGE_SECONDS RESILIENCE_MAX_UNAVAILABLE_SECONDS
   export RESILIENCE_CALL_DEADLINE_SECONDS
 
   envsubst <"${SCRIPT_DIR}/loadgen-job.yaml" | kubectl apply -f -

@@ -30,7 +30,7 @@ The test therefore gates on three properties:
 
 | | Property | How it is measured | Budget |
 | --- | --- | --- | --- |
-| **P1** | **Availability.** Calls succeed within a bounded client retry budget **and a per-call deadline**. | Failure count over the load window, plus the longest run of seconds with no successful call. | `RESILIENCE_ERROR_BUDGET`, which **must be calibrated** - see §7. |
+| **P1** | **Availability.** Calls succeed within a bounded client retry budget **and a per-call deadline**. | Two durations: the longest run of seconds with no successful call, and total failure-equivalent seconds. | `RESILIENCE_MAX_OUTAGE_SECONDS` (30) and `RESILIENCE_MAX_UNAVAILABLE_SECONDS` - see §7. |
 | **P2** | **Pseudonym stability.** Every `(original → pseudonym)` pair observed before chaos re-`Create`s to the byte-identical pseudonym afterwards. | Sampled ledger, replayed in a verification pass. | **Zero.** |
 | **P3** | **Reverse lookup survives.** `Get(namespace, pseudonym_value)` for that same sample still returns its original value. | Same verification pass. | **Zero.** |
 
@@ -142,7 +142,7 @@ about how long the run is.
 
 | # | Scenario | Mechanism | What it proves |
 | --- | --- | --- | --- |
-| 0 | `baseline` | nothing injected | The ambient error floor. Without it you cannot tell a chaos-induced failure from a flaky runner - and it is how the error budget gets calibrated. |
+| 0 | `baseline` | nothing injected | The ambient error floor. Without it you cannot tell a chaos-induced failure from a flaky runner. |
 | 1 | `vfps-pod-kill` | `PodChaos/pod-kill`, `mode: one`, Schedule @45s | Replicas, PDB, Service endpoint churn. |
 | 2 | `cnpg-primary-kill` | one-shot `PodChaos`, selector `cnpg.io/instanceRole: primary`, repeated as health allows | **The headline.** A real failover: promotion, `-rw` repointing, `EnableRetryOnFailure` riding it out. P2 and P3 are decided here. |
 | 3 | `db-network-partition` | `NetworkChaos/partition`, 20s bursts | A distinct failure mode from 2: the database is *up* but unreachable, so Npgsql sees timeouts rather than resets. Tests `Timeout=60` and the retry policy, not failover. |
@@ -238,7 +238,7 @@ gets skipped.
 
 In CI it is `workflow_dispatch` plus a weekly schedule. The dispatch form takes `image-tag` (test a
 released image rather than building from the checkout), `scenarios`, `rate-per-second` and
-`error-budget`.
+`max-outage-seconds`.
 
 ### On a pull request
 
@@ -255,17 +255,33 @@ weekly run. A `scenarios` input always wins over this.
 Requiring a label also means a forked PR cannot spend an hour of runner time unless a maintainer asks
 for it.
 
-### Calibrate the error budget before trusting P1
+### P1 is gated on durations, not a failure rate
 
-`RESILIENCE_ERROR_BUDGET` defaults to `0.005`. **That is a placeholder, not a measurement.** Run:
+A rate is a function of run length. The same single failover measured **9.5%** across the
+six-minute trimmed run and would have measured **3.4%** across the seventeen-minute weekly one -
+identical service behaviour, opposite verdicts, decided by nothing but which scenario set happened to
+run. So P1 is two durations instead:
+
+| Gate | Default | Why |
+| --- | --- | --- |
+| `RESILIENCE_MAX_OUTAGE_SECONDS` | 30 | Longest run of consecutive seconds in which load was offered and nothing succeeded. Run-length independent, so it means the same thing on both scenario sets, and it is the number an operator actually cares about: *how long was it down?* |
+| `RESILIENCE_MAX_UNAVAILABLE_SECONDS` | 150 (60 on a PR) | Total failure-equivalent seconds, `(failed + shed) / rate`. Catches chronic flakiness that never blacks out a whole second and so never trips the gate above. Scales with the number of disruptions, hence the smaller allowance for the trimmed run. |
+
+**Both defaults are provisional**, set at roughly 2x the first two observed CI runs (16s longest
+outage, 34s total across two disruptions). They are a starting point to be revised as runs
+accumulate, not a measurement - but revise them *as durations*. Reverting to a percentage would
+reintroduce the run-length coupling above.
+
+A single-primary PostgreSQL failover costs an outage by construction: the primary dies, a standby is
+promoted, `-rw` repoints, and clients reconnect. The gate is on that outage staying bounded, not on
+it being absent. Driving it towards zero is a different architecture - a pooler in front that can
+hold connections across a switchover - not a tuning exercise.
+
+To see the ambient floor on an undisturbed cluster:
 
 ```
-workflow_dispatch → scenarios: baseline
+workflow_dispatch -> scenarios: baseline
 ```
-
-a handful of times, read the ambient failure rate off `load-timeline.csv`, and set the budget with
-headroom above it. A budget picked before seeing a baseline is the usual reason chaos jobs end up
-permanently marked `continue-on-error`.
 
 ## 8. Artifacts
 

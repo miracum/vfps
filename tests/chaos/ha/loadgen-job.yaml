@@ -56,8 +56,10 @@ spec:
               value: "${RESILIENCE_LOAD_SECONDS}"
             - name: RESILIENCE_SETTLE_SECONDS
               value: "${RESILIENCE_SETTLE_SECONDS}"
-            - name: RESILIENCE_ERROR_BUDGET
-              value: "${RESILIENCE_ERROR_BUDGET}"
+            - name: RESILIENCE_MAX_OUTAGE_SECONDS
+              value: "${RESILIENCE_MAX_OUTAGE_SECONDS}"
+            - name: RESILIENCE_MAX_UNAVAILABLE_SECONDS
+              value: "${RESILIENCE_MAX_UNAVAILABLE_SECONDS}"
             - name: RESILIENCE_MAX_IN_FLIGHT
               value: "${RESILIENCE_MAX_IN_FLIGHT}"
             - name: RESILIENCE_CALL_DEADLINE_SECONDS

@@ -58,13 +58,29 @@ public sealed record ResilienceOptions
     public required int LedgerCapacity { get; init; }
 
     /// <summary>
-    /// P1: the fraction of calls allowed to fail after the client's own retry budget is exhausted.
-    /// <strong>This default is a placeholder, not a calibrated value.</strong> Run the workflow a few
-    /// times with <c>SCENARIOS=baseline</c> and set it from the observed ambient failure rate plus
-    /// headroom - a budget picked before seeing a baseline is the usual reason chaos jobs end up
-    /// permanently marked continue-on-error.
+    /// P1, primary gate: the longest run of consecutive seconds in which load was offered and
+    /// nothing succeeded.
+    /// <para>
+    /// Deliberately a duration rather than a failure rate. A rate is a function of run length, so
+    /// the same single failover scores 9.5% across a six-minute run and 3.4% across a
+    /// seventeen-minute one - identical behaviour, opposite verdicts, decided only by which
+    /// scenario set happened to run. "No disruption blacks the service out for longer than N
+    /// seconds" holds its meaning across both, and is the number an operator actually cares about.
+    /// </para>
     /// </summary>
-    public required double ErrorBudget { get; init; }
+    public required int MaxOutageSeconds { get; init; }
+
+    /// <summary>
+    /// P1, secondary gate: total failure-equivalent seconds (failed plus shed, over the offered
+    /// rate) across the whole run.
+    /// <para>
+    /// Catches what <see cref="MaxOutageSeconds"/> cannot - a service that is chronically flaky
+    /// rather than briefly and completely down, where scattered failures never black out a whole
+    /// second. Scales with the number of disruptive scenarios, so the weekly run is given a larger
+    /// allowance than a trimmed pull-request run.
+    /// </para>
+    /// </summary>
+    public required double MaxUnavailableSeconds { get; init; }
 
     public required int VerificationConcurrency { get; init; }
 
@@ -81,7 +97,16 @@ public sealed record ResilienceOptions
             CallDeadline = TimeSpan.FromSeconds(EnvInt("RESILIENCE_CALL_DEADLINE_SECONDS", 5)),
             MaxInFlight = EnvInt("RESILIENCE_MAX_IN_FLIGHT", 500),
             LedgerCapacity = EnvInt("RESILIENCE_LEDGER_CAPACITY", 2000),
-            ErrorBudget = EnvDouble("RESILIENCE_ERROR_BUDGET", 0.005),
+            // Provisional, from two observed CI runs (16s longest outage, 34s total across the
+            // trimmed two-disruption set) with roughly 2x headroom. Revisit as runs accumulate -
+            // but keep them as durations, not rates.
+            //
+            // MaxOutage is the same for every scenario set, which is the point of it being a
+            // duration. MaxUnavailable is not: it grows with the number of disruptions, so this
+            // default is sized for the full weekly set and the workflow tightens it for the
+            // trimmed pull-request run.
+            MaxOutageSeconds = EnvInt("RESILIENCE_MAX_OUTAGE_SECONDS", 30),
+            MaxUnavailableSeconds = EnvDouble("RESILIENCE_MAX_UNAVAILABLE_SECONDS", 150),
             VerificationConcurrency = EnvInt("RESILIENCE_VERIFY_CONCURRENCY", 16),
         };
 

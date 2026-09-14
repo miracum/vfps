@@ -53,40 +53,8 @@ spec:
         - name: migrate
           image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["/opt/vfps/efbundle"]
-          args: ["--verbose"]
-          {{- with .Values.restrictedContainerSecurityContext }}
-          securityContext:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
-          {{- if $.Values.migrationsJob.resources }}
-          resources: {{- toYaml $.Values.migrationsJob.resources | nindent 12 }}
-          {{- else if ne $.Values.migrationsJob.resourcesPreset "none" }}
-          resources: {{- include "common.resources.preset" (dict "type" $.Values.migrationsJob.resourcesPreset) | nindent 12 }}
-          {{- end }}
-          env:
-            - name: DOTNET_EnableDiagnostics
-              value: "0"
-            - name: ConnectionStrings__PostgreSQL
-              value: {{ include "vfps.database.connection-string" . }}
-            - name: PGUSER
-              value: {{ include "vfps.database.user" . }}
-            - name: PGPASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "vfps.database.db-secret-name" . }}
-                  key: {{ include "vfps.database.db-secret-key" . }}
-            {{- if .Values.migrationsJob.extraEnv }}
-            {{- toYaml .Values.migrationsJob.extraEnv | nindent 12 }}
-            {{- end }}
-          volumeMounts:
-            - mountPath: /tmp
-              name: tmp-volume
-        - name: migrate-dataprotection
-          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag }}"
-          imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["/opt/vfps/efbundle-dataprotection"]
-          args: ["--verbose"]
+          command: ["dotnet", "/opt/vfps/Vfps.dll"]
+          args: ["migrate", "--verbose"]
           {{- with .Values.restrictedContainerSecurityContext }}
           securityContext:
             {{- toYaml . | nindent 12 }}

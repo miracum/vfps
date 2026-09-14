@@ -70,7 +70,9 @@ public class ResilienceTests
         Log($"namespace       {options.NamespaceName}");
         Log($"offered rate    {options.RatePerSecond}/s for {options.LoadDuration}");
         Log($"settle          {options.SettleDuration}");
-        Log($"error budget    {options.ErrorBudget:P3}");
+        Log($"max outage      {options.MaxOutageSeconds}s");
+        Log($"max unavailable {options.MaxUnavailableSeconds:F0}s");
+        Log($"call deadline   {options.CallDeadline.TotalSeconds:F0}s");
 
         using var loadChannel = CreateChannel(options.GrpcAddress, LoadRetryPolicy);
         using var verifyChannel = CreateChannel(options.GrpcAddress, VerifyRetryPolicy);
@@ -114,11 +116,16 @@ public class ResilienceTests
             cancellationToken
         );
 
+        var unavailableSeconds = (report.Failed + report.Shed) / (double)options.RatePerSecond;
+
         Log(
             $"load window complete: {report.Total} offered, {report.Ok} ok, {report.Failed} failed, "
-                + $"{report.Shed} shed ({report.FailureRate:P3} against a {options.ErrorBudget:P3} budget)"
+                + $"{report.Shed} shed ({report.FailureRate:P3})"
         );
-        Log($"longest run of seconds with no successful call: {report.LongestOutageSeconds}s");
+        Log(
+            $"longest outage: {report.LongestOutageSeconds}s (limit {options.MaxOutageSeconds}s) | "
+                + $"total unavailable: {unavailableSeconds:F1}s (limit {options.MaxUnavailableSeconds:F0}s)"
+        );
 
         foreach (
             var (status, count) in report.FailuresByStatus.OrderByDescending(entry => entry.Value)
@@ -183,18 +190,29 @@ public class ResilienceTests
             .Should()
             .BeEmpty("verification runs after chaos has stopped, so it should not be failing calls");
 
+        // Primary: how long was it flat out? A single failover of a single-primary PostgreSQL costs
+        // an outage by construction - the gate is on that outage staying bounded, not on it being
+        // absent.
         report
-            .FailureRate
+            .LongestOutageSeconds
             .Should()
             .BeLessThanOrEqualTo(
-                options.ErrorBudget,
-                "calls failing after the client's retry budget is exhausted are visible to callers "
-                    + "({0} offered, {1} ok, {2} failed, {3} shed, longest outage {4}s)",
+                options.MaxOutageSeconds,
+                "a disruption should not black the service out for longer than this "
+                    + "({0} offered, {1} ok, {2} failed, {3} shed)",
                 report.Total,
                 report.Ok,
                 report.Failed,
-                report.Shed,
-                report.LongestOutageSeconds
+                report.Shed
+            );
+
+        // Secondary: chronic flakiness that never blacks out a whole second, and so never shows up
+        // in the gate above.
+        unavailableSeconds
+            .Should()
+            .BeLessThanOrEqualTo(
+                options.MaxUnavailableSeconds,
+                "total time the service was in effect not serving, across every scenario"
             );
     }
 

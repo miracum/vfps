@@ -40,8 +40,8 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
         migrationsContainerBuilder = new ContainerBuilder(migrationsImage)
             .WithName("migrations")
             .WithNetwork(networkFixture.Network.Name)
-            .WithEntrypoint("/opt/vfps/efbundle")
-            .WithCommand("--verbose", $"--connection={connectionString}");
+            .WithEntrypoint("dotnet", "/opt/vfps/Vfps.dll")
+            .WithCommand("migrate", "--verbose", $"--connection={connectionString}");
     }
 
     [Fact]
@@ -80,6 +80,7 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
         await using var migrationsContainer = migrationsContainerBuilder
             .WithOutputConsumer(consumer)
             .WithCommand(
+                "migrate",
                 "--verbose",
                 "--connection=Server=not-postgres;Port=5432;Database=vfps;User Id=postgres;Password=postgres;"
             )
