@@ -419,6 +419,29 @@ database:
   # both this and the server's `max_connections` together (or put PgBouncer in front).
   additionalConnectionStringParameters: "Timeout=60;Max Auto Prepare=5;Maximum Pool Size=50;"
 
+dataProtection:
+  # -- certificates encrypting the ASP.NET Core Data Protection key ring at rest.
+  #
+  # The key ring holds the master keys protecting this deployment's auth cookies and antiforgery
+  # tokens, and it is persisted to the same database as the pseudonyms. Left empty, those keys are
+  # stored as **plaintext**: anyone who can read the database can forge a session for any user,
+  # including an admin. The application logs a warning at startup while this is empty.
+  #
+  # The first entry encrypts newly created keys; every entry can decrypt existing ones. To rotate,
+  # prepend the new certificate and keep the outgoing one listed until every key it protected has
+  # aged out of the ring (90 days by default) - removing it earlier makes those keys, and every
+  # cookie under them, permanently unreadable.
+  #
+  # Each entry mounts its Secret at /etc/vfps/dataprotection/<index>. Set `privateKeyKey` for a PEM
+  # pair (what cert-manager produces), or leave it empty when `certificateKey` names a PKCS#12
+  # archive. `passwordKey` is optional and names a key in the same Secret.
+  certificates: []
+  # - existingSecret:
+  #     name: "vfps-dataprotection"
+  #     certificateKey: "tls.crt"
+  #     privateKeyKey: "tls.key"
+  #     passwordKey: ""
+
 s3:
   # -- enable CSV pseudonymization jobs, which store their input and output files in
   # S3-compatible object storage. Also requires a database (Hangfire reuses the same one for its

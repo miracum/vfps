@@ -252,6 +252,58 @@ application's, and are easy to miss:
   than `sum()`. A failed recompute is visible on the `/hangfire` dashboard and leaves the previous
   counts in place until the next tick succeeds.
 
+### Encrypting the Data Protection key ring
+
+The ASP.NET Core Data Protection key ring holds the master keys that encrypt this deployment's
+auth cookies and antiforgery tokens. It is persisted to the same PostgreSQL database as the
+pseudonyms (see `ConnectionStrings__PostgreSQL` above), and **by default it is stored there
+unencrypted** - anyone able to read that database can decrypt or forge a session for any user,
+including an admin. The application logs a warning at every startup while this is the case.
+
+Point `DataProtection__Certificates__0__*` at an X.509 certificate to encrypt the ring before it
+reaches a row. The certificate has to come from somewhere the database cannot reach - protecting
+the keys with a secret the database already holds would be circular - so it is mounted from a
+file rather than read from configuration:
+
+```sh
+DataProtection__Certificates__0__Path=/etc/vfps/dataprotection/0/tls.crt
+DataProtection__Certificates__0__KeyPath=/etc/vfps/dataprotection/0/tls.key
+```
+
+Both a PEM pair (what cert-manager produces) and a single PKCS#12 archive work; which one is used
+depends on whether `__KeyPath` is set. A bad path, an unreadable file or a certificate without a
+private key fails startup rather than falling back to plaintext - a deployment that looks
+configured and protects nothing is the one outcome worth refusing outright.
+
+The Helm chart wires this up via `dataProtection.certificates`, which mounts a Secret per entry
+and sets the variables above. It applies the certificate to the worker Deployment as well as the
+API one: the worker shares the key ring and will create a key in it if the ring is empty or fully
+expired, so a worker left unconfigured would silently write an unencrypted key into an otherwise
+encrypted ring.
+
+#### Rotation
+
+Index `0` encrypts newly created keys; **every** configured index can decrypt existing ones. To
+rotate, prepend the new certificate and leave the outgoing one in place until every key it
+protected has aged out of the ring (90 days by default), then drop it. Removing a certificate that
+still protects a live key makes that key - and every cookie under it - permanently unreadable.
+
+#### Turning it on for an existing deployment
+
+Two things are worth knowing before the first rollout:
+
+- **Existing plaintext keys stay plaintext.** Turning encryption on protects newly created keys;
+  it does not rewrite the rows already in `data_protection_keys`. Those remain readable to anyone
+  with database access until they expire out of the ring. Deleting them immediately is safe in the
+  sense that nothing is lost permanently - it invalidates open sessions, so everyone signs in
+  again - and is the only way to close that window early.
+- **Everyone signs in again once.** The Data Protection application name is now pinned to a
+  constant rather than derived from the container's content root path, so that a change to where
+  the application is unpacked can never silently invalidate every cookie. That pinning is itself a
+  one-time change of the isolation boundary, so cookies minted by earlier versions stop being
+  readable on the first start after upgrading, regardless of whether you configure a certificate.
+
+
 ## Configuration
 
 Available configuration options which can be set as environment variables:
@@ -260,6 +312,9 @@ Available configuration options which can be set as environment variables:
 | -------------------------------------------------- | ------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `ConnectionStrings__PostgreSQL`                    | `string`     | `""`                | Connection string to the PostgreSQL database. See <https://www.npgsql.org/doc/connection-string-parameters.html> for options. Whenever this is set, it's also used to persist the ASP.NET Core Data Protection key ring so auth cookies/antiforgery tokens minted by one replica remain valid on another - **independent of `Authorization__IsEnabled`**, since Blazor Server's own circuit handshake relies on antiforgery regardless of whether OIDC auth is on. `Vfps.dll migrate` applies this context's migrations alongside the main one, so a separate migration Job covers both; if it is left unset there, the app fails at startup with `relation "data_protection_keys" does not exist`. |
 | `ForceRunDatabaseMigrations`                       | `bool`       | `false`             | Run database migrations as part of the startup. Only recommended when a single replica of the application is used.            |
+| `DataProtection__Certificates__0__Path`            | `string`     | `""`                | Path to the certificate encrypting the Data Protection key ring at rest. A PKCS#12 archive, or a PEM certificate when `__KeyPath` is also set. **Empty (the default) stores the key ring in plaintext** in the same database as the pseudonyms - see [Encrypting the Data Protection key ring](#encrypting-the-data-protection-key-ring). Index `0` protects newly created keys; further indices (`__1`, ...) are accepted for decryption only, which is what makes rotation possible. |
+| `DataProtection__Certificates__0__KeyPath`         | `string`     | `""`                | Path to the PEM private key belonging to `__Path`. Leave unset when `__Path` is a PKCS#12 archive, which carries its own key. |
+| `DataProtection__Certificates__0__Password`        | `string`     | `""`                | Password for the PKCS#12 archive or the encrypted PEM key. Empty means the file is not password-protected, which is the norm for a certificate mounted from a Kubernetes Secret. |
 | `ShutdownTimeout`                                  | `TimeSpan`   | `"0.00:00:25"`      | How long the host waits for in-flight requests, Blazor circuits and background work to finish after `SIGTERM` before tearing down. Kept just under Kubernetes' default `terminationGracePeriodSeconds` of 30s so draining actually completes; raise both together (and add a `preStop` hook) if your clients need a longer drain - see [Running more than one replica](#running-more-than-one-replica). |
 | `Tracing__IsEnabled`                               | `bool`       | `false`             | Enable distributed tracing support.                                                                                           |
 | `Tracing__ServiceName`                             | `string`     | `"vfps"`            | Tracing service name.                                                                                                         |

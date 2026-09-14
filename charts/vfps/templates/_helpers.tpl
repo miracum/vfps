@@ -262,3 +262,63 @@ deployment still configuring S3 through extraEnv keeps working unchanged.
       key: {{ include "vfps.s3.secret-key-key" . }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Environment variables pointing the application at the mounted key-protection certificates.
+
+The first entry encrypts newly created keys and every entry can decrypt existing ones, so the
+list order is load-bearing during a rotation - see DataProtectionConfig.Certificates.
+
+Applied to the worker Deployment as well as the API one: the worker shares the key ring and will
+create a key in it if the ring is empty or fully expired, so a worker without the certificate
+would silently write an unencrypted key into an otherwise encrypted ring.
+*/}}
+{{- define "vfps.dataProtection.env" -}}
+{{- range $index, $certificate := .Values.dataProtection.certificates }}
+{{- if not $certificate.existingSecret.name }}
+{{- fail (printf "dataProtection.certificates[%d] requires existingSecret.name" $index) }}
+{{- end }}
+- name: DataProtection__Certificates__{{ $index }}__Path
+  value: "/etc/vfps/dataprotection/{{ $index }}/{{ $certificate.existingSecret.certificateKey | default "tls.crt" }}"
+{{- with $certificate.existingSecret.privateKeyKey }}
+- name: DataProtection__Certificates__{{ $index }}__KeyPath
+  value: "/etc/vfps/dataprotection/{{ $index }}/{{ . }}"
+{{- end }}
+{{- with $certificate.existingSecret.passwordKey }}
+- name: DataProtection__Certificates__{{ $index }}__Password
+  valueFrom:
+    secretKeyRef:
+      name: {{ $certificate.existingSecret.name | quote }}
+      key: {{ . | quote }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+volumeMounts for the key-protection certificates. One directory per configured certificate, so a
+rotation that keeps two around never has to reconcile two Secrets with the same file names.
+*/}}
+{{- define "vfps.dataProtection.volumeMounts" -}}
+{{- range $index, $certificate := .Values.dataProtection.certificates }}
+- name: dataprotection-cert-{{ $index }}
+  mountPath: "/etc/vfps/dataprotection/{{ $index }}"
+  readOnly: true
+{{- end }}
+{{- end -}}
+
+{{/*
+volumes for the key-protection certificates.
+
+defaultMode is 0444 rather than something tighter because the container runs as a non-root user
+(securityContext.runAsUser) while Secret volumes are owned by root unless a pod-level fsGroup is
+set - 0400 would leave the application unable to read its own certificate. Nothing is given away
+by the wider mode: every process in the container is the application.
+*/}}
+{{- define "vfps.dataProtection.volumes" -}}
+{{- range $index, $certificate := .Values.dataProtection.certificates }}
+- name: dataprotection-cert-{{ $index }}
+  secret:
+    secretName: {{ $certificate.existingSecret.name | quote }}
+    defaultMode: 0444
+{{- end }}
+{{- end -}}
