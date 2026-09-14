@@ -131,7 +131,7 @@ public class ResilienceTests
             var (status, count) in report.FailuresByStatus.OrderByDescending(entry => entry.Value)
         )
         {
-            Log($"  failures {status,-20} {count}");
+            Log($"  failures {status, -20} {count}");
         }
 
         // Shedding is meant to be a backstop. When it dominates, the harness ran out of in-flight
@@ -169,7 +169,9 @@ public class ResilienceTests
         // Guards against a vacuous pass. A run in which everything was shed, or the namespace was
         // never usable, would otherwise sail through P2 and P3 with an empty ledger and report
         // success for a cluster that served nothing at all.
-        report.Ok.Should().BeGreaterThan(0, "the run has to have served real traffic to mean anything");
+        report
+            .Ok.Should()
+            .BeGreaterThan(0, "the run has to have served real traffic to mean anything");
         pairs.Should().NotBeEmpty("verification over an empty ledger proves nothing");
 
         // P2 and P3 first: an availability breach is a bad day, but a pseudonym that changed
@@ -188,14 +190,15 @@ public class ResilienceTests
 
         verificationErrors
             .Should()
-            .BeEmpty("verification runs after chaos has stopped, so it should not be failing calls");
+            .BeEmpty(
+                "verification runs after chaos has stopped, so it should not be failing calls"
+            );
 
         // Primary: how long was it flat out? A single failover of a single-primary PostgreSQL costs
         // an outage by construction - the gate is on that outage staying bounded, not on it being
         // absent.
         report
-            .LongestOutageSeconds
-            .Should()
+            .LongestOutageSeconds.Should()
             .BeLessThanOrEqualTo(
                 options.MaxOutageSeconds,
                 "a disruption should not black the service out for longer than this "
