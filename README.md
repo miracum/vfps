@@ -252,6 +252,310 @@ application's, and are easy to miss:
   than `sum()`. A failed recompute is visible on the `/hangfire` dashboard and leaves the previous
   counts in place until the next tick succeeds.
 
+### Encrypting the connection to PostgreSQL
+
+Nothing here sets `SSL Mode` by default, which leaves Npgsql's own default in place: it encrypts
+opportunistically, verifies nothing, and **silently falls back to plaintext** against a server
+that offers no TLS. A misconfigured server downgrades the connection with no error and no log
+line, so this is worth setting explicitly rather than assuming.
+
+The Helm chart configures it through `database.tls`, which applies to every component that opens a
+database connection - the API Deployment, the worker Deployment, and the migrations Job:
+
+```yaml
+database:
+  tls:
+    mode: VerifyFull
+    certificateAuthority:
+      existingSecret:
+        name: "vfps-db-ca"
+        key: "ca.crt"
+```
+
+`VerifyFull` verifies the server's certificate chain *and* that its name matches the host being
+connected to. `VerifyCA` verifies only the chain; every other mode verifies nothing. The CA secret
+can be omitted when the server's certificate is signed by a CA already in the container's trust
+store - typical for a managed cloud database, never the case for a cluster-internal one. Setting
+`SSL Mode` in `database.additionalConnectionStringParameters` as well is rejected at template
+time, so the connection string and the mounted certificates cannot drift apart.
+
+#### CloudNativePG
+
+A [CloudNativePG](https://cloudnative-pg.io/) `Cluster` serves TLS out of the box and issues its
+own CA, so there is nothing to enable on the database side - only a trust anchor to hand over.
+The operator creates these Secrets per cluster:
+
+| Secret             | Contents                                                | Used for                                        |
+| ------------------ | ------------------------------------------------------- | ----------------------------------------------- |
+| `<cluster>-ca`     | `ca.crt`, `ca.key`                                      | `database.tls.certificateAuthority`             |
+| `<cluster>-server` | `tls.crt`, `tls.key`                                    | the server's own identity; vfps never reads it  |
+| `<cluster>-app`    | `username`, `password`, `dbname`, `host`, `port`, `uri` | `database.username` / `database.existingSecret` |
+
+```yaml
+database:
+  host: "vfps-db-rw"          # the cluster's read-write Service
+  port: 5432
+  database: "app"
+  username: "app"             # must match the -app Secret's `username`
+  existingSecret: "vfps-db-app"
+  existingSecretKey: "password"
+  tls:
+    mode: VerifyFull
+    certificateAuthority:
+      existingSecret:
+        name: "vfps-db-ca"
+```
+
+The chart projects `ca.crt` out of that Secret key by key rather than mounting it whole. This is
+deliberate: `<cluster>-ca` also contains `ca.key`, the key that signs every certificate in the
+cluster, and mounting the Secret wholesale would hand the vfps pod the ability to mint credentials
+for its own database.
+
+**Check the certificate's SAN before rolling out.** `VerifyFull` matches the host you connect to
+against the server certificate's Subject Alternative Names, and a mismatch fails the handshake
+while the chain itself verifies perfectly - a confusing failure if you are not expecting it:
+
+```sh
+kubectl get secret vfps-db-server -o jsonpath='{.data.tls\.crt}' | base64 -d \
+  | openssl x509 -noout -ext subjectAltName
+```
+
+Set `database.host` to a name that actually appears there. If the form your DNS resolves is not
+listed, either use one that is, or drop to `VerifyCA` - which still verifies the chain, and inside
+a cluster whose DNS you trust is a defensible trade, though it does concede an attacker who can
+both spoof DNS and obtain a certificate from that CA.
+
+#### Mutual TLS
+
+PostgreSQL can authenticate clients by certificate instead of by password, which removes the
+database password from the deployment entirely. Point `database.tls.clientCertificate` at a Secret
+holding a client certificate and key:
+
+```yaml
+database:
+  tls:
+    mode: VerifyFull
+    certificateAuthority:
+      existingSecret:
+        name: "vfps-db-ca"
+    clientCertificate:
+      existingSecret:
+        name: "vfps-db-client"
+        certificateKey: "tls.crt"
+        privateKeyKey: "tls.key"
+```
+
+Two requirements are easy to miss:
+
+- **The certificate's Common Name must equal the database role** vfps connects as
+  (`database.username`), because that CN is what PostgreSQL authenticates as the user. A
+  certificate with any other CN is rejected as the wrong user rather than as an invalid
+  certificate.
+- **The private key must not be passphrase-protected.** Npgsql takes the passphrase from the
+  connection string, which the chart renders as a plain value in the pod spec - so a passphrase
+  there would be readable by anyone who can read the Deployment.
+
+#### Generating a client certificate
+
+The certificate has to be signed by a CA the server trusts for client authentication. For
+CloudNativePG that is the cluster CA (`<cluster>-ca`), which the operator also uses as the client
+CA unless `.spec.certificates.clientCASecret` says otherwise.
+
+The `cnpg` kubectl plugin does the whole thing in one command, and is the way to prefer - it signs
+with the cluster's own client CA and writes a ready-to-mount `kubernetes.io/tls` Secret:
+
+```sh
+kubectl cnpg certificate vfps-db-client \
+  --cnpg-cluster vfps-db \
+  --cnpg-user app \
+  -n vfps
+```
+
+`--cnpg-user` is what ends up as the certificate's CN, so it must be the database role - the same
+value as `database.username`. Check `kubectl cnpg certificate --help` for the flags your plugin
+version accepts.
+
+Without the plugin - or against a PostgreSQL that is not CloudNativePG - sign one with `openssl`.
+This extracts the CA's **private key**, so do it somewhere you are willing to have that key exist,
+and remove it afterwards:
+
+```sh
+kubectl get secret vfps-db-ca -o jsonpath='{.data.ca\.crt}' | base64 -d > ca.crt
+kubectl get secret vfps-db-ca -o jsonpath='{.data.ca\.key}' | base64 -d > ca.key
+
+# CN must be the database role vfps connects as; the key stays unencrypted on purpose
+openssl genrsa -out tls.key 2048
+openssl req -new -key tls.key -out client.csr -subj "/CN=app"
+openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+  -out tls.crt -days 365 \
+  -extfile <(printf "extendedKeyUsage=clientAuth")
+
+kubectl create secret tls vfps-db-client --cert=tls.crt --key=tls.key -n vfps
+shred -u ca.key client.csr
+```
+
+Verify before rolling it out - `openssl verify` catches a wrong CA or a missing client-auth
+extension without having to watch a pod fail:
+
+```sh
+openssl verify -CAfile ca.crt -purpose sslclient tls.crt
+openssl x509 -in tls.crt -noout -subject     # must print the database role
+```
+
+Renewal is a re-run of the same command plus a pod restart, so keep `-days` short enough to stay
+honest and long enough not to page anyone. The plugin's certificates and the manual ones expire
+silently - the failure mode is a pod that stops being able to connect, so it is worth an alert on
+the certificate's expiry rather than discovering it during an unrelated rollout.
+
+#### Making the server require it
+
+A client certificate that the server never asks for is verified as part of the TLS handshake and
+then simply not used to authenticate - so the password stays live and nothing has actually been
+tightened. The `pg_hba` rule is what makes it the credential. On a CloudNativePG cluster:
+
+```yaml
+spec:
+  postgresql:
+    pg_hba:
+      - hostssl app app all cert
+```
+
+#### A note on the migrations Job
+
+Two implementation details, in case a change to the Job ever surprises you. Neither needs
+configuring - `database.tls` drives both - but both are non-obvious enough to be worth writing
+down.
+
+The Job's second container runs `psql` to print the resulting schema, and libpq reads its own
+environment rather than the connection string, so the chart derives `PGSSLMODE`/`PGSSLROOTCERT`/
+`PGSSLCERT` from `database.tls` - spelling the modes libpq's way (`verify-full`, `verify-ca`)
+rather than Npgsql's.
+
+And libpq refuses a private key readable by group or world, which every Secret mount is: the files
+are owned by root while the container runs as a non-root user, so the mode cannot simply be
+tightened. The container therefore copies the key to a `0600` file and points libpq at the copy -
+which is why it receives `VFPS_PGSSLKEY_SOURCE` rather than `PGSSLKEY` directly. Npgsql enforces
+no such rule, so the application and the migration itself read the mounted key as-is.
+
+### Encrypting the Data Protection key ring
+
+The ASP.NET Core Data Protection key ring holds the master keys that encrypt this deployment's
+auth cookies and antiforgery tokens. It is persisted to the same PostgreSQL database as the
+pseudonyms (see `ConnectionStrings__PostgreSQL` above), and **by default it is stored there
+unencrypted** - anyone able to read that database can decrypt or forge a session for any user,
+including an admin. The application logs a warning at every startup while this is the case.
+
+Point `DataProtection__Certificates__0__*` at an X.509 certificate to encrypt the ring before it
+reaches a row. The certificate has to come from somewhere the database cannot reach - protecting
+the keys with a secret the database already holds would be circular - so it is mounted from a
+file rather than read from configuration:
+
+```sh
+DataProtection__Certificates__0__Path=/etc/vfps/dataprotection/0/tls.crt
+DataProtection__Certificates__0__KeyPath=/etc/vfps/dataprotection/0/tls.key
+```
+
+Both a PEM pair (what cert-manager produces) and a single PKCS#12 archive work; which one is used
+depends on whether `__KeyPath` is set. A bad path, an unreadable file or a certificate without a
+private key fails startup rather than falling back to plaintext - a deployment that looks
+configured and protects nothing is the one outcome worth refusing outright.
+
+The Helm chart wires this up via `dataProtection.certificates`, which mounts a Secret per entry
+and sets the variables above. It applies the certificate to the worker Deployment as well as the
+API one: the worker shares the key ring and will create a key in it if the ring is empty or fully
+expired, so a worker left unconfigured would silently write an unencrypted key into an otherwise
+encrypted ring.
+
+#### Generating a certificate
+
+This certificate is never presented to anything and is not a TLS certificate. Data Protection uses
+it purely as an RSA keypair: the public key encrypts the key ring on the way into the database, the
+private key decrypts it on the next startup. There is no CA, no hostname, no chain validation and
+no revocation check - so a self-signed certificate is exactly right here, and reusing your ingress
+or database certificate is not.
+
+```sh
+openssl req -x509 -newkey rsa:4096 -nodes \
+  -keyout tls.key -out tls.crt \
+  -days 3650 -subj "/CN=vfps-dataprotection"
+
+kubectl create secret tls vfps-dataprotection --cert=tls.crt --key=tls.key -n vfps
+```
+
+```yaml
+dataProtection:
+  certificates:
+    - existingSecret:
+        name: "vfps-dataprotection"
+        certificateKey: "tls.crt"
+        privateKeyKey: "tls.key"
+```
+
+Three things that recipe encodes on purpose:
+
+- **`rsa`.** The key ring is encrypted with the XML encryption standard, which wraps its content
+  key with RSA. An **ECDSA certificate is accepted at startup and then fails on the first request**
+  that needs a cookie, with a `CryptographicException` from deep inside the key ring - so the
+  mistake surfaces well away from the thing that caused it.
+- **`-nodes`**, meaning no passphrase on the private key. Add one if you want, and name the Secret
+  key holding it in `passwordKey`; the chart passes it through
+  `DataProtection__Certificates__0__Password`.
+- **A long `-days`.** Nothing enforces the validity period: Data Protection does not check it, and
+  an expired certificate keeps protecting and unprotecting the key ring indefinitely. That cuts
+  both ways - expiry will never cause an outage, and it will never prompt you to rotate either, so
+  treat [rotation](#rotation) as something you schedule rather than something the certificate
+  reminds you about.
+
+For a single PKCS#12 file instead of a PEM pair, leave `privateKeyKey` empty - the archive carries
+its own key:
+
+```sh
+openssl pkcs12 -export -inkey tls.key -in tls.crt -out keyring.pfx -passout pass:hunter2
+
+kubectl create secret generic vfps-dataprotection -n vfps \
+  --from-file=keyring.pfx=keyring.pfx \
+  --from-literal=password=hunter2
+```
+
+```yaml
+dataProtection:
+  certificates:
+    - existingSecret:
+        name: "vfps-dataprotection"
+        certificateKey: "keyring.pfx"
+        privateKeyKey: ""
+        passwordKey: "password"
+```
+
+**Back the private key up somewhere outside this cluster and outside this database.** Losing it
+costs everyone a sign-in rather than any data - the key ring only protects auth cookies and
+antiforgery tokens, so an unreadable one means new keys and a fresh login, not lost pseudonyms.
+But it is unrecoverable in the sense that matters: nothing can decrypt those rows again, and
+storing the only copy next to the thing it protects defeats the point of encrypting it.
+
+#### Rotation
+
+Index `0` encrypts newly created keys; **every** configured index can decrypt existing ones. To
+rotate, prepend the new certificate and leave the outgoing one in place until every key it
+protected has aged out of the ring (90 days by default), then drop it. Removing a certificate that
+still protects a live key makes that key - and every cookie under it - permanently unreadable.
+
+#### Turning it on for an existing deployment
+
+Two things are worth knowing before the first rollout:
+
+- **Existing plaintext keys stay plaintext.** Turning encryption on protects newly created keys;
+  it does not rewrite the rows already in `data_protection_keys`. Those remain readable to anyone
+  with database access until they expire out of the ring. Deleting them immediately is safe in the
+  sense that nothing is lost permanently - it invalidates open sessions, so everyone signs in
+  again - and is the only way to close that window early.
+- **Everyone signs in again once.** The Data Protection application name is now pinned to a
+  constant rather than derived from the container's content root path, so that a change to where
+  the application is unpacked can never silently invalidate every cookie. That pinning is itself a
+  one-time change of the isolation boundary, so cookies minted by earlier versions stop being
+  readable on the first start after upgrading, regardless of whether you configure a certificate.
+
+
 ## Configuration
 
 Available configuration options which can be set as environment variables:
@@ -260,6 +564,9 @@ Available configuration options which can be set as environment variables:
 | -------------------------------------------------- | ------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | `ConnectionStrings__PostgreSQL`                    | `string`     | `""`                | Connection string to the PostgreSQL database. See <https://www.npgsql.org/doc/connection-string-parameters.html> for options. Whenever this is set, it's also used to persist the ASP.NET Core Data Protection key ring so auth cookies/antiforgery tokens minted by one replica remain valid on another - **independent of `Authorization__IsEnabled`**, since Blazor Server's own circuit handshake relies on antiforgery regardless of whether OIDC auth is on. `Vfps.dll migrate` applies this context's migrations alongside the main one, so a separate migration Job covers both; if it is left unset there, the app fails at startup with `relation "data_protection_keys" does not exist`. |
 | `ForceRunDatabaseMigrations`                       | `bool`       | `false`             | Run database migrations as part of the startup. Only recommended when a single replica of the application is used.            |
+| `DataProtection__Certificates__0__Path`            | `string`     | `""`                | Path to the certificate encrypting the Data Protection key ring at rest. A PKCS#12 archive, or a PEM certificate when `__KeyPath` is also set. **Empty (the default) stores the key ring in plaintext** in the same database as the pseudonyms - see [Encrypting the Data Protection key ring](#encrypting-the-data-protection-key-ring). Index `0` protects newly created keys; further indices (`__1`, ...) are accepted for decryption only, which is what makes rotation possible. |
+| `DataProtection__Certificates__0__KeyPath`         | `string`     | `""`                | Path to the PEM private key belonging to `__Path`. Leave unset when `__Path` is a PKCS#12 archive, which carries its own key. |
+| `DataProtection__Certificates__0__Password`        | `string`     | `""`                | Password for the PKCS#12 archive or the encrypted PEM key. Empty means the file is not password-protected, which is the norm for a certificate mounted from a Kubernetes Secret. |
 | `ShutdownTimeout`                                  | `TimeSpan`   | `"0.00:00:25"`      | How long the host waits for in-flight requests, Blazor circuits and background work to finish after `SIGTERM` before tearing down. Kept just under Kubernetes' default `terminationGracePeriodSeconds` of 30s so draining actually completes; raise both together (and add a `preStop` hook) if your clients need a longer drain - see [Running more than one replica](#running-more-than-one-replica). |
 | `Tracing__IsEnabled`                               | `bool`       | `false`             | Enable distributed tracing support.                                                                                           |
 | `Tracing__ServiceName`                             | `string`     | `"vfps"`            | Tracing service name.                                                                                                         |

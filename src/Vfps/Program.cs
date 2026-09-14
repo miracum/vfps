@@ -408,13 +408,45 @@ if (authConfig.IsEnabled)
 // fallback. Persisted to Postgres (the same database vfps already depends on) rather than a
 // separate Redis instance - sticky sessions themselves are an ingress-level concern, documented in
 // the README, not implemented here.
+builder.Services.Configure<DataProtectionConfig>(
+    builder.Configuration.GetSection("DataProtection")
+);
+var dataProtectionConfig = new DataProtectionConfig();
+builder.Configuration.GetSection("DataProtection").Bind(dataProtectionConfig);
+
 var dataProtectionConnectionString = builder.Configuration.GetConnectionString("PostgreSQL");
 if (!string.IsNullOrEmpty(dataProtectionConnectionString))
 {
     builder.Services.AddDbContext<DataProtectionKeyContext>(options =>
         options.UseNpgsql(dataProtectionConnectionString, ConfigureNpgsqlResilience)
     );
-    builder.Services.AddDataProtection().PersistKeysToDbContext<DataProtectionKeyContext>();
+
+    var dataProtectionBuilder = builder
+        .Services.AddDataProtection()
+        // Pinned rather than left to its default, which is derived from the content root path:
+        // the application name is the isolation boundary for every protected payload, so an image
+        // that ever changes where the app is unpacked would silently invalidate every cookie
+        // minted before the move. A constant makes that impossible. Changing this value is itself
+        // a one-time forced re-login, which is why it's a constant and not a setting.
+        .SetApplicationName("vfps")
+        .PersistKeysToDbContext<DataProtectionKeyContext>();
+
+    // Throws rather than degrading to an unencrypted ring - see DataProtectionCertificateLoader.
+    var keyProtectionCertificates = DataProtectionCertificateLoader.Load(
+        dataProtectionConfig.Certificates
+    );
+
+    if (keyProtectionCertificates.Count > 0)
+    {
+        dataProtectionBuilder
+            .ProtectKeysWithCertificate(keyProtectionCertificates[0])
+            // Without this, decryption resolves certificates by thumbprint out of the platform
+            // certificate store - which a certificate loaded from a mounted file is not in, so
+            // every restart would fail to read back the ring it just wrote. Passing them
+            // explicitly is also what lets more than one be accepted, which is the whole rotation
+            // story in DataProtectionConfig.Certificates.
+            .UnprotectKeysWithAnyCertificate([.. keyProtectionCertificates]);
+    }
 }
 
 // CSV pseudonymization jobs: off by default, matching this codebase's optional-feature idiom.
@@ -638,6 +670,21 @@ if (!authConfig.IsEnabled)
         "Authorization is disabled (Authorization:IsEnabled=false). The API and admin UI are "
             + "reachable without authentication and every namespace is fully accessible. This is "
             + "not recommended for deployments handling real data."
+    );
+}
+
+if (
+    !string.IsNullOrEmpty(dataProtectionConnectionString)
+    && dataProtectionConfig.Certificates.Count == 0
+)
+{
+    app.Logger.LogWarning(
+        "The Data Protection key ring is persisted to PostgreSQL unencrypted "
+            + "(DataProtection:Certificates is empty). The keys that protect this deployment's "
+            + "auth cookies and antiforgery tokens are stored as plaintext in the same database "
+            + "as the pseudonyms, so anyone who can read that database can forge a session for "
+            + "any user, including an admin. Configure a certificate to encrypt the key ring at "
+            + "rest - see the Data Protection section of the README."
     );
 }
 

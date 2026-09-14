@@ -94,7 +94,11 @@ public static class OpenModelLoadRunner
 
                                 if (!result.Succeeded && result.Status is { } status)
                                 {
-                                    failuresByStatus.AddOrUpdate(status, 1, (_, count) => count + 1);
+                                    failuresByStatus.AddOrUpdate(
+                                        status,
+                                        1,
+                                        (_, count) => count + 1
+                                    );
                                 }
                             }
                             catch (Exception exception)
@@ -240,7 +244,10 @@ public sealed record LoadReport
 
             csv.Append(CultureInfo.InvariantCulture, $"{second},{bucket.Ok},{bucket.Failed},")
                 .Append(CultureInfo.InvariantCulture, $"{bucket.Shed},{meanMs:F1},")
-                .Append(CultureInfo.InvariantCulture, $"{TimeSpan.FromTicks(bucket.MaxLatencyTicks).TotalMilliseconds:F1}\n");
+                .Append(
+                    CultureInfo.InvariantCulture,
+                    $"{TimeSpan.FromTicks(bucket.MaxLatencyTicks).TotalMilliseconds:F1}\n"
+                );
 
             ok += bucket.Ok;
             failed += bucket.Failed;

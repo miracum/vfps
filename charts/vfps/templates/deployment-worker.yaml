@@ -139,6 +139,7 @@ spec:
               value: {{ . | quote }}
             {{- end }}
             {{- include "vfps.s3.env" . | nindent 12 }}
+            {{- include "vfps.dataProtection.env" . | nindent 12 }}
             # This is what makes these pods the workers. Placed before the user-supplied variables
             # so it can still be overridden deliberately, since Kubernetes lets the last occurrence
             # of a duplicated name win.
@@ -167,6 +168,8 @@ spec:
               readOnly: true
               subPath: appsettings.Production.json
           {{- end }}
+          {{- include "vfps.dataProtection.volumeMounts" . | nindent 12 }}
+          {{- include "vfps.database.tls.volumeMounts" . | nindent 12 }}
           {{- if .Values.extraVolumeMounts }}
             {{- toYaml .Values.extraVolumeMounts | nindent 12 }}
           {{- end }}
@@ -176,6 +179,8 @@ spec:
           configMap:
             name: {{ include "vfps.fullname" . }}-appsettings
         {{- end }}
+        {{- include "vfps.dataProtection.volumes" . | nindent 8 }}
+        {{- include "vfps.database.tls.volumes" . | nindent 8 }}
         {{- if .Values.extraVolumes }}
         {{- toYaml .Values.extraVolumes | nindent 8 }}
         {{- end }}

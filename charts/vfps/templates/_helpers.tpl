@@ -173,7 +173,8 @@ Create the connection string from the host, port and database name.
 {{- $appName := printf "%s" $releaseName -}}
 {{- $additionalConnectionStringParameters := printf "%s" .Values.database.additionalConnectionStringParameters -}}
 {{- $schema := printf "%s" .Values.database.schema -}}
-{{ (printf "Host=%s:%d;Database=%s;Application Name=%s;%s%s" $host (int $port) $databaseName $appName (empty $schema | ternary "" (printf "Search Path=%s;" $schema)) $additionalConnectionStringParameters) | quote }}
+{{- $tlsParameters := (include "vfps.database.tls.connection-string-parameters" .) -}}
+{{ (printf "Host=%s:%d;Database=%s;Application Name=%s;%s%s%s" $host (int $port) $databaseName $appName (empty $schema | ternary "" (printf "Search Path=%s;" $schema)) $additionalConnectionStringParameters $tlsParameters) | quote }}
 {{- end -}}
 
 {{/*
@@ -261,4 +262,184 @@ deployment still configuring S3 through extraEnv keeps working unchanged.
       name: {{ include "vfps.s3.secret-name" . }}
       key: {{ include "vfps.s3.secret-key-key" . }}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Environment variables pointing the application at the mounted key-protection certificates.
+
+The first entry encrypts newly created keys and every entry can decrypt existing ones, so the
+list order is load-bearing during a rotation - see DataProtectionConfig.Certificates.
+
+Applied to the worker Deployment as well as the API one: the worker shares the key ring and will
+create a key in it if the ring is empty or fully expired, so a worker without the certificate
+would silently write an unencrypted key into an otherwise encrypted ring.
+*/}}
+{{- define "vfps.dataProtection.env" -}}
+{{- range $index, $certificate := .Values.dataProtection.certificates }}
+{{- if not $certificate.existingSecret.name }}
+{{- fail (printf "dataProtection.certificates[%d] requires existingSecret.name" $index) }}
+{{- end }}
+- name: DataProtection__Certificates__{{ $index }}__Path
+  value: "/etc/vfps/dataprotection/{{ $index }}/{{ $certificate.existingSecret.certificateKey | default "tls.crt" }}"
+{{- with $certificate.existingSecret.privateKeyKey }}
+- name: DataProtection__Certificates__{{ $index }}__KeyPath
+  value: "/etc/vfps/dataprotection/{{ $index }}/{{ . }}"
+{{- end }}
+{{- with $certificate.existingSecret.passwordKey }}
+- name: DataProtection__Certificates__{{ $index }}__Password
+  valueFrom:
+    secretKeyRef:
+      name: {{ $certificate.existingSecret.name | quote }}
+      key: {{ . | quote }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+volumeMounts for the key-protection certificates. One directory per configured certificate, so a
+rotation that keeps two around never has to reconcile two Secrets with the same file names.
+*/}}
+{{- define "vfps.dataProtection.volumeMounts" -}}
+{{- range $index, $certificate := .Values.dataProtection.certificates }}
+- name: dataprotection-cert-{{ $index }}
+  mountPath: "/etc/vfps/dataprotection/{{ $index }}"
+  readOnly: true
+{{- end }}
+{{- end -}}
+
+{{/*
+volumes for the key-protection certificates.
+
+defaultMode is 0444 rather than something tighter because the container runs as a non-root user
+(securityContext.runAsUser) while Secret volumes are owned by root unless a pod-level fsGroup is
+set - 0400 would leave the application unable to read its own certificate. Nothing is given away
+by the wider mode: every process in the container is the application.
+*/}}
+{{- define "vfps.dataProtection.volumes" -}}
+{{- range $index, $certificate := .Values.dataProtection.certificates }}
+- name: dataprotection-cert-{{ $index }}
+  secret:
+    secretName: {{ $certificate.existingSecret.name | quote }}
+    defaultMode: 0444
+{{- end }}
+{{- end -}}
+
+{{/*
+Where the database TLS material is mounted. Constants rather than settings: nothing outside the
+chart refers to these paths, and making them configurable would only create a way for the mount
+and the connection string to disagree.
+*/}}
+{{- define "vfps.database.tls.caDir" -}}/etc/vfps/db-tls/ca{{- end -}}
+{{- define "vfps.database.tls.clientDir" -}}/etc/vfps/db-tls/client{{- end -}}
+
+{{/*
+The TLS portion of the Npgsql connection string, appended to database.additionalConnectionStringParameters.
+
+Emits nothing at all when database.tls.mode is unset, which is the default - existing deployments
+keep whatever they already had in additionalConnectionStringParameters.
+*/}}
+{{- define "vfps.database.tls.connection-string-parameters" -}}
+{{- $tls := .Values.database.tls -}}
+{{- $mode := $tls.mode | default "" -}}
+{{- $caName := $tls.certificateAuthority.existingSecret.name | default "" -}}
+{{- $clientName := $tls.clientCertificate.existingSecret.name | default "" -}}
+{{- if and (not $mode) (or $caName $clientName) -}}
+{{- fail "database.tls.mode must be set when database.tls.certificateAuthority or database.tls.clientCertificate is configured - a certificate has no effect while the connection is unencrypted" -}}
+{{- end -}}
+{{- if $mode -}}
+{{- $valid := list "Disable" "Allow" "Prefer" "Require" "VerifyCA" "VerifyFull" -}}
+{{- if not (has $mode $valid) -}}
+{{- fail (printf "database.tls.mode must be one of: %s (got %q)" (join ", " $valid) $mode) -}}
+{{- end -}}
+{{- if contains "ssl mode" (lower .Values.database.additionalConnectionStringParameters) -}}
+{{- fail "database.additionalConnectionStringParameters already sets 'SSL Mode' - remove it and use database.tls instead, so the connection string and the mounted certificates cannot disagree" -}}
+{{- end -}}
+{{- $params := printf "SSL Mode=%s;" $mode -}}
+{{- if $caName -}}
+{{- $params = printf "%sRoot Certificate=%s/%s;" $params (include "vfps.database.tls.caDir" .) ($tls.certificateAuthority.existingSecret.key | default "ca.crt") -}}
+{{- end -}}
+{{- if $clientName -}}
+{{- $params = printf "%sSSL Certificate=%s/%s;SSL Key=%s/%s;" $params (include "vfps.database.tls.clientDir" .) ($tls.clientCertificate.existingSecret.certificateKey | default "tls.crt") (include "vfps.database.tls.clientDir" .) ($tls.clientCertificate.existingSecret.privateKeyKey | default "tls.key") -}}
+{{- end -}}
+{{- $params -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+volumeMounts for the database TLS material - every container that opens a database connection
+needs these: the API Deployment, the worker Deployment, and both containers of the migrations Job.
+*/}}
+{{- define "vfps.database.tls.volumeMounts" -}}
+{{- if .Values.database.tls.certificateAuthority.existingSecret.name }}
+- name: db-tls-ca
+  mountPath: {{ include "vfps.database.tls.caDir" . | quote }}
+  readOnly: true
+{{- end }}
+{{- if .Values.database.tls.clientCertificate.existingSecret.name }}
+- name: db-tls-client
+  mountPath: {{ include "vfps.database.tls.clientDir" . | quote }}
+  readOnly: true
+{{- end }}
+{{- end -}}
+
+{{/*
+volumes for the database TLS material.
+
+Each Secret is projected key by key rather than whole. For a CloudNativePG cluster the CA Secret
+also holds `ca.key`, the key that signs every certificate in that cluster - mounting the Secret
+wholesale would hand this pod the ability to mint credentials for its own database.
+
+defaultMode 0444 for the same reason as elsewhere in this chart: Secret volumes are owned by root
+unless a pod-level fsGroup is set, while the containers run as a non-root user. Npgsql does not
+police key file permissions the way libpq does (see the migrations Job, which copies the key to a
+0600 temporary file before invoking psql).
+*/}}
+{{- define "vfps.database.tls.volumes" -}}
+{{- $tls := .Values.database.tls }}
+{{- if $tls.certificateAuthority.existingSecret.name }}
+- name: db-tls-ca
+  secret:
+    secretName: {{ $tls.certificateAuthority.existingSecret.name | quote }}
+    defaultMode: 0444
+    items:
+      - key: {{ $tls.certificateAuthority.existingSecret.key | default "ca.crt" | quote }}
+        path: {{ $tls.certificateAuthority.existingSecret.key | default "ca.crt" | quote }}
+{{- end }}
+{{- if $tls.clientCertificate.existingSecret.name }}
+- name: db-tls-client
+  secret:
+    secretName: {{ $tls.clientCertificate.existingSecret.name | quote }}
+    defaultMode: 0444
+    items:
+      - key: {{ $tls.clientCertificate.existingSecret.certificateKey | default "tls.crt" | quote }}
+        path: {{ $tls.clientCertificate.existingSecret.certificateKey | default "tls.crt" | quote }}
+      - key: {{ $tls.clientCertificate.existingSecret.privateKeyKey | default "tls.key" | quote }}
+        path: {{ $tls.clientCertificate.existingSecret.privateKeyKey | default "tls.key" | quote }}
+{{- end }}
+{{- end -}}
+
+{{/*
+libpq equivalents of the settings above, for the migrations Job's psql container.
+
+libpq spells the modes differently to Npgsql, and PGSSLKEY is deliberately absent: libpq refuses a
+private key readable by group or world, which every Secret mount is, so the container copies it to
+a 0600 file and exports PGSSLKEY itself.
+*/}}
+{{- define "vfps.database.tls.libpq-env" -}}
+{{- $tls := .Values.database.tls -}}
+{{- if $tls.mode }}
+{{- $libpqModes := dict "Disable" "disable" "Allow" "allow" "Prefer" "prefer" "Require" "require" "VerifyCA" "verify-ca" "VerifyFull" "verify-full" }}
+- name: PGSSLMODE
+  value: {{ get $libpqModes $tls.mode | quote }}
+{{- if $tls.certificateAuthority.existingSecret.name }}
+- name: PGSSLROOTCERT
+  value: "{{ include "vfps.database.tls.caDir" . }}/{{ $tls.certificateAuthority.existingSecret.key | default "ca.crt" }}"
+{{- end }}
+{{- if $tls.clientCertificate.existingSecret.name }}
+- name: PGSSLCERT
+  value: "{{ include "vfps.database.tls.clientDir" . }}/{{ $tls.clientCertificate.existingSecret.certificateKey | default "tls.crt" }}"
+- name: VFPS_PGSSLKEY_SOURCE
+  value: "{{ include "vfps.database.tls.clientDir" . }}/{{ $tls.clientCertificate.existingSecret.privateKeyKey | default "tls.key" }}"
+{{- end }}
+{{- end }}
 {{- end -}}
