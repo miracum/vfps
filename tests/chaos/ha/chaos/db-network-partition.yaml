@@ -1,0 +1,33 @@
+# Cuts the vfps API pods off from the database without touching either. A distinct failure mode from
+# killing the primary: PostgreSQL is up and healthy throughout, so Npgsql sees connection timeouts
+# rather than resets, and what is under test is the connection string's Timeout=60 together with the
+# application's retry policy - not failover.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: db-network-partition
+  namespace: vfps
+spec:
+  schedule: "@every 60s"
+  concurrencyPolicy: Forbid
+  historyLimit: 2
+  type: NetworkChaos
+  networkChaos:
+    action: partition
+    mode: all
+    selector:
+      namespaces:
+        - vfps
+      labelSelectors:
+        app.kubernetes.io/name: vfps
+        app.kubernetes.io/instance: vfps
+        app.kubernetes.io/component: api
+    direction: to
+    target:
+      mode: all
+      selector:
+        namespaces:
+          - vfps
+        labelSelectors:
+          cnpg.io/cluster: vfps-db
+    duration: 20s

@@ -1,0 +1,22 @@
+# Kills one vfps API pod at a time, repeatedly, for as long as this Schedule exists.
+# Exercises replicaCount, the PodDisruptionBudget and Service endpoint churn.
+apiVersion: chaos-mesh.org/v1alpha1
+kind: Schedule
+metadata:
+  name: vfps-pod-kill
+  namespace: vfps
+spec:
+  schedule: "@every 45s"
+  concurrencyPolicy: Forbid
+  historyLimit: 2
+  type: PodChaos
+  podChaos:
+    action: pod-kill
+    mode: one
+    selector:
+      namespaces:
+        - vfps
+      labelSelectors:
+        app.kubernetes.io/name: vfps
+        app.kubernetes.io/instance: vfps
+        app.kubernetes.io/component: api

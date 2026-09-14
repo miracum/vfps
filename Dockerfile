@@ -88,11 +88,9 @@ EOF
 
 FROM build AS stress-test
 WORKDIR /opt/vfps-stress
-# https://github.com/hadolint/hadolint/pull/815 isn't yet in mega-linter
-# hadolint ignore=DL3022
-COPY --from=registry.k8s.io/kubectl:v1.37.0@sha256:5ed410ebac5dc976cc717098994dcdb29bbbd38f6bd65f582311f5be4ba719cf /bin/kubectl /usr/bin/kubectl
-
-COPY tests/chaos/chaos.yaml /tmp/
+# kubectl and a baked-in copy of the chaos manifests used to live here, for the Argo Workflows
+# templates that applied and removed chaos from inside the cluster. tests/chaos/ha/run.sh now drives
+# chaos from outside it with the runner's own kubeconfig, so this image only has to run tests.
 COPY --from=build-stress-test /build/publish .
 # currently running into <https://github.com/dotnet/runtime/issues/80619>
 # when running as non-root.
