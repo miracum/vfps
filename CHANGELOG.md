@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.14.0](https://github.com/miracum/vfps/compare/v1.13.4...v1.14.0) (2026-09-14)
+
+
+### Features
+
+* data protection key encryption and cnpg tls ([#315](https://github.com/miracum/vfps/issues/315)) ([fadea00](https://github.com/miracum/vfps/commit/fadea00a3e813eae9e9f15b70d8f49965fa0c097))
+
+
+### CI/CD
+
+* added resilience workflow ([#313](https://github.com/miracum/vfps/issues/313)) ([497caaf](https://github.com/miracum/vfps/commit/497caaf850d18aae006052448455debd1f3f767d))
+
 ## [1.13.4](https://github.com/miracum/vfps/compare/v1.13.3...v1.13.4) (2026-09-12)
 
 
