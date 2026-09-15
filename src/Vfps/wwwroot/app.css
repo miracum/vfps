@@ -50,6 +50,23 @@ body {
 }
 
 /*
+ * The "this pattern is usable" / "this value would be accepted" verdicts on the namespace create
+ * dialog's validation-regex checker (Namespaces.razor). Its counterpart, the rejection, uses
+ * BlazorBlueprint's own text-destructive - there is no matching "text-success" in the shipped
+ * bundle to pair with it (see the note at the top of this file on why an invented Tailwind class
+ * would silently do nothing), so the affirmative half is defined here. Unlike the amber rules
+ * above, this one carries a dark-theme override: green-700 on the dark background is legible but
+ * muddy, and a verdict is exactly the wrong thing to have to squint at.
+ */
+.regex-check-ok {
+    color: #15803d; /* Tailwind green-700 */
+}
+
+.dark .regex-check-ok {
+    color: #4ade80; /* Tailwind green-400 */
+}
+
+/*
  * The one Tailwind utility the namespace create dialog's row layout needs that the shipped
  * blazorblueprint.css doesn't carry (see the note above on why this project has no Tailwind build
  * of its own). It sits on a plain div rather than on a Bb component's Class parameter, so the

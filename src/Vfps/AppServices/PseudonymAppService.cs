@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.WebUtilities;
@@ -642,11 +641,6 @@ public class PseudonymAppService(
         );
     }
 
-    // A short, fixed timeout guards against a catastrophically backtracking pattern turning a
-    // single pseudonym request into a denial of service - the pattern is admin-supplied at
-    // namespace creation, not attacker-controlled, but this is cheap insurance regardless.
-    private static readonly TimeSpan ValidationRegexTimeout = TimeSpan.FromMilliseconds(500);
-
     private static void ValidateOriginalValue(
         Data.Models.Namespace @namespace,
         string originalValue
@@ -674,7 +668,7 @@ public class PseudonymAppService(
         var pattern = @namespace.OriginalValueValidationRegex;
 
         return string.IsNullOrEmpty(pattern)
-            || Regex.IsMatch(originalValue, pattern, RegexOptions.None, ValidationRegexTimeout);
+            || OriginalValueValidation.IsMatch(pattern, originalValue);
     }
 
     /// <summary>

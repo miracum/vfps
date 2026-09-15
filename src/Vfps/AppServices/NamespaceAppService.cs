@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 using EntityFramework.Exceptions.Common;
 using Microsoft.EntityFrameworkCore;
 using Vfps.Authorization;
@@ -64,22 +63,20 @@ public class NamespaceAppService(
         }
 
         // Caught here, at namespace creation, rather than leaving an invalid pattern to fail
-        // lazily on every subsequent pseudonym creation in this namespace.
-        if (!string.IsNullOrEmpty(namespaceToCreate.OriginalValueValidationRegex))
+        // lazily on every subsequent pseudonym creation in this namespace. The admin UI shows the
+        // very same verdict live as the pattern is typed (see Namespaces.razor), so reaching this
+        // from there means the field was never touched after going bad - or the call came from
+        // gRPC, which has no such field to type into.
+        var patternError = OriginalValueValidation.DescribePatternError(
+            namespaceToCreate.OriginalValueValidationRegex
+        );
+        if (patternError is not null)
         {
-            try
-            {
-                _ = new Regex(namespaceToCreate.OriginalValueValidationRegex);
-            }
-            catch (ArgumentException ex)
-            {
-                throw new ArgumentException(
-                    $"The original value validation regex '{namespaceToCreate.OriginalValueValidationRegex}' "
-                        + $"is not a valid regular expression: {ex.Message}",
-                    nameof(namespaceToCreate),
-                    ex
-                );
-            }
+            throw new ArgumentException(
+                $"The original value validation regex '{namespaceToCreate.OriginalValueValidationRegex}' "
+                    + $"is not a valid regular expression: {patternError}",
+                nameof(namespaceToCreate)
+            );
         }
 
         // A validation mode with nothing to validate against is a configuration mistake - caught

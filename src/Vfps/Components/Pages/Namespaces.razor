@@ -1,6 +1,7 @@
 @page "/namespaces"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
+@using System.Text.RegularExpressions
 @using Microsoft.Extensions.Options
 @using Vfps.Config
 @using Vfps.Data.Models
@@ -206,13 +207,81 @@
                         <div class="grid grid-cols-4 items-start gap-4">
                             <BbLabel For="validationRegex" Class="text-right pt-2">@Localizer["App.Namespaces.ValidationRegex"]</BbLabel>
                             <div class="col-span-3">
+                                @* Immediate rather than on-blur: the whole point of the checker
+                                   below is to react while the pattern is being typed. Each
+                                   keystroke is a circuit round trip, but only to compile a
+                                   pattern and match one short sample against it - see
+                                   OnValidationRegexChanged. *@
                                 <BbInput
                                     @bind-Value="_newNamespace.OriginalValueValidationRegex"
+                                    @bind-Value:after="OnValidationRegexChanged"
+                                    UpdateTiming="UpdateTiming.Immediate"
                                     Id="validationRegex"
                                 />
                                 <p class="mt-1 text-xs text-muted-foreground">
                                     @Localizer["App.Namespaces.ValidationRegexHelp"]
                                 </p>
+
+                                @* Nothing to say about an empty field: no pattern means no
+                                   validation, which is the default and not a mistake. *@
+                                @if (!string.IsNullOrEmpty(_newNamespace.OriginalValueValidationRegex))
+                                {
+                                    @if (_validationRegexError is not null)
+                                    {
+                                        <p
+                                            id="validationRegexError"
+                                            class="mt-2 flex items-start gap-1 text-xs text-destructive"
+                                        >
+                                            <LucideIcon Name="x" Size="14" Class="mt-0.5 shrink-0" />
+                                            @* The regex parser's own message, which names the
+                                               offending construct and its offset - far more use
+                                               than a generic "invalid pattern". Not localized:
+                                               it comes from the .NET runtime. *@
+                                            <span class="font-mono">@_validationRegexError</span>
+                                        </p>
+                                    }
+                                    else
+                                    {
+                                        <div class="mt-2 space-y-2">
+                                            <p
+                                                id="validationRegexValid"
+                                                class="flex items-center gap-1 text-xs regex-check-ok"
+                                            >
+                                                <LucideIcon Name="check" Size="14" Class="shrink-0" />
+                                                @Localizer["App.Namespaces.ValidationRegexValid"]
+                                            </p>
+                                            @* A pattern that compiles still isn't necessarily the
+                                               one that was meant - most often because it is
+                                               unanchored and so matches a substring. Trying a
+                                               real value against it is the only way to see that
+                                               before the namespace exists, and this runs the
+                                               exact check the server will (see
+                                               OriginalValueValidation.IsMatch). *@
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <BbInput
+                                                    @bind-Value="_validationRegexSample"
+                                                    @bind-Value:after="UpdateValidationRegexSampleMatch"
+                                                    UpdateTiming="UpdateTiming.Immediate"
+                                                    Id="validationRegexSample"
+                                                    Class="w-64"
+                                                    Placeholder="@Localizer["App.Namespaces.ValidationRegexSamplePlaceholder"]"
+                                                />
+                                                @if (_validationRegexSampleMatches is { } matches)
+                                                {
+                                                    <span
+                                                        id="validationRegexSampleResult"
+                                                        class="@(matches ? "flex items-center gap-1 text-xs regex-check-ok" : "flex items-center gap-1 text-xs text-destructive")"
+                                                    >
+                                                        <LucideIcon Name="@(matches ? "check" : "x")" Size="14" Class="shrink-0" />
+                                                        @(matches
+                                                            ? Localizer["App.Namespaces.ValidationRegexSampleAccepted"].Value
+                                                            : Localizer["App.Namespaces.ValidationRegexSampleRejected"].Value)
+                                                    </span>
+                                                }
+                                            </div>
+                                        </div>
+                                    }
+                                }
                             </div>
                         </div>
                         <div class="grid grid-cols-4 items-center gap-4">
@@ -429,6 +498,17 @@
         .PseudonymGenerationMethod
         .FullRandomBase62Encoded.ToString();
     private string? _errorMessage;
+
+    // Live feedback for the validation-regex field. Recomputed only when the pattern or the
+    // sample value actually changes, rather than from a computed property the renderer would
+    // re-evaluate on every render - checking means compiling the pattern and running it, which is
+    // cheap but not free, and neither input changes without going through the handlers below.
+    private string? _validationRegexError;
+    private string _validationRegexSample = string.Empty;
+
+    // Null when there is nothing to report: no usable pattern, or no sample typed yet.
+    private bool? _validationRegexSampleMatches;
+
     private string? _deleteErrorMessage;
     private bool _isCreating;
     private bool _isDeleting;
@@ -650,6 +730,13 @@
         _showCreateForm = open;
         _shouldFocusCreateName = open;
 
+        // Unconditionally, in both directions: a successful create blanks _newNamespace and
+        // closes the dialog from CreateNamespaceAsync, so without this the next one would open
+        // showing the previous namespace's sample value and its verdict.
+        _validationRegexError = null;
+        _validationRegexSample = string.Empty;
+        _validationRegexSampleMatches = null;
+
         if (!open)
         {
             _errorMessage = null;
@@ -657,6 +744,52 @@
     }
 
     private void CloseCreateForm() => OnCreateDialogOpenChanged(false);
+
+    /// <summary>
+    /// Runs on every keystroke in the validation-regex field. Both halves of the verdict are
+    /// deliberately the server's own (see <see cref="OriginalValueValidation"/>) rather than a
+    /// browser-side check: JavaScript's regex flavour is not .NET's, so a pattern accepted here
+    /// but rejected on submit - or, far worse, one that matches different values in each - would
+    /// be exactly the kind of thing this field is meant to rule out.
+    /// </summary>
+    private void OnValidationRegexChanged()
+    {
+        _validationRegexError = OriginalValueValidation.DescribePatternError(
+            _newNamespace.OriginalValueValidationRegex
+        );
+        UpdateValidationRegexSampleMatch();
+    }
+
+    private void UpdateValidationRegexSampleMatch()
+    {
+        var pattern = _newNamespace.OriginalValueValidationRegex;
+        if (
+            _validationRegexError is not null
+            || string.IsNullOrEmpty(pattern)
+            || _validationRegexSample.Length == 0
+        )
+        {
+            _validationRegexSampleMatches = null;
+            return;
+        }
+
+        try
+        {
+            _validationRegexSampleMatches = OriginalValueValidation.IsMatch(
+                pattern,
+                _validationRegexSample
+            );
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            // A pattern can compile fine and still backtrack catastrophically on a particular
+            // input. That's worth surfacing as loudly as a syntax error: the same timeout applies
+            // to every pseudonym created in the namespace afterwards, where it would fail the
+            // caller's request rather than merely this box.
+            _validationRegexSampleMatches = null;
+            _validationRegexError = Localizer["App.Namespaces.ValidationRegexTimeout"];
+        }
+    }
 
     private void OnHierarchySelectionChanged(string? selectedName) =>
         _selectedNamespaceName = selectedName;

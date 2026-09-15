@@ -547,6 +547,21 @@
   <data name="App.Namespaces.ValidationRegexHelp" xml:space="preserve">
     <value>Optional. Wenn gesetzt, muss ein Ursprungswert diesem regulären Ausdruck entsprechen, bevor ein Pseudonym dafür erzeugt wird.</value>
   </data>
+  <data name="App.Namespaces.ValidationRegexSampleAccepted" xml:space="preserve">
+    <value>Würde akzeptiert</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexSamplePlaceholder" xml:space="preserve">
+    <value>Ursprungswert ausprobieren…</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexSampleRejected" xml:space="preserve">
+    <value>Würde abgelehnt</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexTimeout" xml:space="preserve">
+    <value>Die Auswertung dieses Ausdrucks für diesen Wert hat zu lange gedauert. Er würde bei der Pseudonymerzeugung genauso in einen Timeout laufen - bitte vereinfachen, bevor er verwendet wird.</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexValid" xml:space="preserve">
+    <value>Gültiger Ausdruck</value>
+  </data>
   <data name="App.Nav.AccessControl" xml:space="preserve">
     <value>Zugriffskontrolle</value>
   </data>

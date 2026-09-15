@@ -547,6 +547,21 @@
   <data name="App.Namespaces.ValidationRegexHelp" xml:space="preserve">
     <value>Optional. If set, an original value must match this regular expression before a pseudonym is generated for it.</value>
   </data>
+  <data name="App.Namespaces.ValidationRegexSampleAccepted" xml:space="preserve">
+    <value>Would be accepted</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexSamplePlaceholder" xml:space="preserve">
+    <value>Try an original value…</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexSampleRejected" xml:space="preserve">
+    <value>Would be rejected</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexTimeout" xml:space="preserve">
+    <value>This pattern took too long to evaluate against that value. It would time out and fail pseudonym creation the same way - simplify it before using it.</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexValid" xml:space="preserve">
+    <value>Valid pattern</value>
+  </data>
   <data name="App.Nav.AccessControl" xml:space="preserve">
     <value>Access Control</value>
   </data>
