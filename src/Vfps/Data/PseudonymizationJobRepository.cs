@@ -92,6 +92,43 @@ public class PseudonymizationJobRepository(PseudonymContext context)
     }
 
     /// <inheritdoc/>
+    public async Task<bool> UpdateProgressUnlessCancelledAsync(
+        Guid id,
+        long bytesProcessed,
+        long rowsProcessed,
+        int badDataRowCount,
+        int missingValueCount,
+        CancellationToken cancellationToken
+    )
+    {
+        var rowsAffected = await context
+            .PseudonymizationJobs.Where(j =>
+                j.Id == id && j.Status != PseudonymizationJobStatus.Cancelled
+            )
+            .ExecuteUpdateAsync(
+                s =>
+                    s.SetProperty(j => j.BytesProcessed, bytesProcessed)
+                        .SetProperty(j => j.RowsProcessed, rowsProcessed)
+                        .SetProperty(j => j.BadDataRowCount, badDataRowCount)
+                        .SetProperty(j => j.MissingValueCount, missingValueCount)
+                        .SetProperty(j => j.LastUpdatedAt, DateTimeOffset.UtcNow),
+                cancellationToken
+            );
+
+        // Zero rows means the WHERE didn't match: the job was cancelled, or - only reachable if
+        // something deleted it out from under its own runner, which DeleteFinishedAsync will not
+        // do to a Running job - it is gone entirely. Both are "stop processing", so neither needs
+        // telling apart here, and stopping is the right answer for a job that no longer exists
+        // regardless.
+        //
+        // Only Cancelled is excluded, deliberately: the stall watchdog's Stalled verdict is a
+        // heuristic that a still-healthy job is expected to overtake and complete through (see
+        // StalledPseudonymizationJobWatchdogService), so it must not stop a live runner - exactly
+        // as when this check was a separate read comparing against Cancelled alone.
+        return rowsAffected > 0;
+    }
+
+    /// <inheritdoc/>
     public async Task UpdateStatusAsync(
         Guid id,
         PseudonymizationJobStatus status,

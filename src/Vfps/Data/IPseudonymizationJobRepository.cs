@@ -51,6 +51,31 @@ public interface IPseudonymizationJobRepository
         CancellationToken cancellationToken
     );
 
+    /// <summary>
+    /// <see cref="UpdateProgressAsync"/>, plus the "has this job been cancelled" answer the
+    /// runner needs on the very same cadence - in one round trip rather than an update followed
+    /// by a separate read.
+    ///
+    /// The two fold together because the answer is already implicit in the update: the statement
+    /// simply declines to match a cancelled job, so a row count of zero *is* the cancellation
+    /// signal and no status has to be read back. That halves the database round trips spent on
+    /// progress bookkeeping, which is the part of a CSV job whose cost scales with round-trip
+    /// latency rather than with rows - on a pseudonymize job at the default batch size it was
+    /// issuing ten round trips per thousand rows against the one the actual upsert costs.
+    /// </summary>
+    /// <returns>
+    /// false if the job has been cancelled (or no longer exists) and processing should stop, true
+    /// if it should continue.
+    /// </returns>
+    Task<bool> UpdateProgressUnlessCancelledAsync(
+        Guid id,
+        long bytesProcessed,
+        long rowsProcessed,
+        int badDataRowCount,
+        int missingValueCount,
+        CancellationToken cancellationToken
+    );
+
     Task UpdateStatusAsync(
         Guid id,
         PseudonymizationJobStatus status,

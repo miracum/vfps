@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using Hangfire;
 using Hangfire.Server;
@@ -27,11 +28,25 @@ internal sealed class CsvPseudonymizationJobRunner(
         PerformContext? context = null
     )
     {
+        // A Hangfire job runs outside any HTTP request, and Hangfire.Core exposes no ActivitySource
+        // of its own, so without a span started here there is no ambient Activity for the whole
+        // run: every database command span the job produces - and every span the app starts
+        // underneath it - becomes its own parentless root trace. A million-row job then arrives at
+        // the collector as a million disconnected single-span traces rather than one timeline, and
+        // the tracing that is already wired up (Npgsql command spans, see
+        // TracingConfigurationExtensions) is effectively unusable for exactly the code path where
+        // it would help most. Started before the first database call below so that one is inside
+        // it too.
+        using var activity = Program.ActivitySource.StartActivity("CsvPseudonymizationJob");
+        activity?.SetTag("vfps.job.id", jobId);
+
         var job =
             await jobRepository.FindAsync(jobId, CancellationToken.None)
             ?? throw new InvalidOperationException(
                 $"Pseudonymization job '{jobId}' does not exist."
             );
+
+        activity?.SetTag("vfps.job.direction", job.Direction.ToString());
 
         // Guards against a manual re-run (e.g. via the Hangfire dashboard) of a job that's
         // already reached a genuinely terminal state - automatic exception-triggered retries are
@@ -72,13 +87,18 @@ internal sealed class CsvPseudonymizationJobRunner(
             CancellationToken.None
         );
 
+        var phases = new CsvJobPhaseTimer(job.Direction);
+
         try
         {
             var (outputObjectKey, rowsProcessed) = await ProcessAsync(
                 job,
+                phases,
                 cancellationToken,
                 context
             );
+
+            activity?.SetTag("vfps.job.rows_processed", rowsProcessed);
 
             // A cooperative cancel may have landed while the last chunk was still uploading -
             // don't overwrite Cancelled with Completed. Same for Stalled:
@@ -133,6 +153,11 @@ internal sealed class CsvPseudonymizationJobRunner(
             // Never persist raw row content or the raw exception string here - this service's
             // entire purpose is protecting the values that would otherwise leak into this field.
             logger.LogError(ex, "CSV pseudonymization job {JobId} failed", jobId);
+            // Only the exception's type, never its message - the same reason the persisted error
+            // message above is a fixed string: a raw exception string here can carry the very row
+            // content this service exists to protect, and span attributes travel to a collector
+            // that is not necessarily held to the same standard as the database.
+            activity?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
             await jobRepository.UpdateStatusAsync(
                 jobId,
                 PseudonymizationJobStatus.Failed,
@@ -140,6 +165,13 @@ internal sealed class CsvPseudonymizationJobRunner(
                 CancellationToken.None
             );
             throw;
+        }
+        finally
+        {
+            // Published for a cancelled, shut-down or failed job too, not just a completed one -
+            // a job that died partway through is exactly when knowing where its time went is
+            // worth most.
+            phases.Flush(activity);
         }
     }
 
@@ -151,6 +183,7 @@ internal sealed class CsvPseudonymizationJobRunner(
     /// </summary>
     private async Task<(string OutputObjectKey, long RowsProcessed)> ProcessAsync(
         PseudonymizationJob job,
+        CsvJobPhaseTimer phases,
         IJobCancellationToken cancellationToken,
         PerformContext? context
     )
@@ -162,13 +195,14 @@ internal sealed class CsvPseudonymizationJobRunner(
         // signal (that's what the job's own Status is for).
         context?.SetJobParameter("OutputObjectKey", outputObjectKey);
 
-        var progress = new CsvJobProgressReporter(jobRepository, job.Id);
+        var progress = new CsvJobProgressReporter(jobRepository, job.Id, phases);
         var jobContext = new CsvJobContext(
             job,
             Encoding.GetEncoding(job.Encoding),
             CsvJobFormat.CreateConfiguration(job, progress, logger),
             outputObjectKey,
-            progress
+            progress,
+            phases
         );
 
         var rowsProcessed = await ProcessorFor(job.Direction)

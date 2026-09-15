@@ -14,9 +14,14 @@ namespace Vfps.CsvProcessing;
 /// </summary>
 /// <param name="jobRepository">Where progress is persisted to and the job's status read back from.</param>
 /// <param name="jobId">The job being reported on.</param>
+/// <param name="phases">
+/// Attributes this bookkeeping's own cost to <see cref="CsvJobPhase.ReportProgress"/>, separately
+/// from the database work the job is actually there to do.
+/// </param>
 internal sealed class CsvJobProgressReporter(
     IPseudonymizationJobRepository jobRepository,
-    Guid jobId
+    Guid jobId,
+    CsvJobPhaseTimer phases
 )
 {
     private const int ProgressUpdateRowInterval = 200;
@@ -74,10 +79,23 @@ internal sealed class CsvJobProgressReporter(
             return false;
         }
 
-        await ReportAsync(rowsWritten);
+        using var scope = phases.Measure(CsvJobPhase.ReportProgress);
 
-        var current = await jobRepository.FindAsync(jobId, CancellationToken.None);
-        return current?.Status == PseudonymizationJobStatus.Cancelled;
+        // One round trip for both halves - persisting progress and learning whether the job has
+        // been cancelled - rather than an update followed by a read. See
+        // IPseudonymizationJobRepository.UpdateProgressUnlessCancelledAsync for why the two fold
+        // together, and why halving this particular cost is worth a dedicated method.
+        var stillActive = await jobRepository.UpdateProgressUnlessCancelledAsync(
+            jobId,
+            BytesProcessed(),
+            rowsWritten,
+            BadDataRowCount,
+            MissingValueCount,
+            CancellationToken.None
+        );
+        sinceLastUpdate.Restart();
+
+        return !stillActive;
     }
 
     /// <summary>
@@ -86,6 +104,8 @@ internal sealed class CsvJobProgressReporter(
     /// </summary>
     public async Task ReportAsync(long rowsWritten)
     {
+        using var scope = phases.Measure(CsvJobPhase.ReportProgress);
+
         await jobRepository.UpdateProgressAsync(
             jobId,
             BytesProcessed(),

@@ -40,12 +40,19 @@ internal interface ICsvJobProcessor
 /// </param>
 /// <param name="OutputObjectKey">Where this job's output CSV is to be written.</param>
 /// <param name="Progress">Shared progress/cancellation bookkeeping for this job.</param>
+/// <param name="Phases">
+/// Where this job's wall clock goes. Every processor is expected to bracket its reads, its
+/// database resolution and its writes with <see cref="CsvJobPhaseTimer.Measure"/> - that split is
+/// what distinguishes a job bound by object storage from one bound by the database, which is
+/// otherwise indistinguishable from outside.
+/// </param>
 internal sealed record CsvJobContext(
     PseudonymizationJob Job,
     Encoding Encoding,
     CsvConfiguration CsvConfig,
     string OutputObjectKey,
-    CsvJobProgressReporter Progress
+    CsvJobProgressReporter Progress,
+    CsvJobPhaseTimer Phases
 );
 
 /// <summary>

@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using Amazon.S3;
 using Amazon.S3.Model;
@@ -35,6 +36,46 @@ public class CsvPseudonymizationJobRunnerTests
     private readonly INamespaceRepository namespaceRepository = A.Fake<INamespaceRepository>();
     private readonly IPseudonymRepository pseudonymRepository = A.Fake<IPseudonymRepository>();
     private readonly IAmazonS3 s3 = A.Fake<IAmazonS3>();
+
+    // A real, non-cancelled job's check-in returns "still active". Without this the fake's own
+    // default for a Task<bool> is false, which the runner reads as "cancelled" - every job would
+    // then stop dead at its first check-in (row 200), and the cancellation tests below would pass
+    // whether or not cancellation actually worked.
+    public CsvPseudonymizationJobRunnerTests()
+    {
+        A.CallTo(() =>
+                jobRepository.UpdateProgressUnlessCancelledAsync(
+                    A<Guid>._,
+                    A<long>._,
+                    A<long>._,
+                    A<int>._,
+                    A<int>._,
+                    A<CancellationToken>._
+                )
+            )
+            .Returns(true);
+    }
+
+    // Drives a cancellation the way the runner actually notices one: the progress check-in's
+    // single round trip declines to match a cancelled job (see
+    // IPseudonymizationJobRepository.UpdateProgressUnlessCancelledAsync). RunAsync's own final
+    // "was this cancelled while processing" guard still re-reads the job, so callers stub
+    // FindAsync for that part separately.
+    private void FakeCancelledAfterFirstCheckIn()
+    {
+        var checkIns = 0;
+        A.CallTo(() =>
+                jobRepository.UpdateProgressUnlessCancelledAsync(
+                    A<Guid>._,
+                    A<long>._,
+                    A<long>._,
+                    A<int>._,
+                    A<int>._,
+                    A<CancellationToken>._
+                )
+            )
+            .ReturnsLazily(() => checkIns++ > 0);
+    }
 
     // Hangfire.JobCancellationToken.Null's own ShutdownToken getter throws
     // NullReferenceException (a real quirk of that library, not something under test) - a fake
@@ -858,6 +899,88 @@ public class CsvPseudonymizationJobRunnerTests
     }
 
     [Fact]
+    public async Task RunAsync_ShouldRunTheWholeJobInsideOneSpanCarryingItsPhaseBreakdown()
+    {
+        // The reason this span exists at all: a Hangfire job has no ambient Activity of its own,
+        // so without it every database span the job produces is a parentless root trace rather
+        // than a child of one readable job timeline.
+        var activities = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == "Vfps",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activities.Add,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,secret\n");
+        FakePseudonymize("ns", "secret", "pseudonym-of-secret");
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        var jobActivity = activities
+            .Should()
+            .ContainSingle(a => a.OperationName == "CsvPseudonymizationJob")
+            .Subject;
+        jobActivity.GetTagItem("vfps.job.id").Should().Be(job.Id);
+        jobActivity.GetTagItem("vfps.job.direction").Should().Be("Pseudonymize");
+        jobActivity.GetTagItem("vfps.job.rows_processed").Should().Be(1L);
+        jobActivity.GetTagItem("vfps.csv.phase.read_input.seconds").Should().NotBeNull();
+        jobActivity.GetTagItem("vfps.csv.phase.resolve_database.seconds").Should().NotBeNull();
+        jobActivity.GetTagItem("vfps.csv.phase.write_output.seconds").Should().NotBeNull();
+        jobActivity.GetTagItem("vfps.csv.phase.report_progress.seconds").Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithFailingJob_ShouldStillRecordTheSpanAndItsPhaseBreakdown()
+    {
+        // A job that died partway through is when the breakdown is worth most, so it is published
+        // from a finally rather than only on the success path.
+        var activities = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == "Vfps",
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) =>
+                ActivitySamplingResult.AllDataAndRecorded,
+            ActivityStopped = activities.Add,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "missing-ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("missing-ns", A<CancellationToken>._))
+            .Returns<Data.Models.Namespace?>(null);
+        FakeInputObject(job, "id,value\n1,secret\n");
+
+        var sut = CreateSut();
+        await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            sut.RunAsync(job.Id, "test-label", CreateCancellationToken())
+        );
+
+        var jobActivity = activities
+            .Should()
+            .ContainSingle(a => a.OperationName == "CsvPseudonymizationJob")
+            .Subject;
+        jobActivity.Status.Should().Be(ActivityStatusCode.Error);
+        // The exception's type, never its message - a raw exception string can carry the row
+        // content this service exists to protect.
+        jobActivity.StatusDescription.Should().Be(nameof(InvalidOperationException));
+        jobActivity.GetTagItem("vfps.csv.phase.read_input.seconds").Should().NotBeNull();
+    }
+
+    [Fact]
     public async Task RunAsync_WithJobCancelledMidProcessing_ShouldStopEarlyAndNotOverwriteCancelledWithCompleted()
     {
         // ProgressUpdateRowInterval is 200 - 400 rows guarantees a progress/cancellation check
@@ -877,10 +1000,13 @@ public class CsvPseudonymizationJobRunnerTests
             InputObjectKey = job.InputObjectKey,
             ColumnMappings = job.ColumnMappings,
         };
-        // Only the very first FindAsync call (the initial status-guard check in RunAsync) should
-        // see the original, non-cancelled job - every call after that (the mid-processing check
-        // and RunAsync's final "did this get cancelled while we were processing" check) must see
-        // the cancelled job, however many of those calls there turn out to be.
+        // The mid-processing cancellation is delivered through the progress check-in itself;
+        // FindAsync is stubbed alongside it purely for RunAsync's final "did this get cancelled
+        // while we were processing" guard, which still re-reads the job.
+        FakeCancelledAfterFirstCheckIn();
+        // The first read is RunAsync's own terminal-state guard, which must see a job that is
+        // still runnable or nothing is processed at all; every read after it is the final
+        // "was this cancelled while we were processing" guard.
         var findCallCount = 0;
         A.CallTo(() => jobRepository.FindAsync(job.Id, A<CancellationToken>._))
             .ReturnsLazily(() => findCallCount++ == 0 ? job : cancelledJob);
@@ -944,6 +1070,10 @@ public class CsvPseudonymizationJobRunnerTests
             InputObjectKey = job.InputObjectKey,
             ColumnMappings = job.ColumnMappings,
         };
+        FakeCancelledAfterFirstCheckIn();
+        // The first read is RunAsync's own terminal-state guard, which must see a job that is
+        // still runnable or nothing is processed at all; every read after it is the final
+        // "was this cancelled while we were processing" guard.
         var findCallCount = 0;
         A.CallTo(() => jobRepository.FindAsync(job.Id, A<CancellationToken>._))
             .ReturnsLazily(() => findCallCount++ == 0 ? job : cancelledJob);
