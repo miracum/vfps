@@ -66,9 +66,12 @@ internal sealed class CsvNamespaceExporter(
     )
     {
         var progress = context.Progress;
+        var phases = context.Phases;
 
         if (context.Job.HasHeaderRow)
         {
+            using var headerScope = phases.Measure(CsvJobPhase.WriteOutput);
+
             csvWriter.WriteField(mapping.SourceColumn);
             csvWriter.WriteField(mapping.TargetColumn ?? string.Empty);
             await csvWriter.NextRecordAsync();
@@ -81,20 +84,31 @@ internal sealed class CsvNamespaceExporter(
         {
             cancellationToken.ThrowIfCancellationRequested();
 
-            var page = await pseudonymRepository.ListByNamespaceAsync(
-                mapping.Namespace,
-                cursor,
-                PageSize,
-                CancellationToken.None
-            );
+            IReadOnlyList<Pseudonym> page;
+            using (phases.Measure(CsvJobPhase.ResolveDatabase))
+            {
+                page = await pseudonymRepository.ListByNamespaceAsync(
+                    mapping.Namespace,
+                    cursor,
+                    PageSize,
+                    CancellationToken.None
+                );
+            }
 
             foreach (var pseudonym in page)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                csvWriter.WriteField(pseudonym.OriginalValue);
-                csvWriter.WriteField(pseudonym.PseudonymValue);
-                await csvWriter.NextRecordAsync();
+                // Scoped per row rather than around the whole page, unlike every other direction:
+                // this loop interleaves writes with progress check-ins, so one scope spanning the
+                // page would bill those database round trips to WriteOutput as well.
+                using (phases.Measure(CsvJobPhase.WriteOutput))
+                {
+                    csvWriter.WriteField(pseudonym.OriginalValue);
+                    csvWriter.WriteField(pseudonym.PseudonymValue);
+                    await csvWriter.NextRecordAsync();
+                }
+
                 rows++;
 
                 // Rows are written as they're read rather than buffered into a chunk, so read and

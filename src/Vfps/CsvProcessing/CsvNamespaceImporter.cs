@@ -120,16 +120,28 @@ internal sealed class CsvNamespaceImporter(
         var rows = 0L;
         var totalRowsRead = 0L;
         var chunk = new List<BufferedRow>(chunkSize);
+        var phases = context.Phases;
 
-        while (await csvReader.ReadAsync())
+        // Restructured from a `while (await csvReader.ReadAsync())` loop only so the read can be
+        // timed separately - see the identical note in CsvColumnTransformer.TransformAsync.
+        while (true)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var fieldCount = csvReader.Parser.Count;
-            var rawFields = new string?[fieldCount];
-            for (var i = 0; i < fieldCount; i++)
+            string?[] rawFields;
+            using (phases.Measure(CsvJobPhase.ReadInput))
             {
-                rawFields[i] = csvReader.GetField(i);
+                if (!await csvReader.ReadAsync())
+                {
+                    break;
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var fieldCount = csvReader.Parser.Count;
+                rawFields = new string?[fieldCount];
+                for (var i = 0; i < fieldCount; i++)
+                {
+                    rawFields[i] = csvReader.GetField(i);
+                }
             }
 
             chunk.Add(
@@ -143,7 +155,7 @@ internal sealed class CsvNamespaceImporter(
 
             if (chunk.Count >= chunkSize)
             {
-                await FlushChunkAsync(@namespace, chunk, csvWriter, progress);
+                await FlushChunkAsync(@namespace, chunk, csvWriter, progress, phases);
                 rows += chunk.Count;
                 chunk.Clear();
             }
@@ -156,7 +168,7 @@ internal sealed class CsvNamespaceImporter(
 
         if (chunk.Count > 0)
         {
-            await FlushChunkAsync(@namespace, chunk, csvWriter, progress);
+            await FlushChunkAsync(@namespace, chunk, csvWriter, progress, phases);
             rows += chunk.Count;
         }
 
@@ -186,7 +198,8 @@ internal sealed class CsvNamespaceImporter(
         Namespace @namespace,
         List<BufferedRow> chunk,
         CsvWriter csvWriter,
-        CsvJobProgressReporter progress
+        CsvJobProgressReporter progress,
+        CsvJobPhaseTimer phases
     )
     {
         var entries = new List<PseudonymImportEntry>(chunk.Count);
@@ -204,17 +217,25 @@ internal sealed class CsvNamespaceImporter(
             entries.Add(new PseudonymImportEntry(row.OriginalValue, row.PseudonymValue));
         }
 
-        var results = await pseudonymAppService.ImportTrustedBatchAsync(
-            @namespace,
-            entries,
-            CancellationToken.None
-        );
+        IReadOnlyList<PseudonymImportResult> results;
+        using (phases.Measure(CsvJobPhase.ResolveDatabase))
+        {
+            results = await pseudonymAppService.ImportTrustedBatchAsync(
+                @namespace,
+                entries,
+                CancellationToken.None
+            );
+        }
 
         var outcomeByRowIndex = new Dictionary<int, PseudonymImportOutcome>(results.Count);
         for (var i = 0; i < results.Count; i++)
         {
             outcomeByRowIndex[entryRowIndexes[i]] = results[i].Outcome;
         }
+
+        // Same reasoning as CsvColumnTransformer's write scopes: this measures how long the
+        // report rows spend waiting on the upload to drain the pipe they are written into.
+        using var writeScope = phases.Measure(CsvJobPhase.WriteOutput);
 
         for (var i = 0; i < chunk.Count; i++)
         {

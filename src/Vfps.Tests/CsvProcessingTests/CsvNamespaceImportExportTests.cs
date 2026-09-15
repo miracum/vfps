@@ -28,6 +28,46 @@ public class CsvNamespaceImportExportTests
     private readonly IPseudonymRepository pseudonymRepository = A.Fake<IPseudonymRepository>();
     private readonly IAmazonS3 s3 = A.Fake<IAmazonS3>();
 
+    // A real, non-cancelled job's check-in returns "still active". Without this the fake's own
+    // default for a Task<bool> is false, which the runner reads as "cancelled" - every job would
+    // then stop dead at its first check-in (row 200), and the cancellation tests below would pass
+    // whether or not cancellation actually worked.
+    public CsvNamespaceImportExportTests()
+    {
+        A.CallTo(() =>
+                jobRepository.UpdateProgressUnlessCancelledAsync(
+                    A<Guid>._,
+                    A<long>._,
+                    A<long>._,
+                    A<int>._,
+                    A<int>._,
+                    A<CancellationToken>._
+                )
+            )
+            .Returns(true);
+    }
+
+    // Drives a cancellation the way the runner actually notices one: the progress check-in's
+    // single round trip declines to match a cancelled job (see
+    // IPseudonymizationJobRepository.UpdateProgressUnlessCancelledAsync). RunAsync's own final
+    // "was this cancelled while processing" guard still re-reads the job, so callers stub
+    // FindAsync for that part separately.
+    private void FakeCancelledAfterFirstCheckIn()
+    {
+        var checkIns = 0;
+        A.CallTo(() =>
+                jobRepository.UpdateProgressUnlessCancelledAsync(
+                    A<Guid>._,
+                    A<long>._,
+                    A<long>._,
+                    A<int>._,
+                    A<int>._,
+                    A<CancellationToken>._
+                )
+            )
+            .ReturnsLazily(() => checkIns++ > 0);
+    }
+
     // See CsvPseudonymizationJobRunnerTests for why JobCancellationToken.Null can't be used here.
     private static IJobCancellationToken CreateCancellationToken()
     {
@@ -473,26 +513,27 @@ public class CsvNamespaceImportExportTests
         FakeNamespace("ns");
         FakeNamespaceContents("ns", 1200);
 
-        // The runner's own progress check-in re-reads the job; hand it back as Cancelled from the
-        // second read onwards, which is what a user's Cancel click looks like to a running job.
+        // What a user's Cancel click looks like to a running job: the progress check-in stops
+        // matching it. FindAsync is stubbed to the cancelled job alongside that for RunAsync's
+        // own final guard, which still re-reads.
+        FakeCancelledAfterFirstCheckIn();
+        // The first read is RunAsync's own terminal-state guard, which must see a job that is
+        // still runnable or nothing is exported at all; every read after it is the final
+        // "was this cancelled while we were processing" guard.
         var reads = 0;
         A.CallTo(() => jobRepository.FindAsync(job.Id, A<CancellationToken>._))
             .ReturnsLazily(() =>
-            {
-                reads++;
-                return Task.FromResult<PseudonymizationJob?>(
-                    reads == 1
-                        ? job
-                        : new PseudonymizationJob
-                        {
-                            Id = job.Id,
-                            CreatedBy = job.CreatedBy,
-                            Direction = job.Direction,
-                            ColumnMappings = job.ColumnMappings,
-                            Status = PseudonymizationJobStatus.Cancelled,
-                        }
-                );
-            });
+                reads++ == 0
+                    ? job
+                    : new PseudonymizationJob
+                    {
+                        Id = job.Id,
+                        CreatedBy = job.CreatedBy,
+                        Direction = job.Direction,
+                        ColumnMappings = job.ColumnMappings,
+                        Status = PseudonymizationJobStatus.Cancelled,
+                    }
+            );
 
         var sut = CreateSut();
         await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
@@ -501,5 +542,18 @@ public class CsvNamespaceImportExportTests
                 jobRepository.CompleteAsync(job.Id, A<string>._, A<long>._, A<CancellationToken>._)
             )
             .MustNotHaveHappened();
+        // Not completing is only half of it - RunAsync's final guard would prevent that on its own
+        // even if the export had run to the end. What makes this a *midway* stop is that the
+        // second page was never fetched: 1200 rows against the exporter's 1000-row page size take
+        // two reads to walk, and cancellation lands at the row-200 check-in, inside the first.
+        A.CallTo(() =>
+                pseudonymRepository.ListByNamespaceAsync(
+                    "ns",
+                    A<PseudonymPageCursor?>._,
+                    A<int>._,
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceExactly();
     }
 }

@@ -25,6 +25,119 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
     }
 
     [Fact]
+    public async Task UpdateProgressUnlessCancelledAsync_WithRunningJob_ShouldPersistProgressAndReportActive()
+    {
+        var job = CreateJob(
+            PseudonymizationJobStatus.Running,
+            DateTimeOffset.UtcNow.AddMinutes(-1)
+        );
+        InMemoryPseudonymContext.PseudonymizationJobs.Add(job);
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+
+        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+
+        var stillActive = await sut.UpdateProgressUnlessCancelledAsync(
+            job.Id,
+            bytesProcessed: 4096,
+            rowsProcessed: 200,
+            badDataRowCount: 3,
+            missingValueCount: 7,
+            TestContext.Current.CancellationToken
+        );
+
+        stillActive.Should().BeTrue();
+
+        var stored = await InMemoryPseudonymContext
+            .PseudonymizationJobs.AsNoTracking()
+            .SingleAsync(j => j.Id == job.Id, TestContext.Current.CancellationToken);
+        stored.BytesProcessed.Should().Be(4096);
+        stored.RowsProcessed.Should().Be(200);
+        stored.BadDataRowCount.Should().Be(3);
+        stored.MissingValueCount.Should().Be(7);
+        stored.LastUpdatedAt.Should().BeAfter(job.LastUpdatedAt);
+    }
+
+    [Fact]
+    public async Task UpdateProgressUnlessCancelledAsync_WithCancelledJob_ShouldReportInactiveAndLeaveProgressAlone()
+    {
+        var job = CreateJob(
+            PseudonymizationJobStatus.Cancelled,
+            DateTimeOffset.UtcNow.AddMinutes(-1)
+        );
+        job.RowsProcessed = 17;
+        InMemoryPseudonymContext.PseudonymizationJobs.Add(job);
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+
+        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+
+        var stillActive = await sut.UpdateProgressUnlessCancelledAsync(
+            job.Id,
+            bytesProcessed: 4096,
+            rowsProcessed: 200,
+            badDataRowCount: 0,
+            missingValueCount: 0,
+            TestContext.Current.CancellationToken
+        );
+
+        // The "no rows matched" that signals the cancellation is the same thing that leaves the
+        // row untouched - a cancelled job's final progress isn't overwritten by a runner that
+        // hadn't noticed yet.
+        stillActive.Should().BeFalse();
+
+        var stored = await InMemoryPseudonymContext
+            .PseudonymizationJobs.AsNoTracking()
+            .SingleAsync(j => j.Id == job.Id, TestContext.Current.CancellationToken);
+        stored.RowsProcessed.Should().Be(17);
+    }
+
+    [Theory]
+    [InlineData(PseudonymizationJobStatus.Stalled)]
+    [InlineData(PseudonymizationJobStatus.Running)]
+    public async Task UpdateProgressUnlessCancelledAsync_WithNonCancelledStatus_ShouldReportActive(
+        PseudonymizationJobStatus status
+    )
+    {
+        // Stalled in particular: the watchdog's verdict is a heuristic a still-healthy job is
+        // expected to overtake, so it must not stop a live runner the way Cancelled does.
+        var job = CreateJob(status, DateTimeOffset.UtcNow.AddMinutes(-1));
+        InMemoryPseudonymContext.PseudonymizationJobs.Add(job);
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+
+        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+
+        var stillActive = await sut.UpdateProgressUnlessCancelledAsync(
+            job.Id,
+            bytesProcessed: 1,
+            rowsProcessed: 1,
+            badDataRowCount: 0,
+            missingValueCount: 0,
+            TestContext.Current.CancellationToken
+        );
+
+        stillActive.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateProgressUnlessCancelledAsync_WithUnknownJob_ShouldReportInactive()
+    {
+        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+
+        var stillActive = await sut.UpdateProgressUnlessCancelledAsync(
+            Guid.NewGuid(),
+            bytesProcessed: 1,
+            rowsProcessed: 1,
+            badDataRowCount: 0,
+            missingValueCount: 0,
+            TestContext.Current.CancellationToken
+        );
+
+        stillActive.Should().BeFalse();
+    }
+
+    [Fact]
     public async Task FindStalledRunningJobIdsAsync_ShouldOnlyReturnRunningJobsPastTheThreshold()
     {
         var now = DateTimeOffset.UtcNow;

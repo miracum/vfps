@@ -219,47 +219,56 @@ public class PseudonymAppService(
         // key wins; duplicates just look it up once resolved below.
         var distinctByKey =
             new Dictionary<(string Namespace, string OriginalValue), Data.Models.Pseudonym>();
-        foreach (var (@namespace, originalValue) in requests)
+
+        // One span for the whole batch's generation, tagged with how many values it covered -
+        // deliberately not one per value as the single-value path does (see
+        // GenerateUniquePseudonymValue). This loop runs once per CSV chunk, so at the default
+        // batch size a per-value span would be a thousand spans per chunk and millions over a
+        // large job: enough to swamp the collector, and enough to make the job's own trace
+        // unreadable, all to time an in-memory call that has never been the thing worth looking
+        // at here. The aggregate is what that question actually needs, and the per-method
+        // breakdown already exists as a continuously-run microbenchmark (Vfps.Benchmarks).
+        using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonymBatch"))
         {
-            if (string.IsNullOrWhiteSpace(originalValue))
+            foreach (var (@namespace, originalValue) in requests)
             {
-                throw new ArgumentException(
-                    "The original value must not be blank.",
-                    nameof(requests)
-                );
-            }
+                if (string.IsNullOrWhiteSpace(originalValue))
+                {
+                    throw new ArgumentException(
+                        "The original value must not be blank.",
+                        nameof(requests)
+                    );
+                }
 
-            var key = (@namespace.Name, originalValue);
-            if (distinctByKey.ContainsKey(key))
-            {
-                continue;
-            }
+                var key = (@namespace.Name, originalValue);
+                if (distinctByKey.ContainsKey(key))
+                {
+                    continue;
+                }
 
-            ValidateOriginalValue(@namespace, originalValue);
+                ValidateOriginalValue(@namespace, originalValue);
 
-            string pseudonymValue;
-            using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonym"))
-            {
-                activity?.SetTag("Method", @namespace.PseudonymGenerationMethod.ToString());
-                pseudonymValue = methodsLookup.Generate(
+                var pseudonymValue = methodsLookup.Generate(
                     @namespace.PseudonymGenerationMethod,
                     @namespace.PseudonymLength
                 );
-            }
-            pseudonymValue =
-                @namespace.PseudonymPrefix + pseudonymValue + @namespace.PseudonymSuffix;
+                pseudonymValue =
+                    @namespace.PseudonymPrefix + pseudonymValue + @namespace.PseudonymSuffix;
 
-            // SequenceNumber left at its default (0) - this batch path always targets the first
-            // pseudonym for an original value, same as CreateTrustedAsync's single-value overload.
-            // For a multi-psn namespace that already has additional (sequence > 0) pseudonyms
-            // stored via the dedicated count-aware create path, those are left untouched; this
-            // path only ever creates/reads sequence 0.
-            distinctByKey[key] = new Data.Models.Pseudonym
-            {
-                NamespaceName = @namespace.Name,
-                OriginalValue = originalValue,
-                PseudonymValue = pseudonymValue,
-            };
+                // SequenceNumber left at its default (0) - this batch path always targets the first
+                // pseudonym for an original value, same as CreateTrustedAsync's single-value overload.
+                // For a multi-psn namespace that already has additional (sequence > 0) pseudonyms
+                // stored via the dedicated count-aware create path, those are left untouched; this
+                // path only ever creates/reads sequence 0.
+                distinctByKey[key] = new Data.Models.Pseudonym
+                {
+                    NamespaceName = @namespace.Name,
+                    OriginalValue = originalValue,
+                    PseudonymValue = pseudonymValue,
+                };
+            }
+
+            activity?.SetTag("GeneratedCount", distinctByKey.Count);
         }
 
         var upserted = await repository.CreateIfNotExistBatchAsync(

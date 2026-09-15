@@ -154,16 +154,30 @@ internal sealed class CsvColumnTransformer(
         var rows = 0L;
         var totalRowsRead = 0L;
         var chunk = new List<BufferedRow>(chunkSize);
+        var phases = context.Phases;
 
-        while (await csvReader.ReadAsync())
+        // Rewritten from `while (await csvReader.ReadAsync())` purely so the read can be timed:
+        // parsing is where this job waits on the input object's bytes, and lumping it in with the
+        // work done per row afterwards would hide whether a slow job is slow because S3 is not
+        // delivering. Same structure in CsvNamespaceImporter, for the same reason.
+        while (true)
         {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            var fieldCount = csvReader.Parser.Count;
-            var rawFields = new string?[fieldCount];
-            for (var i = 0; i < fieldCount; i++)
+            string?[] rawFields;
+            using (phases.Measure(CsvJobPhase.ReadInput))
             {
-                rawFields[i] = csvReader.GetField(i);
+                if (!await csvReader.ReadAsync())
+                {
+                    break;
+                }
+
+                cancellationToken.ThrowIfCancellationRequested();
+
+                var fieldCount = csvReader.Parser.Count;
+                rawFields = new string?[fieldCount];
+                for (var i = 0; i < fieldCount; i++)
+                {
+                    rawFields[i] = csvReader.GetField(i);
+                }
             }
 
             chunk.Add(new BufferedRow(rawFields));
@@ -177,7 +191,8 @@ internal sealed class CsvColumnTransformer(
                     inPlaceBySourceIndex,
                     appended,
                     csvWriter,
-                    progress
+                    progress,
+                    phases
                 );
                 rows += chunk.Count;
                 chunk.Clear();
@@ -197,7 +212,8 @@ internal sealed class CsvColumnTransformer(
                 inPlaceBySourceIndex,
                 appended,
                 csvWriter,
-                progress
+                progress,
+                phases
             );
             rows += chunk.Count;
         }
@@ -236,7 +252,8 @@ internal sealed class CsvColumnTransformer(
         Dictionary<int, Namespace> inPlaceBySourceIndex,
         List<(int SourceIndex, string TargetColumn, Namespace Namespace)> appended,
         CsvWriter csvWriter,
-        CsvJobProgressReporter progress
+        CsvJobProgressReporter progress,
+        CsvJobPhaseTimer phases
     )
     {
         if (direction == PseudonymizationJobDirection.Pseudonymize)
@@ -246,7 +263,8 @@ internal sealed class CsvColumnTransformer(
                 inPlaceBySourceIndex,
                 appended,
                 csvWriter,
-                progress
+                progress,
+                phases
             );
         }
         else
@@ -257,7 +275,8 @@ internal sealed class CsvColumnTransformer(
                 inPlaceBySourceIndex,
                 appended,
                 csvWriter,
-                progress
+                progress,
+                phases
             );
         }
     }
@@ -277,7 +296,8 @@ internal sealed class CsvColumnTransformer(
         Dictionary<int, Namespace> inPlaceBySourceIndex,
         List<(int SourceIndex, string TargetColumn, Namespace Namespace)> appended,
         CsvWriter csvWriter,
-        CsvJobProgressReporter progress
+        CsvJobProgressReporter progress,
+        CsvJobPhaseTimer phases
     )
     {
         // A blank cell (or a common "no value" placeholder - see CsvJobFormat.IsMissingValue)
@@ -310,13 +330,23 @@ internal sealed class CsvColumnTransformer(
             }
         }
 
-        var resolved =
-            requests.Count == 0
-                ? new Dictionary<(string, string), Pseudonym>()
-                : await pseudonymAppService.CreateTrustedBatchAsync(
-                    requests,
-                    CancellationToken.None
-                );
+        IReadOnlyDictionary<(string, string), Pseudonym> resolved;
+        using (phases.Measure(CsvJobPhase.ResolveDatabase))
+        {
+            resolved =
+                requests.Count == 0
+                    ? new Dictionary<(string, string), Pseudonym>()
+                    : await pseudonymAppService.CreateTrustedBatchAsync(
+                        requests,
+                        CancellationToken.None
+                    );
+        }
+
+        // Covers the whole write loop rather than each NextRecordAsync individually: the rows go
+        // into a pipe CsvJobOutputUploader drains concurrently, so what is being measured here is
+        // how long that pipe spends full - i.e. how much of this job is spent waiting on the
+        // upload to keep up - and that only shows up in aggregate across a chunk.
+        using var writeScope = phases.Measure(CsvJobPhase.WriteOutput);
 
         foreach (var row in chunk)
         {
@@ -376,9 +406,15 @@ internal sealed class CsvColumnTransformer(
         Dictionary<int, Namespace> inPlaceBySourceIndex,
         List<(int SourceIndex, string TargetColumn, Namespace Namespace)> appended,
         CsvWriter csvWriter,
-        CsvJobProgressReporter progress
+        CsvJobProgressReporter progress,
+        CsvJobPhaseTimer phases
     )
     {
+        // Opened before the tasks are created, not just around the WhenAll: ResolveValueAsync runs
+        // synchronously up to its first await, so some of the lookup work has already happened by
+        // the time the last task is started.
+        var resolveScope = phases.Measure(CsvJobPhase.ResolveDatabase);
+
         foreach (var row in chunk)
         {
             row.InPlaceResults = new Task<string>?[row.RawFields.Length];
@@ -412,13 +448,23 @@ internal sealed class CsvColumnTransformer(
             }
         }
 
-        await Task.WhenAll(
-            chunk.SelectMany(r =>
-                r.InPlaceResults.Where(t => t is not null)
-                    .Cast<Task<string>>()
-                    .Concat(r.AppendedResults)
-            )
-        );
+        try
+        {
+            await Task.WhenAll(
+                chunk.SelectMany(r =>
+                    r.InPlaceResults.Where(t => t is not null)
+                        .Cast<Task<string>>()
+                        .Concat(r.AppendedResults)
+                )
+            );
+        }
+        finally
+        {
+            resolveScope.Dispose();
+        }
+
+        // Same reasoning as the pseudonymize path's write scope above.
+        using var writeScope = phases.Measure(CsvJobPhase.WriteOutput);
 
         foreach (var row in chunk)
         {
