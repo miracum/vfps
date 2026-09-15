@@ -232,7 +232,7 @@
                                             id="validationRegexError"
                                             class="mt-2 flex items-start gap-1 text-xs text-destructive"
                                         >
-                                            <LucideIcon Name="x" Size="14" Class="mt-0.5 shrink-0" />
+                                            <LucideIcon Name="x" Size="14" Class="shrink-0" />
                                             @* The regex parser's own message, which names the
                                                offending construct and its offset - far more use
                                                than a generic "invalid pattern". Not localized:
@@ -265,6 +265,10 @@
                                                     Id="validationRegexSample"
                                                     Class="w-64"
                                                     Placeholder="@Localizer["App.Namespaces.ValidationRegexSamplePlaceholder"]"
+                                                    @* No visible label - the placeholder carries
+                                                       it, and that disappears the moment anything
+                                                       is typed, so screen readers need this. *@
+                                                    AriaLabel="@Localizer["App.Namespaces.ValidationRegexSamplePlaceholder"]"
                                                 />
                                                 @if (_validationRegexSampleMatches is { } matches)
                                                 {
