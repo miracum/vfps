@@ -89,10 +89,44 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
             await Expect(exportRow).ToContainTextAsync($"{pairs.Length} rows");
 
             var exported = await DownloadOutputAsync(exportRow);
-            exported.Should().StartWith("original,pseudonym");
+            // A leading UTF-8 BOM: every CSV job's output is written through a StreamWriter over
+            // the job's own encoding, which emits one for utf-8. Trimmed here rather than
+            // asserted against, since it is the writer's behavior for every direction and not
+            // this one's concern - and StreamReader strips it right back off on the way in, which
+            // is what lets the re-import below find the "original" column at all.
+            exported.TrimStart('\uFEFF').Should().StartWith("original,pseudonym");
             foreach (var (originalValue, pseudonymValue) in pairs)
             {
                 exported.Should().Contain($"{originalValue},{pseudonymValue}");
+            }
+
+            // The point of the pair of directions: an export is directly importable, with no
+            // editing and nothing restated on the form.
+            var secondNamespace = $"e2e-reimport-{UniqueSuffix()}";
+            var exportedPath = Path.Join(Path.GetTempPath(), $"vfps-e2e-{UniqueSuffix()}.csv");
+            await File.WriteAllTextAsync(exportedPath, exported);
+            try
+            {
+                await CreateNamespaceAsync(secondNamespace);
+
+                await GotoAsync("/ui/csv-jobs");
+                await Page.SelectOptionAsync("#direction", "Import");
+                await Page.SetInputFilesAsync("#csvFileInput", exportedPath);
+                await Page.SelectOptionAsync("#jobNamespace", secondNamespace);
+                await Page.ClickAsync("#submitJobButton");
+
+                var reimportRow = JobRow(Path.GetFileName(exportedPath));
+                await Expect(reimportRow).ToContainTextAsync("Completed", RowTimeout());
+
+                var report = await DownloadOutputAsync(reimportRow);
+                foreach (var (originalValue, pseudonymValue) in pairs)
+                {
+                    report.Should().Contain($"{originalValue},{pseudonymValue},Imported");
+                }
+            }
+            finally
+            {
+                File.Delete(exportedPath);
             }
         }
         finally
