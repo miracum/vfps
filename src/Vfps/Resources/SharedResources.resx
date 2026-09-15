@@ -226,6 +226,18 @@
   <data name="App.CsvJobs.DirectionDepseudonymizeOption" xml:space="preserve">
     <value>De-pseudonymize - replace pseudonyms with original values</value>
   </data>
+  <data name="App.CsvJobs.DirectionExport" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="App.CsvJobs.DirectionExportOption" xml:space="preserve">
+    <value>Export - write a namespace's pseudonyms to a CSV file</value>
+  </data>
+  <data name="App.CsvJobs.DirectionImport" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="App.CsvJobs.DirectionImportOption" xml:space="preserve">
+    <value>Import - load original/pseudonym pairs into a namespace</value>
+  </data>
   <data name="App.CsvJobs.DirectionPseudonymize" xml:space="preserve">
     <value>Pseudonymize</value>
   </data>
@@ -244,6 +256,18 @@
   <data name="App.CsvJobs.Encoding" xml:space="preserve">
     <value>Encoding</value>
   </data>
+  <data name="App.CsvJobs.ExportHint" xml:space="preserve">
+    <value>Writes every original value in the namespace and its pseudonym to a two-column CSV file, ready to be imported into another namespace or instance.</value>
+  </data>
+  <data name="App.CsvJobs.ExportStarted" xml:space="preserve">
+    <value>Exporting namespace {0}.</value>
+  </data>
+  <data name="App.CsvJobs.ExportTitle" xml:space="preserve">
+    <value>Namespace to export</value>
+  </data>
+  <data name="App.CsvJobs.ExportWarning" xml:space="preserve">
+    <value>This writes every original value in the namespace to the output file - requires reverse-lookup access to it, same as the reverse lookup on a namespace's pseudonym list.</value>
+  </data>
   <data name="App.CsvJobs.File" xml:space="preserve">
     <value>File</value>
   </data>
@@ -255,6 +279,12 @@
   </data>
   <data name="App.CsvJobs.Id" xml:space="preserve">
     <value>Id</value>
+  </data>
+  <data name="App.CsvJobs.ImportHint" xml:space="preserve">
+    <value>Stores the pairs in the file as they are, without generating pseudonyms. Rows whose original value or pseudonym is already taken are reported in the downloadable result file and left untouched in the namespace.</value>
+  </data>
+  <data name="App.CsvJobs.ImportTitle" xml:space="preserve">
+    <value>Namespace to import into</value>
   </data>
   <data name="App.CsvJobs.Issue" xml:space="preserve">
     <value>Issue</value>
@@ -280,14 +310,26 @@
   <data name="App.CsvJobs.NewJobTitle" xml:space="preserve">
     <value>New job</value>
   </data>
+  <data name="App.CsvJobs.NoImportColumnsError" xml:space="preserve">
+    <value>Both the original value column and the pseudonym value column are required.</value>
+  </data>
   <data name="App.CsvJobs.NoMappingsError" xml:space="preserve">
     <value>At least one column mapping with a source column and namespace is required.</value>
+  </data>
+  <data name="App.CsvJobs.NoNamespaceError" xml:space="preserve">
+    <value>A namespace is required.</value>
+  </data>
+  <data name="App.CsvJobs.OriginalValueColumn" xml:space="preserve">
+    <value>Original value column</value>
   </data>
   <data name="App.CsvJobs.PageTitle" xml:space="preserve">
     <value>CSV pseudonymization</value>
   </data>
   <data name="App.CsvJobs.Progress" xml:space="preserve">
     <value>Progress</value>
+  </data>
+  <data name="App.CsvJobs.PseudonymValueColumn" xml:space="preserve">
+    <value>Pseudonym value column</value>
   </data>
   <data name="App.CsvJobs.RemoveMapping" xml:space="preserve">
     <value>Remove mapping</value>
@@ -315,6 +357,9 @@
   </data>
   <data name="App.CsvJobs.SourceColumnPlaceholder" xml:space="preserve">
     <value>name or 0-based index</value>
+  </data>
+  <data name="App.CsvJobs.StartExport" xml:space="preserve">
+    <value>Start export</value>
   </data>
   <data name="App.CsvJobs.Status" xml:space="preserve">
     <value>Status</value>
@@ -501,6 +546,21 @@
   </data>
   <data name="App.Namespaces.ValidationRegexHelp" xml:space="preserve">
     <value>Optional. If set, an original value must match this regular expression before a pseudonym is generated for it.</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexSampleAccepted" xml:space="preserve">
+    <value>Would be accepted</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexSamplePlaceholder" xml:space="preserve">
+    <value>Try an original value…</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexSampleRejected" xml:space="preserve">
+    <value>Would be rejected</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexTimeout" xml:space="preserve">
+    <value>This pattern took too long to evaluate against that value. It would time out and fail pseudonym creation the same way - simplify it before using it.</value>
+  </data>
+  <data name="App.Namespaces.ValidationRegexValid" xml:space="preserve">
+    <value>Valid pattern</value>
   </data>
   <data name="App.Nav.AccessControl" xml:space="preserve">
     <value>Access Control</value>

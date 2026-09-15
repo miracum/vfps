@@ -133,6 +133,14 @@ Create namespaces and browse or delete existing ones.
   <img src="docs/img/ui-namespaces-light.png" alt="Namespaces page in light mode" width="49%" />
 </p>
 
+A namespace can carry an **original value validation regex**: a pattern every original value must
+match before a pseudonym is generated for it. Since namespaces are immutable, getting that pattern
+wrong means deleting and re-creating the namespace, so the create form checks it as it is typed -
+it reports whether the pattern compiles (with the regex parser's own explanation of what is wrong
+when it doesn't), and lets you try a value against it to see whether it would be accepted or
+rejected. Both run the exact check the server performs on every pseudonym create, including its
+timeout, so a pattern that is valid but catastrophically slow is flagged too.
+
 ### Access Control
 
 Roles and individual users are granted read, write and reverse-lookup access per namespace. Only
@@ -184,6 +192,29 @@ to `"*"` has no UI equivalent any more and has to be re-created per namespace. R
 Upload a CSV file to pseudonymize or de-pseudonymize one or more columns as a background job. Files are streamed directly to and from S3-compatible object storage.
 
 ![CSV pseudonymization jobs page](docs/img/ui-jobs.png)
+
+The same page also moves a whole namespace in and out as CSV, as two further job directions:
+
+- **Import** loads already-known pairs into one namespace instead of generating pseudonyms for
+  them - for migrating a mapping table that predates vfps, or moving a namespace between
+  instances. The file needs an `original` and a `pseudonym` column (either name can be changed on
+  the form, or given as a 0-based column index for a file without a header row); any other column
+  is ignored. Requires **write** access to the namespace.
+
+  Nothing is ever overwritten: an original value that already has a pseudonym keeps it, and a
+  pseudonym already in use for a different original value is refused rather than left ambiguous to
+  reverse-lookup. Every row - accepted or not - comes back in the job's downloadable report as the
+  input row plus a `status` column (`Imported`, `AlreadyPresent`, `OriginalValueConflict`,
+  `PseudonymValueConflict`, `InvalidOriginalValue`, `ParentValueMissing`, or `MissingValue` for a
+  blank/placeholder cell), so re-running the same file is a clean no-op and a partial import is
+  inspectable row by row. A namespace that allows multiple pseudonyms per original value grows
+  instead of conflicting, exactly as its generating create path does.
+
+- **Export** writes every original value in a namespace and its pseudonym to a two-column CSV,
+  ready to be imported elsewhere. It is the one direction with no file to upload - the job is
+  queued as soon as it is created. Requires **reverse-lookup** access: the output is the
+  namespace's original values, in bulk, so it is gated like de-pseudonymization rather than like a
+  read.
 
 ## Production-grade deployment
 

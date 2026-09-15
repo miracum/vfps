@@ -135,6 +135,39 @@ public interface IPseudonymAppService
     );
 
     /// <summary>
+    /// Stores already-known original/pseudonym pairs verbatim in <paramref name="namespace"/>,
+    /// generating nothing - the bulk-import counterpart to
+    /// <see cref="CreateTrustedBatchAsync"/>, and the only way a pseudonym value chosen outside
+    /// vfps ever enters the store. Same trust boundary as the other <c>Trusted</c> methods: write
+    /// access to the namespace is checked once at job creation (see
+    /// <see cref="IPseudonymizationJobAppService.CreateJobAsync"/>), not per call.
+    ///
+    /// Nothing here throws over a row that merely collides with what's already stored - every
+    /// entry gets a <see cref="PseudonymImportOutcome"/> instead, so one bad row in a million-row
+    /// file is reported rather than failing the whole import. Existing pseudonyms are never
+    /// overwritten or deleted: an original value that already has one keeps it (reported as
+    /// <see cref="PseudonymImportOutcome.OriginalValueConflict"/>), unless the namespace allows
+    /// multiple pseudonyms, in which case the imported value is appended at the next free sequence
+    /// number - the same grow-only semantics
+    /// <see cref="CreateTrustedAsync(Data.Models.Namespace, string, long, CancellationToken)"/>
+    /// has.
+    ///
+    /// Costs three round trips per call regardless of <paramref name="entries"/>'s size (plus one
+    /// per validating parent namespace): what's already stored for these original values, which
+    /// of these pseudonym values are already taken, and the batched upsert itself.
+    /// </summary>
+    /// <returns>
+    /// One result per entry in <paramref name="entries"/>, in the same order - including for
+    /// entries that collided with an earlier one in the same call.
+    /// </returns>
+    /// <exception cref="ArgumentException">Any entry's original or pseudonym value is blank.</exception>
+    Task<IReadOnlyList<PseudonymImportResult>> ImportTrustedBatchAsync(
+        Data.Models.Namespace @namespace,
+        IReadOnlyList<PseudonymImportEntry> entries,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Lists pseudonyms in a namespace, keyset-paginated. Deliberately returns
     /// <see cref="PseudonymSummaryDto"/> rather than a type carrying the original value - this
     /// is the bulk projection exposed to external callers (gRPC/REST), and the original value
@@ -198,6 +231,56 @@ public interface IPseudonymAppService
         CancellationToken cancellationToken
     );
 }
+
+/// <summary>One already-known pair to store via <see cref="IPseudonymAppService.ImportTrustedBatchAsync"/>.</summary>
+public record PseudonymImportEntry(string OriginalValue, string PseudonymValue);
+
+/// <summary>
+/// What happened to one <see cref="PseudonymImportEntry"/>. Only
+/// <see cref="Imported"/> wrote anything; every other member means the store was left exactly as
+/// it was. Surfaced per row in a namespace import job's output report (see
+/// <see cref="CsvProcessing.CsvNamespaceImporter"/>), so the names double as that report's
+/// <c>status</c> column values and shouldn't be renamed lightly.
+/// </summary>
+public enum PseudonymImportOutcome
+{
+    /// <summary>Stored as given.</summary>
+    Imported,
+
+    /// <summary>This exact pair was already stored - a no-op, which makes re-running an import idempotent.</summary>
+    AlreadyPresent,
+
+    /// <summary>
+    /// The original value already has a different pseudonym, and the namespace doesn't allow more
+    /// than one per original value. The stored one is kept and deliberately not reported back
+    /// here: the report is written to object storage, and the import path is gated on write
+    /// access, which is not enough to be shown a mapping the caller didn't already have.
+    /// </summary>
+    OriginalValueConflict,
+
+    /// <summary>
+    /// The pseudonym value is already in use in this namespace for a different original value.
+    /// Storing it anyway would make the reverse lookup for that pseudonym ambiguous, so the row
+    /// is skipped. Which original value holds it is never reported back - that would be a reverse
+    /// lookup, which write access doesn't grant.
+    /// </summary>
+    PseudonymValueConflict,
+
+    /// <summary>
+    /// The original value doesn't match the namespace's
+    /// <see cref="Data.Models.Namespace.OriginalValueValidationRegex"/>.
+    /// </summary>
+    InvalidOriginalValue,
+
+    /// <summary>
+    /// The namespace requires its original values to already exist as pseudonyms in its parent
+    /// (<see cref="Data.Models.Namespace.ParentValidationMode"/>) and this one doesn't.
+    /// </summary>
+    ParentValueMissing,
+}
+
+/// <summary>One entry's fate - see <see cref="IPseudonymAppService.ImportTrustedBatchAsync"/>.</summary>
+public record PseudonymImportResult(PseudonymImportEntry Entry, PseudonymImportOutcome Outcome);
 
 /// <summary>Pseudonym projection safe for bulk/list display - no original value.</summary>
 public record PseudonymSummaryDto(

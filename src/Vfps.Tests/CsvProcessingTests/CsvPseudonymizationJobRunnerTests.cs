@@ -33,6 +33,7 @@ public class CsvPseudonymizationJobRunnerTests
         A.Fake<IPseudonymizationJobRepository>();
     private readonly IPseudonymAppService pseudonymAppService = A.Fake<IPseudonymAppService>();
     private readonly INamespaceRepository namespaceRepository = A.Fake<INamespaceRepository>();
+    private readonly IPseudonymRepository pseudonymRepository = A.Fake<IPseudonymRepository>();
     private readonly IAmazonS3 s3 = A.Fake<IAmazonS3>();
 
     // Hangfire.JobCancellationToken.Null's own ShutdownToken getter throws
@@ -63,25 +64,46 @@ public class CsvPseudonymizationJobRunnerTests
     // missingValuePlaceholders defaults to CsvProcessingConfig's own production default ("NA"/
     // "NULL") rather than null/empty, so existing tests that don't care about this setting still
     // exercise the same behavior a real deployment would see out of the box.
+    // The per-direction processors are wired up for real rather than faked: they are the code
+    // under test here (the runner itself only dispatches to them), and they take the same faked
+    // S3/repository/app-service dependencies this class already sets up.
     private CsvPseudonymizationJobRunner CreateSut(
         int pseudonymizeBatchSize = 20,
         List<string>? missingValuePlaceholders = null
-    ) =>
-        new(
+    )
+    {
+        var s3Config = Options.Create(new S3Config { Bucket = Bucket });
+        var csvProcessingConfig = Options.Create(
+            new CsvProcessingConfig
+            {
+                PseudonymizeBatchSize = pseudonymizeBatchSize,
+                MissingValuePlaceholders = missingValuePlaceholders ?? ["NA", "NULL"],
+            }
+        );
+        var outputUploader = new CsvJobOutputUploader(s3, s3Config);
+
+        return new(
             jobRepository,
-            pseudonymAppService,
-            namespaceRepository,
-            s3,
-            Options.Create(new S3Config { Bucket = Bucket }),
-            Options.Create(
-                new CsvProcessingConfig
-                {
-                    PseudonymizeBatchSize = pseudonymizeBatchSize,
-                    MissingValuePlaceholders = missingValuePlaceholders ?? ["NA", "NULL"],
-                }
+            new CsvColumnTransformer(
+                pseudonymAppService,
+                namespaceRepository,
+                s3,
+                s3Config,
+                csvProcessingConfig,
+                outputUploader
             ),
+            new CsvNamespaceImporter(
+                pseudonymAppService,
+                namespaceRepository,
+                s3,
+                s3Config,
+                csvProcessingConfig,
+                outputUploader
+            ),
+            new CsvNamespaceExporter(pseudonymRepository, namespaceRepository, outputUploader),
             NullLogger<CsvPseudonymizationJobRunner>.Instance
         );
+    }
 
     private static Data.Models.Namespace CreateNamespace(string name) =>
         new()
@@ -252,7 +274,7 @@ public class CsvPseudonymizationJobRunnerTests
                 storageConnection.SetJobParameter(
                     context.BackgroundJob.Id,
                     "InputObjectKey",
-                    A<string>.That.Contains(job.InputObjectKey)
+                    A<string>.That.Contains(job.InputObjectKey!)
                 )
             )
             .MustHaveHappenedOnceExactly();

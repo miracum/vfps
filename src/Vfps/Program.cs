@@ -497,6 +497,13 @@ if (s3Config.IsEnabled)
     builder.Services.AddScoped<IPseudonymizationJobRepository, PseudonymizationJobRepository>();
     builder.Services.AddScoped<IPseudonymizationJobAppService, PseudonymizationJobAppService>();
     builder.Services.AddScoped<ICsvPseudonymizationJobRunner, CsvPseudonymizationJobRunner>();
+
+    // One processor per job direction, behind the runner that dispatches to them. Scoped like the
+    // runner itself, so each Hangfire job execution gets its own set within its own DI scope.
+    builder.Services.AddScoped<CsvJobOutputUploader>();
+    builder.Services.AddScoped<ICsvColumnTransformer, CsvColumnTransformer>();
+    builder.Services.AddScoped<ICsvNamespaceImporter, CsvNamespaceImporter>();
+    builder.Services.AddScoped<ICsvNamespaceExporter, CsvNamespaceExporter>();
     builder.Services.AddHostedService<S3BucketConfigurationBackgroundService>();
     builder.Services.AddHostedService<StalledPseudonymizationJobWatchdogService>();
 

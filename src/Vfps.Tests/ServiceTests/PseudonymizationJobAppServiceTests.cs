@@ -717,4 +717,201 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
 
         jobs.Should().ContainSingle(j => j.Id == job.Id);
     }
+
+    // --- Import / Export ---------------------------------------------------------------------
+
+    [Fact]
+    public async Task CreateJobAsync_WithImportDirectionAndWriteAccess_ShouldCreateTheJob()
+    {
+        // An import only ever stores pairs the caller already holds, so write access is the bar -
+        // the same as Pseudonymize, not the higher one Depseudonymize/Export need.
+        var (sut, _, _, _) = CreateSut(
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-write", write: true)
+        );
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [
+                new ColumnMapping
+                {
+                    SourceColumn = CsvNamespaceColumns.OriginalValue,
+                    TargetColumn = CsvNamespaceColumns.PseudonymValue,
+                    Namespace = "existingNamespace",
+                },
+            ],
+            PseudonymizationJobDirection.Import
+        );
+
+        var (job, uploadUrl) = await sut.CreateJobAsync(
+            request,
+            UserWithRoles("can-write"),
+            CancellationToken.None
+        );
+
+        job.Direction.Should().Be(PseudonymizationJobDirection.Import);
+        job.Status.Should().Be(PseudonymizationJobStatus.AwaitingUpload);
+        job.InputObjectKey.Should().Contain(job.Id.ToString());
+        uploadUrl.Should().Be("https://example.invalid/presigned");
+    }
+
+    [Fact]
+    public async Task CreateJobAsync_WithImportDirectionAndNoWriteAccess_ShouldThrowForbidden()
+    {
+        var (sut, _, _, _) = CreateSut(new AuthorizationConfig { IsEnabled = true });
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [
+                new ColumnMapping
+                {
+                    SourceColumn = CsvNamespaceColumns.OriginalValue,
+                    TargetColumn = CsvNamespaceColumns.PseudonymValue,
+                    Namespace = "existingNamespace",
+                },
+            ],
+            PseudonymizationJobDirection.Import
+        );
+
+        var act = () => sut.CreateJobAsync(request, UserWithRoles(), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task CreateExportJobAsync_WithReverseLookupAccess_ShouldQueueAndEnqueueItImmediately()
+    {
+        var (sut, _, _, backgroundJobClient) = CreateSut(
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-reverse-lookup", reverseLookup: true)
+        );
+
+        var job = await sut.CreateExportJobAsync(
+            new CreateCsvExportJobRequest("existingNamespace"),
+            UserWithRoles("can-reverse-lookup"),
+            CancellationToken.None
+        );
+
+        // No upload to wait for, so it never passes through AwaitingUpload at all.
+        job.Status.Should().Be(PseudonymizationJobStatus.Queued);
+        job.Direction.Should().Be(PseudonymizationJobDirection.Export);
+        job.InputObjectKey.Should().BeNull();
+        job.HasHeaderRow.Should().BeTrue();
+        job.ColumnMappings.Should().ContainSingle();
+        job.ColumnMappings[0].Namespace.Should().Be("existingNamespace");
+        job.ColumnMappings[0].SourceColumn.Should().Be(CsvNamespaceColumns.OriginalValue);
+        job.ColumnMappings[0].TargetColumn.Should().Be(CsvNamespaceColumns.PseudonymValue);
+        A.CallTo(() => backgroundJobClient.Create(A<Job>._, A<IState>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task CreateExportJobAsync_WithWriteAccessOnly_ShouldThrowForbidden()
+    {
+        // An export is a bulk reverse lookup of the whole namespace - write access is not enough,
+        // exactly as it isn't for a de-pseudonymization job.
+        var (sut, _, _, _) = CreateSut(
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-write", write: true)
+        );
+
+        var act = () =>
+            sut.CreateExportJobAsync(
+                new CreateCsvExportJobRequest("existingNamespace"),
+                UserWithRoles("can-write"),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task CreateExportJobAsync_ShouldLabelTheHangfireJobWithTheNamespace()
+    {
+        // An export has no file name, so the Hangfire dashboard would otherwise show nothing
+        // identifying at all.
+        var (sut, _, _, backgroundJobClient) = CreateSut();
+        Job? enqueuedJob = null;
+        A.CallTo(() => backgroundJobClient.Create(A<Job>._, A<IState>._))
+            .Invokes((Job j, IState _) => enqueuedJob = j)
+            .Returns("hangfire-job-id");
+
+        await sut.CreateExportJobAsync(
+            new CreateCsvExportJobRequest("existingNamespace"),
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+
+        enqueuedJob.Should().NotBeNull();
+        enqueuedJob!.Args[1].Should().Be("Export - existingNamespace");
+    }
+
+    [Fact]
+    public async Task GetDownloadUrlAsync_WithExportDirection_ShouldNameFileAfterTheNamespace()
+    {
+        var (sut, repository, s3, _) = CreateSut();
+
+        var job = await sut.CreateExportJobAsync(
+            new CreateCsvExportJobRequest("existingNamespace"),
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+        await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
+
+        GetPreSignedUrlRequest? presignedRequest = null;
+        A.CallTo(() => s3.GetPreSignedURLAsync(A<GetPreSignedUrlRequest>._))
+            .Invokes((GetPreSignedUrlRequest r) => presignedRequest = r)
+            .Returns("https://example.invalid/presigned");
+
+        await sut.GetDownloadUrlAsync(job.Id, UserWithSubject("alice"), CancellationToken.None);
+
+        presignedRequest.Should().NotBeNull();
+        presignedRequest!
+            .ResponseHeaderOverrides.ContentDisposition.Should()
+            .Contain("existingNamespace-export.csv");
+    }
+
+    [Fact]
+    public async Task GetDownloadUrlAsync_WithImportDirection_ShouldNameFileAfterTheReport()
+    {
+        // The download is the per-row outcome report, not the imported data itself.
+        var (sut, repository, s3, _) = CreateSut();
+
+        var (job, _) = await sut.CreateJobAsync(
+            new CreateCsvJobRequest(
+                "utf-8",
+                ",",
+                true,
+                [
+                    new ColumnMapping
+                    {
+                        SourceColumn = CsvNamespaceColumns.OriginalValue,
+                        TargetColumn = CsvNamespaceColumns.PseudonymValue,
+                        Namespace = "existingNamespace",
+                    },
+                ],
+                PseudonymizationJobDirection.Import,
+                OriginalFileName: "mapping_table.csv"
+            ),
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+        await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
+
+        GetPreSignedUrlRequest? presignedRequest = null;
+        A.CallTo(() => s3.GetPreSignedURLAsync(A<GetPreSignedUrlRequest>._))
+            .Invokes((GetPreSignedUrlRequest r) => presignedRequest = r)
+            .Returns("https://example.invalid/presigned");
+
+        await sut.GetDownloadUrlAsync(job.Id, UserWithSubject("alice"), CancellationToken.None);
+
+        presignedRequest.Should().NotBeNull();
+        presignedRequest!
+            .ResponseHeaderOverrides.ContentDisposition.Should()
+            .Contain("mapping_table-import-report.csv");
+    }
 }

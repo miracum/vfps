@@ -1031,4 +1031,243 @@ public class PseudonymAppServiceTests : ServiceTestBase
 
         result.Should().BeNull();
     }
+
+    // --- ImportTrustedBatchAsync -------------------------------------------------------------
+    //
+    // Exercised against the real (SQLite) upsert rather than a faked repository: what these are
+    // actually about is which rows land in the store and which are refused, and that's decided by
+    // the "insert if not exists" semantics of the upsert itself.
+
+    private PseudonymAppService CreateImportSut() =>
+        CreatePseudonymAppService(
+            new NamespaceRepository(InMemoryPseudonymContext),
+            new PseudonymRepository(InMemoryPseudonymContext)
+        );
+
+    private static Data.Models.Namespace NamespaceNamed(
+        string name,
+        bool allowsMultiplePseudonyms = false,
+        string? originalValueValidationRegex = null
+    ) =>
+        new()
+        {
+            Name = name,
+            PseudonymLength = 16,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+            AllowsMultiplePseudonyms = allowsMultiplePseudonyms,
+            OriginalValueValidationRegex = originalValueValidationRegex,
+        };
+
+    private async Task<Data.Models.Pseudonym?> FindStoredAsync(
+        string namespaceName,
+        string pseudonymValue
+    ) =>
+        await new PseudonymRepository(InMemoryPseudonymContext).FindByPseudonymValueAsync(
+            namespaceName,
+            pseudonymValue,
+            CancellationToken.None
+        );
+
+    [Fact]
+    public async Task ImportTrustedBatchAsync_WithNewPairs_ShouldStoreThemVerbatim()
+    {
+        var sut = CreateImportSut();
+
+        var results = await sut.ImportTrustedBatchAsync(
+            NamespaceNamed("emptyNamespace"),
+            [
+                new PseudonymImportEntry("alice", "imported-psn-1"),
+                new PseudonymImportEntry("bob", "imported-psn-2"),
+            ],
+            CancellationToken.None
+        );
+
+        results.Select(r => r.Outcome).Should().AllBeEquivalentTo(PseudonymImportOutcome.Imported);
+
+        // Stored exactly as given - no prefix/suffix, no generation, nothing derived from the
+        // namespace's own pseudonym settings.
+        var stored = await FindStoredAsync("emptyNamespace", "imported-psn-1");
+        stored.Should().NotBeNull();
+        stored!.OriginalValue.Should().Be("alice");
+    }
+
+    [Fact]
+    public async Task ImportTrustedBatchAsync_WithTheSamePairTwice_ShouldReportItAsAlreadyPresent()
+    {
+        // Re-running the same import file has to be a clean no-op, not a pile of conflicts.
+        var sut = CreateImportSut();
+        var entries = new[] { new PseudonymImportEntry("alice", "idempotent-psn") };
+
+        await sut.ImportTrustedBatchAsync(
+            NamespaceNamed("emptyNamespace"),
+            entries,
+            CancellationToken.None
+        );
+        var second = await sut.ImportTrustedBatchAsync(
+            NamespaceNamed("emptyNamespace"),
+            entries,
+            CancellationToken.None
+        );
+
+        second[0].Outcome.Should().Be(PseudonymImportOutcome.AlreadyPresent);
+    }
+
+    [Fact]
+    public async Task ImportTrustedBatchAsync_WithADuplicatePairInTheSameBatch_ShouldReportTheSecondAsAlreadyPresent()
+    {
+        var sut = CreateImportSut();
+
+        var results = await sut.ImportTrustedBatchAsync(
+            NamespaceNamed("emptyNamespace"),
+            [
+                new PseudonymImportEntry("alice", "dup-psn"),
+                new PseudonymImportEntry("alice", "dup-psn"),
+            ],
+            CancellationToken.None
+        );
+
+        results[0].Outcome.Should().Be(PseudonymImportOutcome.Imported);
+        results[1].Outcome.Should().Be(PseudonymImportOutcome.AlreadyPresent);
+    }
+
+    [Fact]
+    public async Task ImportTrustedBatchAsync_WithAnOriginalValueThatAlreadyHasAPseudonym_ShouldKeepTheStoredOne()
+    {
+        // "an original value" -> "existingPseudonym" is seeded by ServiceTestBase.
+        var sut = CreateImportSut();
+
+        var results = await sut.ImportTrustedBatchAsync(
+            NamespaceNamed("existingNamespace"),
+            [new PseudonymImportEntry("an original value", "a-different-pseudonym")],
+            CancellationToken.None
+        );
+
+        results[0].Outcome.Should().Be(PseudonymImportOutcome.OriginalValueConflict);
+        (await FindStoredAsync("existingNamespace", "a-different-pseudonym")).Should().BeNull();
+        (await FindStoredAsync("existingNamespace", "existingPseudonym")).Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task ImportTrustedBatchAsync_WithAPseudonymAlreadyUsedByAnotherOriginalValue_ShouldRefuseIt()
+    {
+        // Storing it would leave two original values behind one pseudonym, making that
+        // pseudonym's reverse lookup ambiguous.
+        var sut = CreateImportSut();
+
+        var results = await sut.ImportTrustedBatchAsync(
+            NamespaceNamed("existingNamespace"),
+            [new PseudonymImportEntry("someone else", "existingPseudonym")],
+            CancellationToken.None
+        );
+
+        results[0].Outcome.Should().Be(PseudonymImportOutcome.PseudonymValueConflict);
+        var stored = await FindStoredAsync("existingNamespace", "existingPseudonym");
+        stored!.OriginalValue.Should().Be("an original value");
+    }
+
+    [Fact]
+    public async Task ImportTrustedBatchAsync_WithTwoOriginalValuesClaimingOnePseudonymInOneBatch_ShouldOnlyStoreTheFirst()
+    {
+        var sut = CreateImportSut();
+
+        var results = await sut.ImportTrustedBatchAsync(
+            NamespaceNamed("emptyNamespace"),
+            [
+                new PseudonymImportEntry("alice", "contested-psn"),
+                new PseudonymImportEntry("bob", "contested-psn"),
+            ],
+            CancellationToken.None
+        );
+
+        results[0].Outcome.Should().Be(PseudonymImportOutcome.Imported);
+        results[1].Outcome.Should().Be(PseudonymImportOutcome.PseudonymValueConflict);
+        var stored = await FindStoredAsync("emptyNamespace", "contested-psn");
+        stored!.OriginalValue.Should().Be("alice");
+    }
+
+    [Fact]
+    public async Task ImportTrustedBatchAsync_WithAValueFailingTheValidationRegex_ShouldRefuseOnlyThatRow()
+    {
+        // One bad row in a file must not take the rest of the batch down with it - the whole
+        // reason this reports outcomes rather than throwing the way the generating paths do.
+        var sut = CreateImportSut();
+
+        var results = await sut.ImportTrustedBatchAsync(
+            NamespaceNamed("emptyNamespace", originalValueValidationRegex: "^[0-9]+$"),
+            [
+                new PseudonymImportEntry("not-a-number", "regex-psn-1"),
+                new PseudonymImportEntry("12345", "regex-psn-2"),
+            ],
+            CancellationToken.None
+        );
+
+        results[0].Outcome.Should().Be(PseudonymImportOutcome.InvalidOriginalValue);
+        results[1].Outcome.Should().Be(PseudonymImportOutcome.Imported);
+    }
+
+    [Fact]
+    public async Task ImportTrustedBatchAsync_IntoAMultiPsnNamespace_ShouldAppendAtTheNextSequenceNumber()
+    {
+        // A namespace that allows several pseudonyms per original value grows rather than
+        // conflicting - the same semantics the generating create path has.
+        var sut = CreateImportSut();
+        var @namespace = NamespaceNamed("multiPsnNamespace", allowsMultiplePseudonyms: true);
+
+        await sut.ImportTrustedBatchAsync(
+            @namespace,
+            [new PseudonymImportEntry("alice", "multi-psn-1")],
+            CancellationToken.None
+        );
+        var second = await sut.ImportTrustedBatchAsync(
+            @namespace,
+            [new PseudonymImportEntry("alice", "multi-psn-2")],
+            CancellationToken.None
+        );
+
+        second[0].Outcome.Should().Be(PseudonymImportOutcome.Imported);
+        var stored = await new PseudonymRepository(
+            InMemoryPseudonymContext
+        ).FindAllByOriginalValueAsync("multiPsnNamespace", "alice", CancellationToken.None);
+        stored.Select(p => p.PseudonymValue).Should().Equal("multi-psn-1", "multi-psn-2");
+        stored.Select(p => p.SequenceNumber).Should().Equal(0, 1);
+    }
+
+    [Fact]
+    public async Task ImportTrustedBatchAsync_WithNoEntries_ShouldReturnNothing()
+    {
+        var sut = CreateImportSut();
+
+        var results = await sut.ImportTrustedBatchAsync(
+            NamespaceNamed("emptyNamespace"),
+            [],
+            CancellationToken.None
+        );
+
+        results.Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData("", "psn")]
+    [InlineData("   ", "psn")]
+    [InlineData("original", "")]
+    [InlineData("original", "   ")]
+    public async Task ImportTrustedBatchAsync_WithABlankValue_ShouldThrowArgumentException(
+        string originalValue,
+        string pseudonymValue
+    )
+    {
+        // The import job runner drops blank cells before they get here, so one reaching this
+        // point means a caller built the batch wrong - that's a bug, not a data problem to
+        // report per row.
+        var sut = CreateImportSut();
+
+        var act = () =>
+            sut.ImportTrustedBatchAsync(
+                NamespaceNamed("emptyNamespace"),
+                [new PseudonymImportEntry(originalValue, pseudonymValue)],
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
 }

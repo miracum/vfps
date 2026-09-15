@@ -24,6 +24,20 @@ public interface IPseudonymizationJobAppService
     );
 
     /// <summary>
+    /// Creates an already-queued <see cref="PseudonymizationJobDirection.Export"/> job for
+    /// <paramref name="request"/>'s namespace and enqueues it immediately - unlike every other
+    /// direction, there is no input file to wait for, so it skips
+    /// <see cref="PseudonymizationJobStatus.AwaitingUpload"/> and
+    /// <see cref="MarkUploadCompleteAsync"/> entirely and no upload URL is issued. Requires
+    /// reverse-lookup access to the namespace: the output is its original values, in bulk.
+    /// </summary>
+    Task<PseudonymizationJob> CreateExportJobAsync(
+        CreateCsvExportJobRequest request,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Called once the caller's browser-to-S3 PUT resolves. Verifies the object actually exists
     /// (a HEAD request - the PUT response alone isn't trusted) before transitioning the job to
     /// Queued and enqueueing the Hangfire processing job.
@@ -89,6 +103,32 @@ public record CreateCsvJobRequest(
     PseudonymizationJobDirection Direction = PseudonymizationJobDirection.Pseudonymize,
     string? OriginalFileName = null
 );
+
+/// <summary>
+/// An export has no file to describe, so it takes the namespace and the output's formatting
+/// directly rather than reusing <see cref="CreateCsvJobRequest"/> and leaving half of it
+/// meaningless. <paramref name="OriginalValueColumn"/>/<paramref name="PseudonymValueColumn"/> name
+/// the two columns written out, defaulting to what
+/// <see cref="PseudonymizationJobDirection.Import"/> expects to read back in.
+/// </summary>
+public record CreateCsvExportJobRequest(
+    string NamespaceName,
+    string Encoding = "utf-8",
+    string Delimiter = ",",
+    string OriginalValueColumn = CsvNamespaceColumns.OriginalValue,
+    string PseudonymValueColumn = CsvNamespaceColumns.PseudonymValue
+);
+
+/// <summary>
+/// The column names a namespace import/export file uses by default. Shared by the export request
+/// above and the admin UI's import form, so a file exported from one namespace imports into
+/// another without the operator having to restate the column names on either side.
+/// </summary>
+public static class CsvNamespaceColumns
+{
+    public const string OriginalValue = "original";
+    public const string PseudonymValue = "pseudonym";
+}
 
 public class PseudonymizationJobNotFoundException(Guid jobId)
     : Exception($"The requested pseudonymization job '{jobId}' does not exist.")

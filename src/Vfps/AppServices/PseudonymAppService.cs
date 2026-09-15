@@ -1,5 +1,4 @@
 using System.Security.Claims;
-using System.Text.RegularExpressions;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.WebUtilities;
@@ -278,6 +277,218 @@ public class PseudonymAppService(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<PseudonymImportResult>> ImportTrustedBatchAsync(
+        Data.Models.Namespace @namespace,
+        IReadOnlyList<PseudonymImportEntry> entries,
+        CancellationToken cancellationToken
+    )
+    {
+        if (entries.Count == 0)
+        {
+            return [];
+        }
+
+        // Blank values are the caller's bug rather than a data problem to report per row - the
+        // import job runner drops blank/placeholder cells before ever getting here (see
+        // CsvPseudonymizationJobRunner.IsMissingValue), so reaching this means something else
+        // built the batch wrong. Same reasoning as CreateTrustedBatchAsync's own blank check.
+        foreach (var entry in entries)
+        {
+            if (string.IsNullOrWhiteSpace(entry.OriginalValue))
+            {
+                throw new ArgumentException(
+                    "The original value must not be blank.",
+                    nameof(entries)
+                );
+            }
+
+            if (string.IsNullOrWhiteSpace(entry.PseudonymValue))
+            {
+                throw new ArgumentException(
+                    "The pseudonym value must not be blank.",
+                    nameof(entries)
+                );
+            }
+        }
+
+        // Same fresh, pooled DbContext reasoning as CreateTrustedBatchAsync above.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var repository = new PseudonymRepository(context);
+
+        var distinctOriginalValues = entries
+            .Select(e => e.OriginalValue)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        // Everything already stored for the original values this batch touches, so each row can
+        // be classified against it without a round trip of its own. Also seeds the next free
+        // sequence number per original value for a multi-psn namespace, exactly the way
+        // CreateTrustedAsync derives it from existing.Count.
+        var storedPseudonymValuesByOriginal = new Dictionary<string, HashSet<string>>(
+            StringComparer.Ordinal
+        );
+        var nextSequenceByOriginal = new Dictionary<string, long>(StringComparer.Ordinal);
+        foreach (
+            var stored in await repository.FindAllByOriginalValuesAsync(
+                @namespace.Name,
+                distinctOriginalValues,
+                cancellationToken
+            )
+        )
+        {
+            if (!storedPseudonymValuesByOriginal.TryGetValue(stored.OriginalValue, out var values))
+            {
+                values = new HashSet<string>(StringComparer.Ordinal);
+                storedPseudonymValuesByOriginal[stored.OriginalValue] = values;
+            }
+
+            values.Add(stored.PseudonymValue);
+            nextSequenceByOriginal[stored.OriginalValue] =
+                Math.Max(
+                    nextSequenceByOriginal.GetValueOrDefault(stored.OriginalValue),
+                    stored.SequenceNumber
+                ) + 1;
+        }
+
+        // Which of the pseudonym values being imported are already in use in this namespace.
+        // Deliberately only asks *whether* they exist rather than what they map to: knowing which
+        // original value holds one is a reverse lookup, and this path is gated on write access.
+        var takenPseudonymValues = await repository.FilterExistingPseudonymValuesAsync(
+            @namespace.Name,
+            [.. entries.Select(e => e.PseudonymValue).Distinct(StringComparer.Ordinal)],
+            cancellationToken
+        );
+
+        var missingFromParent = await FindValuesMissingFromParentAsync(
+            @namespace,
+            distinctOriginalValues,
+            repository,
+            cancellationToken
+        );
+
+        var outcomes = new PseudonymImportOutcome?[entries.Count];
+        var candidates = new List<Data.Models.Pseudonym>();
+        var candidateEntryIndexes = new List<int>();
+        var claimedPseudonymValues = new HashSet<string>(StringComparer.Ordinal);
+
+        for (var i = 0; i < entries.Count; i++)
+        {
+            var (originalValue, pseudonymValue) = entries[i];
+
+            if (missingFromParent.Contains(originalValue))
+            {
+                outcomes[i] = PseudonymImportOutcome.ParentValueMissing;
+                continue;
+            }
+
+            if (!MatchesOriginalValueValidation(@namespace, originalValue))
+            {
+                outcomes[i] = PseudonymImportOutcome.InvalidOriginalValue;
+                continue;
+            }
+
+            if (!storedPseudonymValuesByOriginal.TryGetValue(originalValue, out var knownForValue))
+            {
+                knownForValue = new HashSet<string>(StringComparer.Ordinal);
+                storedPseudonymValuesByOriginal[originalValue] = knownForValue;
+            }
+
+            // Checked before anything else below, so re-running the same import file - or a file
+            // repeating the same pair - is a clean no-op rather than a pile of conflicts.
+            if (knownForValue.Contains(pseudonymValue))
+            {
+                outcomes[i] = PseudonymImportOutcome.AlreadyPresent;
+                continue;
+            }
+
+            var nextSequence = nextSequenceByOriginal.GetValueOrDefault(originalValue);
+            if (nextSequence > 0 && !@namespace.AllowsMultiplePseudonyms)
+            {
+                outcomes[i] = PseudonymImportOutcome.OriginalValueConflict;
+                continue;
+            }
+
+            // Both halves of the same rule: the pseudonym is already in the namespace, or an
+            // earlier row in this very batch just claimed it for a different original value.
+            // Either way storing it would leave two original values behind one pseudonym, making
+            // that pseudonym's reverse lookup ambiguous.
+            if (
+                takenPseudonymValues.Contains(pseudonymValue)
+                || !claimedPseudonymValues.Add(pseudonymValue)
+            )
+            {
+                outcomes[i] = PseudonymImportOutcome.PseudonymValueConflict;
+                continue;
+            }
+
+            knownForValue.Add(pseudonymValue);
+            nextSequenceByOriginal[originalValue] = nextSequence + 1;
+            candidateEntryIndexes.Add(i);
+            candidates.Add(
+                new Data.Models.Pseudonym
+                {
+                    NamespaceName = @namespace.Name,
+                    OriginalValue = originalValue,
+                    PseudonymValue = pseudonymValue,
+                    SequenceNumber = nextSequence,
+                }
+            );
+        }
+
+        if (candidates.Count > 0)
+        {
+            var upserted = await repository.CreateIfNotExistBatchAsync(
+                candidates,
+                cancellationToken
+            );
+            var storedByKey = upserted.ToDictionary(
+                p => (p.OriginalValue, p.SequenceNumber),
+                p => p.PseudonymValue
+            );
+
+            for (var c = 0; c < candidates.Count; c++)
+            {
+                var candidate = candidates[c];
+
+                // The upsert never overwrites, so a concurrent writer that got to this exact key
+                // first leaves it returning *their* value instead of ours - report the collision
+                // rather than claiming an import that didn't happen.
+                outcomes[candidateEntryIndexes[c]] =
+                    storedByKey.TryGetValue(
+                        (candidate.OriginalValue, candidate.SequenceNumber),
+                        out var storedValue
+                    )
+                    && string.Equals(
+                        storedValue,
+                        candidate.PseudonymValue,
+                        StringComparison.Ordinal
+                    )
+                        ? PseudonymImportOutcome.Imported
+                        : PseudonymImportOutcome.OriginalValueConflict;
+            }
+        }
+
+        return
+        [
+            .. entries.Select(
+                (entry, i) =>
+                    new PseudonymImportResult(
+                        entry,
+                        outcomes[i]
+                            // Unreachable: every branch of the loop above assigns an outcome, and
+                            // every index it skipped is covered by candidateEntryIndexes. Asserted
+                            // rather than defaulted, so a future edit that misses a path shows up
+                            // as a failed job instead of a silent "Imported" for a row that never
+                            // was.
+                            ?? throw new InvalidOperationException(
+                                $"Import entry {i} was left unclassified."
+                            )
+                    )
+            ),
+        ];
+    }
+
+    /// <inheritdoc/>
     public async Task<PseudonymPageDto> ListAsync(
         string namespaceName,
         int pageSize,
@@ -430,26 +641,34 @@ public class PseudonymAppService(
         );
     }
 
-    // A short, fixed timeout guards against a catastrophically backtracking pattern turning a
-    // single pseudonym request into a denial of service - the pattern is admin-supplied at
-    // namespace creation, not attacker-controlled, but this is cheap insurance regardless.
-    private static readonly TimeSpan ValidationRegexTimeout = TimeSpan.FromMilliseconds(500);
-
     private static void ValidateOriginalValue(
         Data.Models.Namespace @namespace,
         string originalValue
     )
     {
-        var pattern = @namespace.OriginalValueValidationRegex;
-        if (string.IsNullOrEmpty(pattern))
+        if (!MatchesOriginalValueValidation(@namespace, originalValue))
         {
-            return;
+            throw new OriginalValueValidationException(
+                @namespace.Name,
+                @namespace.OriginalValueValidationRegex!
+            );
         }
+    }
 
-        if (!Regex.IsMatch(originalValue, pattern, RegexOptions.None, ValidationRegexTimeout))
-        {
-            throw new OriginalValueValidationException(@namespace.Name, pattern);
-        }
+    /// <summary>
+    /// The same check as <see cref="ValidateOriginalValue"/> without the exception - the import
+    /// path reports a rejected value as one row's outcome rather than failing the whole batch, so
+    /// it can't use exceptions for what is an expected, per-row result there.
+    /// </summary>
+    private static bool MatchesOriginalValueValidation(
+        Data.Models.Namespace @namespace,
+        string originalValue
+    )
+    {
+        var pattern = @namespace.OriginalValueValidationRegex;
+
+        return string.IsNullOrEmpty(pattern)
+            || OriginalValueValidation.IsMatch(pattern, originalValue);
     }
 
     /// <summary>
@@ -465,13 +684,40 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
+        var missing = await FindValuesMissingFromParentAsync(
+            @namespace,
+            originalValues,
+            repository,
+            cancellationToken
+        );
+
+        if (missing.Count > 0)
+        {
+            throw new ParentPseudonymNotFoundException(@namespace.Name, @namespace.ParentName!);
+        }
+    }
+
+    /// <summary>
+    /// The <see cref="ValidateParentAsync"/> check without the exception: which of
+    /// <paramref name="originalValues"/> are not present as pseudonym values in the parent
+    /// namespace, empty when the namespace doesn't opt in. Split out for
+    /// <see cref="ImportTrustedBatchAsync"/>, which reports a missing parent value as one row's
+    /// outcome instead of failing every row in the batch alongside it.
+    /// </summary>
+    private static async Task<IReadOnlySet<string>> FindValuesMissingFromParentAsync(
+        Data.Models.Namespace @namespace,
+        IReadOnlyCollection<string> originalValues,
+        IPseudonymRepository repository,
+        CancellationToken cancellationToken
+    )
+    {
         if (
             @namespace.ParentValidationMode != ParentValidationMode.EnsureExists
             || string.IsNullOrEmpty(@namespace.ParentName)
             || originalValues.Count == 0
         )
         {
-            return;
+            return new HashSet<string>(StringComparer.Ordinal);
         }
 
         var existing = await repository.FilterExistingPseudonymValuesAsync(
@@ -482,10 +728,9 @@ public class PseudonymAppService(
 
         // Membership rather than a count comparison, so a caller passing the same value twice
         // can't be mistaken for a missing one.
-        if (originalValues.Any(value => !existing.Contains(value)))
-        {
-            throw new ParentPseudonymNotFoundException(@namespace.Name, @namespace.ParentName);
-        }
+        return originalValues
+            .Where(value => !existing.Contains(value))
+            .ToHashSet(StringComparer.Ordinal);
     }
 
     private static PseudonymPageCursor? DecodeCursor(string? pageToken)
