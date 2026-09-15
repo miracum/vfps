@@ -81,7 +81,7 @@ internal sealed class CsvNamespaceImporter(
                 $"Namespace '{mapping.Namespace}' does not exist."
             );
 
-        using var reader = new StreamReader(countingStream, context.Encoding);
+        using var reader = CsvJobFormat.CreateReader(countingStream, context.Encoding);
         using var csvReader = new CsvReader(reader, context.CsvConfig, leaveOpen: true);
 
         string[]? header = null;
