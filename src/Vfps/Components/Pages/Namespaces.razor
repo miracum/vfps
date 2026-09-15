@@ -257,6 +257,14 @@
                                                before the namespace exists, and this runs the
                                                exact check the server will (see
                                                OriginalValueValidation.IsMatch). *@
+                                            @* AriaLabel because this input has no visible label:
+                                               the placeholder carries it, and that disappears the
+                                               moment anything is typed. The comment sits out here
+                                               rather than between the attributes below - a Razor
+                                               comment inside a component's attribute list is
+                                               passed through as a literal attribute name and
+                                               takes the whole circuit down when the browser
+                                               rejects it. *@
                                             <div class="flex flex-wrap items-center gap-2">
                                                 <BbInput
                                                     @bind-Value="_validationRegexSample"
@@ -265,9 +273,6 @@
                                                     Id="validationRegexSample"
                                                     Class="w-64"
                                                     Placeholder="@Localizer["App.Namespaces.ValidationRegexSamplePlaceholder"]"
-                                                    @* No visible label - the placeholder carries
-                                                       it, and that disappears the moment anything
-                                                       is typed, so screen readers need this. *@
                                                     AriaLabel="@Localizer["App.Namespaces.ValidationRegexSamplePlaceholder"]"
                                                 />
                                                 @if (_validationRegexSampleMatches is { } matches)

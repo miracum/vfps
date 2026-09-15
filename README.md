@@ -133,6 +133,14 @@ Create namespaces and browse or delete existing ones.
   <img src="docs/img/ui-namespaces-light.png" alt="Namespaces page in light mode" width="49%" />
 </p>
 
+A namespace can carry an **original value validation regex**: a pattern every original value must
+match before a pseudonym is generated for it. Since namespaces are immutable, getting that pattern
+wrong means deleting and re-creating the namespace, so the create form checks it as it is typed -
+it reports whether the pattern compiles (with the regex parser's own explanation of what is wrong
+when it doesn't), and lets you try a value against it to see whether it would be accepted or
+rejected. Both run the exact check the server performs on every pseudonym create, including its
+timeout, so a pattern that is valid but catastrophically slow is flagged too.
+
 ### Access Control
 
 Roles and individual users are granted read, write and reverse-lookup access per namespace. Only
