@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package vfps.voprf.v1;
+
+option csharp_namespace = "Vfps.Voprf.Protos";
+
+// Key-holding half of the verifiable oblivious pseudorandom function described in RFC 9497,
+// ciphersuite VOPRF(ristretto255, SHA-512), verifiable mode.
+//
+// The server holds the key and never sees an identifier; the client holds the identifier and
+// never sees the key. Consequently this service does NOT return pseudonyms - it cannot, since
+// it never learns what it is pseudonymizing. It returns the evaluated group element and a
+// proof, and the client unblinds that into the pseudonym itself. Anything that posts raw
+// identifiers to a central service and gets pseudonyms back has given that service the exact
+// data this design exists to withhold.
+service VoprfService {
+  // the public key this server evaluates under, for bootstrapping a client's pin
+  rpc GetPublicKey(VoprfServiceGetPublicKeyRequest) returns (VoprfServiceGetPublicKeyResponse);
+
+  // apply the key to one or more blinded elements, returning a single proof over the batch
+  rpc BlindEvaluate(VoprfServiceBlindEvaluateRequest) returns (VoprfServiceBlindEvaluateResponse);
+}
+
+// request for the server's public key
+message VoprfServiceGetPublicKeyRequest {}
+
+// the server's public key and the generation it belongs to
+message VoprfServiceGetPublicKeyResponse {
+  // the 32-byte serialized ristretto255 public key
+  bytes public_key = 1;
+  // identifies which generation of the key this server holds. One server holds exactly one
+  // key; a deployment running two generations at once runs two servers, and a client selects
+  // between them by address rather than by naming an id here.
+  string key_id = 2;
+}
+
+// blinded elements awaiting evaluation
+message VoprfServiceBlindEvaluateRequest {
+  // 32-byte serialized ristretto255 elements, each produced by a client's Blind step.
+  // The order is significant: the proof covers this exact sequence.
+  repeated bytes blinded_elements = 1;
+}
+
+// the evaluated elements and the proof covering them
+message VoprfServiceBlindEvaluateResponse {
+  // the evaluated elements, in the same order as the request
+  repeated bytes evaluated_elements = 1;
+  // the 64-byte DLEQ proof covering the whole batch. Verification is all-or-nothing: it
+  // establishes that every element was evaluated under the published key, or that some
+  // element was not - never which one.
+  bytes proof = 2;
+  // the generation of the key used. Echoed on every answer because a stored pseudonym is
+  // meaningless without knowing which key produced it - that is what makes a later migration
+  // possible, and it is needed whether the generations live in one server or several.
+  string key_id = 3;
+}

@@ -9,5 +9,10 @@
   <Project Path="src/Vfps.PlaywrightTests/Vfps.PlaywrightTests.csproj" />
   <Project Path="src/Vfps.StressTests/Vfps.StressTests.csproj" />
   <Project Path="src/Vfps.Tests/Vfps.Tests.csproj" Type="fb0508b1-3e31-4aba-bc1d-c0294175ffc7" />
+  <Project Path="src/Vfps.Voprf/Vfps.Voprf.csproj" />
+  <Project Path="src/Vfps.Voprf.Client/Vfps.Voprf.Client.csproj" />
+  <Project Path="src/Vfps.Voprf.Contracts/Vfps.Voprf.Contracts.csproj" />
+  <Project Path="src/Vfps.Voprf.Server/Vfps.Voprf.Server.csproj" />
+  <Project Path="src/Vfps.Voprf.Server.Tests/Vfps.Voprf.Server.Tests.csproj" />
   <Project Path="src/Vfps/Vfps.csproj" />
 </Solution>
