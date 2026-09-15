@@ -36,7 +36,7 @@ gracefulShutdown:
 image:
   registry: ghcr.io
   repository: miracum/vfps
-  tag: v1.14.0 # x-release-please-version
+  tag: v1.15.0 # x-release-please-version
   pullPolicy: IfNotPresent
 
 migrationsJob:
