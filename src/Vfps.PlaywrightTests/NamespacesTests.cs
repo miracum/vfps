@@ -279,8 +279,12 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
     }
 
     [Fact]
-    public async Task ValidationRegex_CheckerResetsWhenTheDialogIsReopened()
+    public async Task ValidationRegex_VerdictSurvivesDismissingTheDialogWithThePatternItDescribes()
     {
+        // The create form keeps what was typed when it is dismissed - every field does, and the
+        // duplicate-name flow above relies on it. The checker has to follow the pattern rather
+        // than reset independently of it, or reopening would show a pattern with no verdict
+        // beside it and it would read as unchecked.
         await GotoAsync("/ui/namespaces");
         await OpenCreateDialogAsync();
         await Page.FillAsync("#validationRegex", "^[0-9]+$");
@@ -290,11 +294,34 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await CloseCreateDialogAsync();
         await OpenCreateDialogAsync();
 
-        // Neither the pattern nor the sample it was tried against survives - a stale verdict on a
-        // fresh form would be worse than none.
+        await Expect(Page.Locator("#validationRegex")).ToHaveValueAsync("^[0-9]+$");
+        await Expect(Page.Locator("#validationRegexValid")).ToBeVisibleAsync();
+        await Expect(Page.Locator("#validationRegexSampleResult"))
+            .ToContainTextAsync("Would be accepted");
+    }
+
+    [Fact]
+    public async Task ValidationRegex_CheckerIsClearOnTheDialogAfterASuccessfulCreate()
+    {
+        // A successful create blanks the form, so the next dialog must not open still showing the
+        // last namespace's pattern verdict or the value it was tried against.
+        await GotoAsync("/ui/namespaces");
+        await OpenCreateDialogAsync();
+        await Page.FillAsync("#name", UniqueName());
+        await Page.FillAsync("#validationRegex", "^[0-9]+$");
+        await Page.FillAsync("#validationRegexSample", "12345");
+        await Expect(Page.Locator("#validationRegexSampleResult")).ToBeVisibleAsync();
+        await SubmitCreateFormAsync();
+        await Expect(Page.Locator("#name")).ToHaveCountAsync(0);
+
+        await OpenCreateDialogAsync();
+
         await Expect(Page.Locator("#validationRegex")).ToHaveValueAsync(string.Empty);
         await Expect(Page.Locator("#validationRegexValid")).ToHaveCountAsync(0);
         await Expect(Page.Locator("#validationRegexSampleResult")).ToHaveCountAsync(0);
+
+        await Page.FillAsync("#validationRegex", "^[0-9]+$");
+        await Expect(Page.Locator("#validationRegexSample")).ToHaveValueAsync(string.Empty);
     }
 
     /// <summary>

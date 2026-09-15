@@ -730,12 +730,17 @@
         _showCreateForm = open;
         _shouldFocusCreateName = open;
 
-        // Unconditionally, in both directions: a successful create blanks _newNamespace and
-        // closes the dialog from CreateNamespaceAsync, so without this the next one would open
-        // showing the previous namespace's sample value and its verdict.
-        _validationRegexError = null;
-        _validationRegexSample = string.Empty;
-        _validationRegexSampleMatches = null;
+        // The form deliberately keeps what was typed when the dialog is dismissed - see the
+        // duplicate-name flow, which relies on it - so the checker is recomputed from whatever
+        // the pattern field currently holds rather than blanked. Blanking would leave a retained
+        // pattern sitting there with no verdict beside it, looking unchecked. A successful create
+        // blanks the model before closing, which is the case the sample is dropped for.
+        if (string.IsNullOrEmpty(_newNamespace.OriginalValueValidationRegex))
+        {
+            _validationRegexSample = string.Empty;
+        }
+
+        OnValidationRegexChanged();
 
         if (!open)
         {
