@@ -217,6 +217,86 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await Expect(TreeNode(unrelated)).ToHaveCountAsync(1);
     }
 
+    [Fact]
+    public async Task ValidationRegex_ChecksThePatternAsItIsTyped()
+    {
+        await GotoAsync("/ui/namespaces");
+        await OpenCreateDialogAsync();
+
+        // An empty field says nothing: no pattern means no validation, which is the default
+        // rather than a mistake.
+        await Expect(Page.Locator("#validationRegexValid")).ToHaveCountAsync(0);
+        await Expect(Page.Locator("#validationRegexError")).ToHaveCountAsync(0);
+
+        await Page.FillAsync("#validationRegex", "(unterminated");
+        // The regex parser's own explanation, not a generic "invalid" - it names the construct
+        // that is wrong, which is the whole reason it is surfaced verbatim.
+        await Expect(Page.Locator("#validationRegexError")).ToContainTextAsync("Not enough )");
+        await Expect(Page.Locator("#validationRegexValid")).ToHaveCountAsync(0);
+
+        await Page.FillAsync("#validationRegex", "^[0-9]+$");
+        await Expect(Page.Locator("#validationRegexValid")).ToBeVisibleAsync();
+        await Expect(Page.Locator("#validationRegexError")).ToHaveCountAsync(0);
+
+        await Page.FillAsync("#validationRegex", string.Empty);
+        await Expect(Page.Locator("#validationRegexValid")).ToHaveCountAsync(0);
+    }
+
+    [Fact]
+    public async Task ValidationRegex_TriesASampleValueAgainstThePattern()
+    {
+        await GotoAsync("/ui/namespaces");
+        await OpenCreateDialogAsync();
+        await Page.FillAsync("#validationRegex", "^[0-9]+$");
+
+        // Nothing to report until there is something to test.
+        await Expect(Page.Locator("#validationRegexSampleResult")).ToHaveCountAsync(0);
+
+        await Page.FillAsync("#validationRegexSample", "12345");
+        await Expect(Page.Locator("#validationRegexSampleResult"))
+            .ToContainTextAsync("Would be accepted");
+
+        await Page.FillAsync("#validationRegexSample", "12a45");
+        await Expect(Page.Locator("#validationRegexSampleResult"))
+            .ToContainTextAsync("Would be rejected");
+    }
+
+    [Fact]
+    public async Task ValidationRegex_MakesAnUnanchoredPatternsSubstringMatchVisible()
+    {
+        // The mistake this box exists for: a pattern that looks like "digits only" but, being
+        // unanchored, accepts any value that merely contains a digit. Nothing about the pattern
+        // itself is wrong, so only trying a value against it shows the problem - and it shows it
+        // before the namespace is created around it rather than after.
+        await GotoAsync("/ui/namespaces");
+        await OpenCreateDialogAsync();
+        await Page.FillAsync("#validationRegex", "[0-9]+");
+        await Page.FillAsync("#validationRegexSample", "abc123");
+
+        await Expect(Page.Locator("#validationRegexValid")).ToBeVisibleAsync();
+        await Expect(Page.Locator("#validationRegexSampleResult"))
+            .ToContainTextAsync("Would be accepted");
+    }
+
+    [Fact]
+    public async Task ValidationRegex_CheckerResetsWhenTheDialogIsReopened()
+    {
+        await GotoAsync("/ui/namespaces");
+        await OpenCreateDialogAsync();
+        await Page.FillAsync("#validationRegex", "^[0-9]+$");
+        await Page.FillAsync("#validationRegexSample", "12345");
+        await Expect(Page.Locator("#validationRegexSampleResult")).ToBeVisibleAsync();
+
+        await CloseCreateDialogAsync();
+        await OpenCreateDialogAsync();
+
+        // Neither the pattern nor the sample it was tried against survives - a stale verdict on a
+        // fresh form would be worse than none.
+        await Expect(Page.Locator("#validationRegex")).ToHaveValueAsync(string.Empty);
+        await Expect(Page.Locator("#validationRegexValid")).ToHaveCountAsync(0);
+        await Expect(Page.Locator("#validationRegexSampleResult")).ToHaveCountAsync(0);
+    }
+
     /// <summary>
     /// The create dialog's own submit button. "Create" on its own is ambiguous, since the header
     /// carries a "Create namespace" button to open the dialog in the first place.
