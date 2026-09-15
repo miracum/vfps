@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Vfps.Voprf</RootNamespace>
+    <!-- matches Vfps.Voprf.Server, which publishes RID-specific; without it that
+         project's locked-mode restore fails on this one's lock file -->
+    <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- the libsodium P/Invoke surface passes pinned spans as raw pointers -->
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+  <ItemGroup>
+    <!--
+      Ships runtimes/<rid>/native/libsodium.* for every RID and is resolved by the host from
+      deps.json, so there is no native library to build, commit, or copy into the image.
+    -->
+    <PackageReference Include="libsodium" Version="1.0.22" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Vfps.Tests" />
+  </ItemGroup>
+</Project>

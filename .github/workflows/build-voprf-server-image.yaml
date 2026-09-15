@@ -1,0 +1,77 @@
+name: build-voprf-server-image
+
+on:
+  push:
+    branches: [master]
+  release:
+    types: [created]
+  pull_request:
+    branches: [master]
+  merge_group:
+    types: [checks_requested]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Container meta for the VOPRF server image
+        id: container_voprf_server_meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}-voprf-server
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      # Vfps.Voprf.Server.Tests covers the server and Vfps.Voprf.Client, and
+      # runs nowhere else: ci.yaml's test layer is scoped to src/Vfps.Tests.
+      # The test stage runs `dotnet test` in the image, so a failing test
+      # fails this job. cacheonly: nothing consumes the coverage it writes.
+      - name: Run the VOPRF server and client tests
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          push: false
+          target: test
+          outputs: type=cacheonly
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          file: voprf-server.Dockerfile
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        # Explicit allow-list, not "!= pull_request" - a merge_group run
+        # validates a speculative merge commit before it lands, so it
+        # shouldn't publish anything either.
+        if: ${{ github.event_name == 'push' || github.event_name == 'release' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Single platform on purpose: the app publishes --runtime=linux-x64,
+      # and unlike the root Dockerfile this runtime stage is not pinned to
+      # $BUILDPLATFORM - so linux/arm64 would pull an arm64 base image and
+      # fill it with x64 binaries.
+      - name: Build and push the VOPRF server image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          push: ${{ github.event_name == 'push' || github.event_name == 'release' }}
+          target: runtime
+          tags: ${{ steps.container_voprf_server_meta.outputs.tags }}
+          labels: ${{ steps.container_voprf_server_meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          file: voprf-server.Dockerfile
