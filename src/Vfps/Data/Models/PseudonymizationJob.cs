@@ -28,10 +28,12 @@ public enum PseudonymizationJobStatus
 }
 
 /// <summary>
-/// Which way a job's <see cref="ColumnMapping"/>s transform values. Determines both the required
-/// permission at job creation (see
-/// <see cref="AppServices.IPseudonymizationJobAppService.CreateJobAsync"/>) and which
-/// <see cref="AppServices.IPseudonymAppService"/> method the runner calls per field.
+/// What a CSV job does with the namespaces its <see cref="ColumnMapping"/>s reference. Determines
+/// the required permission at job creation (see
+/// <see cref="AppServices.IPseudonymizationJobAppService.CreateJobAsync"/>), and which processor
+/// <see cref="CsvProcessing.CsvPseudonymizationJobRunner"/> hands the job to.
+///
+/// New members are appended, never inserted, so existing stored integer values keep their meaning.
 /// </summary>
 public enum PseudonymizationJobDirection
 {
@@ -40,12 +42,42 @@ public enum PseudonymizationJobDirection
 
     /// <summary>Source column holds pseudonym values - replaced with their original value. Requires reverse-lookup access.</summary>
     Depseudonymize,
+
+    /// <summary>
+    /// Bulk-loads already-known original/pseudonym pairs into a single namespace rather than
+    /// generating pseudonyms - see <see cref="CsvProcessing.CsvNamespaceImporter"/>. The input's
+    /// <see cref="ColumnMapping.SourceColumn"/> holds the original value and its
+    /// <see cref="ColumnMapping.TargetColumn"/> the pseudonym to store for it; every other column
+    /// is ignored. Requires write access, the same as <see cref="Pseudonymize"/>: it only ever
+    /// stores pairs the caller already holds, and never reveals one it didn't.
+    /// </summary>
+    Import,
+
+    /// <summary>
+    /// Writes every pseudonym in a single namespace out as a two-column CSV - see
+    /// <see cref="CsvProcessing.CsvNamespaceExporter"/>. The only direction with no input file at
+    /// all (<see cref="PseudonymizationJob.InputObjectKey"/> is null). Requires reverse-lookup
+    /// access, the same as <see cref="Depseudonymize"/> and for the same reason: the output is
+    /// the namespace's original values, in bulk.
+    /// </summary>
+    Export,
 }
 
 /// <summary>
 /// One column of a CSV job: replaces the value in <see cref="SourceColumn"/> - interpreted
 /// according to the job's <see cref="PseudonymizationJob.Direction"/> - in
 /// <see cref="Namespace"/>, either in place or into <see cref="TargetColumn"/>.
+///
+/// <see cref="PseudonymizationJobDirection.Import"/> and
+/// <see cref="PseudonymizationJobDirection.Export"/> jobs carry exactly one of these and read it
+/// differently: <see cref="SourceColumn"/> names the original-value column and
+/// <see cref="TargetColumn"/> the pseudonym-value column (both required there, rather than
+/// TargetColumn being optional), with <see cref="Namespace"/> naming the single namespace being
+/// imported into/exported from. Reusing this type is what lets those two directions inherit the
+/// existing per-namespace permission checks and job plumbing unchanged, with no extra column on
+/// <see cref="PseudonymizationJob"/> - see
+/// <see cref="AppServices.PseudonymizationJobAppService.ResolveSingleNamespaceMapping"/>, which is
+/// the only place that reads them back in that shape.
 /// </summary>
 public class ColumnMapping
 {
@@ -58,11 +90,12 @@ public class ColumnMapping
 }
 
 /// <summary>
-/// A CSV pseudonymization (or de-pseudonymization - see <see cref="Direction"/>) job:
-/// input/output files live in S3-compatible object storage (see <see cref="Config.S3Config"/>),
-/// rows are processed by <see cref="CsvProcessing.CsvPseudonymizationJobRunner"/> via Hangfire.
-/// No FK to <see cref="Namespace"/> - a single job's <see cref="ColumnMappings"/> can span
-/// multiple namespaces.
+/// A CSV job - pseudonymization, de-pseudonymization, namespace import or namespace export (see
+/// <see cref="Direction"/>): input/output files live in S3-compatible object storage (see
+/// <see cref="Config.S3Config"/>), rows are processed by
+/// <see cref="CsvProcessing.CsvPseudonymizationJobRunner"/> via Hangfire. No FK to
+/// <see cref="Namespace"/> - a single job's <see cref="ColumnMappings"/> can span multiple
+/// namespaces (import/export are the exception: exactly one).
 /// </summary>
 public class PseudonymizationJob : TracksCreationAndUpdates
 {
@@ -76,7 +109,13 @@ public class PseudonymizationJob : TracksCreationAndUpdates
     /// <summary>Subject ("sub" claim) of the user who created this job.</summary>
     public required string CreatedBy { get; set; }
 
-    public required string InputObjectKey { get; set; }
+    /// <summary>
+    /// The object the runner reads this job's rows from. Null only for
+    /// <see cref="PseudonymizationJobDirection.Export"/>, whose rows come from the database
+    /// rather than from an uploaded file - every other direction always has one, assigned at
+    /// creation time.
+    /// </summary>
+    public string? InputObjectKey { get; set; }
     public string? OutputObjectKey { get; set; }
 
     /// <summary>

@@ -49,6 +49,21 @@ public interface IPseudonymRepository
     );
 
     /// <summary>
+    /// Same as <see cref="FindAllByOriginalValueAsync"/> for many original values at once, in a
+    /// single round trip - backs the namespace import path (see
+    /// <see cref="AppServices.IPseudonymAppService.ImportTrustedBatchAsync"/>), which has to know
+    /// what each row in a chunk would collide with before writing anything. Returns every stored
+    /// sequence number for each value, ordered by (OriginalValue, SequenceNumber); values with
+    /// nothing stored simply have no entries. Materializing original values is safe here in a way
+    /// it wouldn't be for a bulk listing - the caller supplied these exact values itself.
+    /// </summary>
+    Task<IReadOnlyList<Pseudonym>> FindAllByOriginalValuesAsync(
+        string namespaceName,
+        IReadOnlyCollection<string> originalValues,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Inserts <paramref name="newSequenceCandidates"/> (the missing sequence numbers a multi-psn
     /// Create call decided to add - see <see cref="AppServices.PseudonymAppService.CreateTrustedAsync(Models.Namespace, string, long, CancellationToken)"/>)
     /// iff they don't already exist, then returns the complete, up-to-date set of every

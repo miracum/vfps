@@ -139,6 +139,23 @@ public class CachingPseudonymRepository(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Pseudonym>> FindAllByOriginalValuesAsync(
+        string namespaceName,
+        IReadOnlyCollection<string> originalValues,
+        CancellationToken cancellationToken
+    )
+    {
+        // Not cached - same reasoning as FindAllByOriginalValueAsync above, and the import path
+        // this backs needs the authoritative current state of every key it is about to write
+        // anyway, which a cache could only ever make staler.
+        return await Repository.FindAllByOriginalValuesAsync(
+            namespaceName,
+            originalValues,
+            cancellationToken
+        );
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Pseudonym>> CreateSetIfNotExistAsync(
         IReadOnlyList<Pseudonym> newSequenceCandidates,
         CancellationToken cancellationToken

@@ -75,6 +75,7 @@ else
                         <BbFieldContent>
                             <select
                                 @bind="_direction"
+                                @bind:after="OnDirectionChanged"
                                 id="direction"
                                 class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                             >
@@ -84,29 +85,46 @@ else
                                 <option value="@nameof(PseudonymizationJobDirection.Depseudonymize)">
                                     @Localizer["App.CsvJobs.DirectionDepseudonymizeOption"]
                                 </option>
+                                <option value="@nameof(PseudonymizationJobDirection.Import)">
+                                    @Localizer["App.CsvJobs.DirectionImportOption"]
+                                </option>
+                                <option value="@nameof(PseudonymizationJobDirection.Export)">
+                                    @Localizer["App.CsvJobs.DirectionExportOption"]
+                                </option>
                             </select>
                         </BbFieldContent>
                     </BbField>
-                    @if (_direction == nameof(PseudonymizationJobDirection.Depseudonymize))
+                    @* Both of these hand back original values in bulk, so both get the same
+                       "this reveals the data" warning the manual reverse-lookup box carries. *@
+                    @if (SelectedDirection is PseudonymizationJobDirection.Depseudonymize
+                        or PseudonymizationJobDirection.Export)
                     {
                         <BbAlert Variant="AlertVariant.Warning" Class="sm:col-span-3">
                             <BbAlertDescription>
-                                @Localizer["App.CsvJobs.DepseudonymizeWarning"]
+                                @(SelectedDirection == PseudonymizationJobDirection.Export
+                                    ? Localizer["App.CsvJobs.ExportWarning"].Value
+                                    : Localizer["App.CsvJobs.DepseudonymizeWarning"].Value)
                             </BbAlertDescription>
                         </BbAlert>
                     }
-                    <BbField Class="sm:col-span-3">
-                        <BbFieldLabel For="csvFileInput">@Localizer["App.CsvJobs.CsvFile"]</BbFieldLabel>
-                        <BbFieldContent>
-                            <input
-                                type="file"
-                                id="csvFileInput"
-                                accept=".csv,text/csv"
-                                @onchange="OnFileSelectedAsync"
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
-                            />
-                        </BbFieldContent>
-                    </BbField>
+                    @* An export has nothing to upload - its rows come from the database - so the
+                       file picker and the header-row question don't apply to it. Encoding and
+                       delimiter still do: they describe the file being written. *@
+                    @if (RequiresInputFile)
+                    {
+                        <BbField Class="sm:col-span-3">
+                            <BbFieldLabel For="csvFileInput">@Localizer["App.CsvJobs.CsvFile"]</BbFieldLabel>
+                            <BbFieldContent>
+                                <input
+                                    type="file"
+                                    id="csvFileInput"
+                                    accept=".csv,text/csv"
+                                    @onchange="OnFileSelectedAsync"
+                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
+                                />
+                            </BbFieldContent>
+                        </BbField>
+                    }
 
                     <BbField>
                         <BbFieldLabel For="encoding">@Localizer["App.CsvJobs.Encoding"]</BbFieldLabel>
@@ -124,117 +142,198 @@ else
                             />
                         </BbFieldContent>
                     </BbField>
-                    <BbField>
-                        <BbFieldLabel For="hasHeaderRow">@Localizer["App.CsvJobs.HeaderRow"]</BbFieldLabel>
-                        <BbFieldContent>
-                            <div class="flex h-10 items-center gap-2">
-                                <BbCheckbox
-                                    Checked="_hasHeaderRow"
-                                    CheckedChanged="OnHasHeaderRowChangedAsync"
-                                    Id="hasHeaderRow"
-                                />
-                                <label for="hasHeaderRow" class="text-sm">@Localizer["App.CsvJobs.HasHeaderRow"]</label>
-                            </div>
-                        </BbFieldContent>
-                    </BbField>
+                    @if (RequiresInputFile)
+                    {
+                        <BbField>
+                            <BbFieldLabel For="hasHeaderRow">@Localizer["App.CsvJobs.HeaderRow"]</BbFieldLabel>
+                            <BbFieldContent>
+                                <div class="flex h-10 items-center gap-2">
+                                    <BbCheckbox
+                                        Checked="_hasHeaderRow"
+                                        CheckedChanged="OnHasHeaderRowChangedAsync"
+                                        Id="hasHeaderRow"
+                                    />
+                                    <label for="hasHeaderRow" class="text-sm">@Localizer["App.CsvJobs.HasHeaderRow"]</label>
+                                </div>
+                            </BbFieldContent>
+                        </BbField>
+                    }
                 </div>
 
-                <div>
-                    <h3 class="text-sm font-medium">@Localizer["App.CsvJobs.ColumnMappings"]</h3>
-                    <p class="mt-1 text-sm text-muted-foreground">
-                        @if (_direction == nameof(PseudonymizationJobDirection.Depseudonymize))
-                        {
-                            <text>@Localizer["App.CsvJobs.ColumnMappingsHintDepseudonymize"]</text>
-                        }
-                        else
-                        {
-                            <text>@Localizer["App.CsvJobs.ColumnMappingsHintPseudonymize"]</text>
-                        }
-                        @Localizer["App.CsvJobs.ColumnMappingsHintSuffix"]
-                    </p>
+                @* Import and export both act on exactly one namespace rather than an
+                   arbitrary set of column mappings, so each gets its own, much smaller form -
+                   see ColumnMapping's own doc comment for how the one mapping they do carry is
+                   read back. *@
+                @if (IsColumnTransform)
+                {
+                    <div>
+                        <h3 class="text-sm font-medium">@Localizer["App.CsvJobs.ColumnMappings"]</h3>
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            @if (_direction == nameof(PseudonymizationJobDirection.Depseudonymize))
+                            {
+                                <text>@Localizer["App.CsvJobs.ColumnMappingsHintDepseudonymize"]</text>
+                            }
+                            else
+                            {
+                                <text>@Localizer["App.CsvJobs.ColumnMappingsHintPseudonymize"]</text>
+                            }
+                            @Localizer["App.CsvJobs.ColumnMappingsHintSuffix"]
+                        </p>
 
-                    <div class="mt-3 space-y-3">
-                        @foreach (var row in _columnMappings)
-                        {
-                            <div class="flex flex-wrap items-end gap-2 rounded-lg border p-3">
-                                <BbField Class="w-48">
-                                    <BbFieldLabel For="@row.SourceColumnId">
-                                        @Localizer["App.CsvJobs.SourceColumn"]
-                                    </BbFieldLabel>
-                                    <BbFieldContent>
-                                        @if (_detectedColumns.Count > 0)
-                                        {
+                        <div class="mt-3 space-y-3">
+                            @foreach (var row in _columnMappings)
+                            {
+                                <div class="flex flex-wrap items-end gap-2 rounded-lg border p-3">
+                                    <BbField Class="w-48">
+                                        <BbFieldLabel For="@row.SourceColumnId">
+                                            @Localizer["App.CsvJobs.SourceColumn"]
+                                        </BbFieldLabel>
+                                        <BbFieldContent>
+                                            @if (_detectedColumns.Count > 0)
+                                            {
+                                                <select
+                                                    @bind="row.SourceColumn"
+                                                    id="@row.SourceColumnId"
+                                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    <option value="">@Localizer["App.CsvJobs.SelectColumn"]</option>
+                                                    @foreach (var col in _detectedColumns)
+                                                    {
+                                                        <option value="@col">@col</option>
+                                                    }
+                                                </select>
+                                            }
+                                            else
+                                            {
+                                                <BbInput
+                                                    @bind-Value="row.SourceColumn"
+                                                    Id="@row.SourceColumnId"
+                                                    Placeholder="@Localizer["App.CsvJobs.SourceColumnPlaceholder"]"
+                                                />
+                                            }
+                                        </BbFieldContent>
+                                    </BbField>
+                                    <BbField Class="w-48">
+                                        <BbFieldLabel For="@row.TargetColumnId">
+                                            @Localizer["App.CsvJobs.TargetColumn"]
+                                        </BbFieldLabel>
+                                        <BbFieldContent>
+                                            <BbInput
+                                                @bind-Value="row.TargetColumn"
+                                                Id="@row.TargetColumnId"
+                                                Placeholder="@Localizer["App.CsvJobs.TargetColumnPlaceholder"]"
+                                            />
+                                        </BbFieldContent>
+                                    </BbField>
+                                    <BbField Class="w-48">
+                                        <BbFieldLabel For="@row.NamespaceId">@Localizer["App.Nav.Namespaces"]</BbFieldLabel>
+                                        <BbFieldContent>
                                             <select
-                                                @bind="row.SourceColumn"
-                                                id="@row.SourceColumnId"
+                                                @bind="row.Namespace"
+                                                id="@row.NamespaceId"
                                                 class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                                             >
-                                                <option value="">@Localizer["App.CsvJobs.SelectColumn"]</option>
-                                                @foreach (var col in _detectedColumns)
+                                                <option value="">@Localizer["App.CsvJobs.SelectNamespace"]</option>
+                                                @foreach (var ns in _namespaces)
                                                 {
-                                                    <option value="@col">@col</option>
+                                                    <option value="@ns.Name">@ns.Name</option>
                                                 }
                                             </select>
-                                        }
-                                        else
+                                        </BbFieldContent>
+                                    </BbField>
+                                    <BbButton
+                                        Variant="ButtonVariant.Ghost"
+                                        Size="ButtonSize.Icon"
+                                        OnClick="() => RemoveMappingRow(row)"
+                                        Disabled="@(_columnMappings.Count == 1)"
+                                        AriaLabel="@Localizer["App.CsvJobs.RemoveMapping"]"
+                                    >
+                                        <LucideIcon Name="x" Size="16" />
+                                    </BbButton>
+                                </div>
+                            }
+                        </div>
+
+                        <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="AddMappingRow" Class="mt-3">
+                            <LucideIcon Name="plus" Size="16" />
+                            @Localizer["App.CsvJobs.AddColumnMapping"]
+                        </BbButton>
+                    </div>
+                }
+                else
+                {
+                    @* One form for both: an export picks a namespace, and an import picks the same
+                       plus which two columns of its file hold the pair. *@
+                    <div>
+                        <h3 class="text-sm font-medium">
+                            @(IsImport
+                                ? Localizer["App.CsvJobs.ImportTitle"].Value
+                                : Localizer["App.CsvJobs.ExportTitle"].Value)
+                        </h3>
+                        <p class="mt-1 text-sm text-muted-foreground">
+                            @(IsImport
+                                ? Localizer["App.CsvJobs.ImportHint"].Value
+                                : Localizer["App.CsvJobs.ExportHint"].Value)
+                        </p>
+
+                        <div class="mt-3 flex flex-wrap items-end gap-2 rounded-lg border p-3">
+                            <BbField Class="w-48">
+                                <BbFieldLabel For="jobNamespace">@Localizer["App.Nav.Namespaces"]</BbFieldLabel>
+                                <BbFieldContent>
+                                    <select
+                                        @bind="_namespaceMapping.Namespace"
+                                        id="jobNamespace"
+                                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                    >
+                                        <option value="">@Localizer["App.CsvJobs.SelectNamespace"]</option>
+                                        @foreach (var ns in _namespaces)
                                         {
-                                            <BbInput
-                                                @bind-Value="row.SourceColumn"
-                                                Id="@row.SourceColumnId"
-                                                Placeholder="@Localizer["App.CsvJobs.SourceColumnPlaceholder"]"
-                                            />
+                                            <option value="@ns.Name">@ns.Name</option>
                                         }
-                                    </BbFieldContent>
-                                </BbField>
+                                    </select>
+                                </BbFieldContent>
+                            </BbField>
+                            @* Only an import reads columns; an export writes the two it is told to
+                               here by CreateCsvExportJobRequest's own defaults.
+
+                               Free text rather than a dropdown of detected columns, unlike the
+                               transform directions above: these two default to what an export
+                               writes, so the common case needs no input at all - and they still
+                               have to be editable when the file has no header row, where a column
+                               is named by its 0-based index instead. *@
+                            @if (IsImport)
+                            {
                                 <BbField Class="w-48">
-                                    <BbFieldLabel For="@row.TargetColumnId">
-                                        @Localizer["App.CsvJobs.TargetColumn"]
+                                    <BbFieldLabel For="originalValueColumn">
+                                        @Localizer["App.CsvJobs.OriginalValueColumn"]
                                     </BbFieldLabel>
                                     <BbFieldContent>
                                         <BbInput
-                                            @bind-Value="row.TargetColumn"
-                                            Id="@row.TargetColumnId"
-                                            Placeholder="@Localizer["App.CsvJobs.TargetColumnPlaceholder"]"
+                                            @bind-Value="_namespaceMapping.SourceColumn"
+                                            Id="originalValueColumn"
                                         />
                                     </BbFieldContent>
                                 </BbField>
                                 <BbField Class="w-48">
-                                    <BbFieldLabel For="@row.NamespaceId">@Localizer["App.Nav.Namespaces"]</BbFieldLabel>
+                                    <BbFieldLabel For="pseudonymValueColumn">
+                                        @Localizer["App.CsvJobs.PseudonymValueColumn"]
+                                    </BbFieldLabel>
                                     <BbFieldContent>
-                                        <select
-                                            @bind="row.Namespace"
-                                            id="@row.NamespaceId"
-                                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            <option value="">@Localizer["App.CsvJobs.SelectNamespace"]</option>
-                                            @foreach (var ns in _namespaces)
-                                            {
-                                                <option value="@ns.Name">@ns.Name</option>
-                                            }
-                                        </select>
+                                        <BbInput
+                                            @bind-Value="_namespaceMapping.TargetColumn"
+                                            Id="pseudonymValueColumn"
+                                        />
                                     </BbFieldContent>
                                 </BbField>
-                                <BbButton
-                                    Variant="ButtonVariant.Ghost"
-                                    Size="ButtonSize.Icon"
-                                    OnClick="() => RemoveMappingRow(row)"
-                                    Disabled="@(_columnMappings.Count == 1)"
-                                    AriaLabel="@Localizer["App.CsvJobs.RemoveMapping"]"
-                                >
-                                    <LucideIcon Name="x" Size="16" />
-                                </BbButton>
-                            </div>
-                        }
+                            }
+                        </div>
                     </div>
+                }
 
-                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="AddMappingRow" Class="mt-3">
-                        <LucideIcon Name="plus" Size="16" />
-                        @Localizer["App.CsvJobs.AddColumnMapping"]
-                    </BbButton>
-                </div>
-
-                <BbButton OnClick="CreateJobAsync" Loading="_isCreating">
-                    @Localizer["App.CsvJobs.UploadAndProcess"]
+                <BbButton id="submitJobButton" OnClick="CreateJobAsync" Loading="_isCreating">
+                    @(RequiresInputFile
+                        ? Localizer["App.CsvJobs.UploadAndProcess"].Value
+                        : Localizer["App.CsvJobs.StartExport"].Value)
                 </BbButton>
             </BbCardContent>
         </BbCard>
@@ -293,16 +392,14 @@ else
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.File"]">
                             <ChildContent Context="j">
-                                <div class="max-w-40 truncate text-xs" title="@j.OriginalFileName">
-                                    @(j.OriginalFileName ?? "—")
+                                <div class="max-w-40 truncate text-xs" title="@JobSubject(j)">
+                                    @(JobSubject(j) ?? "—")
                                 </div>
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Direction"]">
                             <ChildContent Context="j">
-                                @(j.Direction == PseudonymizationJobDirection.Depseudonymize
-                                    ? Localizer["App.CsvJobs.DirectionDepseudonymize"].Value
-                                    : Localizer["App.CsvJobs.DirectionPseudonymize"].Value)
+                                @DirectionLabel(j.Direction)
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Status"]">
@@ -452,6 +549,19 @@ else
     private IPseudonymizationJobAppService? _jobAppService;
     private IReadOnlyList<Namespace> _namespaces = [];
     private readonly List<ColumnMappingRow> _columnMappings = [new()];
+
+    // The single namespace (and, for an import, the two column names) an import or export job
+    // acts on. Reuses ColumnMappingRow because that's exactly the shape those jobs store - one
+    // ColumnMapping, read back by PseudonymizationJobAppService.ResolveSingleNamespaceMapping.
+    // Its generated per-row element ids go unused here: there is only ever one of these on the
+    // page, so its fields carry plain literal ids instead. Kept across submits so importing
+    // several files into the same namespace doesn't mean re-picking it every time.
+    private readonly ColumnMappingRow _namespaceMapping = new()
+    {
+        SourceColumn = CsvNamespaceColumns.OriginalValue,
+        TargetColumn = CsvNamespaceColumns.PseudonymValue,
+    };
+
     private string _direction = nameof(PseudonymizationJobDirection.Pseudonymize);
     private string _encoding = "utf-8";
     private string _delimiter = ",";
@@ -473,6 +583,27 @@ else
 
     private CancellationTokenSource? _pollCts;
     private Task? _pollTask;
+
+    private PseudonymizationJobDirection SelectedDirection =>
+        Enum.Parse<PseudonymizationJobDirection>(_direction);
+
+    // Whether the file picker was on screen before the last direction change - see
+    // OnDirectionChanged.
+    private bool _hadInputFile = true;
+
+    // Pseudonymize and Depseudonymize share one form (an arbitrary number of column mappings);
+    // Import and Export each have their own, single-namespace one.
+    private bool IsColumnTransform =>
+        SelectedDirection
+            is PseudonymizationJobDirection.Pseudonymize
+                or PseudonymizationJobDirection.Depseudonymize;
+
+    private bool IsImport => SelectedDirection == PseudonymizationJobDirection.Import;
+
+    // Everything except an export starts with a file the browser uploads straight to S3; an
+    // export's rows come from the database, so it has no file picker, no header-row question and
+    // no upload step at all.
+    private bool RequiresInputFile => SelectedDirection != PseudonymizationJobDirection.Export;
 
     // Blazor Server renders on the server, so "Created at" starts out shown in UTC until this
     // JS round-trip (OnAfterRenderAsync below) resolves the browser's own IANA time zone name -
@@ -620,6 +751,26 @@ else
             ? Localizer["App.CsvJobs.ThroughputRowsPerSecond", rowsPerSecond.ToString("N0")].Value
             : null;
 
+    private string DirectionLabel(PseudonymizationJobDirection direction) =>
+        direction switch
+        {
+            PseudonymizationJobDirection.Depseudonymize =>
+                Localizer["App.CsvJobs.DirectionDepseudonymize"],
+            PseudonymizationJobDirection.Import => Localizer["App.CsvJobs.DirectionImport"],
+            PseudonymizationJobDirection.Export => Localizer["App.CsvJobs.DirectionExport"],
+            _ => Localizer["App.CsvJobs.DirectionPseudonymize"],
+        };
+
+    // What the "File" column shows. An export has no uploaded file, so it's identified by the
+    // namespace it reads instead - the same thing its downloaded file is named after. Read
+    // defensively rather than via PseudonymizationJobAppService.ResolveSingleNamespaceMapping:
+    // this is a grid cell, and a malformed row should render as "—" rather than throw the whole
+    // page's render away.
+    private static string? JobSubject(PseudonymizationJob job) =>
+        job.Direction == PseudonymizationJobDirection.Export
+            ? job.ColumnMappings.FirstOrDefault()?.Namespace
+            : job.OriginalFileName;
+
     private string StatusLabel(PseudonymizationJobStatus status) =>
         status switch
         {
@@ -708,6 +859,25 @@ else
         }
     }
 
+    private void OnDirectionChanged()
+    {
+        // The previous direction's error no longer describes what the form now asks for.
+        _createError = null;
+
+        // Switching to or from Export tears the file picker out of the DOM (or puts a fresh,
+        // empty one back), so the browser has no file selected any more while _fileName and
+        // _detectedColumns still describe the one picked before the switch. Only reset on that
+        // transition: switching between the two transform directions leaves the same input
+        // element - and the file in it - in place, and clearing the detected columns there would
+        // drop the source-column dropdowns back to free text for no reason.
+        if (RequiresInputFile != _hadInputFile)
+        {
+            _hadInputFile = RequiresInputFile;
+            _fileName = null;
+            _detectedColumns = [];
+        }
+    }
+
     private void AddMappingRow() => _columnMappings.Add(new ColumnMappingRow());
 
     private void RemoveMappingRow(ColumnMappingRow row) => _columnMappings.Remove(row);
@@ -730,57 +900,15 @@ else
         _createError = null;
         try
         {
-            var mappings = _columnMappings
-                .Where(m =>
-                    !string.IsNullOrWhiteSpace(m.SourceColumn)
-                    && !string.IsNullOrWhiteSpace(m.Namespace)
-                )
-                .Select(m => new ColumnMapping
-                {
-                    SourceColumn = m.SourceColumn,
-                    TargetColumn = string.IsNullOrWhiteSpace(m.TargetColumn)
-                        ? null
-                        : m.TargetColumn,
-                    Namespace = m.Namespace,
-                })
-                .ToList();
-
-            if (mappings.Count == 0)
-            {
-                _createError = Localizer["App.CsvJobs.NoMappingsError"];
-                return;
-            }
-
             var user = await GetUserAsync();
-            var request = new CreateCsvJobRequest(
-                _encoding,
-                _delimiter,
-                _hasHeaderRow,
-                mappings,
-                Enum.Parse<PseudonymizationJobDirection>(_direction),
-                _fileName
-            );
-            var (job, uploadUrl) = await _jobAppService.CreateJobAsync(
-                request,
-                user,
-                CancellationToken.None
-            );
-
-            await JS.InvokeVoidAsync("vfpsCsvUpload.uploadFile", "csvFileInput", uploadUrl);
-            await _jobAppService.MarkUploadCompleteAsync(job.Id, user, CancellationToken.None);
-
-            Toast.Success(
-                job.OriginalFileName is null
-                    ? Localizer["App.CsvJobs.UploadedNoFileName"].Value
-                    : Localizer["App.CsvJobs.UploadedWithFileName", job.OriginalFileName].Value,
-                Localizer["App.CsvJobs.JobCreated"]
-            );
-
-            _columnMappings.Clear();
-            _columnMappings.Add(new ColumnMappingRow());
-            _detectedColumns = [];
-            _fileName = null;
-            await ReloadJobsAsync();
+            if (SelectedDirection == PseudonymizationJobDirection.Export)
+            {
+                await StartExportJobAsync(user);
+            }
+            else
+            {
+                await StartUploadJobAsync(user);
+            }
         }
         catch (ForbiddenException ex)
         {
@@ -798,6 +926,129 @@ else
         {
             _isCreating = false;
         }
+    }
+
+    // Everything but an export: create the job, PUT the file straight to S3 from the browser, and
+    // only then tell the server the upload landed.
+    private async Task StartUploadJobAsync(ClaimsPrincipal user)
+    {
+        var mappings = BuildColumnMappings();
+        if (mappings is null)
+        {
+            return;
+        }
+
+        var request = new CreateCsvJobRequest(
+            _encoding,
+            _delimiter,
+            _hasHeaderRow,
+            mappings,
+            SelectedDirection,
+            _fileName
+        );
+        var (job, uploadUrl) = await _jobAppService!.CreateJobAsync(
+            request,
+            user,
+            CancellationToken.None
+        );
+
+        await JS.InvokeVoidAsync("vfpsCsvUpload.uploadFile", "csvFileInput", uploadUrl);
+        await _jobAppService.MarkUploadCompleteAsync(job.Id, user, CancellationToken.None);
+
+        Toast.Success(
+            job.OriginalFileName is null
+                ? Localizer["App.CsvJobs.UploadedNoFileName"].Value
+                : Localizer["App.CsvJobs.UploadedWithFileName", job.OriginalFileName].Value,
+            Localizer["App.CsvJobs.JobCreated"]
+        );
+
+        if (IsColumnTransform)
+        {
+            _columnMappings.Clear();
+            _columnMappings.Add(new ColumnMappingRow());
+        }
+
+        _detectedColumns = [];
+        _fileName = null;
+        await ReloadJobsAsync();
+    }
+
+    // No file, no upload URL, no AwaitingUpload state - the job is queued the moment it's created.
+    private async Task StartExportJobAsync(ClaimsPrincipal user)
+    {
+        if (string.IsNullOrWhiteSpace(_namespaceMapping.Namespace))
+        {
+            _createError = Localizer["App.CsvJobs.NoNamespaceError"];
+            return;
+        }
+
+        await _jobAppService!.CreateExportJobAsync(
+            new CreateCsvExportJobRequest(_namespaceMapping.Namespace, _encoding, _delimiter),
+            user,
+            CancellationToken.None
+        );
+
+        Toast.Success(
+            Localizer["App.CsvJobs.ExportStarted", _namespaceMapping.Namespace].Value,
+            Localizer["App.CsvJobs.JobCreated"]
+        );
+
+        await ReloadJobsAsync();
+    }
+
+    /// <summary>
+    /// The mappings to submit, or null when the form isn't filled in enough to submit at all
+    /// (with <see cref="_createError"/> already set to say why).
+    /// </summary>
+    private IReadOnlyList<ColumnMapping>? BuildColumnMappings()
+    {
+        if (IsImport)
+        {
+            if (string.IsNullOrWhiteSpace(_namespaceMapping.Namespace))
+            {
+                _createError = Localizer["App.CsvJobs.NoNamespaceError"];
+                return null;
+            }
+
+            if (
+                string.IsNullOrWhiteSpace(_namespaceMapping.SourceColumn)
+                || string.IsNullOrWhiteSpace(_namespaceMapping.TargetColumn)
+            )
+            {
+                _createError = Localizer["App.CsvJobs.NoImportColumnsError"];
+                return null;
+            }
+
+            return
+            [
+                new ColumnMapping
+                {
+                    SourceColumn = _namespaceMapping.SourceColumn,
+                    TargetColumn = _namespaceMapping.TargetColumn,
+                    Namespace = _namespaceMapping.Namespace,
+                },
+            ];
+        }
+
+        var mappings = _columnMappings
+            .Where(m =>
+                !string.IsNullOrWhiteSpace(m.SourceColumn) && !string.IsNullOrWhiteSpace(m.Namespace)
+            )
+            .Select(m => new ColumnMapping
+            {
+                SourceColumn = m.SourceColumn,
+                TargetColumn = string.IsNullOrWhiteSpace(m.TargetColumn) ? null : m.TargetColumn,
+                Namespace = m.Namespace,
+            })
+            .ToList();
+
+        if (mappings.Count == 0)
+        {
+            _createError = Localizer["App.CsvJobs.NoMappingsError"];
+            return null;
+        }
+
+        return mappings;
     }
 
     private async Task CancelJobAsync(Guid jobId)

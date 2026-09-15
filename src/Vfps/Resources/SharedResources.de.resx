@@ -226,6 +226,18 @@
   <data name="App.CsvJobs.DirectionDepseudonymizeOption" xml:space="preserve">
     <value>De-pseudonymisieren - Pseudonyme durch Originalwerte ersetzen</value>
   </data>
+  <data name="App.CsvJobs.DirectionExport" xml:space="preserve">
+    <value>Export</value>
+  </data>
+  <data name="App.CsvJobs.DirectionExportOption" xml:space="preserve">
+    <value>Export - Pseudonyme eines Namespace in eine CSV-Datei schreiben</value>
+  </data>
+  <data name="App.CsvJobs.DirectionImport" xml:space="preserve">
+    <value>Import</value>
+  </data>
+  <data name="App.CsvJobs.DirectionImportOption" xml:space="preserve">
+    <value>Import - Original-/Pseudonym-Paare in einen Namespace laden</value>
+  </data>
   <data name="App.CsvJobs.DirectionPseudonymize" xml:space="preserve">
     <value>Pseudonymisieren</value>
   </data>
@@ -244,6 +256,18 @@
   <data name="App.CsvJobs.Encoding" xml:space="preserve">
     <value>Zeichenkodierung</value>
   </data>
+  <data name="App.CsvJobs.ExportHint" xml:space="preserve">
+    <value>Schreibt jeden Originalwert des Namespace und sein Pseudonym in eine zweispaltige CSV-Datei, bereit für den Import in einen anderen Namespace oder eine andere Instanz.</value>
+  </data>
+  <data name="App.CsvJobs.ExportStarted" xml:space="preserve">
+    <value>Namespace {0} wird exportiert.</value>
+  </data>
+  <data name="App.CsvJobs.ExportTitle" xml:space="preserve">
+    <value>Zu exportierender Namespace</value>
+  </data>
+  <data name="App.CsvJobs.ExportWarning" xml:space="preserve">
+    <value>Dadurch wird jeder Originalwert des Namespace in die Ausgabedatei geschrieben - erfordert Reverse-Lookup-Zugriff darauf, ebenso wie der Reverse-Lookup in der Pseudonymliste eines Namespace.</value>
+  </data>
   <data name="App.CsvJobs.File" xml:space="preserve">
     <value>Datei</value>
   </data>
@@ -255,6 +279,12 @@
   </data>
   <data name="App.CsvJobs.Id" xml:space="preserve">
     <value>Id</value>
+  </data>
+  <data name="App.CsvJobs.ImportHint" xml:space="preserve">
+    <value>Speichert die Paare aus der Datei unverändert, ohne Pseudonyme zu erzeugen. Zeilen, deren Originalwert oder Pseudonym bereits vergeben ist, werden in der herunterladbaren Ergebnisdatei gemeldet und im Namespace unverändert gelassen.</value>
+  </data>
+  <data name="App.CsvJobs.ImportTitle" xml:space="preserve">
+    <value>Ziel-Namespace für den Import</value>
   </data>
   <data name="App.CsvJobs.Issue" xml:space="preserve">
     <value>Problem</value>
@@ -280,14 +310,26 @@
   <data name="App.CsvJobs.NewJobTitle" xml:space="preserve">
     <value>Neuer Job</value>
   </data>
+  <data name="App.CsvJobs.NoImportColumnsError" xml:space="preserve">
+    <value>Sowohl die Spalte mit dem Originalwert als auch die Spalte mit dem Pseudonym sind erforderlich.</value>
+  </data>
   <data name="App.CsvJobs.NoMappingsError" xml:space="preserve">
     <value>Mindestens eine Spaltenzuordnung mit Quellspalte und Namespace ist erforderlich.</value>
+  </data>
+  <data name="App.CsvJobs.NoNamespaceError" xml:space="preserve">
+    <value>Ein Namespace ist erforderlich.</value>
+  </data>
+  <data name="App.CsvJobs.OriginalValueColumn" xml:space="preserve">
+    <value>Spalte mit Originalwert</value>
   </data>
   <data name="App.CsvJobs.PageTitle" xml:space="preserve">
     <value>CSV-Pseudonymisierung</value>
   </data>
   <data name="App.CsvJobs.Progress" xml:space="preserve">
     <value>Fortschritt</value>
+  </data>
+  <data name="App.CsvJobs.PseudonymValueColumn" xml:space="preserve">
+    <value>Spalte mit Pseudonym</value>
   </data>
   <data name="App.CsvJobs.RemoveMapping" xml:space="preserve">
     <value>Zuordnung entfernen</value>
@@ -315,6 +357,9 @@
   </data>
   <data name="App.CsvJobs.SourceColumnPlaceholder" xml:space="preserve">
     <value>Name oder nullbasierter Index</value>
+  </data>
+  <data name="App.CsvJobs.StartExport" xml:space="preserve">
+    <value>Export starten</value>
   </data>
   <data name="App.CsvJobs.Status" xml:space="preserve">
     <value>Status</value>

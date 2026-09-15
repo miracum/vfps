@@ -89,6 +89,57 @@ public class PseudonymizationJobAppService(
     }
 
     /// <inheritdoc/>
+    public async Task<PseudonymizationJob> CreateExportJobAsync(
+        CreateCsvExportJobRequest request,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        await EnsureNamespaceAccessAsync(
+            [request.NamespaceName],
+            PseudonymizationJobDirection.Export,
+            user,
+            cancellationToken
+        );
+
+        var jobId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        var job = new PseudonymizationJob
+        {
+            Id = jobId,
+            Direction = PseudonymizationJobDirection.Export,
+            CreatedBy = user.GetSubject(),
+            // No input object at all - an export's rows come from the database. Every other
+            // direction's "wait for the upload, then verify it landed" dance exists only to get
+            // one, so an export skips straight past AwaitingUpload to Queued. TotalBytes stays 0
+            // for the same reason, which is what makes the UI show rows rather than a percentage.
+            InputObjectKey = null,
+            Status = PseudonymizationJobStatus.Queued,
+            Encoding = request.Encoding,
+            Delimiter = request.Delimiter,
+            // Always written, so an exported file can be imported straight back without the
+            // operator having to restate which column is which.
+            HasHeaderRow = true,
+            ColumnMappings =
+            [
+                new ColumnMapping
+                {
+                    SourceColumn = request.OriginalValueColumn,
+                    TargetColumn = request.PseudonymValueColumn,
+                    Namespace = request.NamespaceName,
+                },
+            ],
+            CreatedAt = now,
+            LastUpdatedAt = now,
+        };
+
+        await jobRepository.CreateAsync(job, cancellationToken);
+        await EnqueueAsync(job, cancellationToken);
+
+        return job;
+    }
+
+    /// <inheritdoc/>
     public async Task MarkUploadCompleteAsync(
         Guid jobId,
         ClaimsPrincipal user,
@@ -121,23 +172,55 @@ public class PseudonymizationJobAppService(
         }
 
         await jobRepository.MarkQueuedAsync(jobId, totalBytes, cancellationToken);
+        await EnqueueAsync(job, cancellationToken);
+    }
 
+    private async Task EnqueueAsync(PseudonymizationJob job, CancellationToken cancellationToken)
+    {
         var hangfireJobId = backgroundJobClient.Enqueue<ICsvPseudonymizationJobRunner>(runner =>
-            runner.RunAsync(jobId, BuildJobLabel(job), JobCancellationToken.Null)
+            runner.RunAsync(job.Id, BuildJobLabel(job), JobCancellationToken.Null)
         );
-        await jobRepository.SetHangfireJobIdAsync(jobId, hangfireJobId, cancellationToken);
+        await jobRepository.SetHangfireJobIdAsync(job.Id, hangfireJobId, cancellationToken);
     }
 
     // Matches the wording of CsvJobs.razor's own Direction column, so the same job reads
     // consistently whether you're looking at it in vfps's UI or in the Hangfire dashboard.
     private static string BuildJobLabel(PseudonymizationJob job)
     {
-        var direction =
-            job.Direction == PseudonymizationJobDirection.Depseudonymize
-                ? "De-pseudonymize"
-                : "Pseudonymize";
-        return job.OriginalFileName is null ? direction : $"{direction} - {job.OriginalFileName}";
+        var direction = job.Direction switch
+        {
+            PseudonymizationJobDirection.Depseudonymize => "De-pseudonymize",
+            PseudonymizationJobDirection.Import => "Import",
+            PseudonymizationJobDirection.Export => "Export",
+            _ => "Pseudonymize",
+        };
+
+        // An export has no file name to show, so it's labelled with the one thing that actually
+        // identifies it instead: the namespace being exported.
+        var subject =
+            job.Direction == PseudonymizationJobDirection.Export
+                ? ResolveSingleNamespaceMapping(job).Namespace
+                : job.OriginalFileName;
+
+        return subject is null ? direction : $"{direction} - {subject}";
     }
+
+    /// <summary>
+    /// Reads back the single <see cref="ColumnMapping"/> an
+    /// <see cref="PseudonymizationJobDirection.Import"/>/<see cref="PseudonymizationJobDirection.Export"/>
+    /// job carries - see that type's own doc comment for why those two directions reuse it rather
+    /// than adding columns to <see cref="PseudonymizationJob"/>. Throws rather than returning null
+    /// for a job that somehow has none (or several): both are impossible through this service's
+    /// own creation paths, so either means a hand-edited row, and processing it as though it named
+    /// some other namespace would be far worse than failing the job.
+    /// </summary>
+    public static ColumnMapping ResolveSingleNamespaceMapping(PseudonymizationJob job) =>
+        job.ColumnMappings.Count == 1
+            ? job.ColumnMappings[0]
+            : throw new InvalidOperationException(
+                $"A {job.Direction} job must have exactly one column mapping, but job "
+                    + $"'{job.Id}' has {job.ColumnMappings.Count}."
+            );
 
     /// <inheritdoc/>
     public async Task<PseudonymizationJob> GetAsync(
@@ -248,13 +331,24 @@ public class PseudonymizationJobAppService(
     // CSV regardless of what the input happened to be named/extended as.
     private static string BuildOutputFileName(PseudonymizationJob job)
     {
+        // An export has no uploaded file to name itself after; the namespace is what identifies
+        // it, and it's also what makes a folder full of exports tellable apart.
+        if (job.Direction == PseudonymizationJobDirection.Export)
+        {
+            return $"{ResolveSingleNamespaceMapping(job).Namespace}-export.csv";
+        }
+
         var baseName = job.OriginalFileName is null
             ? job.Id.ToString()
             : Path.GetFileNameWithoutExtension(job.OriginalFileName);
-        var suffix =
-            job.Direction == PseudonymizationJobDirection.Depseudonymize
-                ? "de-pseudonymized"
-                : "pseudonymized";
+        var suffix = job.Direction switch
+        {
+            PseudonymizationJobDirection.Depseudonymize => "de-pseudonymized",
+            // Not "imported": the download is the per-row outcome report, not the data that was
+            // imported (which is the file the operator uploaded and still has).
+            PseudonymizationJobDirection.Import => "import-report",
+            _ => "pseudonymized",
+        };
         return $"{baseName}-{suffix}.csv";
     }
 
@@ -301,16 +395,21 @@ public class PseudonymizationJobAppService(
         // namespaces, and every one of them is checked against the same caller.
         var permissions = await permissionChecker.ResolveAsync(user, cancellationToken);
 
-        // Depseudonymize reveals original values, so it's gated the same as the manual
-        // reverse-lookup textbox (reverse-lookup access), not merely write access.
+        // Depseudonymize and Export both hand back original values, so they're gated the same as
+        // the manual reverse-lookup textbox (reverse-lookup access), not merely write access -
+        // an export is a bulk reverse lookup of the whole namespace in one file. Import only ever
+        // stores pairs the caller already holds, so write access is the right bar for it, exactly
+        // as for Pseudonymize.
         Func<string, bool> hasAccess = direction switch
         {
-            PseudonymizationJobDirection.Depseudonymize => permissions.HasReverseLookupAccess,
+            PseudonymizationJobDirection.Depseudonymize or PseudonymizationJobDirection.Export =>
+                permissions.HasReverseLookupAccess,
             _ => permissions.HasWriteAccess,
         };
         var requiredAccessDescription = direction switch
         {
-            PseudonymizationJobDirection.Depseudonymize => "Reverse-lookup",
+            PseudonymizationJobDirection.Depseudonymize or PseudonymizationJobDirection.Export =>
+                "Reverse-lookup",
             _ => "Write",
         };
 

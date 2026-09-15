@@ -185,6 +185,29 @@ Upload a CSV file to pseudonymize or de-pseudonymize one or more columns as a ba
 
 ![CSV pseudonymization jobs page](docs/img/ui-jobs.png)
 
+The same page also moves a whole namespace in and out as CSV, as two further job directions:
+
+- **Import** loads already-known pairs into one namespace instead of generating pseudonyms for
+  them - for migrating a mapping table that predates vfps, or moving a namespace between
+  instances. The file needs an `original` and a `pseudonym` column (either name can be changed on
+  the form, or given as a 0-based column index for a file without a header row); any other column
+  is ignored. Requires **write** access to the namespace.
+
+  Nothing is ever overwritten: an original value that already has a pseudonym keeps it, and a
+  pseudonym already in use for a different original value is refused rather than left ambiguous to
+  reverse-lookup. Every row - accepted or not - comes back in the job's downloadable report as the
+  input row plus a `status` column (`Imported`, `AlreadyPresent`, `OriginalValueConflict`,
+  `PseudonymValueConflict`, `InvalidOriginalValue`, `ParentValueMissing`, or `MissingValue` for a
+  blank/placeholder cell), so re-running the same file is a clean no-op and a partial import is
+  inspectable row by row. A namespace that allows multiple pseudonyms per original value grows
+  instead of conflicting, exactly as its generating create path does.
+
+- **Export** writes every original value in a namespace and its pseudonym to a two-column CSV,
+  ready to be imported elsewhere. It is the one direction with no file to upload - the job is
+  queued as soon as it is created. Requires **reverse-lookup** access: the output is the
+  namespace's original values, in bulk, so it is gated like de-pseudonymization rather than like a
+  read.
+
 ## Production-grade deployment
 
 See [charts/vfps](charts/vfps) for a production-grade deployment on Kubernetes via Helm.
