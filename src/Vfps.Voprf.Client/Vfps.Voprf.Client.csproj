@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Vfps.Voprf.Client</RootNamespace>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Grpc.Net.ClientFactory" Version="2.83.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Vfps.Voprf.Contracts\Vfps.Voprf.Contracts.csproj" />
+    <ProjectReference Include="..\Vfps.Voprf\Vfps.Voprf.csproj" />
+  </ItemGroup>
+</Project>

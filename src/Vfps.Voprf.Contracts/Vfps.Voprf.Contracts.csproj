@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <RootNamespace>Vfps.Voprf.Protos</RootNamespace>
+    <!-- matches Vfps.Voprf.Server, which publishes RID-specific; without it that
+         project's locked-mode restore fails on this one's lock file -->
+    <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!-- generated protobuf code is not ours to document or style -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.31.1" />
+    <PackageReference Include="Grpc.Core.Api" Version="2.83.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.83.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
+    <!--
+      Compiled once, here, and referenced by both sides. Generating it separately in the server
+      and the client produced two copies of every type, which collide the moment one assembly
+      references both - a test project, or Vfps hosting a client next to anything server-shaped.
+    -->
+    <Protobuf Include="Protos\vfps\voprf\v1\*.proto" GrpcServices="Both" />
+  </ItemGroup>
+</Project>

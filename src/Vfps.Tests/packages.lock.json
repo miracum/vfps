@@ -421,6 +421,11 @@
           "AngleSharp.Css": "1.0.1"
         }
       },
+      "libsodium": {
+        "type": "Transitive",
+        "resolved": "1.0.22",
+        "contentHash": "KPD9SloJFclrsjnhABu7dzWrcyYkwPbvx5l1gRSPAX/0n+OBtSiVCKtGFv4n+ecWUHU0tCG9LSSwoZZx673zBQ=="
+      },
       "Markdig": {
         "type": "Transitive",
         "resolved": "0.37.0",
@@ -1391,6 +1396,12 @@
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.18.0, )",
           "OpenTelemetry.Instrumentation.Http": "[1.18.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.18.0, )"
+        }
+      },
+      "vfps.voprf": {
+        "type": "Project",
+        "dependencies": {
+          "libsodium": "[1.0.22, )"
         }
       }
     }
