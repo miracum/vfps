@@ -1,0 +1,46 @@
+# Override for running the end-to-end (Playwright) tests against the "test" profile:
+#
+#   docker compose -f compose.yaml -f compose.test.yaml --profile=test up -d
+#
+# It removes the vfps container's CPU and memory limits for the duration of an e2e run. Those
+# limits in compose.yaml are sized as a frugal illustration of what the gRPC/REST pseudonymization
+# service needs; the admin UI the e2e suite drives is a heavier workload - a Blazor Server circuit
+# holds per-connection render state, and on a CI runner the container shares two vCPUs with
+# PostgreSQL, a headless Chromium and the test host itself.
+#
+# Honest about what this does and does not fix. The e2e flakiness that prompted it was a genuine
+# defect in the tests, not in the limits: they set an input's value in one shot and then acted on
+# elements that only exist after the resulting Blazor round trip, so a single dropped event left
+# them waiting on markup the server had never been asked to render. Once the tests typed instead
+# and waited for each verdict, the whole suite passed repeatedly even at cpus=0.25/128m - harsher
+# than CI. Measured against this image, thirteen Namespaces tests, fresh database per run:
+#
+#   cpus  mem    before the test fix        after
+#   1     128m   (CI's setting; failed there on a busier runner)
+#   0.5   128m   passes, 3/3                passes
+#   0.25  128m   1-3 failures every run     passes, 3/3
+#   0.25  512m   2 failures every run       -
+#
+# The 0.25/512m row is why the limits are not the story: more memory changed nothing, and the app
+# only reached 162 MiB when given 512 - .NET sizes its heap to the cgroup limit and copes with a
+# small one by collecting harder rather than by failing. Unlimited it settles around 185 MiB.
+#
+# So this file buys margin rather than correctness: one fewer variable behind an e2e failure, and
+# a slightly faster run. Compose normalizes a "0" here into no limit at all rather than a limit of
+# zero, which is why it reads the way it does - there is no syntax for unsetting a key an earlier
+# compose file has set.
+#
+# Deliberately an explicit -f override rather than compose.override.yaml, which Compose loads
+# automatically and would silently change what `docker compose up` means for anyone reading
+# compose.yaml on its own. The gRPC job in CI keeps the limits: exercising the service in its
+# advertised footprint is the point there.
+services:
+  vfps:
+    deploy:
+      resources:
+        limits:
+          memory: "0"
+          cpus: "0"
+        reservations:
+          memory: "0"
+          cpus: "0"

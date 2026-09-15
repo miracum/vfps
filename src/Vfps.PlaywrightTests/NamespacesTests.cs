@@ -22,10 +22,10 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
 
         await Expect(Page.Locator("#name")).ToHaveCountAsync(0);
 
-        await Page.ClickAsync("#showCreateNamespaceFormButton");
+        // Visible and focused, so typing can start straight away - OpenCreateDialogAsync relies
+        // on the focus half as its settle signal.
+        await OpenCreateDialogAsync();
         await Expect(Page.Locator("#name")).ToBeVisibleAsync();
-        // Focused, not merely present, so typing can start straight away.
-        await Expect(Page.Locator("#name")).ToBeFocusedAsync();
 
         // The two boolean options are switches now, not checkboxes.
         await Expect(Page.Locator("#allowsMultiplePseudonyms"))
@@ -228,17 +228,17 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await Expect(Page.Locator("#validationRegexValid")).ToHaveCountAsync(0);
         await Expect(Page.Locator("#validationRegexError")).ToHaveCountAsync(0);
 
-        await Page.FillAsync("#validationRegex", "(unterminated");
+        await EnterValidationRegexAsync("(unterminated", expectValid: false);
         // The regex parser's own explanation, not a generic "invalid" - it names the construct
         // that is wrong, which is the whole reason it is surfaced verbatim.
         await Expect(Page.Locator("#validationRegexError")).ToContainTextAsync("Not enough )");
         await Expect(Page.Locator("#validationRegexValid")).ToHaveCountAsync(0);
 
-        await Page.FillAsync("#validationRegex", "^[0-9]+$");
-        await Expect(Page.Locator("#validationRegexValid")).ToBeVisibleAsync();
+        await Page.Locator("#validationRegex").ClearAsync();
+        await EnterValidationRegexAsync("^[0-9]+$");
         await Expect(Page.Locator("#validationRegexError")).ToHaveCountAsync(0);
 
-        await Page.FillAsync("#validationRegex", string.Empty);
+        await Page.Locator("#validationRegex").ClearAsync();
         await Expect(Page.Locator("#validationRegexValid")).ToHaveCountAsync(0);
     }
 
@@ -247,9 +247,12 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
     {
         await GotoAsync("/ui/namespaces");
         await OpenCreateDialogAsync();
-        await Page.FillAsync("#validationRegex", "^[0-9]+$");
+        await EnterValidationRegexAsync("^[0-9]+$");
 
-        // Nothing to report until there is something to test.
+        // Nothing to report until there is something to test. Asserted only after the verdict
+        // above has landed - before that the sample box does not exist either, so this would pass
+        // against a DOM the update has not reached and prove nothing.
+        await Expect(Page.Locator("#validationRegexSample")).ToBeVisibleAsync();
         await Expect(Page.Locator("#validationRegexSampleResult")).ToHaveCountAsync(0);
 
         await Page.FillAsync("#validationRegexSample", "12345");
@@ -270,10 +273,9 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         // before the namespace is created around it rather than after.
         await GotoAsync("/ui/namespaces");
         await OpenCreateDialogAsync();
-        await Page.FillAsync("#validationRegex", "[0-9]+");
+        await EnterValidationRegexAsync("[0-9]+");
         await Page.FillAsync("#validationRegexSample", "abc123");
 
-        await Expect(Page.Locator("#validationRegexValid")).ToBeVisibleAsync();
         await Expect(Page.Locator("#validationRegexSampleResult"))
             .ToContainTextAsync("Would be accepted");
     }
@@ -287,7 +289,7 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         // beside it and it would read as unchecked.
         await GotoAsync("/ui/namespaces");
         await OpenCreateDialogAsync();
-        await Page.FillAsync("#validationRegex", "^[0-9]+$");
+        await EnterValidationRegexAsync("^[0-9]+$");
         await Page.FillAsync("#validationRegexSample", "12345");
         await Expect(Page.Locator("#validationRegexSampleResult")).ToBeVisibleAsync();
 
@@ -308,7 +310,7 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await GotoAsync("/ui/namespaces");
         await OpenCreateDialogAsync();
         await Page.FillAsync("#name", UniqueName());
-        await Page.FillAsync("#validationRegex", "^[0-9]+$");
+        await EnterValidationRegexAsync("^[0-9]+$");
         await Page.FillAsync("#validationRegexSample", "12345");
         await Expect(Page.Locator("#validationRegexSampleResult")).ToBeVisibleAsync();
         await SubmitCreateFormAsync();
@@ -320,8 +322,32 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await Expect(Page.Locator("#validationRegexValid")).ToHaveCountAsync(0);
         await Expect(Page.Locator("#validationRegexSampleResult")).ToHaveCountAsync(0);
 
-        await Page.FillAsync("#validationRegex", "^[0-9]+$");
+        await EnterValidationRegexAsync("^[0-9]+$");
         await Expect(Page.Locator("#validationRegexSample")).ToHaveValueAsync(string.Empty);
+    }
+
+    /// <summary>
+    /// Types a validation-regex pattern into the create dialog and waits for the checker's verdict
+    /// to come back before returning.
+    ///
+    /// Typed character by character rather than set with FillAsync, for the same reason the
+    /// feature exists: the verdict is recomputed per keystroke, over the Blazor circuit. FillAsync
+    /// dispatches exactly one `input` event for the whole string, so that single round trip
+    /// becomes the test's single point of failure - and on a CPU-starved runner, losing it leaves
+    /// every later step waiting on an element the server was never told to render. Typing carries
+    /// the full value on every keystroke, so a dropped intermediate event is corrected by the next
+    /// one, exactly as it would be for someone typing this in.
+    ///
+    /// Waiting for the verdict is the other half: it is what makes the following step act on a
+    /// DOM the round trip has actually reached, rather than racing the render that creates the
+    /// elements it needs.
+    /// </summary>
+    private async Task EnterValidationRegexAsync(string pattern, bool expectValid = true)
+    {
+        await Page.Locator("#validationRegex").PressSequentiallyAsync(pattern);
+
+        await Expect(Page.Locator(expectValid ? "#validationRegexValid" : "#validationRegexError"))
+            .ToBeVisibleAsync();
     }
 
     /// <summary>
@@ -336,7 +362,13 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
     private async Task OpenCreateDialogAsync()
     {
         await Page.ClickAsync("#showCreateNamespaceFormButton");
-        await Expect(Page.Locator("#name")).ToBeVisibleAsync();
+
+        // Focused, not merely visible. The dialog asks for the name field to be focused from
+        // OnAfterRenderAsync, over JS interop - so focus arriving is proof that the render which
+        // opened the dialog has completed a full round trip, where visibility only means the
+        // markup reached the browser while the dialog may still be animating and settling.
+        // Anything typed before that can land on an element Blazor is still reconciling.
+        await Expect(Page.Locator("#name")).ToBeFocusedAsync();
     }
 
     /// <summary>
