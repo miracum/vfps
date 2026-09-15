@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.15.0](https://github.com/miracum/vfps/compare/v1.14.0...v1.15.0) (2026-09-15)
+
+
+### Features
+
+* more extensive ops metrics ([#318](https://github.com/miracum/vfps/issues/318)) ([e09df87](https://github.com/miracum/vfps/commit/e09df87525e4bda5cab8a6b8e3b1f1448f1a2eb7))
+* namespace csv import and export ([#317](https://github.com/miracum/vfps/issues/317)) ([98507a2](https://github.com/miracum/vfps/commit/98507a2017f0528518a378b7e814317e78dba44f))
+
 ## [1.14.0](https://github.com/miracum/vfps/compare/v1.13.4...v1.14.0) (2026-09-14)
 
 
