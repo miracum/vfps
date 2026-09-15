@@ -78,7 +78,7 @@ internal sealed class CsvColumnTransformer(
         var job = context.Job;
         var progress = context.Progress;
 
-        using var reader = new StreamReader(countingStream, context.Encoding);
+        using var reader = CsvJobFormat.CreateReader(countingStream, context.Encoding);
         using var csvReader = new CsvReader(reader, context.CsvConfig, leaveOpen: true);
 
         string[]? header = null;
