@@ -80,4 +80,17 @@ public sealed class NamespacePermissions
 
     public bool HasReverseLookupAccess(string namespaceName) =>
         _unrestricted || _globalReverseLookup || _reverseLookupable.Contains(namespaceName);
+
+    /// <summary>
+    /// Write access to every namespace there is - an admin, or a grant made without a namespace of
+    /// its own, which applies to namespaces created after it too.
+    ///
+    /// Deliberately distinct from asking <see cref="HasWriteAccess"/> about each namespace in
+    /// turn: this is the question to ask when the set of namespaces being written to is not known
+    /// in advance. A namespace-column CSV import is the case that needs it - each row names its
+    /// own target namespace, and those names are only read once the job runs, long after the
+    /// caller's <see cref="System.Security.Claims.ClaimsPrincipal"/> is gone. Granting it up front is what keeps the
+    /// runner's trusted, permission-check-free write path honest for that direction.
+    /// </summary>
+    public bool HasWriteAccessToAllNamespaces => _unrestricted || _globalWrite;
 }

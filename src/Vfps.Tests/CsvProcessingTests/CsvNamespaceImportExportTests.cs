@@ -121,7 +121,10 @@ public class CsvNamespaceImportExportTests
     private static PseudonymizationJob CreateImportJob(
         string originalColumn = CsvNamespaceColumns.OriginalValue,
         string pseudonymColumn = CsvNamespaceColumns.PseudonymValue,
-        bool hasHeaderRow = true
+        bool hasHeaderRow = true,
+        // Non-null switches the job to reading each row's target namespace from that column, with
+        // Namespace left empty exactly as PseudonymizationJobAppService stores it.
+        string? namespaceColumn = null
     ) =>
         new()
         {
@@ -137,7 +140,8 @@ public class CsvNamespaceImportExportTests
                 {
                     SourceColumn = originalColumn,
                     TargetColumn = pseudonymColumn,
-                    Namespace = "ns",
+                    Namespace = namespaceColumn is null ? "ns" : string.Empty,
+                    NamespaceColumn = namespaceColumn,
                 },
             ],
         };
@@ -554,6 +558,168 @@ public class CsvNamespaceImportExportTests
                     A<CancellationToken>._
                 )
             )
+            .MustHaveHappenedOnceExactly();
+    }
+
+    // --- namespace column ---------------------------------------------------------------------
+
+    /// <summary>
+    /// Captures the (namespace, entries) pairs handed to the import, so a test can assert which
+    /// rows were routed where rather than only that something was imported.
+    /// </summary>
+    private List<(string Namespace, List<PseudonymImportEntry> Entries)> CaptureImportBatches()
+    {
+        var batches = new List<(string, List<PseudonymImportEntry>)>();
+        A.CallTo(() =>
+                pseudonymAppService.ImportTrustedBatchAsync(
+                    A<Data.Models.Namespace>._,
+                    A<IReadOnlyList<PseudonymImportEntry>>._,
+                    A<CancellationToken>._
+                )
+            )
+            .ReturnsLazily(call =>
+            {
+                var @namespace = call.GetArgument<Data.Models.Namespace>(0)!;
+                var entries = call.GetArgument<IReadOnlyList<PseudonymImportEntry>>(1)!;
+                batches.Add((@namespace.Name, [.. entries]));
+
+                return Task.FromResult<IReadOnlyList<PseudonymImportResult>>([
+                    .. entries.Select(e => new PseudonymImportResult(
+                        e,
+                        PseudonymImportOutcome.Imported
+                    )),
+                ]);
+            });
+
+        return batches;
+    }
+
+    [Fact]
+    public async Task RunAsync_WithANamespaceColumn_ShouldRouteEachRowToTheNamespaceItNames()
+    {
+        var job = CreateImportJob(namespaceColumn: "namespace");
+        FakeFindJob(job);
+        FakeNamespace("ns-a");
+        FakeNamespace("ns-b");
+        FakeInputObject(
+            job,
+            "original,pseudonym,namespace\nalice,psn-1,ns-a\nbob,psn-2,ns-b\ncarol,psn-3,ns-a\n"
+        );
+        var batches = CaptureImportBatches();
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        // One batch per distinct namespace in the chunk, not one per row.
+        batches.Should().HaveCount(2);
+        batches
+            .Single(b => b.Namespace == "ns-a")
+            .Entries.Should()
+            .BeEquivalentTo([
+                new PseudonymImportEntry("alice", "psn-1"),
+                new PseudonymImportEntry("carol", "psn-3"),
+            ]);
+        batches
+            .Single(b => b.Namespace == "ns-b")
+            .Entries.Should()
+            .BeEquivalentTo([new PseudonymImportEntry("bob", "psn-2")]);
+        A.CallTo(() => jobRepository.CompleteAsync(job.Id, A<string>._, 3, A<CancellationToken>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithANamespaceColumn_ShouldResolveEachNamespaceOnlyOnce()
+    {
+        // The same saving the transform path gets from resolving its namespaces up front: a
+        // column repeating one name across a million rows must not cost a million lookups.
+        var job = CreateImportJob(namespaceColumn: "namespace");
+        FakeFindJob(job);
+        FakeNamespace("ns-a");
+        FakeInputObject(
+            job,
+            "original,pseudonym,namespace\nalice,psn-1,ns-a\nbob,psn-2,ns-a\ncarol,psn-3,ns-a\n"
+        );
+        CaptureImportBatches();
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        A.CallTo(() => namespaceRepository.FindAsync("ns-a", A<CancellationToken>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithANamespaceColumnNamingAnUnknownNamespace_ShouldSkipThatRowOnly()
+    {
+        // A namespace named by a row is data, not job configuration - one typo must not take a
+        // whole file down, unlike a job whose own namespace is missing.
+        var job = CreateImportJob(namespaceColumn: "namespace");
+        FakeFindJob(job);
+        FakeNamespace("ns-a");
+        A.CallTo(() => namespaceRepository.FindAsync("no-such-ns", A<CancellationToken>._))
+            .Returns((Data.Models.Namespace?)null);
+        FakeInputObject(
+            job,
+            "original,pseudonym,namespace\nalice,psn-1,no-such-ns\nbob,psn-2,ns-a\n"
+        );
+        var batches = CaptureImportBatches();
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        batches.Should().ContainSingle();
+        batches[0].Entries.Should().BeEquivalentTo([new PseudonymImportEntry("bob", "psn-2")]);
+        // Both rows still counted and reported - the report lines up with the input row for row.
+        A.CallTo(() => jobRepository.CompleteAsync(job.Id, A<string>._, 2, A<CancellationToken>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithANamespaceColumnLeftBlankOnARow_ShouldSkipThatRowAsMissing()
+    {
+        // No fallback namespace: quietly putting a row somewhere else is the one outcome this
+        // must never produce.
+        var job = CreateImportJob(namespaceColumn: "namespace");
+        FakeFindJob(job);
+        FakeNamespace("ns-a");
+        FakeInputObject(job, "original,pseudonym,namespace\nalice,psn-1,\nbob,psn-2,ns-a\n");
+        var batches = CaptureImportBatches();
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        batches.Should().ContainSingle();
+        batches[0].Entries.Should().BeEquivalentTo([new PseudonymImportEntry("bob", "psn-2")]);
+        A.CallTo(() =>
+                jobRepository.UpdateProgressAsync(
+                    job.Id,
+                    A<long>._,
+                    2,
+                    0,
+                    1,
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappened();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithANamespaceColumn_ShouldNotRequireTheJobsOwnNamespaceToExist()
+    {
+        // Namespace is stored empty for this shape of job - resolving it up front the way a
+        // single-namespace import does would fail every one of them.
+        var job = CreateImportJob(namespaceColumn: "namespace");
+        FakeFindJob(job);
+        FakeNamespace("ns-a");
+        FakeInputObject(job, "original,pseudonym,namespace\nalice,psn-1,ns-a\n");
+        CaptureImportBatches();
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        A.CallTo(() => namespaceRepository.FindAsync(string.Empty, A<CancellationToken>._))
+            .MustNotHaveHappened();
+        A.CallTo(() => jobRepository.CompleteAsync(job.Id, A<string>._, 1, A<CancellationToken>._))
             .MustHaveHappenedOnceExactly();
     }
 }

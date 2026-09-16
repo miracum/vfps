@@ -87,6 +87,23 @@ public class ColumnMapping
     /// <summary>Null means replace <see cref="SourceColumn"/>'s value in place.</summary>
     public string? TargetColumn { get; set; }
     public required string Namespace { get; set; }
+
+    /// <summary>
+    /// <see cref="PseudonymizationJobDirection.Import"/> only: when set, each row's target
+    /// namespace is read from this column of the row itself rather than being the single
+    /// <see cref="Namespace"/> for the whole file - so one file can load pairs into many
+    /// namespaces at once. <see cref="Namespace"/> is then unused and stored empty.
+    ///
+    /// Costs more to permit than it looks: the namespaces a file names are only known once it is
+    /// being read, well after the caller who submitted it is gone, so there is no set to check
+    /// access against at job creation. Write access to *every* namespace is therefore required
+    /// instead - see <see cref="Authorization.NamespacePermissions.HasWriteAccessToAllNamespaces"/>.
+    ///
+    /// Null for every job created before this existed, and for every other direction - it is
+    /// stored inside <see cref="PseudonymizationJob.ColumnMappings"/>'s JSON, so old rows simply
+    /// deserialize without it.
+    /// </summary>
+    public string? NamespaceColumn { get; set; }
 }
 
 /// <summary>

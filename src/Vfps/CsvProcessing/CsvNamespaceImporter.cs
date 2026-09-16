@@ -11,9 +11,14 @@ namespace Vfps.CsvProcessing;
 
 /// <summary>
 /// <see cref="PseudonymizationJobDirection.Import"/>: stores already-known original/pseudonym
-/// pairs in one namespace, rather than generating pseudonyms for them. The typical source is a
+/// pairs, rather than generating pseudonyms for them. The typical source is a
 /// <see cref="PseudonymizationJobDirection.Export"/> file from another vfps instance, or a
 /// mapping table produced before vfps was introduced.
+///
+/// Every pair goes into the single namespace the job names, unless the job also names a namespace
+/// column (<see cref="ColumnMapping.NamespaceColumn"/>) - then each row carries its own target
+/// namespace and one file can populate many at once, which is what makes a whole instance's export
+/// loadable in one job instead of one per namespace.
 ///
 /// The output object is a per-row report rather than a transformed copy of the input: every input
 /// column is echoed back unchanged, with a <see cref="StatusColumnName"/> column appended holding
@@ -71,15 +76,26 @@ internal sealed class CsvNamespaceImporter(
         var job = context.Job;
         var progress = context.Progress;
 
+        var mapping = PseudonymizationJobAppService.ResolveSingleNamespaceMapping(job);
+        var usesNamespaceColumn = !string.IsNullOrEmpty(mapping.NamespaceColumn);
+
         // Resolved once up front, exactly as CsvColumnTransformer does - and for the same reason:
         // a job pointing at a namespace that no longer exists should fail immediately rather than
-        // many rows in.
-        var mapping = PseudonymizationJobAppService.ResolveSingleNamespaceMapping(job);
-        var @namespace =
-            await namespaceRepository.FindAsync(mapping.Namespace, CancellationToken.None)
-            ?? throw new InvalidOperationException(
-                $"Namespace '{mapping.Namespace}' does not exist."
-            );
+        // many rows in. That reasoning only holds for a namespace the *job* names: one a row names
+        // is data, and a single bad row must not take a million-row file down with it, so those
+        // are resolved lazily below and reported per row instead.
+        var fixedNamespace = usesNamespaceColumn
+            ? null
+            : await namespaceRepository.FindAsync(mapping.Namespace, CancellationToken.None)
+                ?? throw new InvalidOperationException(
+                    $"Namespace '{mapping.Namespace}' does not exist."
+                );
+
+        // Namespaces named by rows, resolved once each for the whole job rather than per row -
+        // the same saving the transform path gets from resolving its mappings' namespaces up
+        // front. A name that does not exist is cached as null too, so a typo repeated on a
+        // million rows costs one lookup rather than a million.
+        var namespacesByName = new Dictionary<string, Namespace?>(StringComparer.Ordinal);
 
         using var reader = CsvJobFormat.CreateReader(countingStream, context.Encoding);
         using var csvReader = new CsvReader(reader, context.CsvConfig, leaveOpen: true);
@@ -100,6 +116,9 @@ internal sealed class CsvNamespaceImporter(
                 ),
             header
         );
+        var namespaceIndex = usesNamespaceColumn
+            ? CsvJobFormat.ResolveColumnIndex(mapping.NamespaceColumn!, header)
+            : -1;
 
         if (header is not null)
         {
@@ -148,14 +167,22 @@ internal sealed class CsvNamespaceImporter(
                 new BufferedRow(
                     rawFields,
                     FieldAt(rawFields, originalValueIndex),
-                    FieldAt(rawFields, pseudonymValueIndex)
+                    FieldAt(rawFields, pseudonymValueIndex),
+                    FieldAt(rawFields, namespaceIndex)
                 )
             );
             totalRowsRead++;
 
             if (chunk.Count >= chunkSize)
             {
-                await FlushChunkAsync(@namespace, chunk, csvWriter, progress, phases);
+                await FlushChunkAsync(
+                    fixedNamespace,
+                    namespacesByName,
+                    chunk,
+                    csvWriter,
+                    progress,
+                    phases
+                );
                 rows += chunk.Count;
                 chunk.Clear();
             }
@@ -168,7 +195,14 @@ internal sealed class CsvNamespaceImporter(
 
         if (chunk.Count > 0)
         {
-            await FlushChunkAsync(@namespace, chunk, csvWriter, progress, phases);
+            await FlushChunkAsync(
+                fixedNamespace,
+                namespacesByName,
+                chunk,
+                csvWriter,
+                progress,
+                phases
+            );
             rows += chunk.Count;
         }
 
@@ -188,49 +222,88 @@ internal sealed class CsvNamespaceImporter(
     }
 
     /// <summary>
-    /// Imports one chunk and writes its report rows. A row whose original or pseudonym cell holds
-    /// no value (see <see cref="CsvJobFormat.IsMissingValue"/>) is left out of the batch entirely
-    /// rather than rejected by <see cref="IPseudonymAppService.ImportTrustedBatchAsync"/>'s blank
-    /// check - it still gets a report row, counted as a missing value the same way every other
-    /// direction counts one.
+    /// Imports one chunk and writes its report rows.
+    ///
+    /// A row whose original or pseudonym cell holds no value (see
+    /// <see cref="CsvJobFormat.IsMissingValue"/>) is left out of the batch entirely rather than
+    /// rejected by <see cref="IPseudonymAppService.ImportTrustedBatchAsync"/>'s blank check - it
+    /// still gets a report row, counted as a missing value the same way every other direction
+    /// counts one. A namespace-column job treats a blank namespace cell the same way: there is no
+    /// default to fall back to, and quietly putting a row in some other namespace is the one
+    /// outcome a pseudonymization service must never produce.
+    ///
+    /// Rows are grouped by target namespace and imported one batch per namespace, because
+    /// <see cref="IPseudonymAppService.ImportTrustedBatchAsync"/>'s round trips are all
+    /// namespace-scoped. A single-namespace job therefore behaves exactly as it did before this
+    /// grew a namespace column - one batch - while a namespace-column job costs one batch per
+    /// distinct namespace appearing in the chunk.
     /// </summary>
     private async Task FlushChunkAsync(
-        Namespace @namespace,
+        Namespace? fixedNamespace,
+        Dictionary<string, Namespace?> namespacesByName,
         List<BufferedRow> chunk,
         CsvWriter csvWriter,
         CsvJobProgressReporter progress,
         CsvJobPhaseTimer phases
     )
     {
-        var entries = new List<PseudonymImportEntry>(chunk.Count);
-        var entryRowIndexes = new List<int>(chunk.Count);
-        for (var i = 0; i < chunk.Count; i++)
-        {
-            var row = chunk[i];
-            if (IsMissingValue(row.OriginalValue) || IsMissingValue(row.PseudonymValue))
-            {
-                progress.MissingValueCount++;
-                continue;
-            }
+        var batches = new Dictionary<string, NamespaceBatch>(StringComparer.Ordinal);
+        var statusByRowIndex = new Dictionary<int, string>(chunk.Count);
 
-            entryRowIndexes.Add(i);
-            entries.Add(new PseudonymImportEntry(row.OriginalValue, row.PseudonymValue));
-        }
-
-        IReadOnlyList<PseudonymImportResult> results;
         using (phases.Measure(CsvJobPhase.ResolveDatabase))
         {
-            results = await pseudonymAppService.ImportTrustedBatchAsync(
-                @namespace,
-                entries,
-                CancellationToken.None
-            );
-        }
+            for (var i = 0; i < chunk.Count; i++)
+            {
+                var row = chunk[i];
+                if (IsMissingValue(row.OriginalValue) || IsMissingValue(row.PseudonymValue))
+                {
+                    progress.MissingValueCount++;
+                    statusByRowIndex[i] = MissingValueStatus;
+                    continue;
+                }
 
-        var outcomeByRowIndex = new Dictionary<int, PseudonymImportOutcome>(results.Count);
-        for (var i = 0; i < results.Count; i++)
-        {
-            outcomeByRowIndex[entryRowIndexes[i]] = results[i].Outcome;
+                var @namespace = fixedNamespace;
+                if (@namespace is null)
+                {
+                    if (IsMissingValue(row.NamespaceName))
+                    {
+                        progress.MissingValueCount++;
+                        statusByRowIndex[i] = MissingValueStatus;
+                        continue;
+                    }
+
+                    @namespace = await ResolveNamespaceAsync(row.NamespaceName, namespacesByName);
+                    if (@namespace is null)
+                    {
+                        statusByRowIndex[i] = UnknownNamespaceStatus;
+                        continue;
+                    }
+                }
+
+                if (!batches.TryGetValue(@namespace.Name, out var batch))
+                {
+                    batch = new NamespaceBatch(@namespace);
+                    batches[@namespace.Name] = batch;
+                }
+
+                batch.RowIndexes.Add(i);
+                batch.Entries.Add(new PseudonymImportEntry(row.OriginalValue, row.PseudonymValue));
+            }
+
+            foreach (var batch in batches.Values)
+            {
+                var results = await pseudonymAppService.ImportTrustedBatchAsync(
+                    batch.Namespace,
+                    batch.Entries,
+                    CancellationToken.None
+                );
+
+                // Positional, as that method's contract promises: one result per entry, in order.
+                for (var i = 0; i < results.Count; i++)
+                {
+                    statusByRowIndex[batch.RowIndexes[i]] = results[i].Outcome.ToString();
+                }
+            }
         }
 
         // Same reasoning as CsvColumnTransformer's write scopes: this measures how long the
@@ -244,14 +317,47 @@ internal sealed class CsvNamespaceImporter(
                 csvWriter.WriteField(field ?? string.Empty);
             }
 
-            csvWriter.WriteField(
-                outcomeByRowIndex.TryGetValue(i, out var outcome)
-                    ? outcome.ToString()
-                    : MissingValueStatus
-            );
+            // Indexed rather than looked up defensively: every row above lands in exactly one of
+            // the branches that assigns a status, so a miss here is a bug in that logic and
+            // should fail the job loudly rather than write a plausible-looking wrong one.
+            csvWriter.WriteField(statusByRowIndex[i]);
             await csvWriter.NextRecordAsync();
         }
     }
+
+    /// <summary>
+    /// Looks a row-named namespace up at most once per job, caching misses as well as hits.
+    /// </summary>
+    private async Task<Namespace?> ResolveNamespaceAsync(
+        string namespaceName,
+        Dictionary<string, Namespace?> namespacesByName
+    )
+    {
+        if (namespacesByName.TryGetValue(namespaceName, out var cached))
+        {
+            return cached;
+        }
+
+        var resolved = await namespaceRepository.FindAsync(namespaceName, CancellationToken.None);
+        namespacesByName[namespaceName] = resolved;
+
+        return resolved;
+    }
+
+    /// <summary>One namespace's share of a chunk, and which rows of it they came from.</summary>
+    private sealed class NamespaceBatch(Namespace @namespace)
+    {
+        public Namespace Namespace { get; } = @namespace;
+        public List<PseudonymImportEntry> Entries { get; } = [];
+        public List<int> RowIndexes { get; } = [];
+    }
+
+    /// <summary>
+    /// Reported for a row naming a namespace that does not exist - only reachable for a job whose
+    /// namespace comes from a column, where the name is data rather than job configuration. A job
+    /// naming a missing namespace itself fails outright instead, up front.
+    /// </summary>
+    internal const string UnknownNamespaceStatus = "UnknownNamespace";
 
     /// <summary>
     /// Reported instead of a <see cref="PseudonymImportOutcome"/> for a row that never reached the
@@ -268,6 +374,8 @@ internal sealed class CsvNamespaceImporter(
     private sealed record BufferedRow(
         string?[] RawFields,
         string OriginalValue,
-        string PseudonymValue
+        string PseudonymValue,
+        // Empty unless the job names a namespace column - see CsvNamespaceImporter's summary.
+        string NamespaceName
     );
 }

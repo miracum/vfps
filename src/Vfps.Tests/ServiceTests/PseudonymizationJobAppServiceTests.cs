@@ -914,4 +914,109 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
             .ResponseHeaderOverrides.ContentDisposition.Should()
             .Contain("mapping_table-import-report.csv");
     }
+
+    // --- namespace-column imports --------------------------------------------------------------
+
+    private static CreateCsvJobRequest NamespaceColumnImportRequest() =>
+        new(
+            "utf-8",
+            ",",
+            true,
+            [
+                new ColumnMapping
+                {
+                    SourceColumn = CsvNamespaceColumns.OriginalValue,
+                    TargetColumn = CsvNamespaceColumns.PseudonymValue,
+                    // No single namespace: each row names its own.
+                    Namespace = string.Empty,
+                    NamespaceColumn = "namespace",
+                },
+            ],
+            PseudonymizationJobDirection.Import
+        );
+
+    [Fact]
+    public async Task CreateJobAsync_WithNamespaceColumnAndOnlyPerNamespaceWriteAccess_ShouldThrowForbidden()
+    {
+        // Write access to some namespaces cannot authorize a file that has not been read yet -
+        // whatever it names could be outside the grant, and by the time anything knows, the
+        // caller is gone and the runner has no principal to re-check against.
+        var (sut, _, _, _) = CreateSut(
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-write", write: true)
+        );
+
+        var act = () =>
+            sut.CreateJobAsync(
+                NamespaceColumnImportRequest(),
+                UserWithRoles("can-write"),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
+
+    [Fact]
+    public async Task CreateJobAsync_WithNamespaceColumnAndGlobalWriteAccess_ShouldCreateTheJob()
+    {
+        // A grant made without a namespace of its own covers every namespace, including ones
+        // created after it - which is exactly what a file naming its own namespaces needs.
+        var (sut, _, _, _) = CreateSut(
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole(null, "can-write-anywhere", write: true)
+        );
+
+        var (job, _) = await sut.CreateJobAsync(
+            NamespaceColumnImportRequest(),
+            UserWithRoles("can-write-anywhere"),
+            CancellationToken.None
+        );
+
+        job.Direction.Should().Be(PseudonymizationJobDirection.Import);
+        job.ColumnMappings.Should().ContainSingle();
+        job.ColumnMappings[0].NamespaceColumn.Should().Be("namespace");
+        job.ColumnMappings[0].Namespace.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task CreateJobAsync_WithNamespaceColumnAsAdmin_ShouldCreateTheJob()
+    {
+        var (sut, _, _, _) = CreateSut(
+            new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
+        );
+
+        var (job, _) = await sut.CreateJobAsync(
+            NamespaceColumnImportRequest(),
+            UserWithRoles("admin"),
+            CancellationToken.None
+        );
+
+        job.ColumnMappings[0].NamespaceColumn.Should().Be("namespace");
+    }
+
+    [Fact]
+    public async Task GetAsync_OnANamespaceColumnJobAfterGlobalWriteWasRevoked_ShouldThrowForbidden()
+    {
+        // The same re-check every other direction gets: holding the grant when the job was
+        // submitted must not keep the job reachable once it is gone.
+        var (sut, _, _, _) = CreateSut(
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole(null, "can-write-anywhere", write: true)
+        );
+        var alice = UserWithSubject("alice", "can-write-anywhere");
+        var (job, _) = await sut.CreateJobAsync(
+            NamespaceColumnImportRequest(),
+            alice,
+            CancellationToken.None
+        );
+
+        var (afterRevocation, _, _, _) = CreateSut(
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-write-anywhere", write: true)
+        );
+
+        var act = () => afterRevocation.GetAsync(job.Id, alice, CancellationToken.None);
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+    }
 }
