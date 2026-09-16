@@ -1,6 +1,7 @@
 using Amazon.S3;
 using CsvHelper;
 using Hangfire;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Vfps.AppServices;
 using Vfps.Config;
@@ -32,7 +33,8 @@ internal sealed class CsvNamespaceImporter(
     IAmazonS3 s3,
     IOptions<S3Config> s3Config,
     IOptions<CsvProcessingConfig> csvProcessingConfig,
-    CsvJobOutputUploader outputUploader
+    CsvJobOutputUploader outputUploader,
+    ILogger<CsvNamespaceImporter> logger
 ) : ICsvNamespaceImporter
 {
     /// <summary>
@@ -47,14 +49,19 @@ internal sealed class CsvNamespaceImporter(
         IJobCancellationToken cancellationToken
     )
     {
-        using var getResponse = await s3.GetObjectAsync(
+        // Resuming rather than a plain GetObjectAsync: this stream stays open for the whole job,
+        // read at the pace of the database work between chunks, which is long enough for an idle
+        // connection to be reaped underneath it - see ResumingS3ObjectStream.
+        using var countingStream = await ResumingS3ObjectStream.OpenAsync(
+            s3,
             s3Config.Value.Bucket,
             context.Job.InputObjectKey
                 ?? throw new InvalidOperationException(
                     $"CSV job '{context.Job.Id}' has no input object to read."
-                )
+                ),
+            logger,
+            cancellationToken.ShutdownToken
         );
-        using var countingStream = new ByteCountingStream(getResponse.ResponseStream);
         context.Progress.BytesProcessed = () => countingStream.BytesRead;
 
         return await outputUploader.UploadAsync(
@@ -68,7 +75,7 @@ internal sealed class CsvNamespaceImporter(
 
     private async Task<long> ImportAsync(
         CsvJobContext context,
-        ByteCountingStream countingStream,
+        Stream countingStream,
         CsvWriter csvWriter,
         IJobCancellationToken cancellationToken
     )
