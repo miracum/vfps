@@ -75,7 +75,7 @@ internal sealed class CsvColumnTransformer(
         {
             // In a finally so an interrupted job still reports it - a job that died part-way is
             // exactly when knowing whether it was starved of bytes or of CPU is worth most.
-            context.Phases.AddInputBlocked(countingStream.TimeBlocked);
+            context.Phases.AddInputFetch(countingStream.TimeFetching);
         }
     }
 
@@ -179,7 +179,10 @@ internal sealed class CsvColumnTransformer(
         while (true)
         {
             string?[] rawFields;
-            using (phases.Measure(CsvJobPhase.ReadInput))
+            // Brackets fetching and parsing together; the fetch half is deducted at flush from
+            // what ResumingS3ObjectStream measured inside these same reads - see
+            // CsvJobPhase.ParseInput.
+            using (phases.Measure(CsvJobPhase.ParseInput))
             {
                 if (!await csvReader.ReadAsync())
                 {

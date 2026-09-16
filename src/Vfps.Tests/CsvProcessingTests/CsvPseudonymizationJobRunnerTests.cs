@@ -936,7 +936,7 @@ public class CsvPseudonymizationJobRunnerTests
         jobActivity.GetTagItem("vfps.job.id").Should().Be(job.Id);
         jobActivity.GetTagItem("vfps.job.direction").Should().Be("Pseudonymize");
         jobActivity.GetTagItem("vfps.job.rows_processed").Should().Be(1L);
-        jobActivity.GetTagItem("vfps.csv.phase.read_input.seconds").Should().NotBeNull();
+        jobActivity.GetTagItem("vfps.csv.phase.parse_input.seconds").Should().NotBeNull();
         jobActivity.GetTagItem("vfps.csv.phase.resolve_database.seconds").Should().NotBeNull();
         jobActivity.GetTagItem("vfps.csv.phase.write_output.seconds").Should().NotBeNull();
         jobActivity.GetTagItem("vfps.csv.phase.report_progress.seconds").Should().NotBeNull();
@@ -979,7 +979,7 @@ public class CsvPseudonymizationJobRunnerTests
         // The exception's type, never its message - a raw exception string can carry the row
         // content this service exists to protect.
         jobActivity.StatusDescription.Should().Be(nameof(InvalidOperationException));
-        jobActivity.GetTagItem("vfps.csv.phase.read_input.seconds").Should().NotBeNull();
+        jobActivity.GetTagItem("vfps.csv.phase.parse_input.seconds").Should().NotBeNull();
     }
 
     [Fact]

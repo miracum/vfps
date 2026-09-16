@@ -12,11 +12,28 @@ namespace Vfps.CsvProcessing;
 internal enum CsvJobPhase
 {
     /// <summary>
-    /// Pulling the input file's bytes and parsing them into fields. Object-storage bound - the
-    /// CSV parser only blocks because the underlying S3 response stream hasn't delivered yet.
-    /// Always zero for <see cref="PseudonymizationJobDirection.Export"/>, which has no input file.
+    /// Waiting for object storage to hand over the input file's bytes, reconnecting to it
+    /// included. Always zero for <see cref="PseudonymizationJobDirection.Export"/>, which has no
+    /// input file.
+    ///
+    /// Measured from inside <see cref="ResumingS3ObjectStream"/> rather than by a scope around the
+    /// read loop, because fetching and parsing interleave at a far finer grain than a scope can
+    /// bracket: a single CsvHelper read may or may not touch the network, and only the stream
+    /// knows which did.
     /// </summary>
-    ReadInput,
+    FetchInput,
+
+    /// <summary>
+    /// Turning those bytes into fields - CsvHelper's parsing, and pulling each row's values out of
+    /// it. CPU, not I/O.
+    ///
+    /// Split from <see cref="FetchInput"/> because a job dominated by "reading input" is
+    /// ambiguous in the one way that matters: waiting on a slow object store and being short of
+    /// CPU to parse with look identical, and have opposite fixes. Scopes bracket the two together
+    /// and <see cref="CsvJobPhaseTimer.Flush"/> deducts the fetch half, so what is published here
+    /// is parsing alone.
+    /// </summary>
+    ParseInput,
 
     /// <summary>
     /// Resolving a chunk against the database - the batched upsert, the concurrent reverse
@@ -26,7 +43,7 @@ internal enum CsvJobPhase
 
     /// <summary>
     /// Writing resolved rows out. Object-storage bound in the same indirect way as
-    /// <see cref="ReadInput"/>: the writes go into a pipe that <see cref="CsvJobOutputUploader"/>
+    /// <see cref="FetchInput"/>: the writes go into a pipe that <see cref="CsvJobOutputUploader"/>
     /// uploads from concurrently, so this only blocks once that pipe fills, which means the
     /// upload is not keeping up.
     /// </summary>
@@ -61,25 +78,10 @@ internal sealed class CsvJobPhaseTimer(PseudonymizationJobDirection direction)
         description: "Total time CSV pseudonymization jobs spent in each phase of processing, by job direction."
     );
 
-    /// <summary>
-    /// A breakdown *of* <see cref="CsvJobPhase.ReadInput"/>, not a fifth phase - deliberately kept
-    /// out of the phase set so the four phases still sum to the job's duration and stack cleanly.
-    ///
-    /// ReadInput covers pulling the input's bytes and parsing them into fields together, which
-    /// hides the one distinction that decides what to do about a job dominated by it: waiting on
-    /// object storage and being short of CPU to parse with look identical there, and have opposite
-    /// fixes. This is the object-storage half, measured inside
-    /// <see cref="ResumingS3ObjectStream"/>; ReadInput minus this is the parsing half. Close to
-    /// ReadInput means chase the store or the network, far below it means give the job more CPU.
-    /// </summary>
-    private static readonly Counter<double> InputBlockedDuration =
-        Program.Meter.CreateCounter<double>(
-            "vfps.csv.job.input.blocked.duration.seconds",
-            unit: "s",
-            description: "Of the time CSV jobs spent reading input, how much was spent waiting for object storage to deliver bytes rather than parsing them."
-        );
-
-    private double inputBlockedSeconds;
+    // The fetch half of the input reads, measured inside ResumingS3ObjectStream and deducted from
+    // ParseInput in Flush. Kept apart from the phase totals until then precisely because it is not
+    // measured the same way they are - see CsvJobPhase.FetchInput.
+    private double inputFetchSeconds;
 
     // Indexed by (int)CsvJobPhase. Plain += with no synchronization: a job's phases are measured
     // from its own single, linear async flow - even the depseudonymize path, whose concurrency
@@ -95,12 +97,12 @@ internal sealed class CsvJobPhaseTimer(PseudonymizationJobDirection direction)
     public Scope Measure(CsvJobPhase phase) => new(this, phase);
 
     /// <summary>
-    /// Records how much of this job's <see cref="CsvJobPhase.ReadInput"/> time was spent waiting
-    /// for object storage - see <see cref="InputBlockedDuration"/>. Called once per job, by the
-    /// processors that read an input file;
-    /// <see cref="PseudonymizationJobDirection.Export"/> has none and leaves it at zero.
+    /// Records how much of the time bracketed as <see cref="CsvJobPhase.ParseInput"/> was actually
+    /// spent waiting for object storage, which <see cref="Flush"/> moves across into
+    /// <see cref="CsvJobPhase.FetchInput"/>. Called once per job, by the processors that read an
+    /// input file; <see cref="PseudonymizationJobDirection.Export"/> has none and leaves it zero.
     /// </summary>
-    public void AddInputBlocked(TimeSpan elapsed) => inputBlockedSeconds += elapsed.TotalSeconds;
+    public void AddInputFetch(TimeSpan elapsed) => inputFetchSeconds += elapsed.TotalSeconds;
 
     /// <summary>
     /// Publishes the totals as counter increments, and mirrors them onto <paramref name="activity"/>
@@ -110,6 +112,8 @@ internal sealed class CsvJobPhaseTimer(PseudonymizationJobDirection direction)
     /// </summary>
     public void Flush(Activity? activity)
     {
+        SplitInputPhases();
+
         foreach (var phase in Enum.GetValues<CsvJobPhase>())
         {
             var seconds = elapsedSeconds[(int)phase];
@@ -126,12 +130,24 @@ internal sealed class CsvJobPhaseTimer(PseudonymizationJobDirection direction)
 
             activity?.SetTag($"vfps.csv.phase.{phaseTag}.seconds", seconds);
         }
+    }
 
-        InputBlockedDuration.Add(
-            inputBlockedSeconds,
-            new KeyValuePair<string, object?>("direction", direction.ToString())
-        );
-        activity?.SetTag("vfps.csv.input_blocked.seconds", inputBlockedSeconds);
+    /// <summary>
+    /// Moves the fetch half out of the input-read total, leaving parsing behind - see
+    /// <see cref="CsvJobPhase.ParseInput"/> for why the two are bracketed together and separated
+    /// only here.
+    ///
+    /// Clamped to what was actually bracketed: every fetch is measured strictly inside one of
+    /// those scopes, so it cannot legitimately exceed them, and a negative parse figure from some
+    /// boundary effect would be worse than a zero one.
+    /// </summary>
+    private void SplitInputPhases()
+    {
+        var bracketed = elapsedSeconds[(int)CsvJobPhase.ParseInput];
+        var fetch = Math.Clamp(inputFetchSeconds, 0, bracketed);
+
+        elapsedSeconds[(int)CsvJobPhase.FetchInput] = fetch;
+        elapsedSeconds[(int)CsvJobPhase.ParseInput] = bracketed - fetch;
     }
 
     private void Add(CsvJobPhase phase, double seconds) => elapsedSeconds[(int)phase] += seconds;
@@ -141,7 +157,8 @@ internal sealed class CsvJobPhaseTimer(PseudonymizationJobDirection direction)
     private static string TagValue(CsvJobPhase phase) =>
         phase switch
         {
-            CsvJobPhase.ReadInput => "read_input",
+            CsvJobPhase.FetchInput => "fetch_input",
+            CsvJobPhase.ParseInput => "parse_input",
             CsvJobPhase.ResolveDatabase => "resolve_database",
             CsvJobPhase.WriteOutput => "write_output",
             CsvJobPhase.ReportProgress => "report_progress",

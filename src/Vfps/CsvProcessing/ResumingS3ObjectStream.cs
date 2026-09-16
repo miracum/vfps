@@ -55,7 +55,7 @@ internal sealed class ResumingS3ObjectStream : Stream
     private ByteCountingStream current;
     private long bytesFromClosedResponses;
     private int consecutiveResumes;
-    private long blockedTicks;
+    private long fetchTicks;
 
     private ResumingS3ObjectStream(
         IAmazonS3 s3,
@@ -112,13 +112,12 @@ internal sealed class ResumingS3ObjectStream : Stream
     /// How long the job has spent inside this stream waiting for bytes - object storage delivering
     /// them, plus any time spent re-establishing a dropped connection.
     ///
-    /// Exists to settle a question the <see cref="CsvJobPhase.ReadInput"/> phase cannot answer on
-    /// its own: that phase covers pulling bytes *and* parsing them into fields, so a job dominated
-    /// by it may be waiting on the object store or may be short of CPU to parse with, and those
-    /// have opposite fixes. Everything measured here is unambiguously the former; the rest of the
-    /// phase is the latter.
+    /// This is what <see cref="CsvJobPhase.FetchInput"/> is made of, and the reason it can be a
+    /// phase of its own: fetching and parsing interleave far too finely for a scope around the
+    /// read loop to separate them, but every byte crosses this stream, so measuring here splits
+    /// them exactly.
     /// </summary>
-    public TimeSpan TimeBlocked => Stopwatch.GetElapsedTime(0, blockedTicks);
+    public TimeSpan TimeFetching => Stopwatch.GetElapsedTime(0, fetchTicks);
 
     public override bool CanRead => true;
     public override bool CanSeek => false;
@@ -156,7 +155,7 @@ internal sealed class ResumingS3ObjectStream : Stream
         }
         finally
         {
-            blockedTicks += Stopwatch.GetTimestamp() - startedAt;
+            fetchTicks += Stopwatch.GetTimestamp() - startedAt;
         }
     }
 

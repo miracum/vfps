@@ -245,25 +245,25 @@ public class ResumingS3ObjectStreamTests
     }
 
     [Fact]
-    public async Task TimeBlocked_ShouldAccumulateOnlyWhileWaitingOnObjectStorage()
+    public async Task TimeFetching_ShouldAccumulateOnlyWhileWaitingOnObjectStorage()
     {
         // The measurement that separates "the store is slow" from "the job has no CPU to parse
-        // with" - two causes that look identical in the ReadInput phase and have opposite fixes.
+        // with" - two causes that look identical in a single read-input phase and have opposite fixes.
         var content = string.Concat(Enumerable.Range(0, 200).Select(i => $"row-{i:D6}\n"));
         FakeObject(content, failAfterBytes: int.MaxValue);
 
         using var sut = await OpenAsync();
-        sut.TimeBlocked.Should().Be(TimeSpan.Zero);
+        sut.TimeFetching.Should().Be(TimeSpan.Zero);
 
         await ReadAllAsync(sut);
 
         // A MemoryStream returns instantly, so this only proves it is wired to the reads at all -
         // that it moves when bytes are read and not before.
-        sut.TimeBlocked.Should().BeGreaterThan(TimeSpan.Zero);
+        sut.TimeFetching.Should().BeGreaterThan(TimeSpan.Zero);
     }
 
     [Fact]
-    public async Task TimeBlocked_ShouldIncludeTimeSpentReconnecting()
+    public async Task TimeFetching_ShouldIncludeTimeSpentReconnecting()
     {
         // A resume is time the job spent unable to make progress on input, so it belongs in the
         // same bucket - otherwise a job losing its connection repeatedly would look CPU-bound.
@@ -280,6 +280,9 @@ public class ResumingS3ObjectStreamTests
         );
         await ReadAllAsync(sut);
 
-        sut.TimeBlocked.Should().BeGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(200));
+        // Not asserted at the full 200ms: Task.Delay can return a fraction of a millisecond early
+        // on a coarse timer, and what matters here is that the reconnect wait is counted at all
+        // rather than that it is counted to the microsecond.
+        sut.TimeFetching.Should().BeGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(150));
     }
 }

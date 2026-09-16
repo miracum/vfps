@@ -69,7 +69,13 @@ public class CsvJobPhaseTimerTests
         measurements
             .Select(m => m.Phase)
             .Should()
-            .BeEquivalentTo(["read_input", "resolve_database", "write_output", "report_progress"]);
+            .BeEquivalentTo([
+                "fetch_input",
+                "parse_input",
+                "resolve_database",
+                "write_output",
+                "report_progress",
+            ]);
         measurements.Should().OnlyContain(m => m.Direction == "Export");
         measurements.Should().OnlyContain(m => m.Value == 0);
     }
@@ -91,7 +97,8 @@ public class CsvJobPhaseTimerTests
 
         var byPhase = measurements.ToDictionary(m => m.Phase, m => m.Value);
         byPhase["resolve_database"].Should().BeGreaterThan(0.01);
-        byPhase["read_input"].Should().Be(0);
+        byPhase["fetch_input"].Should().Be(0);
+        byPhase["parse_input"].Should().Be(0);
         byPhase["write_output"].Should().Be(0);
         byPhase["report_progress"].Should().Be(0);
     }
@@ -138,7 +145,7 @@ public class CsvJobPhaseTimerTests
         activity.Should().NotBeNull();
 
         var sut = new CsvJobPhaseTimer(PseudonymizationJobDirection.Depseudonymize);
-        using (sut.Measure(CsvJobPhase.ReadInput))
+        using (sut.Measure(CsvJobPhase.ParseInput))
         {
             Thread.Sleep(20);
         }
@@ -146,11 +153,85 @@ public class CsvJobPhaseTimerTests
         sut.Flush(activity);
 
         activity!
-            .GetTagItem("vfps.csv.phase.read_input.seconds")
+            .GetTagItem("vfps.csv.phase.parse_input.seconds")
             .Should()
             .BeOfType<double>()
             .Which.Should()
             .BeGreaterThan(0.01);
         activity.GetTagItem("vfps.csv.phase.resolve_database.seconds").Should().Be(0d);
+    }
+
+    // --- splitting the input read into fetching and parsing ------------------------------------
+
+    [Fact]
+    public void Flush_ShouldReportFetchingAndParsingSeparately()
+    {
+        // The whole point of the split: "reading input" on its own cannot say whether a job is
+        // waiting on the object store or short of CPU to parse with, and those have opposite
+        // fixes.
+        var measurements = Collect(() =>
+        {
+            var sut = new CsvJobPhaseTimer(PseudonymizationJobDirection.Import);
+            using (sut.Measure(CsvJobPhase.ParseInput))
+            {
+                Thread.Sleep(50);
+            }
+
+            // As the stream reports it: part of what the scope above bracketed was really spent
+            // waiting for bytes.
+            sut.AddInputFetch(TimeSpan.FromMilliseconds(20));
+            sut.Flush(activity: null);
+        });
+
+        var fetch = measurements.Single(m => m.Phase == "fetch_input").Value;
+        var parse = measurements.Single(m => m.Phase == "parse_input").Value;
+
+        fetch.Should().BeApproximately(0.02, 0.001);
+        // The remainder, not the whole bracketed span - the two must not double-count, or the
+        // phases stop summing to the job's duration.
+        parse.Should().BeGreaterThan(0.02);
+        (fetch + parse).Should().BeGreaterThan(0.045);
+    }
+
+    [Fact]
+    public void Flush_WithNoInputFetchReported_ShouldLeaveTheWholeReadAsParsing()
+    {
+        // An export reads no input file at all, so nothing ever reports fetch time for it.
+        var measurements = Collect(() =>
+        {
+            var sut = new CsvJobPhaseTimer(PseudonymizationJobDirection.Export);
+            using (sut.Measure(CsvJobPhase.ParseInput))
+            {
+                Thread.Sleep(20);
+            }
+
+            sut.Flush(activity: null);
+        });
+
+        measurements.Single(m => m.Phase == "fetch_input").Value.Should().Be(0);
+        measurements.Single(m => m.Phase == "parse_input").Value.Should().BeGreaterThan(0.01);
+    }
+
+    [Fact]
+    public void Flush_WithMoreFetchTimeThanWasBracketed_ShouldNotReportNegativeParsing()
+    {
+        // Cannot happen legitimately - every fetch is measured inside one of those scopes - but a
+        // negative phase on a dashboard would be worse than a zero one.
+        var measurements = Collect(() =>
+        {
+            var sut = new CsvJobPhaseTimer(PseudonymizationJobDirection.Import);
+            using (sut.Measure(CsvJobPhase.ParseInput))
+            {
+                Thread.Sleep(5);
+            }
+
+            sut.AddInputFetch(TimeSpan.FromSeconds(10));
+            sut.Flush(activity: null);
+        });
+
+        measurements.Single(m => m.Phase == "parse_input").Value.Should().Be(0);
+        // And the fetch half is capped at what was actually bracketed rather than inventing time
+        // the job never spent.
+        measurements.Single(m => m.Phase == "fetch_input").Value.Should().BeLessThan(1);
     }
 }
