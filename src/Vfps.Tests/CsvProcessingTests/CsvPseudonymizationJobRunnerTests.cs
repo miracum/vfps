@@ -131,7 +131,8 @@ public class CsvPseudonymizationJobRunnerTests
                 s3,
                 s3Config,
                 csvProcessingConfig,
-                outputUploader
+                outputUploader,
+                NullLogger<CsvColumnTransformer>.Instance
             ),
             new CsvNamespaceImporter(
                 pseudonymAppService,
@@ -139,7 +140,8 @@ public class CsvPseudonymizationJobRunnerTests
                 s3,
                 s3Config,
                 csvProcessingConfig,
-                outputUploader
+                outputUploader,
+                NullLogger<CsvNamespaceImporter>.Instance
             ),
             new CsvNamespaceExporter(pseudonymRepository, namespaceRepository, outputUploader),
             NullLogger<CsvPseudonymizationJobRunner>.Instance
