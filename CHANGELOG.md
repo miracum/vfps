@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.1](https://github.com/miracum/vfps/compare/v1.16.0...v1.16.1) (2026-09-16)
+
+
+### Bug Fixes
+
+* resume long-running s3 connections ([#323](https://github.com/miracum/vfps/issues/323)) ([f3598f1](https://github.com/miracum/vfps/commit/f3598f199287c28ea357f204c5f77d378fc1680a))
+
 ## [1.16.0](https://github.com/miracum/vfps/compare/v1.15.0...v1.16.0) (2026-09-16)
 
 
