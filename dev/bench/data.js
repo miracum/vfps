@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789546506225,
+  "lastUpdate": 1789556176652,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -8814,6 +8814,66 @@ window.BENCHMARK_DATA = {
             "value": 730.648794968923,
             "unit": "ns",
             "range": "± 2.573667313133671"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "f3598f199287c28ea357f204c5f77d378fc1680a",
+          "message": "fix: resume long-running s3 connections (#323)",
+          "timestamp": "2026-09-16T12:52:14+02:00",
+          "tree_id": "8b794ae22fed1691a917622a4b65b043352f0fdc",
+          "url": "https://github.com/miracum/vfps/commit/f3598f199287c28ea357f204c5f77d378fc1680a"
+        },
+        "date": 1789556175943,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 709.3373417173113,
+            "unit": "ns",
+            "range": "± 1.9576928355385617"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 363.6386620156905,
+            "unit": "ns",
+            "range": "± 11.039434829543469"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 377.95593588168805,
+            "unit": "ns",
+            "range": "± 2.6911413176515833"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 667.2066115651812,
+            "unit": "ns",
+            "range": "± 1.7285671945216525"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 766.6247486114502,
+            "unit": "ns",
+            "range": "± 17.53731121259712"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 738.1843391827175,
+            "unit": "ns",
+            "range": "± 8.856838479197119"
           }
         ]
       }
