@@ -64,13 +64,22 @@ internal sealed class CsvNamespaceImporter(
         );
         context.Progress.BytesProcessed = () => countingStream.BytesRead;
 
-        return await outputUploader.UploadAsync(
-            context.OutputObjectKey,
-            context.Encoding,
-            context.CsvConfig,
-            csvWriter => ImportAsync(context, countingStream, csvWriter, cancellationToken),
-            cancellationToken.ShutdownToken
-        );
+        try
+        {
+            return await outputUploader.UploadAsync(
+                context.OutputObjectKey,
+                context.Encoding,
+                context.CsvConfig,
+                csvWriter => ImportAsync(context, countingStream, csvWriter, cancellationToken),
+                cancellationToken.ShutdownToken
+            );
+        }
+        finally
+        {
+            // In a finally so an interrupted job still reports it - a job that died part-way is
+            // exactly when knowing whether it was starved of bytes or of CPU is worth most.
+            context.Phases.AddInputFetch(countingStream.TimeFetching);
+        }
     }
 
     private async Task<long> ImportAsync(
@@ -153,7 +162,10 @@ internal sealed class CsvNamespaceImporter(
         while (true)
         {
             string?[] rawFields;
-            using (phases.Measure(CsvJobPhase.ReadInput))
+            // Brackets fetching and parsing together; the fetch half is deducted at flush from
+            // what ResumingS3ObjectStream measured inside these same reads - see
+            // CsvJobPhase.ParseInput.
+            using (phases.Measure(CsvJobPhase.ParseInput))
             {
                 if (!await csvReader.ReadAsync())
                 {

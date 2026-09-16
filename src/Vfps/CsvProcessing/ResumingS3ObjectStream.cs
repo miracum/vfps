@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using Amazon.Runtime;
@@ -54,6 +55,7 @@ internal sealed class ResumingS3ObjectStream : Stream
     private ByteCountingStream current;
     private long bytesFromClosedResponses;
     private int consecutiveResumes;
+    private long fetchTicks;
 
     private ResumingS3ObjectStream(
         IAmazonS3 s3,
@@ -106,6 +108,17 @@ internal sealed class ResumingS3ObjectStream : Stream
     /// </summary>
     public long BytesRead => bytesFromClosedResponses + current.BytesRead;
 
+    /// <summary>
+    /// How long the job has spent inside this stream waiting for bytes - object storage delivering
+    /// them, plus any time spent re-establishing a dropped connection.
+    ///
+    /// This is what <see cref="CsvJobPhase.FetchInput"/> is made of, and the reason it can be a
+    /// phase of its own: fetching and parsing interleave far too finely for a scope around the
+    /// read loop to separate them, but every byte crosses this stream, so measuring here splits
+    /// them exactly.
+    /// </summary>
+    public TimeSpan TimeFetching => Stopwatch.GetElapsedTime(0, fetchTicks);
+
     public override bool CanRead => true;
     public override bool CanSeek => false;
     public override bool CanWrite => false;
@@ -122,19 +135,27 @@ internal sealed class ResumingS3ObjectStream : Stream
         CancellationToken cancellationToken = default
     )
     {
-        while (true)
+        var startedAt = Stopwatch.GetTimestamp();
+        try
         {
-            try
+            while (true)
             {
-                var read = await current.ReadAsync(buffer, cancellationToken);
-                consecutiveResumes = 0;
+                try
+                {
+                    var read = await current.ReadAsync(buffer, cancellationToken);
+                    consecutiveResumes = 0;
 
-                return read;
+                    return read;
+                }
+                catch (Exception ex) when (ShouldResume(ex, cancellationToken))
+                {
+                    await ResumeAsync(ex, cancellationToken);
+                }
             }
-            catch (Exception ex) when (ShouldResume(ex, cancellationToken))
-            {
-                await ResumeAsync(ex, cancellationToken);
-            }
+        }
+        finally
+        {
+            fetchTicks += Stopwatch.GetTimestamp() - startedAt;
         }
     }
 
