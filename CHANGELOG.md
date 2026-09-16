@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.2](https://github.com/miracum/vfps/compare/v1.16.1...v1.16.2) (2026-09-16)
+
+
+### Bug Fixes
+
+* more precise metrics ([#325](https://github.com/miracum/vfps/issues/325)) ([00736bd](https://github.com/miracum/vfps/commit/00736bdb57ad3a8e516b3aab4007809ffe061c11))
+
 ## [1.16.1](https://github.com/miracum/vfps/compare/v1.16.0...v1.16.1) (2026-09-16)
 
 
