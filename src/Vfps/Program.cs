@@ -540,7 +540,34 @@ if (isHangfireEnabled)
     // "no new service" for this feature.
     builder.Services.AddHangfire(config =>
         config
-            .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(hangfireConnectionString))
+            .UsePostgreSqlStorage(
+                options => options.UseNpgsqlConnection(hangfireConnectionString),
+                new PostgreSqlStorageOptions
+                {
+                    // Hangfire.PostgreSql tracks "who is working on this job" via a fetchedat
+                    // timestamp on the queue row, not a held lock - its dequeue query picks up any
+                    // row whose fetchedat is older than InvisibilityTimeout (left at the package's
+                    // own 30-minute default here), regardless of whether the worker that fetched
+                    // it is still healthily running. With sliding off (also the package's
+                    // default), fetchedat is stamped once and never renewed, so a CSV job that
+                    // legitimately runs past 30 minutes gets its queue row handed to a second
+                    // worker while the first is still processing it - not a crash, not a real
+                    // server shutdown, just Hangfire deciding the first attempt looks abandoned.
+                    // The two then race forever: each fresh attempt re-reads the whole file from
+                    // byte zero (nothing about progress survives across a RunAsync call), so on a
+                    // large enough import every attempt again takes longer than 30 minutes and
+                    // gets reassigned again before it can finish.
+                    //
+                    // Sliding fixes this at the source: while true, a background heartbeat
+                    // re-stamps fetchedat every InvisibilityTimeout/5 (6 minutes here) for as long
+                    // as the fetch is genuinely still held, so a healthy job of any length is
+                    // never mistaken for abandoned - a worker that actually crashed (and so stops
+                    // heartbeating) is still reclaimed after the same 30 minutes as before. See
+                    // CsvPseudonymizationJobRunner.RunAsync's JobAbortedException handling for
+                    // what happens on the (now rare) occasions a fetch is genuinely lost instead.
+                    UseSlidingInvisibilityTimeout = true,
+                }
+            )
             // CsvPseudonymizationJobRunner already handles its own failures (marks the job
             // Failed with a sanitized message, logs the full exception server-side) - Hangfire's
             // default of 10 automatic retries would silently re-run the whole job (tying up a

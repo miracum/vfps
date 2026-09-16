@@ -820,6 +820,52 @@ public class CsvPseudonymizationJobRunnerTests
             .MustNotHaveHappened();
     }
 
+    [Fact]
+    public async Task RunAsync_WhenHangfireReassignsTheFetch_ShouldNotMarkJobFailed()
+    {
+        // JobAbortedException is Hangfire's own signal that this job's queue entry no longer
+        // names this server/worker as the one holding it - most commonly its invisibility-timeout
+        // fetch lease expiring while this execution was still genuinely running, handing the same
+        // job to a second worker. It is a genuine Hangfire.Server.JobAbortedException (itself an
+        // OperationCanceledException) here, not a hand-rolled one, so this also proves the runner
+        // catches it by its real type rather than by some looser shape that happened to work.
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,secret\n");
+        FakePseudonymize("ns", "secret", "pseudonym-of-secret");
+
+        // Not shutting down - a reassigned fetch throws this even while ShutdownToken is
+        // perfectly healthy, which is exactly what makes it a distinct case from the one above
+        // rather than a special case of it.
+        var cancellationToken = A.Fake<IJobCancellationToken>();
+        A.CallTo(() => cancellationToken.ShutdownToken).Returns(CancellationToken.None);
+        A.CallTo(() => cancellationToken.ThrowIfCancellationRequested())
+            .Throws(() => new JobAbortedException());
+
+        var sut = CreateSut();
+        var act = () => sut.RunAsync(job.Id, "test-label", cancellationToken);
+
+        await act.Should().ThrowAsync<JobAbortedException>();
+
+        // Same outcome as a real shutdown: something else now owns this job, so this execution
+        // must not mark it Failed and strand whichever execution actually finishes it behind a
+        // terminal status.
+        A.CallTo(() =>
+                jobRepository.UpdateStatusAsync(
+                    job.Id,
+                    PseudonymizationJobStatus.Failed,
+                    A<string>._,
+                    A<CancellationToken>._
+                )
+            )
+            .MustNotHaveHappened();
+    }
+
     [Theory]
     [InlineData(PseudonymizationJobStatus.Completed)]
     [InlineData(PseudonymizationJobStatus.Failed)]

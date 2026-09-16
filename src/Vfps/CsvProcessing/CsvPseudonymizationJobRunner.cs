@@ -125,6 +125,18 @@ internal sealed class CsvPseudonymizationJobRunner(
                 );
             }
         }
+        catch (JobAbortedException)
+        {
+            logger.LogWarning(
+                "CSV pseudonymization job {JobId} was aborted because Hangfire reassigned it to "
+                    + "another worker execution - most likely its invisibility-timeout fetch "
+                    + "lease expired while this execution was still running. It will finish under "
+                    + "that other execution, or be reprocessed again if that one is also "
+                    + "reassigned before finishing.",
+                jobId
+            );
+            throw;
+        }
         catch (OperationCanceledException)
             when (cancellationToken.ShutdownToken.IsCancellationRequested)
         {
@@ -140,6 +152,10 @@ internal sealed class CsvPseudonymizationJobRunner(
             // internally) and later re-ran the job, which then immediately no-opped against the
             // Failed status this catch used to set and reported back to Hangfire as "Succeeded" -
             // while vfps's own UI kept showing Failed, and the job's real output was incomplete.
+            //
+            // Note this clause cannot fire for the reassigned-fetch case above:
+            // JobAbortedException is itself an OperationCanceledException, but it is caught by
+            // name first, so only a real ApplicationStopping-driven shutdown reaches here.
             logger.LogWarning(
                 "CSV pseudonymization job {JobId} was interrupted by a server shutdown mid-"
                     + "processing - it will be reprocessed once a Hangfire server is available "
