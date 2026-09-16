@@ -48,7 +48,7 @@ public class PseudonymizationJobAppService(
     )
     {
         await EnsureNamespaceAccessAsync(
-            request.ColumnMappings.Select(m => m.Namespace),
+            request.ColumnMappings,
             request.Direction,
             user,
             cancellationToken
@@ -96,7 +96,14 @@ public class PseudonymizationJobAppService(
     )
     {
         await EnsureNamespaceAccessAsync(
-            [request.NamespaceName],
+            [
+                new ColumnMapping
+                {
+                    SourceColumn = request.OriginalValueColumn,
+                    TargetColumn = request.PseudonymValueColumn,
+                    Namespace = request.NamespaceName,
+                },
+            ],
             PseudonymizationJobDirection.Export,
             user,
             cancellationToken
@@ -376,16 +383,10 @@ public class PseudonymizationJobAppService(
         PseudonymizationJob job,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
-    ) =>
-        EnsureNamespaceAccessAsync(
-            job.ColumnMappings.Select(m => m.Namespace),
-            job.Direction,
-            user,
-            cancellationToken
-        );
+    ) => EnsureNamespaceAccessAsync(job.ColumnMappings, job.Direction, user, cancellationToken);
 
     private async Task EnsureNamespaceAccessAsync(
-        IEnumerable<string> namespaceNames,
+        IReadOnlyList<ColumnMapping> columnMappings,
         PseudonymizationJobDirection direction,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
@@ -394,6 +395,28 @@ public class PseudonymizationJobAppService(
         // Resolved once for the whole job: a job's column mappings routinely span several
         // namespaces, and every one of them is checked against the same caller.
         var permissions = await permissionChecker.ResolveAsync(user, cancellationToken);
+
+        // A namespace-column import names its target namespaces inside the file, which nothing
+        // has read yet - there is no set of names to check here, and by the time there is, the
+        // caller is long gone and the runner has no principal to re-check against (the same
+        // reason IPseudonymAppService's Trusted methods exist at all). The only permission that
+        // can be verified up front and still be true for whatever the file turns out to name is
+        // write access to every namespace, so that is what this asks for. Anything narrower would
+        // amount to checking nothing.
+        if (columnMappings.Any(m => !string.IsNullOrEmpty(m.NamespaceColumn)))
+        {
+            if (!permissions.HasWriteAccessToAllNamespaces)
+            {
+                throw new ForbiddenException(
+                    "Importing into the namespace named by a column requires write access to "
+                        + "every namespace, since the namespaces the file names are only known "
+                        + "once it is processed. Grant access without a namespace, or import "
+                        + "into a single chosen namespace instead."
+                );
+            }
+
+            return;
+        }
 
         // Depseudonymize and Export both hand back original values, so they're gated the same as
         // the manual reverse-lookup textbox (reverse-lookup access), not merely write access -
@@ -414,7 +437,8 @@ public class PseudonymizationJobAppService(
         };
 
         foreach (
-            var namespaceName in namespaceNames
+            var namespaceName in columnMappings
+                .Select(m => m.Namespace)
                 .Distinct(StringComparer.Ordinal)
                 .Where(namespaceName => !hasAccess(namespaceName))
         )

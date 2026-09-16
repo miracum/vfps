@@ -202,6 +202,9 @@
   <data name="App.CsvJobs.ColumnMappingsHintSuffix" xml:space="preserve">
     <value>Wählen Sie oben eine CSV-Datei mit aktivierter Option "Datei hat eine Kopfzeile" aus, um Quellspalten anhand ihres Namens statt durch Eingabe auszuwählen.</value>
   </data>
+  <data name="App.CsvJobs.ColumnNotInFile" xml:space="preserve">
+    <value>{0} (nicht in dieser Datei)</value>
+  </data>
   <data name="App.CsvJobs.CreateErrorTitle" xml:space="preserve">
     <value>Job konnte nicht erstellt werden</value>
   </data>
@@ -286,6 +289,9 @@
   <data name="App.CsvJobs.ImportTitle" xml:space="preserve">
     <value>Ziel-Namespace für den Import</value>
   </data>
+  <data name="App.CsvJobs.ImportTitleNamespaceColumn" xml:space="preserve">
+    <value>Zu importierende Spalten</value>
+  </data>
   <data name="App.CsvJobs.Issue" xml:space="preserve">
     <value>Problem</value>
   </data>
@@ -303,6 +309,18 @@
   </data>
   <data name="App.CsvJobs.MissingValueTitle" xml:space="preserve">
     <value>Diese Werte waren leer oder ein gängiger Platzhalter für fehlende Daten (NA/NULL) - sie wurden unverändert belassen, statt pseudonymisiert zu werden.</value>
+  </data>
+  <data name="App.CsvJobs.NamespaceColumn" xml:space="preserve">
+    <value>Namespace-Spalte</value>
+  </data>
+  <data name="App.CsvJobs.NamespaceColumnHint" xml:space="preserve">
+    <value>Ohne Namespace-Spalte werden alle Zeilen in den oben ausgewählten Namespace importiert.</value>
+  </data>
+  <data name="App.CsvJobs.NamespaceColumnPlaceholder" xml:space="preserve">
+    <value>Optional</value>
+  </data>
+  <data name="App.CsvJobs.NamespaceColumnSetHint" xml:space="preserve">
+    <value>Jede Zeile wird in den in dieser Spalte genannten Namespace importiert, sodass eine Datei mehrere Namespaces befüllen kann. Zeilen, die einen nicht existierenden Namespace nennen oder die Spalte leer lassen, werden in der Ergebnisdatei gemeldet und übersprungen. Erfordert Schreibzugriff auf alle Namespaces.</value>
   </data>
   <data name="App.CsvJobs.NewJobDescription" xml:space="preserve">
     <value>Wählen Sie eine hochzuladende CSV-Datei aus und legen Sie fest, wie ihre Spalten pseudonymisiert oder de-pseudonymisiert werden sollen. Die Ausgabe steht zum Download bereit, sobald der Job abgeschlossen ist.</value>

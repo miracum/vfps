@@ -170,6 +170,22 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
         }
     }
 
+    /// <summary>
+    /// Picks a column in one of the import form's column dropdowns, waiting for the option to be
+    /// there first.
+    ///
+    /// Those dropdowns only exist once the browser has read the file's header row and told the
+    /// server about it, which is a JS interop call plus a render round trip after the file input
+    /// changes. Selecting straight after SetInputFilesAsync races that: the element resolves to
+    /// the free-text fallback the selector renders when no columns are known yet, or to one being
+    /// swapped out mid-render.
+    /// </summary>
+    private async Task SelectDetectedColumnAsync(string selectId, string column)
+    {
+        await Expect(Page.Locator($"{selectId} option[value='{column}']")).ToHaveCountAsync(1);
+        await Page.SelectOptionAsync(selectId, column);
+    }
+
     private static LocatorAssertionsToContainTextOptions RowTimeout() =>
         new() { Timeout = JobTimeoutMs };
 
@@ -205,5 +221,122 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
         await Page.FillAsync("#name", name);
         await Page.ClickAsync("form:has(#name) button[type=submit]");
         await Expect(Page.Locator($"[role=treeitem][data-value=\"{name}\"]")).ToHaveCountAsync(1);
+    }
+
+    [Fact]
+    public async Task ImportColumns_AreOfferedAsDropdownsOfTheFilesOwnHeaderRow()
+    {
+        // The same header detection the pseudonymize form uses - readHeaderRow reads only the
+        // first chunk of the file, so this costs nothing even for a huge upload.
+        var csvPath = Path.Join(Path.GetTempPath(), $"vfps-e2e-{UniqueSuffix()}.csv");
+        await File.WriteAllTextAsync(csvPath, "mrn,psn,target_ns\n1,p1,ns-a\n");
+
+        try
+        {
+            await GotoAsync("/ui/csv-jobs");
+            await Page.SelectOptionAsync("#direction", "Import");
+            await Page.SetInputFilesAsync("#csvFileInput", csvPath);
+
+            foreach (
+                var id in new[]
+                {
+                    "#originalValueColumn",
+                    "#pseudonymValueColumn",
+                    "#namespaceColumn",
+                }
+            )
+            {
+                // Retrying, unlike AllInnerTextsAsync on its own: the options arrive with the
+                // render that follows the header being read, not with the file selection.
+                await Expect(Page.Locator($"{id} option"))
+                    .ToContainTextAsync(["mrn", "psn", "target_ns"]);
+            }
+        }
+        finally
+        {
+            File.Delete(csvPath);
+        }
+    }
+
+    [Fact]
+    public async Task ChoosingANamespaceColumn_ReplacesTheNamespacePicker()
+    {
+        var csvPath = Path.Join(Path.GetTempPath(), $"vfps-e2e-{UniqueSuffix()}.csv");
+        await File.WriteAllTextAsync(csvPath, "original,pseudonym,namespace\na,p,ns\n");
+
+        try
+        {
+            await GotoAsync("/ui/csv-jobs");
+            await Page.SelectOptionAsync("#direction", "Import");
+            await Page.SetInputFilesAsync("#csvFileInput", csvPath);
+
+            // With no namespace column, one namespace is picked for the whole file.
+            await Expect(Page.Locator("#jobNamespace")).ToBeVisibleAsync();
+
+            await SelectDetectedColumnAsync("#namespaceColumn", "namespace");
+
+            // With one, there is no single namespace to pick any more.
+            await Expect(Page.Locator("#jobNamespace")).ToHaveCountAsync(0);
+
+            await Page.SelectOptionAsync("#namespaceColumn", string.Empty);
+            await Expect(Page.Locator("#jobNamespace")).ToBeVisibleAsync();
+        }
+        finally
+        {
+            File.Delete(csvPath);
+        }
+    }
+
+    [Fact]
+    public async Task ImportWithANamespaceColumn_LoadsOneFileIntoSeveralNamespaces()
+    {
+        var first = $"e2e-multi-a-{UniqueSuffix()}";
+        var second = $"e2e-multi-b-{UniqueSuffix()}";
+        var csvPath = Path.Join(Path.GetTempPath(), $"vfps-e2e-{UniqueSuffix()}.csv");
+        await File.WriteAllTextAsync(
+            csvPath,
+            "original,pseudonym,namespace\n"
+                + $"alice,psn-alice,{first}\n"
+                + $"bob,psn-bob,{second}\n"
+                + $"carol,psn-carol,{first}\n"
+                + "dave,psn-dave,no-such-namespace-here\n"
+        );
+
+        try
+        {
+            await CreateNamespaceAsync(first);
+            await CreateNamespaceAsync(second);
+
+            await GotoAsync("/ui/csv-jobs");
+            await Page.SelectOptionAsync("#direction", "Import");
+            await Page.SetInputFilesAsync("#csvFileInput", csvPath);
+            await SelectDetectedColumnAsync("#namespaceColumn", "namespace");
+            await Page.ClickAsync("#submitJobButton");
+
+            var jobRow = JobRow(Path.GetFileName(csvPath));
+            await Expect(jobRow).ToContainTextAsync("Completed", RowTimeout());
+
+            // Every row reported, including the one naming a namespace that does not exist - which
+            // is skipped rather than failing the job.
+            var report = await DownloadOutputAsync(jobRow);
+            report.Should().Contain($"alice,psn-alice,{first},Imported");
+            report.Should().Contain($"bob,psn-bob,{second},Imported");
+            report.Should().Contain($"carol,psn-carol,{first},Imported");
+            report.Should().Contain("dave,psn-dave,no-such-namespace-here,UnknownNamespace");
+
+            // And the pairs really landed in the namespace each row named, not all in one.
+            await GotoAsync($"/ui/namespaces/{Uri.EscapeDataString(first)}/pseudonyms");
+            await Expect(Page.Locator("body")).ToContainTextAsync("psn-alice");
+            await Expect(Page.Locator("body")).ToContainTextAsync("psn-carol");
+            await Expect(Page.Locator("body")).Not.ToContainTextAsync("psn-bob");
+
+            await GotoAsync($"/ui/namespaces/{Uri.EscapeDataString(second)}/pseudonyms");
+            await Expect(Page.Locator("body")).ToContainTextAsync("psn-bob");
+            await Expect(Page.Locator("body")).Not.ToContainTextAsync("psn-alice");
+        }
+        finally
+        {
+            File.Delete(csvPath);
+        }
     }
 }

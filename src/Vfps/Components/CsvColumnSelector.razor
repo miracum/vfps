@@ -1,0 +1,73 @@
+@using Microsoft.Extensions.Localization
+@inject IStringLocalizer<SharedResources> Localizer
+
+@* Picking a column of the uploaded file, wherever a CSV job needs one: the source column of a
+   pseudonymize/de-pseudonymize mapping, and an import's original/pseudonym/namespace columns.
+
+   A dropdown of the file's own header row when one has been read (see
+   wwwroot/js/csvUpload.js's readHeaderRow, which reads only the first 64 KiB of the file so a
+   multi-GB upload still costs nothing to inspect), and free text otherwise - which is both the
+   no-file-selected case and the no-header-row case, where a column is named by its 0-based index
+   instead. That fallback is why this cannot simply be a <select>: CsvJobFormat.ResolveColumnIndex
+   accepts either form, and the form it gets depends on a file the server has never seen. *@
+@if (Columns.Count > 0)
+{
+    <select
+        value="@Value"
+        @onchange="OnSelectChangedAsync"
+        id="@Id"
+        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+    >
+        <option value="">@Localizer["App.CsvJobs.SelectColumn"]</option>
+        @* A column the file does not have - carried over from a previous file, or typed while
+           there was no header to choose from - would otherwise silently select nothing, leaving
+           the form showing a blank field that still submits the old value. Kept as an option so
+           it stays visible and correctable. *@
+        @if (!string.IsNullOrEmpty(Value) && !Columns.Contains(Value))
+        {
+            <option value="@Value">@Localizer["App.CsvJobs.ColumnNotInFile", Value]</option>
+        }
+        @foreach (var column in Columns)
+        {
+            <option value="@column">@column</option>
+        }
+    </select>
+}
+else
+{
+    <BbInput
+        Value="@Value"
+        ValueChanged="OnInputChangedAsync"
+        UpdateTiming="UpdateTiming.Immediate"
+        Id="@Id"
+        Placeholder="@Placeholder"
+    />
+}
+
+@code {
+    /// <summary>The currently selected column name, or 0-based index.</summary>
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }
+
+    /// <summary>
+    /// The columns detected in the selected file's header row, empty when there are none to offer.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<string> Columns { get; set; } = [];
+
+    /// <summary>Element id, so the field's label can point at whichever control renders.</summary>
+    [Parameter]
+    public string? Id { get; set; }
+
+    /// <summary>Shown only in the free-text fallback; the dropdown has its own empty option.</summary>
+    [Parameter]
+    public string? Placeholder { get; set; }
+
+    private Task OnSelectChangedAsync(ChangeEventArgs args) =>
+        ValueChanged.InvokeAsync(args.Value as string);
+
+    private Task OnInputChangedAsync(string? value) => ValueChanged.InvokeAsync(value);
+}

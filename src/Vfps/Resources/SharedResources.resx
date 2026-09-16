@@ -202,6 +202,9 @@
   <data name="App.CsvJobs.ColumnMappingsHintSuffix" xml:space="preserve">
     <value>Pick a CSV file above with "File has a header row" checked to select source columns by name instead of typing them.</value>
   </data>
+  <data name="App.CsvJobs.ColumnNotInFile" xml:space="preserve">
+    <value>{0} (not in this file)</value>
+  </data>
   <data name="App.CsvJobs.CreateErrorTitle" xml:space="preserve">
     <value>Could not create job</value>
   </data>
@@ -286,6 +289,9 @@
   <data name="App.CsvJobs.ImportTitle" xml:space="preserve">
     <value>Namespace to import into</value>
   </data>
+  <data name="App.CsvJobs.ImportTitleNamespaceColumn" xml:space="preserve">
+    <value>Columns to import</value>
+  </data>
   <data name="App.CsvJobs.Issue" xml:space="preserve">
     <value>Issue</value>
   </data>
@@ -303,6 +309,18 @@
   </data>
   <data name="App.CsvJobs.MissingValueTitle" xml:space="preserve">
     <value>These values were blank or a common missing-data placeholder (NA/NULL) - left as-is rather than pseudonymized.</value>
+  </data>
+  <data name="App.CsvJobs.NamespaceColumn" xml:space="preserve">
+    <value>Namespace column</value>
+  </data>
+  <data name="App.CsvJobs.NamespaceColumnHint" xml:space="preserve">
+    <value>Leave the namespace column empty to import every row into the single namespace selected above.</value>
+  </data>
+  <data name="App.CsvJobs.NamespaceColumnPlaceholder" xml:space="preserve">
+    <value>Optional</value>
+  </data>
+  <data name="App.CsvJobs.NamespaceColumnSetHint" xml:space="preserve">
+    <value>Each row is imported into the namespace named in this column, so one file can populate several namespaces. Rows naming a namespace that does not exist, or leaving the column empty, are reported in the result file and skipped. Requires write access to every namespace.</value>
   </data>
   <data name="App.CsvJobs.NewJobDescription" xml:space="preserve">
     <value>Select a CSV file to upload, and specify how its columns should be pseudonymized or de-pseudonymized. The output will be available for download once the job completes.</value>

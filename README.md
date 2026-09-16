@@ -195,19 +195,28 @@ Upload a CSV file to pseudonymize or de-pseudonymize one or more columns as a ba
 
 The same page also moves a whole namespace in and out as CSV, as two further job directions:
 
-- **Import** loads already-known pairs into one namespace instead of generating pseudonyms for
-  them - for migrating a mapping table that predates vfps, or moving a namespace between
-  instances. The file needs an `original` and a `pseudonym` column (either name can be changed on
-  the form, or given as a 0-based column index for a file without a header row); any other column
-  is ignored. Requires **write** access to the namespace.
+- **Import** loads already-known pairs instead of generating pseudonyms for them - for migrating a
+  mapping table that predates vfps, or moving namespaces between instances. The file needs an
+  `original` and a `pseudonym` column; when the file has a header row its columns are offered as
+  dropdowns, and otherwise a column is named by its 0-based index. Any other column is ignored.
+  Requires **write** access to the namespace.
+
+  Optionally a third, **namespace column** can be chosen. Each row is then imported into the
+  namespace named in that column, so a whole instance's export loads in one job rather than one per
+  namespace; the single-namespace picker disappears, since there is no longer one to pick. Rows
+  naming a namespace that doesn't exist - or leaving the column empty - are reported and skipped
+  rather than failing the job or landing somewhere unintended. This needs **write access to every
+  namespace** (an admin, or a grant made without a namespace): the namespaces a file names are only
+  known once it is processed, long after the caller who submitted it is gone, so there is no
+  narrower permission that can honestly be checked up front.
 
   Nothing is ever overwritten: an original value that already has a pseudonym keeps it, and a
   pseudonym already in use for a different original value is refused rather than left ambiguous to
   reverse-lookup. Every row - accepted or not - comes back in the job's downloadable report as the
   input row plus a `status` column (`Imported`, `AlreadyPresent`, `OriginalValueConflict`,
-  `PseudonymValueConflict`, `InvalidOriginalValue`, `ParentValueMissing`, or `MissingValue` for a
-  blank/placeholder cell), so re-running the same file is a clean no-op and a partial import is
-  inspectable row by row. A namespace that allows multiple pseudonyms per original value grows
+  `PseudonymValueConflict`, `InvalidOriginalValue`, `ParentValueMissing`, `UnknownNamespace`, or
+  `MissingValue` for a blank/placeholder cell), so re-running the same file is a clean no-op and a
+  partial import is inspectable row by row. A namespace that allows multiple pseudonyms per original value grows
   instead of conflicting, exactly as its generating create path does.
 
 - **Export** writes every original value in a namespace and its pseudonym to a two-column CSV,
