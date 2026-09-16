@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.3](https://github.com/miracum/vfps/compare/v1.16.2...v1.16.3) (2026-09-16)
+
+
+### Bug Fixes
+
+* job expiration ([#327](https://github.com/miracum/vfps/issues/327)) ([d50f4fb](https://github.com/miracum/vfps/commit/d50f4fbd7397eff2e9ae0dfa019b18037d13d293))
+
 ## [1.16.2](https://github.com/miracum/vfps/compare/v1.16.1...v1.16.2) (2026-09-16)
 
 
