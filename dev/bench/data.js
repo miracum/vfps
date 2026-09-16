@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789574660920,
+  "lastUpdate": 1789577568025,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -9294,6 +9294,66 @@ window.BENCHMARK_DATA = {
             "value": 1214.9505181993757,
             "unit": "ns",
             "range": "± 1.7021237857204488"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "64022198+miracum-bot@users.noreply.github.com",
+            "name": "miracum-bot",
+            "username": "miracum-bot"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "7b29f3a9a1d82655fc8cd05aca118875aaac1365",
+          "message": "chore(master): release 1.16.3 (#328)",
+          "timestamp": "2026-09-16T16:39:24Z",
+          "tree_id": "ce27c394341e07bb65d13482c21773502f6c7395",
+          "url": "https://github.com/miracum/vfps/commit/7b29f3a9a1d82655fc8cd05aca118875aaac1365"
+        },
+        "date": 1789577567506,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1221.316777910505,
+            "unit": "ns",
+            "range": "± 6.028566549850337"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 690.7175439687876,
+            "unit": "ns",
+            "range": "± 1.2543593105020492"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 715.6589611493624,
+            "unit": "ns",
+            "range": "± 0.733283854622652"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 1145.2712839566743,
+            "unit": "ns",
+            "range": "± 2.6124890426466383"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1264.099108505249,
+            "unit": "ns",
+            "range": "± 2.8886912815380166"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 1271.8757859638758,
+            "unit": "ns",
+            "range": "± 2.4181424057208587"
           }
         ]
       }
