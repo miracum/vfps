@@ -243,4 +243,43 @@ public class ResumingS3ObjectStreamTests
         read.Should().Be(content);
         requests.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task TimeBlocked_ShouldAccumulateOnlyWhileWaitingOnObjectStorage()
+    {
+        // The measurement that separates "the store is slow" from "the job has no CPU to parse
+        // with" - two causes that look identical in the ReadInput phase and have opposite fixes.
+        var content = string.Concat(Enumerable.Range(0, 200).Select(i => $"row-{i:D6}\n"));
+        FakeObject(content, failAfterBytes: int.MaxValue);
+
+        using var sut = await OpenAsync();
+        sut.TimeBlocked.Should().Be(TimeSpan.Zero);
+
+        await ReadAllAsync(sut);
+
+        // A MemoryStream returns instantly, so this only proves it is wired to the reads at all -
+        // that it moves when bytes are read and not before.
+        sut.TimeBlocked.Should().BeGreaterThan(TimeSpan.Zero);
+    }
+
+    [Fact]
+    public async Task TimeBlocked_ShouldIncludeTimeSpentReconnecting()
+    {
+        // A resume is time the job spent unable to make progress on input, so it belongs in the
+        // same bucket - otherwise a job losing its connection repeatedly would look CPU-bound.
+        var content = string.Concat(Enumerable.Range(0, 2000).Select(i => $"row-{i:D6}\n"));
+        FakeObject(content, failAfterBytes: 4096);
+
+        using var sut = await ResumingS3ObjectStream.OpenAsync(
+            s3,
+            Bucket,
+            Key,
+            NullLogger.Instance,
+            CancellationToken.None,
+            resumeDelay: TimeSpan.FromMilliseconds(200)
+        );
+        await ReadAllAsync(sut);
+
+        sut.TimeBlocked.Should().BeGreaterThanOrEqualTo(TimeSpan.FromMilliseconds(200));
+    }
 }

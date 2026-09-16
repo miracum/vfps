@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using Amazon.Runtime;
@@ -54,6 +55,7 @@ internal sealed class ResumingS3ObjectStream : Stream
     private ByteCountingStream current;
     private long bytesFromClosedResponses;
     private int consecutiveResumes;
+    private long blockedTicks;
 
     private ResumingS3ObjectStream(
         IAmazonS3 s3,
@@ -106,6 +108,18 @@ internal sealed class ResumingS3ObjectStream : Stream
     /// </summary>
     public long BytesRead => bytesFromClosedResponses + current.BytesRead;
 
+    /// <summary>
+    /// How long the job has spent inside this stream waiting for bytes - object storage delivering
+    /// them, plus any time spent re-establishing a dropped connection.
+    ///
+    /// Exists to settle a question the <see cref="CsvJobPhase.ReadInput"/> phase cannot answer on
+    /// its own: that phase covers pulling bytes *and* parsing them into fields, so a job dominated
+    /// by it may be waiting on the object store or may be short of CPU to parse with, and those
+    /// have opposite fixes. Everything measured here is unambiguously the former; the rest of the
+    /// phase is the latter.
+    /// </summary>
+    public TimeSpan TimeBlocked => Stopwatch.GetElapsedTime(0, blockedTicks);
+
     public override bool CanRead => true;
     public override bool CanSeek => false;
     public override bool CanWrite => false;
@@ -122,19 +136,27 @@ internal sealed class ResumingS3ObjectStream : Stream
         CancellationToken cancellationToken = default
     )
     {
-        while (true)
+        var startedAt = Stopwatch.GetTimestamp();
+        try
         {
-            try
+            while (true)
             {
-                var read = await current.ReadAsync(buffer, cancellationToken);
-                consecutiveResumes = 0;
+                try
+                {
+                    var read = await current.ReadAsync(buffer, cancellationToken);
+                    consecutiveResumes = 0;
 
-                return read;
+                    return read;
+                }
+                catch (Exception ex) when (ShouldResume(ex, cancellationToken))
+                {
+                    await ResumeAsync(ex, cancellationToken);
+                }
             }
-            catch (Exception ex) when (ShouldResume(ex, cancellationToken))
-            {
-                await ResumeAsync(ex, cancellationToken);
-            }
+        }
+        finally
+        {
+            blockedTicks += Stopwatch.GetTimestamp() - startedAt;
         }
     }
 

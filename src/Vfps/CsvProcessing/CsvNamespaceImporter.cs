@@ -64,13 +64,22 @@ internal sealed class CsvNamespaceImporter(
         );
         context.Progress.BytesProcessed = () => countingStream.BytesRead;
 
-        return await outputUploader.UploadAsync(
-            context.OutputObjectKey,
-            context.Encoding,
-            context.CsvConfig,
-            csvWriter => ImportAsync(context, countingStream, csvWriter, cancellationToken),
-            cancellationToken.ShutdownToken
-        );
+        try
+        {
+            return await outputUploader.UploadAsync(
+                context.OutputObjectKey,
+                context.Encoding,
+                context.CsvConfig,
+                csvWriter => ImportAsync(context, countingStream, csvWriter, cancellationToken),
+                cancellationToken.ShutdownToken
+            );
+        }
+        finally
+        {
+            // In a finally so an interrupted job still reports it - a job that died part-way is
+            // exactly when knowing whether it was starved of bytes or of CPU is worth most.
+            context.Phases.AddInputBlocked(countingStream.TimeBlocked);
+        }
     }
 
     private async Task<long> ImportAsync(

@@ -61,6 +61,26 @@ internal sealed class CsvJobPhaseTimer(PseudonymizationJobDirection direction)
         description: "Total time CSV pseudonymization jobs spent in each phase of processing, by job direction."
     );
 
+    /// <summary>
+    /// A breakdown *of* <see cref="CsvJobPhase.ReadInput"/>, not a fifth phase - deliberately kept
+    /// out of the phase set so the four phases still sum to the job's duration and stack cleanly.
+    ///
+    /// ReadInput covers pulling the input's bytes and parsing them into fields together, which
+    /// hides the one distinction that decides what to do about a job dominated by it: waiting on
+    /// object storage and being short of CPU to parse with look identical there, and have opposite
+    /// fixes. This is the object-storage half, measured inside
+    /// <see cref="ResumingS3ObjectStream"/>; ReadInput minus this is the parsing half. Close to
+    /// ReadInput means chase the store or the network, far below it means give the job more CPU.
+    /// </summary>
+    private static readonly Counter<double> InputBlockedDuration =
+        Program.Meter.CreateCounter<double>(
+            "vfps.csv.job.input.blocked.duration.seconds",
+            unit: "s",
+            description: "Of the time CSV jobs spent reading input, how much was spent waiting for object storage to deliver bytes rather than parsing them."
+        );
+
+    private double inputBlockedSeconds;
+
     // Indexed by (int)CsvJobPhase. Plain += with no synchronization: a job's phases are measured
     // from its own single, linear async flow - even the depseudonymize path, whose concurrency
     // lives entirely inside one ResolveDatabase scope rather than across several - so these are
@@ -73,6 +93,14 @@ internal sealed class CsvJobPhaseTimer(PseudonymizationJobDirection direction)
     /// the four totals sum to (very nearly) the job's own duration and can be read as shares of it.
     /// </summary>
     public Scope Measure(CsvJobPhase phase) => new(this, phase);
+
+    /// <summary>
+    /// Records how much of this job's <see cref="CsvJobPhase.ReadInput"/> time was spent waiting
+    /// for object storage - see <see cref="InputBlockedDuration"/>. Called once per job, by the
+    /// processors that read an input file;
+    /// <see cref="PseudonymizationJobDirection.Export"/> has none and leaves it at zero.
+    /// </summary>
+    public void AddInputBlocked(TimeSpan elapsed) => inputBlockedSeconds += elapsed.TotalSeconds;
 
     /// <summary>
     /// Publishes the totals as counter increments, and mirrors them onto <paramref name="activity"/>
@@ -98,6 +126,12 @@ internal sealed class CsvJobPhaseTimer(PseudonymizationJobDirection direction)
 
             activity?.SetTag($"vfps.csv.phase.{phaseTag}.seconds", seconds);
         }
+
+        InputBlockedDuration.Add(
+            inputBlockedSeconds,
+            new KeyValuePair<string, object?>("direction", direction.ToString())
+        );
+        activity?.SetTag("vfps.csv.input_blocked.seconds", inputBlockedSeconds);
     }
 
     private void Add(CsvJobPhase phase, double seconds) => elapsedSeconds[(int)phase] += seconds;
