@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.16.0](https://github.com/miracum/vfps/compare/v1.15.0...v1.16.0) (2026-09-16)
+
+
+### Features
+
+* impprt whole csv exports with namespace columns ([#322](https://github.com/miracum/vfps/issues/322)) ([7bb9592](https://github.com/miracum/vfps/commit/7bb95923a4a751f77c1c1b2d454253fc3355b7ea))
+
+
+### Bug Fixes
+
+* increase streaming buffer size ([#320](https://github.com/miracum/vfps/issues/320)) ([f13c4ba](https://github.com/miracum/vfps/commit/f13c4ba1a32cb88ae5e678c025e56704f771d841))
+
 ## [1.15.0](https://github.com/miracum/vfps/compare/v1.14.0...v1.15.0) (2026-09-15)
 
 
