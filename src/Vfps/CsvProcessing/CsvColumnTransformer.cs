@@ -28,18 +28,6 @@ internal sealed class CsvColumnTransformer(
     ILogger<CsvColumnTransformer> logger
 ) : ICsvColumnTransformer
 {
-    // Depseudonymize resolves a chunk via one concurrent DB call per row (Task.WhenAll - see
-    // FlushChunkDepseudonymizeAsync), each grabbing its own pooled connection, so this bound
-    // exists purely to protect the connection pool: kept well under its "Maximum Pool Size=50"
-    // default (see appsettings.Development.json/compose.yaml) so one CSV job can't starve every
-    // other Hangfire worker or request of a connection. Deliberately a constant, not configurable
-    // like Pseudonymize's batch size below - an operator raising it would need to reason about
-    // every other consumer of that same shared connection pool, not just this one job type.
-    // Pseudonymize resolves a whole chunk via a single batched upsert round trip regardless of
-    // chunk size, so it never touches more than one connection at a time and this concern doesn't
-    // apply to it - see CsvProcessingConfig.PseudonymizeBatchSize for that one's own reasoning.
-    private const int DepseudonymizeConcurrencyChunkSize = 20;
-
     /// <inheritdoc/>
     public async Task<long> ProcessAsync(
         CsvJobContext context,
@@ -151,13 +139,12 @@ internal sealed class CsvColumnTransformer(
             await csvWriter.NextRecordAsync();
         }
 
-        var chunkSize =
-            job.Direction == PseudonymizationJobDirection.Pseudonymize
-                // Clamped rather than trusted as-is - a misconfigured 0 or negative value
-                // would otherwise throw out of the List<BufferedRow> capacity below or flush
-                // on every single row.
-                ? Math.Max(1, csvProcessingConfig.Value.PseudonymizeBatchSize)
-                : DepseudonymizeConcurrencyChunkSize;
+        // Both directions now resolve a chunk in one batched round trip per namespace, so both
+        // take the same size - a de-pseudonymizing job no longer holds one pooled connection per
+        // row and no longer needs its own, much smaller, pool-protecting bound.
+        // Clamped rather than trusted as-is: a misconfigured 0 or negative value would otherwise
+        // throw out of the List<BufferedRow> capacity below or flush on every single row.
+        var chunkSize = Math.Max(1, csvProcessingConfig.Value.PseudonymizeBatchSize);
 
         // rows: actually flushed/written so far - what's reported as progress and eventually
         // RowsProcessed. totalRowsRead: consumed from the reader so far, flushed or not - this
@@ -189,7 +176,16 @@ internal sealed class CsvColumnTransformer(
                     break;
                 }
 
-                cancellationToken.ThrowIfCancellationRequested();
+                // ShutdownToken, not the Hangfire token itself: IJobCancellationToken's own
+                // ThrowIfCancellationRequested() takes a lock and issues a `GetStateData` query
+                // against Hangfire's storage on every call (Hangfire 1.8's
+                // ServerJobCancellationToken), so calling it per row costs one database round trip
+                // per row - which measured as ~84% of a 1M-row job's wall clock, billed to
+                // ParseInput because it sits inside that scope. The abort check it performs is
+                // made once per chunk instead (see the flush below), and a user-initiated cancel
+                // is already noticed by CsvJobProgressReporter.MaybeReportAndCheckCancelledAsync.
+                // ShutdownToken is a plain CancellationToken, so this stays a free flag read.
+                cancellationToken.ShutdownToken.ThrowIfCancellationRequested();
 
                 var fieldCount = csvReader.Parser.Count;
                 rawFields = new string?[fieldCount];
@@ -204,6 +200,9 @@ internal sealed class CsvColumnTransformer(
 
             if (chunk.Count >= chunkSize)
             {
+                // The Hangfire abort check, at chunk granularity rather than per row - see the
+                // note on ShutdownToken above for why it cannot go in the row loop.
+                cancellationToken.ThrowIfCancellationRequested();
                 await FlushChunkAsync(
                     chunk,
                     job.Direction,
@@ -225,6 +224,10 @@ internal sealed class CsvColumnTransformer(
 
         if (chunk.Count > 0)
         {
+            // Also here, not just at the full-chunk flushes above: a file shorter than one chunk
+            // would otherwise never reach a Hangfire abort check at all, and a job whose fetch has
+            // been reassigned to another worker must not go on to write output.
+            cancellationToken.ThrowIfCancellationRequested();
             await FlushChunkAsync(
                 chunk,
                 job.Direction,
@@ -259,11 +262,10 @@ internal sealed class CsvColumnTransformer(
 
     /// <summary>
     /// Writes out every row in <paramref name="chunk"/>, resolving each field first. Pseudonymize
-    /// and Depseudonymize deliberately take different paths here (see
+    /// and Depseudonymize still take separate paths here (see
     /// <see cref="FlushChunkPseudonymizeAsync"/> and <see cref="FlushChunkDepseudonymizeAsync"/>)
-    /// rather than a single generic one - only Pseudonymize's per-value operation (an upsert) can
-    /// be batched into one round trip; Depseudonymize's (a lookup) cannot use the same batched SQL
-    /// shape, so it keeps the one-DB-call-per-value-but-concurrent-across-the-chunk approach.
+    /// because their per-value operation differs - an upsert versus a lookup - but both now
+    /// resolve the whole chunk in one batched round trip per namespace rather than one per value.
     /// </summary>
     private async Task FlushChunkAsync(
         List<BufferedRow> chunk,
@@ -290,7 +292,6 @@ internal sealed class CsvColumnTransformer(
         {
             await FlushChunkDepseudonymizeAsync(
                 chunk,
-                direction,
                 inPlaceBySourceIndex,
                 appended,
                 csvWriter,
@@ -421,7 +422,6 @@ internal sealed class CsvColumnTransformer(
     /// </summary>
     private async Task FlushChunkDepseudonymizeAsync(
         List<BufferedRow> chunk,
-        PseudonymizationJobDirection direction,
         Dictionary<int, Namespace> inPlaceBySourceIndex,
         List<(int SourceIndex, string TargetColumn, Namespace Namespace)> appended,
         CsvWriter csvWriter,
@@ -429,57 +429,44 @@ internal sealed class CsvColumnTransformer(
         CsvJobPhaseTimer phases
     )
     {
-        // Opened before the tasks are created, not just around the WhenAll: ResolveValueAsync runs
-        // synchronously up to its first await, so some of the lookup work has already happened by
-        // the time the last task is started.
-        var resolveScope = phases.Measure(CsvJobPhase.ResolveDatabase);
-
+        // Mirrors FlushChunkPseudonymizeAsync exactly: collect the whole chunk's values, resolve
+        // them in one batch, then write. A blank/placeholder cell is left out of the batch rather
+        // than looked up, since a lookup for it could only ever miss.
+        var requests = new List<(Namespace Namespace, string PseudonymValue)>();
         foreach (var row in chunk)
         {
-            row.InPlaceResults = new Task<string>?[row.RawFields.Length];
-            for (var i = 0; i < row.RawFields.Length; i++)
+            foreach (var (sourceIndex, ns) in inPlaceBySourceIndex)
             {
-                if (inPlaceBySourceIndex.TryGetValue(i, out var ns))
+                var raw = row.RawFields[sourceIndex] ?? string.Empty;
+                if (!IsMissingValue(raw))
                 {
-                    row.InPlaceResults[i] = ResolveValueAsync(
-                        direction,
-                        ns,
-                        row.RawFields[i] ?? string.Empty,
-                        progress
-                    );
+                    requests.Add((ns, raw));
                 }
             }
 
-            row.AppendedResults = new Task<string>[appended.Count];
-            for (var a = 0; a < appended.Count; a++)
+            foreach (var mapping in appended)
             {
-                var mapping = appended[a];
                 var raw =
                     mapping.SourceIndex < row.RawFields.Length
                         ? row.RawFields[mapping.SourceIndex] ?? string.Empty
                         : string.Empty;
-                row.AppendedResults[a] = ResolveValueAsync(
-                    direction,
-                    mapping.Namespace,
-                    raw,
-                    progress
-                );
+                if (!IsMissingValue(raw))
+                {
+                    requests.Add((mapping.Namespace, raw));
+                }
             }
         }
 
-        try
+        IReadOnlyDictionary<(string, string), Pseudonym> resolved;
+        using (phases.Measure(CsvJobPhase.ResolveDatabase))
         {
-            await Task.WhenAll(
-                chunk.SelectMany(r =>
-                    r.InPlaceResults.Where(t => t is not null)
-                        .Cast<Task<string>>()
-                        .Concat(r.AppendedResults)
-                )
-            );
-        }
-        finally
-        {
-            resolveScope.Dispose();
+            resolved =
+                requests.Count == 0
+                    ? new Dictionary<(string, string), Pseudonym>()
+                    : await pseudonymAppService.ReverseLookupTrustedBatchAsync(
+                        requests,
+                        CancellationToken.None
+                    );
         }
 
         // Same reasoning as the pseudonymize path's write scope above.
@@ -489,20 +476,46 @@ internal sealed class CsvColumnTransformer(
         {
             for (var i = 0; i < row.RawFields.Length; i++)
             {
-                // Already completed - every task in this chunk was awaited via WhenAll above.
-                csvWriter.WriteField(
-                    row.InPlaceResults[i] is { } task
-                        ? await task
-                        : row.RawFields[i] ?? string.Empty
-                );
+                if (inPlaceBySourceIndex.TryGetValue(i, out var ns))
+                {
+                    csvWriter.WriteField(Resolve(ns, row.RawFields[i] ?? string.Empty));
+                }
+                else
+                {
+                    csvWriter.WriteField(row.RawFields[i] ?? string.Empty);
+                }
             }
 
-            foreach (var appendedTask in row.AppendedResults)
+            foreach (var mapping in appended)
             {
-                csvWriter.WriteField(await appendedTask);
+                var raw =
+                    mapping.SourceIndex < row.RawFields.Length
+                        ? row.RawFields[mapping.SourceIndex] ?? string.Empty
+                        : string.Empty;
+                csvWriter.WriteField(Resolve(mapping.Namespace, raw));
             }
 
             await csvWriter.NextRecordAsync();
+        }
+
+        // A value with no matching pseudonym is left exactly as it was found in the input,
+        // rather than failing the job or blanking the field - whether it is a genuinely unknown
+        // pseudonym or a value that was never pseudonymized at all, a partial or wrong column
+        // selection stays inspectable in the output instead of silently destroying data. A
+        // blank/missing cell (see CsvJobFormat.IsMissingValue) reaches the same outcome without
+        // ever being looked up: it was left out of the batch above, since a lookup for it could
+        // only ever miss.
+        string Resolve(Namespace @namespace, string raw)
+        {
+            if (IsMissingValue(raw))
+            {
+                progress.MissingValueCount++;
+                return raw;
+            }
+
+            return resolved.TryGetValue((@namespace.Name, raw), out var pseudonym)
+                ? pseudonym.OriginalValue
+                : raw;
         }
     }
 
@@ -512,48 +525,5 @@ internal sealed class CsvColumnTransformer(
     private sealed class BufferedRow(string?[] rawFields)
     {
         public string?[] RawFields { get; } = rawFields;
-        public Task<string>?[] InPlaceResults { get; set; } = [];
-        public Task<string>[] AppendedResults { get; set; } = [];
-    }
-
-    /// <summary>
-    /// Transforms one field according to the job's direction. Depseudonymize on a value with no
-    /// matching pseudonym leaves it unchanged rather than failing the whole job or blanking it -
-    /// the field is left exactly as it was found in the input, whether that's a genuine unknown
-    /// pseudonym or a value that was never pseudonymized in the first place, so a partial/wrong
-    /// column selection is inspectable in the output rather than silently destroying data. A
-    /// blank/missing value (see <see cref="CsvJobFormat.IsMissingValue"/>) short-circuits before
-    /// even attempting a lookup - same "leave it as-is" outcome, just skipping a DB round trip
-    /// that could only ever miss.
-    /// </summary>
-    private async Task<string> ResolveValueAsync(
-        PseudonymizationJobDirection direction,
-        Namespace @namespace,
-        string rawValue,
-        CsvJobProgressReporter progress
-    )
-    {
-        if (IsMissingValue(rawValue))
-        {
-            progress.MissingValueCount++;
-            return rawValue;
-        }
-
-        if (direction == PseudonymizationJobDirection.Depseudonymize)
-        {
-            var pseudonym = await pseudonymAppService.ReverseLookupTrustedAsync(
-                @namespace.Name,
-                rawValue,
-                CancellationToken.None
-            );
-            return pseudonym?.OriginalValue ?? rawValue;
-        }
-
-        var created = await pseudonymAppService.CreateTrustedAsync(
-            @namespace,
-            rawValue,
-            CancellationToken.None
-        );
-        return created.PseudonymValue;
     }
 }

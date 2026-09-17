@@ -18,14 +18,46 @@ namespace Vfps.CsvProcessing;
 /// Attributes this bookkeeping's own cost to <see cref="CsvJobPhase.ReportProgress"/>, separately
 /// from the database work the job is actually there to do.
 /// </param>
+/// <param name="progressUpdateInterval">
+/// Minimum wall time between check-ins, from
+/// <see cref="Config.CsvProcessingConfig.ProgressUpdateInterval"/>. <see cref="TimeSpan.Zero"/>
+/// makes every <see cref="ProgressUpdateRowInterval"/>th row a check-in, which is what the unit
+/// tests want and what a production deployment very much does not.
+/// </param>
 internal sealed class CsvJobProgressReporter(
     IPseudonymizationJobRepository jobRepository,
     Guid jobId,
-    CsvJobPhaseTimer phases
+    CsvJobPhaseTimer phases,
+    TimeSpan progressUpdateInterval
 )
 {
+    /// <summary>
+    /// How often the row counter is even looked at. Only a cheap modulo gate in front of the
+    /// clock read below - it is <see cref="Config.CsvProcessingConfig.ProgressUpdateInterval"/>
+    /// that decides whether an
+    /// update actually happens, so this bounds how far past the interval a check-in can slip
+    /// (one interval plus up to this many rows), not how many updates there are.
+    /// </summary>
     private const int ProgressUpdateRowInterval = 200;
-    private static readonly TimeSpan ProgressUpdateInterval = TimeSpan.FromSeconds(2);
+
+    /// <summary>
+    /// Minimum wall time between two check-ins. Each one is a committing round trip, so this is
+    /// what bounds their cost on a long job: a million-row import used to issue one every 200
+    /// rows regardless of elapsed time - 5,000 commits, ~20/s at observed throughput - because
+    /// the two gates below were combined with `&amp;&amp;`, which fires as soon as *either* opens.
+    /// With both required, the count follows the job's duration instead of its row count.
+    ///
+    /// Deliberately well above the ~2s the admin UI's job grid polls at: the progress bar simply
+    /// advances in larger steps, while a cross-AZ deployment - where a synchronous commit costs
+    /// milliseconds rather than the sub-millisecond it costs when every instance shares a host -
+    /// stops paying for a check-in per 200 rows. Also the ceiling on how long a cancel click
+    /// takes to be noticed, which is why this is seconds rather than minutes, and it must stay
+    /// far below <see cref="Config.CsvProcessingConfig.StalledJobThreshold"/> or a healthy job
+    /// would be marked Stalled.
+    ///
+    /// Supplied per job from <see cref="Config.CsvProcessingConfig.ProgressUpdateInterval"/>.
+    /// </summary>
+    private readonly TimeSpan progressUpdateInterval = progressUpdateInterval;
 
     private readonly Stopwatch sinceLastUpdate = Stopwatch.StartNew();
 
@@ -61,7 +93,8 @@ internal sealed class CsvJobProgressReporter(
     /// than only on flush boundaries, which for a pseudonymize job can be up to
     /// <see cref="Config.CsvProcessingConfig.PseudonymizeBatchSize"/> rows apart. Tying this to
     /// that boundary would mean a cancel click, or the UI's progress bar, could lag by that many
-    /// rows instead of the ~<see cref="ProgressUpdateRowInterval"/>/2s cadence this aims for.
+    /// rows instead of the <see cref="Config.CsvProcessingConfig.ProgressUpdateInterval"/>
+    /// cadence this aims for.
     /// </summary>
     /// <param name="totalRowsRead">
     /// Rows consumed from the source so far (flushed or still buffered) - gates *when* this checks
@@ -71,9 +104,11 @@ internal sealed class CsvJobProgressReporter(
     /// <returns>true if the job was cancelled and processing should stop.</returns>
     public async Task<bool> MaybeReportAndCheckCancelledAsync(long totalRowsRead, long rowsWritten)
     {
+        // Both gates must open, not either: the row gate is only here to keep the clock read off
+        // the per-row path, and on its own it fired every 200 rows however fast the job ran.
         if (
             totalRowsRead % ProgressUpdateRowInterval != 0
-            && sinceLastUpdate.Elapsed < ProgressUpdateInterval
+            || sinceLastUpdate.Elapsed < progressUpdateInterval
         )
         {
             return false;

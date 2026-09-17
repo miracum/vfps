@@ -230,6 +230,25 @@ public interface IPseudonymAppService
         string pseudonymValue,
         CancellationToken cancellationToken
     );
+
+    /// <summary>
+    /// Same as <see cref="ReverseLookupTrustedAsync"/> - including its trust boundary - but
+    /// resolves a whole chunk's worth of values in one round trip per distinct namespace instead
+    /// of one per value. The reverse-lookup counterpart to
+    /// <see cref="CreateTrustedBatchAsync"/>, and the reason a de-pseudonymizing CSV job no
+    /// longer costs a database call per row.
+    ///
+    /// A value with no matching pseudonym is simply absent from the returned dictionary rather
+    /// than mapping to null: callers leave such a field unchanged (see
+    /// <see cref="CsvProcessing.CsvColumnTransformer"/>), and an absent key expresses that
+    /// without a nullable value in the dictionary.
+    /// </summary>
+    Task<
+        IReadOnlyDictionary<(string Namespace, string PseudonymValue), Pseudonym>
+    > ReverseLookupTrustedBatchAsync(
+        IReadOnlyList<(Namespace Namespace, string PseudonymValue)> requests,
+        CancellationToken cancellationToken
+    );
 }
 
 /// <summary>One already-known pair to store via <see cref="IPseudonymAppService.ImportTrustedBatchAsync"/>.</summary>

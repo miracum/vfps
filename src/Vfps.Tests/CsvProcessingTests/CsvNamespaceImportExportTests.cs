@@ -83,6 +83,11 @@ public class CsvNamespaceImportExportTests
             new CsvProcessingConfig
             {
                 MissingValuePlaceholders = missingValuePlaceholders ?? ["NA", "NULL"],
+                // Zero, so the progress/cancellation gate below falls back to its row interval
+                // alone: these tests process a handful of rows in milliseconds, and the production
+                // default (seconds) would mean a job never checks in - or notices a cancellation -
+                // before reaching the end of the file.
+                ProgressUpdateInterval = TimeSpan.Zero,
             }
         );
         var outputUploader = new CsvJobOutputUploader(s3, s3Config);
@@ -108,6 +113,7 @@ public class CsvNamespaceImportExportTests
                 NullLogger<CsvNamespaceImporter>.Instance
             ),
             new CsvNamespaceExporter(pseudonymRepository, namespaceRepository, outputUploader),
+            csvProcessingConfig,
             NullLogger<CsvPseudonymizationJobRunner>.Instance
         );
     }

@@ -172,7 +172,16 @@ internal sealed class CsvNamespaceImporter(
                     break;
                 }
 
-                cancellationToken.ThrowIfCancellationRequested();
+                // ShutdownToken, not the Hangfire token itself: IJobCancellationToken's own
+                // ThrowIfCancellationRequested() takes a lock and issues a `GetStateData` query
+                // against Hangfire's storage on every call (Hangfire 1.8's
+                // ServerJobCancellationToken), so calling it per row costs one database round trip
+                // per row - which measured as ~84% of a 1M-row job's wall clock, billed to
+                // ParseInput because it sits inside that scope. The abort check it performs is
+                // made once per chunk instead (see the flush below), and a user-initiated cancel
+                // is already noticed by CsvJobProgressReporter.MaybeReportAndCheckCancelledAsync.
+                // ShutdownToken is a plain CancellationToken, so this stays a free flag read.
+                cancellationToken.ShutdownToken.ThrowIfCancellationRequested();
 
                 var fieldCount = csvReader.Parser.Count;
                 rawFields = new string?[fieldCount];
@@ -194,6 +203,9 @@ internal sealed class CsvNamespaceImporter(
 
             if (chunk.Count >= chunkSize)
             {
+                // The Hangfire abort check, at chunk granularity rather than per row - see the
+                // note on ShutdownToken above for why it cannot go in the row loop.
+                cancellationToken.ThrowIfCancellationRequested();
                 await FlushChunkAsync(
                     fixedNamespace,
                     namespacesByName,
@@ -214,6 +226,10 @@ internal sealed class CsvNamespaceImporter(
 
         if (chunk.Count > 0)
         {
+            // Also here, not just at the full-chunk flushes above: a file shorter than one chunk
+            // would otherwise never reach a Hangfire abort check at all, and a job whose fetch has
+            // been reassigned to another worker must not go on to write output.
+            cancellationToken.ThrowIfCancellationRequested();
             await FlushChunkAsync(
                 fixedNamespace,
                 namespacesByName,

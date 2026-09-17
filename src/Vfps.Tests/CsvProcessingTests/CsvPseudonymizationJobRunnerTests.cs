@@ -119,6 +119,11 @@ public class CsvPseudonymizationJobRunnerTests
             {
                 PseudonymizeBatchSize = pseudonymizeBatchSize,
                 MissingValuePlaceholders = missingValuePlaceholders ?? ["NA", "NULL"],
+                // Zero, so the progress/cancellation gate below falls back to its row interval
+                // alone: these tests process a handful of rows in milliseconds, and the production
+                // default (seconds) would mean a job never checks in - or notices a cancellation -
+                // before reaching the end of the file.
+                ProgressUpdateInterval = TimeSpan.Zero,
             }
         );
         var outputUploader = new CsvJobOutputUploader(s3, s3Config);
@@ -144,6 +149,7 @@ public class CsvPseudonymizationJobRunnerTests
                 NullLogger<CsvNamespaceImporter>.Instance
             ),
             new CsvNamespaceExporter(pseudonymRepository, namespaceRepository, outputUploader),
+            csvProcessingConfig,
             NullLogger<CsvPseudonymizationJobRunner>.Instance
         );
     }
@@ -233,28 +239,68 @@ public class CsvPseudonymizationJobRunnerTests
             });
     }
 
+    // Same shape as FakePseudonymize above, and for the same reason: the Depseudonymize path now
+    // resolves a whole chunk through one ReverseLookupTrustedBatchAsync call rather than one
+    // ReverseLookupTrustedAsync per value. A value registered with a null originalValue stands for
+    // an unknown pseudonym and is simply left out of the returned dictionary, which is how the
+    // batch contract expresses a miss.
+    private readonly Dictionary<
+        (string Namespace, string PseudonymValue),
+        string?
+    > knownOriginalValues = [];
+    private bool batchDepseudonymizeFakeConfigured;
+
     private void FakeDepseudonymize(
         string namespaceName,
         string pseudonymValue,
         string? originalValue
-    ) =>
+    )
+    {
+        knownOriginalValues[(namespaceName, pseudonymValue)] = originalValue;
+
+        if (batchDepseudonymizeFakeConfigured)
+        {
+            return;
+        }
+
+        batchDepseudonymizeFakeConfigured = true;
         A.CallTo(() =>
-                pseudonymAppService.ReverseLookupTrustedAsync(
-                    namespaceName,
-                    pseudonymValue,
+                pseudonymAppService.ReverseLookupTrustedBatchAsync(
+                    A<IReadOnlyList<(Data.Models.Namespace Namespace, string PseudonymValue)>>._,
                     A<CancellationToken>._
                 )
             )
-            .Returns(
-                originalValue is null
-                    ? null
-                    : new Data.Models.Pseudonym
+            .ReturnsLazily(call =>
+            {
+                var requests = call.GetArgument<
+                    IReadOnlyList<(Data.Models.Namespace Namespace, string PseudonymValue)>
+                >(0)!;
+
+                var result = new Dictionary<(string, string), Data.Models.Pseudonym>();
+                foreach (var (ns, pseudonymValue) in requests)
+                {
+                    var key = (ns.Name, pseudonymValue);
+                    if (
+                        !knownOriginalValues.TryGetValue(key, out var originalValue)
+                        || originalValue is null
+                    )
                     {
-                        NamespaceName = namespaceName,
+                        continue;
+                    }
+
+                    result[key] = new Data.Models.Pseudonym
+                    {
+                        NamespaceName = ns.Name,
                         OriginalValue = originalValue,
                         PseudonymValue = pseudonymValue,
-                    }
-            );
+                    };
+                }
+
+                return Task.FromResult(
+                    (IReadOnlyDictionary<(string, string), Data.Models.Pseudonym>)result
+                );
+            });
+    }
 
     [Fact]
     public async Task RunAsync_WithPseudonymizeDirection_ShouldPseudonymizeEachRowValueAndComplete()
@@ -533,9 +579,14 @@ public class CsvPseudonymizationJobRunnerTests
         await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         A.CallTo(() =>
-                pseudonymAppService.ReverseLookupTrustedAsync(
-                    "ns",
-                    "pseudonym-of-secret",
+                pseudonymAppService.ReverseLookupTrustedBatchAsync(
+                    A<
+                        IReadOnlyList<(Data.Models.Namespace Namespace, string PseudonymValue)>
+                    >.That.Matches(requests =>
+                        requests.Any(r =>
+                            r.Namespace.Name == "ns" && r.PseudonymValue == "pseudonym-of-secret"
+                        )
+                    ),
                     A<CancellationToken>._
                 )
             )
@@ -547,8 +598,8 @@ public class CsvPseudonymizationJobRunnerTests
     [Fact]
     public async Task RunAsync_WithDepseudonymizeDirectionAndNoMatchingPseudonym_ShouldStillCompleteJob()
     {
-        // ResolveValueAsync falls back to the raw value when ReverseLookupTrustedAsync returns
-        // null (see CsvPseudonymizationJobRunner.ResolveValueAsync) rather than failing the row -
+        // The transformer falls back to the raw value when a pseudonym is absent from the batch
+        // result (see CsvColumnTransformer's Resolve local function) rather than failing the row -
         // this only asserts the job still completes normally in that case, since the runner
         // doesn't expose the per-row output value to verify the fallback value directly.
         var job = CreateJob(
@@ -572,7 +623,7 @@ public class CsvPseudonymizationJobRunnerTests
     public async Task RunAsync_WithDepseudonymizeDirectionAndBlankOrMissingPlaceholderValues_ShouldSkipLookupAndCompleteJob()
     {
         // Blank/"NA"/"NULL" source values already passed through unchanged here (via the same
-        // fallback as an unmatched pseudonym - see ResolveValueAsync), so this couldn't crash the
+        // fallback as an unmatched pseudonym), so this couldn't crash the
         // way the Pseudonymize path could. It should still skip the DB round trip entirely for
         // these (there's nothing to look up) and count them the same way as the Pseudonymize
         // path, so the UI reports "N missing values" consistently regardless of direction.
@@ -590,17 +641,31 @@ public class CsvPseudonymizationJobRunnerTests
         await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         A.CallTo(() =>
-                pseudonymAppService.ReverseLookupTrustedAsync(
-                    "ns",
-                    "pseudonym-of-secret",
+                pseudonymAppService.ReverseLookupTrustedBatchAsync(
+                    A<
+                        IReadOnlyList<(Data.Models.Namespace Namespace, string PseudonymValue)>
+                    >.That.Matches(requests =>
+                        requests.Any(r =>
+                            r.Namespace.Name == "ns" && r.PseudonymValue == "pseudonym-of-secret"
+                        )
+                    ),
                     A<CancellationToken>._
                 )
             )
             .MustHaveHappenedOnceExactly();
+        // The blank/"NA"/"null" rows must never reach the batch at all - there is nothing to look
+        // up for them, and including them would spend a lookup slot on a guaranteed miss.
         A.CallTo(() =>
-                pseudonymAppService.ReverseLookupTrustedAsync(
-                    "ns",
-                    A<string>.That.Matches(v => v.Length == 0 || v == "NA" || v == "null"),
+                pseudonymAppService.ReverseLookupTrustedBatchAsync(
+                    A<
+                        IReadOnlyList<(Data.Models.Namespace Namespace, string PseudonymValue)>
+                    >.That.Matches(requests =>
+                        requests.Any(r =>
+                            r.PseudonymValue.Length == 0
+                            || r.PseudonymValue == "NA"
+                            || r.PseudonymValue == "null"
+                        )
+                    ),
                     A<CancellationToken>._
                 )
             )

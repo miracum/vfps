@@ -144,6 +144,23 @@ public interface IPseudonymRepository
     );
 
     /// <summary>
+    /// Batched <see cref="FindByPseudonymValueAsync"/>: every stored pseudonym in
+    /// <paramref name="namespaceName"/> whose pseudonym_value is one of
+    /// <paramref name="pseudonymValues"/>, in one round trip rather than one per value. Backs the
+    /// de-pseudonymize CSV direction, whose chunk previously cost one round trip per row.
+    ///
+    /// Uses the same (namespace_name, pseudonym_value) index as the single-value overload. Unlike
+    /// <see cref="FilterExistingPseudonymValuesAsync"/> this materializes the whole row, original
+    /// value included - that is the point of a reverse lookup, and the reason this is only
+    /// reachable through the reverse-lookup-gated app service methods.
+    /// </summary>
+    Task<IReadOnlyList<Pseudonym>> FindAllByPseudonymValuesAsync(
+        string namespaceName,
+        IReadOnlyCollection<string> pseudonymValues,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Returns the subset of <paramref name="pseudonymValues"/> that exist as pseudonym values
     /// in <paramref name="namespaceName"/>. Backs the parent-existence check a child namespace
     /// performs on its original values (see <see cref="Models.Namespace.ParentValidationMode"/>),

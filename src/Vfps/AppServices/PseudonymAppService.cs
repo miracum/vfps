@@ -650,6 +650,56 @@ public class PseudonymAppService(
         );
     }
 
+    /// <inheritdoc/>
+    public async Task<
+        IReadOnlyDictionary<(string Namespace, string PseudonymValue), Data.Models.Pseudonym>
+    > ReverseLookupTrustedBatchAsync(
+        IReadOnlyList<(Data.Models.Namespace Namespace, string PseudonymValue)> requests,
+        CancellationToken cancellationToken
+    )
+    {
+        var resolved =
+            new Dictionary<(string Namespace, string PseudonymValue), Data.Models.Pseudonym>();
+
+        if (requests.Count == 0)
+        {
+            return resolved;
+        }
+
+        // Same fresh, pooled DbContext reasoning as ReverseLookupTrustedAsync above.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var repository = new PseudonymRepository(context);
+
+        // One round trip per distinct namespace rather than per value: the lookup is
+        // namespace-scoped (it rides the (namespace_name, pseudonym_value) index), so a chunk
+        // touching a single namespace - the overwhelmingly common case - costs exactly one.
+        // Distinct values only, so a value repeated across the chunk is not asked for twice.
+        foreach (var group in requests.GroupBy(r => r.Namespace.Name, StringComparer.Ordinal))
+        {
+            var values = group
+                .Select(r => r.PseudonymValue)
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            foreach (
+                var pseudonym in await repository.FindAllByPseudonymValuesAsync(
+                    group.Key,
+                    values,
+                    cancellationToken
+                )
+            )
+            {
+                // A namespace cannot hold the same pseudonym value twice (the import path rejects
+                // that as a PseudonymValueConflict, and generation checks for it), so the first
+                // row for a key is the only one - indexer assignment rather than Add, purely so a
+                // stored duplicate predating those checks can't throw mid-job.
+                resolved[(group.Key, pseudonym.PseudonymValue)] = pseudonym;
+            }
+        }
+
+        return resolved;
+    }
+
     private static void ValidateOriginalValue(
         Data.Models.Namespace @namespace,
         string originalValue
