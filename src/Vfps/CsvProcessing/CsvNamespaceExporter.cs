@@ -97,7 +97,11 @@ internal sealed class CsvNamespaceExporter(
 
             foreach (var pseudonym in page)
             {
-                cancellationToken.ThrowIfCancellationRequested();
+                // ShutdownToken rather than the Hangfire token: the latter issues a storage query
+                // per call (see CsvNamespaceImporter's note), and this loop runs per row. The
+                // Hangfire abort check stays on the page loop above, which runs once per
+                // PageSize rows.
+                cancellationToken.ShutdownToken.ThrowIfCancellationRequested();
 
                 // Scoped per row rather than around the whole page, unlike every other direction:
                 // this loop interleaves writes with progress check-ins, so one scope spanning the

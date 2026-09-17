@@ -6,13 +6,14 @@ namespace Vfps.Config;
 public class CsvProcessingConfig
 {
     /// <summary>
-    /// How many rows' worth of values go into one batched upsert round trip when
-    /// pseudonymizing - see CsvPseudonymizationJobRunner.FlushChunkPseudonymizeAsync and
-    /// IPseudonymRepository.CreateIfNotExistBatchAsync. Doesn't apply to de-pseudonymization,
-    /// which resolves a chunk via concurrent single-value lookups bounded by the connection pool
-    /// instead (DepseudonymizeConcurrencyChunkSize, a constant - that one protects the shared
-    /// connection pool from a single job monopolizing it, so it isn't something an operator
-    /// should tune up without also considering every other consumer of that same pool).
+    /// How many rows' worth of values go into one batched round trip - an upsert when
+    /// pseudonymizing (CsvColumnTransformer.FlushChunkPseudonymizeAsync,
+    /// IPseudonymRepository.CreateIfNotExistBatchAsync), a reverse lookup when de-pseudonymizing
+    /// (FlushChunkDepseudonymizeAsync, IPseudonymRepository.FindAllByPseudonymValuesAsync), and
+    /// an import batch for the namespace-import direction. Named for the pseudonymize path it
+    /// was introduced for, but it now sizes every direction's chunk: de-pseudonymization used to
+    /// resolve a chunk via concurrent single-value lookups and needed its own much smaller bound
+    /// to protect the connection pool, and no longer does.
     ///
     /// Benchmarked locally against Postgres, fresh (non-conflicting) rows, 5 reps per size:
     /// throughput is ~30-35us/row from 100 rows upward with no cliff through 5000 (100 rows:
@@ -29,9 +30,21 @@ public class CsvProcessingConfig
     public int PseudonymizeBatchSize { get; set; } = 1000;
 
     /// <summary>
+    /// Minimum wall time between a running job's progress check-ins. Each one is a committing
+    /// round trip that also re-reads the job's status, so this is simultaneously the knob that
+    /// bounds their cost on a long job and the ceiling on how long a cancel click takes to be
+    /// noticed - raise it on a deployment where a commit is expensive (a cross-AZ synchronous
+    /// replica), lower it for a snappier progress bar and faster cancellation.
+    ///
+    /// Must stay far below <see cref="StalledJobThreshold"/>, or a perfectly healthy job stops
+    /// checking in for long enough to be marked Stalled.
+    /// </summary>
+    public TimeSpan ProgressUpdateInterval { get; set; } = TimeSpan.FromSeconds(5);
+
+    /// <summary>
     /// How long a job can sit in <see cref="Data.Models.PseudonymizationJobStatus.Running"/>
     /// with no progress update before <see cref="CsvProcessing.StalledPseudonymizationJobWatchdogService"/>
-    /// marks it Failed. A healthy job updates its progress at least every ~2s/200 rows (see
+    /// marks it Failed. A healthy job updates its progress every few seconds (see
     /// CsvPseudonymizationJobRunner), so this exists to catch a runner that crashed, was killed,
     /// or hit a database outage long enough to exhaust its own retries (see
     /// EnableRetryOnFailure in Program.cs) without ever getting to record its own failure -
@@ -62,14 +75,12 @@ public class CsvProcessingConfig
     /// How many CSV jobs one replica processes concurrently (Hangfire's worker count for this
     /// app's job server). Pinned rather than left at Hangfire's own default of
     /// <c>min(ProcessorCount * 5, 20)</c>, because that default is chosen for short, cheap jobs
-    /// and knows nothing about this app's real constraint: the shared Npgsql connection pool. A
-    /// single de-pseudonymizing job resolves a chunk via up to
-    /// CsvPseudonymizationJobRunner.DepseudonymizeConcurrencyChunkSize (20) concurrent lookups, so
-    /// 20 workers would be up to 400 concurrent connection requests from one replica against a
-    /// pool whose default maximum is 100 - jobs would then spend their time queued on the pool
-    /// (and eventually time out on the connection string's Timeout) rather than working. 4 keeps
-    /// the worst case (~80) inside that default pool while still overlapping jobs, and is the
-    /// knob to raise in step with `Maximum Pool Size` if a deployment wants more concurrency.
+    /// and knows nothing about this app's real constraint: the shared Npgsql connection pool.
+    /// Every direction now resolves a chunk over a single connection at a time, so N workers cost
+    /// about N connections rather than the up-to-20-per-job a de-pseudonymizing job used to take
+    /// - 4 is kept as a conservative default that leaves plenty of the pool for the API and
+    /// Hangfire itself, and is the knob to raise in step with `Maximum Pool Size` if a deployment
+    /// wants more job concurrency.
     ///
     /// Note this multiplies by replica count against a *shared* database: 4 workers on each of 3
     /// replicas is 12 concurrent jobs, not 4.

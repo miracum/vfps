@@ -120,6 +120,21 @@ public class CachingPseudonymRepository(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Pseudonym>> FindAllByPseudonymValuesAsync(
+        string namespaceName,
+        IReadOnlyCollection<string> pseudonymValues,
+        CancellationToken cancellationToken
+    )
+    {
+        // Not cached - same reasoning as FindByPseudonymValueAsync above.
+        return await Repository.FindAllByPseudonymValuesAsync(
+            namespaceName,
+            pseudonymValues,
+            cancellationToken
+        );
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Pseudonym>> FindAllByOriginalValueAsync(
         string namespaceName,
         string originalValue,

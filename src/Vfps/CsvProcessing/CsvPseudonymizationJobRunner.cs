@@ -3,7 +3,9 @@ using System.Text;
 using Hangfire;
 using Hangfire.Server;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Vfps.AppServices;
+using Vfps.Config;
 using Vfps.Data;
 using Vfps.Data.Models;
 
@@ -17,6 +19,7 @@ internal sealed class CsvPseudonymizationJobRunner(
     ICsvColumnTransformer columnTransformer,
     ICsvNamespaceImporter namespaceImporter,
     ICsvNamespaceExporter namespaceExporter,
+    IOptions<CsvProcessingConfig> csvProcessingConfig,
     ILogger<CsvPseudonymizationJobRunner> logger
 ) : ICsvPseudonymizationJobRunner
 {
@@ -211,7 +214,12 @@ internal sealed class CsvPseudonymizationJobRunner(
         // signal (that's what the job's own Status is for).
         context?.SetJobParameter("OutputObjectKey", outputObjectKey);
 
-        var progress = new CsvJobProgressReporter(jobRepository, job.Id, phases);
+        var progress = new CsvJobProgressReporter(
+            jobRepository,
+            job.Id,
+            phases,
+            csvProcessingConfig.Value.ProgressUpdateInterval
+        );
         var jobContext = new CsvJobContext(
             job,
             Encoding.GetEncoding(job.Encoding),

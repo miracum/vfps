@@ -453,6 +453,29 @@ public class PseudonymRepository : IPseudonymRepository
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Pseudonym>> FindAllByPseudonymValuesAsync(
+        string namespaceName,
+        IReadOnlyCollection<string> pseudonymValues,
+        CancellationToken cancellationToken
+    )
+    {
+        if (pseudonymValues.Count == 0)
+        {
+            return [];
+        }
+
+        // Contains() over a collection is translated by the Npgsql provider to `= ANY(@p)` - one
+        // array parameter, so the SQL text is identical whatever the chunk size and stays
+        // plan-cacheable, rather than an IN list whose parameter count changes per call.
+        return await Context
+            .Pseudonyms.AsNoTracking()
+            .Where(p =>
+                p.NamespaceName == namespaceName && pseudonymValues.Contains(p.PseudonymValue)
+            )
+            .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlySet<string>> FilterExistingPseudonymValuesAsync(
         string namespaceName,
         IReadOnlyCollection<string> pseudonymValues,
