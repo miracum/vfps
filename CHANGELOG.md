@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.16.4](https://github.com/miracum/vfps/compare/v1.16.3...v1.16.4) (2026-09-17)
+
+
+### Bug Fixes
+
+* improved CSV processing performance ([#329](https://github.com/miracum/vfps/issues/329)) ([01812c7](https://github.com/miracum/vfps/commit/01812c70c0663fee4b4f769a2c661e2733a713e7))
+
 ## [1.16.3](https://github.com/miracum/vfps/compare/v1.16.2...v1.16.3) (2026-09-16)
 
 
