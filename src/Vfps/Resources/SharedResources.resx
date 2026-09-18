@@ -118,6 +118,30 @@
   <data name="App.Common.Close" xml:space="preserve">
     <value>Close</value>
   </data>
+  <data name="App.CsvJobs.PseudonymizeMode" xml:space="preserve">
+    <value>Unknown values</value>
+  </data>
+  <data name="App.CsvJobs.PseudonymizeModeBlankIfMissingHint" xml:space="preserve">
+    <value>Unknown values are written out as an empty cell and counted - never as the original value, which would leave unpseudonymized data in the output.</value>
+  </data>
+  <data name="App.CsvJobs.PseudonymizeModeBlankIfMissingOption" xml:space="preserve">
+    <value>Leave the cell empty if the namespace doesn't already know a value</value>
+  </data>
+  <data name="App.CsvJobs.PseudonymizeModeCreateIfMissingOption" xml:space="preserve">
+    <value>Create a pseudonym for values the namespace doesn't know yet</value>
+  </data>
+  <data name="App.CsvJobs.PseudonymizeModeFailIfMissingOption" xml:space="preserve">
+    <value>Fail the job if the namespace doesn't already know a value</value>
+  </data>
+  <data name="App.CsvJobs.UnresolvedValueCountPlural" xml:space="preserve">
+    <value>{0} unknown values</value>
+  </data>
+  <data name="App.CsvJobs.UnresolvedValueCountSingular" xml:space="preserve">
+    <value>{0} unknown value</value>
+  </data>
+  <data name="App.CsvJobs.UnresolvedValueTitle" xml:space="preserve">
+    <value>These values had no pseudonym in their namespace and this job was set not to create one - written out as empty cells.</value>
+  </data>
   <data name="App.Namespaces.ConfigureAccessAction" xml:space="preserve">
     <value>Configure access</value>
   </data>

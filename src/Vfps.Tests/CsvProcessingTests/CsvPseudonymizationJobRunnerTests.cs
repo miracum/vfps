@@ -50,6 +50,7 @@ public class CsvPseudonymizationJobRunnerTests
                     A<long>._,
                     A<int>._,
                     A<int>._,
+                    A<int>._,
                     A<CancellationToken>._
                 )
             )
@@ -69,6 +70,7 @@ public class CsvPseudonymizationJobRunnerTests
                     A<Guid>._,
                     A<long>._,
                     A<long>._,
+                    A<int>._,
                     A<int>._,
                     A<int>._,
                     A<CancellationToken>._
@@ -165,12 +167,19 @@ public class CsvPseudonymizationJobRunnerTests
     private static PseudonymizationJob CreateJob(
         PseudonymizationJobDirection direction,
         params ColumnMapping[] columnMappings
+    ) => CreateJob(direction, PseudonymizeMode.CreateIfMissing, columnMappings);
+
+    private static PseudonymizationJob CreateJob(
+        PseudonymizationJobDirection direction,
+        PseudonymizeMode pseudonymizeMode,
+        params ColumnMapping[] columnMappings
     ) =>
         new()
         {
             Id = Guid.NewGuid(),
             Status = PseudonymizationJobStatus.Queued,
             Direction = direction,
+            PseudonymizeMode = pseudonymizeMode,
             CreatedBy = "test-user",
             InputObjectKey = "csv-jobs/input.csv",
             ColumnMappings = [.. columnMappings],
@@ -190,7 +199,7 @@ public class CsvPseudonymizationJobRunnerTests
 
     // Backs the CreateTrustedBatchAsync fake below - CsvPseudonymizationJobRunner's Pseudonymize
     // path resolves a whole chunk via one batched call rather than one CreateTrustedAsync call
-    // per value (see FlushChunkPseudonymizeAsync), so FakePseudonymize registers known
+    // per value (see FlushChunkAsync), so FakePseudonymize registers known
     // (namespace, originalValue) -> pseudonymValue mappings here instead of stubbing individual
     // calls directly.
     private readonly Dictionary<
@@ -342,6 +351,262 @@ public class CsvPseudonymizationJobRunnerTests
             .MustHaveHappenedOnceExactly();
     }
 
+    // The lookup-only counterpart to FakePseudonymize: only the registered pairs resolve, and
+    // anything else is simply absent from the returned dictionary - which is exactly how
+    // ResolveTrustedBatchAsync reports "this namespace has never seen that value".
+    private readonly Dictionary<
+        (string Namespace, string OriginalValue),
+        string
+    > existingPseudonymValues = [];
+    private bool batchResolveFakeConfigured;
+
+    private void FakeExistingPseudonym(
+        string namespaceName,
+        string originalValue,
+        string pseudonymValue
+    )
+    {
+        existingPseudonymValues[(namespaceName, originalValue)] = pseudonymValue;
+
+        if (batchResolveFakeConfigured)
+        {
+            return;
+        }
+
+        batchResolveFakeConfigured = true;
+        A.CallTo(() =>
+                pseudonymAppService.ResolveTrustedBatchAsync(
+                    A<IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>>._,
+                    A<CancellationToken>._
+                )
+            )
+            .ReturnsLazily(call =>
+            {
+                var requests = call.GetArgument<
+                    IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>
+                >(0)!;
+
+                var result = new Dictionary<(string, string), Data.Models.Pseudonym>();
+                foreach (var (ns, originalValue) in requests)
+                {
+                    var key = (ns.Name, originalValue);
+                    if (existingPseudonymValues.TryGetValue(key, out var pseudonymValue))
+                    {
+                        result[key] = new Data.Models.Pseudonym
+                        {
+                            NamespaceName = ns.Name,
+                            OriginalValue = originalValue,
+                            PseudonymValue = pseudonymValue,
+                        };
+                    }
+                }
+
+                return Task.FromResult(
+                    (IReadOnlyDictionary<(string, string), Data.Models.Pseudonym>)result
+                );
+            });
+    }
+
+    [Theory]
+    [InlineData(PseudonymizeMode.FailIfMissing)]
+    [InlineData(PseudonymizeMode.BlankIfMissing)]
+    public async Task RunAsync_WithALookupOnlyMode_ShouldResolveWithoutEverCreating(
+        PseudonymizeMode mode
+    )
+    {
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            mode,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,known\n");
+        FakeExistingPseudonym("ns", "known", "pseudonym-of-known");
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        A.CallTo(() =>
+                pseudonymAppService.ResolveTrustedBatchAsync(
+                    A<
+                        IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>
+                    >.That.Matches(reqs =>
+                        reqs.Any(r => r.Namespace.Name == "ns" && r.OriginalValue == "known")
+                    ),
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+
+        // The whole point of the mode: nothing is minted, whatever the file contains.
+        A.CallTo(() =>
+                pseudonymAppService.CreateTrustedBatchAsync(
+                    A<IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)>>._,
+                    A<CancellationToken>._
+                )
+            )
+            .MustNotHaveHappened();
+        A.CallTo(() => jobRepository.CompleteAsync(job.Id, A<string>._, 1, A<CancellationToken>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithFailIfMissing_AndAnUnknownValue_ShouldFailWithoutCompleting()
+    {
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            PseudonymizeMode.FailIfMissing,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,known\n2,never-seen\n");
+        FakeExistingPseudonym("ns", "known", "pseudonym-of-known");
+
+        var sut = CreateSut();
+        var run = () => sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        await run.Should().ThrowAsync<UnresolvedOriginalValueException>();
+
+        A.CallTo(() =>
+                jobRepository.CompleteAsync(job.Id, A<string>._, A<long>._, A<CancellationToken>._)
+            )
+            .MustNotHaveHappened();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithFailIfMissing_ShouldRecordWhereItStoppedButNeverTheValue()
+    {
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            PseudonymizeMode.FailIfMissing,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,known\n2,never-seen\n");
+        FakeExistingPseudonym("ns", "known", "pseudonym-of-known");
+
+        var sut = CreateSut();
+        var run = () => sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+        await run.Should().ThrowAsync<UnresolvedOriginalValueException>();
+
+        // Unlike every other CSV failure, this one's own message is persisted rather than replaced
+        // with the generic "see server logs" text - so what it may and may not contain is the
+        // thing worth pinning down. The row, the column and the namespace are the caller's own job
+        // configuration coming back; the value never appears.
+        A.CallTo(() =>
+                jobRepository.UpdateStatusAsync(
+                    job.Id,
+                    PseudonymizationJobStatus.Failed,
+                    A<string>.That.Matches(message =>
+                        message!.Contains("data row 2", StringComparison.Ordinal)
+                        && message.Contains("'ns'", StringComparison.Ordinal)
+                        && message.Contains("'value'", StringComparison.Ordinal)
+                        && !message.Contains("never-seen", StringComparison.Ordinal)
+                    ),
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithBlankIfMissing_ShouldCountUnknownValuesAndComplete()
+    {
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            PseudonymizeMode.BlankIfMissing,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,known\n2,never-seen\n3,also-never-seen\n");
+        FakeExistingPseudonym("ns", "known", "pseudonym-of-known");
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        // Three rows written, two of them with an emptied cell - counted as unresolved (the sixth
+        // argument) rather than as missing input values (the fifth), which they are not.
+        A.CallTo(() =>
+                jobRepository.UpdateProgressAsync(
+                    job.Id,
+                    A<long>._,
+                    3,
+                    0,
+                    0,
+                    2,
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappened();
+        A.CallTo(() => jobRepository.CompleteAsync(job.Id, A<string>._, 3, A<CancellationToken>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithBlankIfMissing_ShouldCountABlankInputCellAsMissingNotUnresolved()
+    {
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            PseudonymizeMode.BlankIfMissing,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        // Row 2's cell is blank and row 3's is a configured placeholder: neither is a value this
+        // namespace has never seen, they are values that were never there to resolve.
+        FakeInputObject(job, "id,value\n1,known\n2,\n3,NA\n");
+        FakeExistingPseudonym("ns", "known", "pseudonym-of-known");
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        A.CallTo(() =>
+                jobRepository.UpdateProgressAsync(
+                    job.Id,
+                    A<long>._,
+                    3,
+                    0,
+                    2,
+                    0,
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappened();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithFailIfMissing_ShouldNotFailOverABlankInputCell()
+    {
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            PseudonymizeMode.FailIfMissing,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id,value\n1,known\n2,\n");
+        FakeExistingPseudonym("ns", "known", "pseudonym-of-known");
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        // A blank cell is what a real-world CSV export routinely contains, and it is already a
+        // tolerated, counted case in every other mode - failing a job over one would make this
+        // mode unusable on real files for a reason that has nothing to do with what it guards.
+        A.CallTo(() => jobRepository.CompleteAsync(job.Id, A<string>._, 2, A<CancellationToken>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
     [Fact]
     public async Task RunAsync_WithPerformContext_ShouldSetInputAndOutputObjectKeyAsJobParameters()
     {
@@ -465,6 +730,7 @@ public class CsvPseudonymizationJobRunnerTests
                     1,
                     1,
                     0,
+                    0,
                     A<CancellationToken>._
                 )
             )
@@ -511,6 +777,7 @@ public class CsvPseudonymizationJobRunnerTests
                     4,
                     0,
                     3,
+                    0,
                     A<CancellationToken>._
                 )
             )
@@ -556,6 +823,7 @@ public class CsvPseudonymizationJobRunnerTests
                     2,
                     0,
                     1,
+                    0,
                     A<CancellationToken>._
                 )
             )
@@ -677,6 +945,7 @@ public class CsvPseudonymizationJobRunnerTests
                     4,
                     0,
                     3,
+                    0,
                     A<CancellationToken>._
                 )
             )

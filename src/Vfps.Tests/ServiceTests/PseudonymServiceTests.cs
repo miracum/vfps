@@ -49,6 +49,94 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task Resolve_WithAStoredOriginalValue_ShouldReturnItsExistingPseudonym()
+    {
+        var request = new PseudonymServiceResolveRequest
+        {
+            Namespace = "existingNamespace",
+            OriginalValue = "an original value",
+        };
+
+        var response = await sut.Resolve(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
+
+        response.Pseudonym.PseudonymValue.Should().Be("existingPseudonym");
+        response.Pseudonyms.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Resolve_WithAnUnknownOriginalValue_ShouldThrowNotFoundRatherThanCreateOne()
+    {
+        var countBefore = InMemoryPseudonymContext.Pseudonyms.Count();
+        var request = new PseudonymServiceResolveRequest
+        {
+            Namespace = "existingNamespace",
+            OriginalValue = "never stored",
+        };
+
+        var act = () => sut.Resolve(request, TestServerCallContext.Create());
+
+        var result = await act.Should().ThrowAsync<RpcException>();
+        result.Which.StatusCode.Should().Be(StatusCode.NotFound);
+
+        // The difference from Create, and the reason this operation exists.
+        InMemoryPseudonymContext.Pseudonyms.Count().Should().Be(countBefore);
+    }
+
+    [Fact]
+    public async Task Resolve_WithAnUnknownOriginalValue_ShouldNotEchoItBackInTheTrailers()
+    {
+        // Get puts the pseudonym it could not find in the trailing metadata, which is safe - the
+        // caller already sent it and it is not the secret. The original value is, and trailers
+        // reach the caller's own logs, so this one names only the namespace.
+        var request = new PseudonymServiceResolveRequest
+        {
+            Namespace = "existingNamespace",
+            OriginalValue = "never stored",
+        };
+
+        var act = () => sut.Resolve(request, TestServerCallContext.Create());
+
+        var result = await act.Should().ThrowAsync<RpcException>();
+        result
+            .Which.Trailers.Should()
+            .NotContain(entry => entry.Value.Contains("never stored", StringComparison.Ordinal));
+        result.Which.Trailers.Should().Contain(entry => entry.Key == "namespace");
+    }
+
+    [Fact]
+    public async Task Resolve_WithUnknownNamespace_ShouldThrowNotFound()
+    {
+        var request = new PseudonymServiceResolveRequest
+        {
+            Namespace = "noSuchNamespace",
+            OriginalValue = "an original value",
+        };
+
+        var act = () => sut.Resolve(request, TestServerCallContext.Create());
+
+        var result = await act.Should().ThrowAsync<RpcException>();
+        result.Which.StatusCode.Should().Be(StatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Resolve_WithBlankOriginalValue_ShouldThrowInvalidArgument()
+    {
+        var request = new PseudonymServiceResolveRequest
+        {
+            Namespace = "existingNamespace",
+            OriginalValue = "   ",
+        };
+
+        var act = () => sut.Resolve(request, TestServerCallContext.Create());
+
+        var result = await act.Should().ThrowAsync<RpcException>();
+        result.Which.StatusCode.Should().Be(StatusCode.InvalidArgument);
+    }
+
+    [Fact]
     public async Task Create_ShouldSaveNewPseudonym()
     {
         var request = new PseudonymServiceCreateRequest

@@ -6,7 +6,7 @@ namespace Vfps.CsvProcessing;
 
 /// <summary>
 /// One CSV job's progress bookkeeping: the throttled "check in with the database" cadence every
-/// direction shares, plus the two recovered-problem counters the UI surfaces alongside it.
+/// direction shares, plus the recovered-problem counters the UI surfaces alongside it.
 ///
 /// Created per job by <see cref="CsvPseudonymizationJobRunner"/> and handed to whichever
 /// <see cref="ICsvJobProcessor"/> runs it, so all four directions report progress and notice a
@@ -89,6 +89,14 @@ internal sealed class CsvJobProgressReporter(
     public int MissingValueCount { get; set; }
 
     /// <summary>
+    /// Fields blanked because the namespace held no pseudonym for them and the job was told not to
+    /// create one - <see cref="PseudonymizeMode.BlankIfMissing"/> only. Lives here for the same
+    /// reason as the two counters above: it is incremented deep inside the per-chunk flush path
+    /// and observed by the reporting code below.
+    /// </summary>
+    public int UnresolvedValueCount { get; set; }
+
+    /// <summary>
     /// Called on every row read - cheap to skip via the interval/elapsed-time gate below - rather
     /// than only on flush boundaries, which for a pseudonymize job can be up to
     /// <see cref="Config.CsvProcessingConfig.PseudonymizeBatchSize"/> rows apart. Tying this to
@@ -126,6 +134,7 @@ internal sealed class CsvJobProgressReporter(
             rowsWritten,
             BadDataRowCount,
             MissingValueCount,
+            UnresolvedValueCount,
             CancellationToken.None
         );
         sinceLastUpdate.Restart();
@@ -147,6 +156,7 @@ internal sealed class CsvJobProgressReporter(
             rowsWritten,
             BadDataRowCount,
             MissingValueCount,
+            UnresolvedValueCount,
             CancellationToken.None
         );
         sinceLastUpdate.Restart();

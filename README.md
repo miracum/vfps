@@ -193,6 +193,28 @@ Upload a CSV file to pseudonymize or de-pseudonymize one or more columns as a ba
 
 ![CSV pseudonymization jobs page](docs/img/ui-jobs.png)
 
+A **pseudonymize** job normally creates a pseudonym for any value the namespace doesn't know yet.
+Where that is wrong - a file that is supposed to contain only subjects already in a cohort, where a
+new pseudonym would silently record one that was never meant to be there - the **unknown values**
+setting changes what happens instead:
+
+- **Fail the job** stops at the first value the namespace doesn't know, before writing any part of
+  the chunk it was found in, and reports the data row, column and namespace it stopped at. The
+  value itself is never recorded in the error, only where it was.
+- **Leave the cell empty** writes an empty cell for each unknown value, counts them, and carries
+  on. The count is shown on the job, separately from the "missing value" count: both render as an
+  empty cell in the output and mean opposite things - "the input had nothing here" versus "the
+  input had a value this namespace has never seen".
+
+Neither ever writes the original value through to the output. That is what de-pseudonymization does
+with a pseudonym it cannot resolve, where the field harmlessly stays a pseudonym; doing the same
+here would leave unpseudonymized data in the very column the job was asked to replace.
+
+The setting applies to pseudonymize jobs only, and is rejected rather than ignored on any other
+direction - the other three either read pseudonyms or store pairs the caller already holds, so
+there is nothing for it to guard. The equivalent single-value API operation is
+[`$resolve-pseudonym` / `PseudonymService.Resolve`](#resolving-without-creating).
+
 The same page also moves a whole namespace in and out as CSV, as two further job directions:
 
 - **Import** loads already-known pairs instead of generating pseudonyms for them - for migrating a
@@ -766,6 +788,26 @@ will create a pseudonym in the `test` namespace. The expected response looks as 
   ]
 }
 ```
+
+### Resolving without creating
+
+`$resolve-pseudonym` takes the same Parameters resource and returns the same response, with one
+difference: it never creates anything. A value the namespace already knows comes back as above; one
+it doesn't returns `404` with an `OperationOutcome`, rather than a freshly generated pseudonym.
+
+The gRPC/REST API has the same operation as `PseudonymService.Resolve`, transcoded to
+`POST /v1/namespaces/{namespace}/pseudonyms:resolve` with the original value in the body - like
+`Create`, and deliberately not as a `GET` with the value in the path, where every access log, proxy
+and browser history between the caller and this service would record it. A value the namespace has
+never seen comes back as `NOT_FOUND` (`404` over REST), and the status carries only the namespace -
+never the value that was not found.
+
+Both require **write** access, the same as creating. That is not quite the tautology it looks like:
+a create call can never tell you whether the pseudonym it handed back already existed, and this one
+can, which makes it an existence oracle over a namespace's original values ("was this subject ever
+in this cohort?"). Write access already lets a caller obtain the mapping for any value it can
+supply, so this is a small step rather than a new capability - but it is a step, and it is why the
+operation is not gated on mere read access.
 
 ## Development
 

@@ -41,6 +41,7 @@ public class CsvNamespaceImportExportTests
                     A<long>._,
                     A<int>._,
                     A<int>._,
+                    A<int>._,
                     A<CancellationToken>._
                 )
             )
@@ -60,6 +61,7 @@ public class CsvNamespaceImportExportTests
                     A<Guid>._,
                     A<long>._,
                     A<long>._,
+                    A<int>._,
                     A<int>._,
                     A<int>._,
                     A<CancellationToken>._
@@ -353,6 +355,7 @@ public class CsvNamespaceImportExportTests
                     2,
                     0,
                     1,
+                    0,
                     A<CancellationToken>._
                 )
             )
@@ -705,6 +708,7 @@ public class CsvNamespaceImportExportTests
                     2,
                     0,
                     1,
+                    0,
                     A<CancellationToken>._
                 )
             )

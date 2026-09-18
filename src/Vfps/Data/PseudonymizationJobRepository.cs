@@ -75,6 +75,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
         long rowsProcessed,
         int badDataRowCount,
         int missingValueCount,
+        int unresolvedValueCount,
         CancellationToken cancellationToken
     )
     {
@@ -86,6 +87,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
                         .SetProperty(j => j.RowsProcessed, rowsProcessed)
                         .SetProperty(j => j.BadDataRowCount, badDataRowCount)
                         .SetProperty(j => j.MissingValueCount, missingValueCount)
+                        .SetProperty(j => j.UnresolvedValueCount, unresolvedValueCount)
                         .SetProperty(j => j.LastUpdatedAt, DateTimeOffset.UtcNow),
                 cancellationToken
             );
@@ -98,6 +100,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
         long rowsProcessed,
         int badDataRowCount,
         int missingValueCount,
+        int unresolvedValueCount,
         CancellationToken cancellationToken
     )
     {
@@ -111,6 +114,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
                         .SetProperty(j => j.RowsProcessed, rowsProcessed)
                         .SetProperty(j => j.BadDataRowCount, badDataRowCount)
                         .SetProperty(j => j.MissingValueCount, missingValueCount)
+                        .SetProperty(j => j.UnresolvedValueCount, unresolvedValueCount)
                         .SetProperty(j => j.LastUpdatedAt, DateTimeOffset.UtcNow),
                 cancellationToken
             );

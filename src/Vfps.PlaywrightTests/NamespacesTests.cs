@@ -136,8 +136,33 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
             .ToHaveURLAsync(
                 $"{PlaywrightFixture.BaseUrl}/ui/namespaces/{Uri.EscapeDataString(name)}/pseudonyms"
             );
-        var bodyText = await Page.Locator("body").InnerTextAsync();
-        bodyText.Should().NotContain("404");
+
+        // Assert the pseudonyms page rendered, rather than scanning the body for "404", which is
+        // what this used to do and which was wrong twice over.
+        //
+        // Both pages are InteractiveServer, so clicking the link routes over the circuit rather
+        // than issuing a request: the address moves on pushState and the new markup arrives over
+        // the socket after it. The URL assertion above is satisfied by the first half of that, and
+        // the body read was a single shot with no retry, so on a loaded runner it could still be
+        // looking at the namespaces page it came from - which lists every namespace in the
+        // deployment, each ending in twelve random hex characters. About one suffix in four
+        // hundred contains the literal "404", and the CI failure that prompted this was exactly
+        // that: an unrelated "e2e-ns-32bfca540457" sitting in the tree.
+        //
+        // Matching this page instead of the absence of a string removes both halves at once -
+        // these assertions retry, so they also wait for the render the URL alone doesn't prove.
+        await Expect(Page.Locator("#originalValue")).ToBeVisibleAsync();
+
+        // The heading is what actually pins the regression down: the name has to come back out of
+        // the route parameter decoded, not as the escaped form the address bar shows. A page that
+        // merely rendered would satisfy the locator above even if the name had not survived.
+        await Expect(
+                Page.GetByRole(
+                    AriaRole.Heading,
+                    new PageGetByRoleOptions { Name = $"Pseudonyms in {name}" }
+                )
+            )
+            .ToBeVisibleAsync();
     }
 
     [Fact]

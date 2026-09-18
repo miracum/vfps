@@ -47,6 +47,19 @@ public class PseudonymizationJobAppService(
         CancellationToken cancellationToken
     )
     {
+        if (
+            request.PseudonymizeMode != PseudonymizeMode.CreateIfMissing
+            && request.Direction != PseudonymizationJobDirection.Pseudonymize
+        )
+        {
+            throw new ArgumentException(
+                $"A {request.Direction} job has no pseudonymize mode - "
+                    + $"{nameof(request.PseudonymizeMode)} is only valid on a "
+                    + $"{PseudonymizationJobDirection.Pseudonymize} job.",
+                nameof(request)
+            );
+        }
+
         await EnsureNamespaceAccessAsync(
             request.ColumnMappings,
             request.Direction,
@@ -60,6 +73,7 @@ public class PseudonymizationJobAppService(
         {
             Id = jobId,
             Direction = request.Direction,
+            PseudonymizeMode = request.PseudonymizeMode,
             CreatedBy = user.GetSubject(),
             InputObjectKey = $"{S3ObjectKeyPrefix}{jobId}/input.csv",
             OriginalFileName = request.OriginalFileName,

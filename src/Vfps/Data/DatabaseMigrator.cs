@@ -1,9 +1,12 @@
+using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Vfps.Data;
 
 /// <summary>
-/// The `migrate` subcommand: applies every pending EF Core migration and exits.
+/// The `migrate` subcommand: applies every pending EF Core migration, installs Hangfire's own
+/// schema, and exits.
 /// </summary>
 /// <remarks>
 /// This replaces the two `dotnet ef migrations bundle` executables (`efbundle`,
@@ -14,8 +17,10 @@ namespace Vfps.Data;
 /// nothing extra and keeps a single code path for "apply the migrations".
 ///
 /// Deliberately not a <c>WebApplication</c>: a migration run has no business binding Kestrel,
-/// reaching an OIDC discovery endpoint or an S3 bucket, or starting Hangfire's job server. It
-/// builds the DbContexts straight off <see cref="IConfiguration"/>.
+/// reaching an OIDC discovery endpoint or an S3 bucket, or starting Hangfire's job server -
+/// installing Hangfire's schema needs none of that, see
+/// <see cref="InstallHangfireSchema"/>. It builds the DbContexts straight off
+/// <see cref="IConfiguration"/>.
 /// </remarks>
 internal static class DatabaseMigrator
 {
@@ -28,6 +33,13 @@ internal static class DatabaseMigrator
     {
         ["--connection"] = "ConnectionStrings:PostgreSQL",
     };
+
+    /// <summary>
+    /// The Postgres schema Hangfire's own tables live in. Shared with Program.cs rather than left
+    /// to <see cref="PostgreSqlStorageOptions" />'s default on both sides, so that the schema this
+    /// job installs and the one the app reads can't drift apart.
+    /// </summary>
+    public const string HangfireSchemaName = "hangfire";
 
     public static async Task<int> RunAsync(string[] args)
     {
@@ -63,16 +75,15 @@ internal static class DatabaseMigrator
                 ConfigurePseudonymContext(isp.GetRequiredService<IConfiguration>(), options)
         );
 
-        // Only registered when a PostgreSQL connection string is set, mirroring Program.cs: the
-        // Data Protection key ring lives in Postgres only when there is a Postgres to put it in.
-        var dataProtectionConnectionString = builder.Configuration.GetConnectionString(
-            "PostgreSQL"
-        );
-        var hasDataProtectionContext = !string.IsNullOrEmpty(dataProtectionConnectionString);
-        if (hasDataProtectionContext)
+        // Both the Data Protection key ring and Hangfire live in ConnectionStrings:PostgreSQL,
+        // so one check gates both, mirroring Program.cs: neither exists where there is no Postgres
+        // to put it in.
+        var postgresConnectionString = builder.Configuration.GetConnectionString("PostgreSQL");
+        var hasPostgres = !string.IsNullOrEmpty(postgresConnectionString);
+        if (hasPostgres)
         {
             builder.Services.AddDbContext<DataProtectionKeyContext>(options =>
-                options.UseNpgsql(dataProtectionConnectionString)
+                options.UseNpgsql(postgresConnectionString)
             );
         }
 
@@ -87,9 +98,10 @@ internal static class DatabaseMigrator
 
             await MigrateAsync<PseudonymContext>(scope.ServiceProvider, logger);
 
-            if (hasDataProtectionContext)
+            if (hasPostgres)
             {
                 await MigrateAsync<DataProtectionKeyContext>(scope.ServiceProvider, logger);
+                InstallHangfireSchema(postgresConnectionString!, logger);
             }
             else
             {
@@ -97,7 +109,8 @@ internal static class DatabaseMigrator
                 // skipping it is how you end up with the app failing at startup on
                 // `relation "data_protection_keys" does not exist`.
                 logger.LogWarning(
-                    "No PostgreSQL connection string configured, skipping {Context} migrations",
+                    "No PostgreSQL connection string configured, skipping {Context} migrations "
+                        + "and the Hangfire schema",
                     nameof(DataProtectionKeyContext)
                 );
             }
@@ -110,6 +123,43 @@ internal static class DatabaseMigrator
 
         logger.LogInformation("Done.");
         return 0;
+    }
+
+    /// <summary>
+    /// Creates or upgrades Hangfire's own schema, which is not an EF Core migration and so is not
+    /// covered by <see cref="MigrateAsync{TContext}" />.
+    /// </summary>
+    /// <remarks>
+    /// Hangfire.PostgreSql does this itself from <c>PostgreSqlStorage</c>'s constructor on every
+    /// instance that starts, because <c>PrepareSchemaIfNecessary</c> defaults to true. Its
+    /// Install.sql takes no advisory lock and no table lock - each version step is guarded only by
+    /// a "has this already been applied?" read of the "schema" table from inside the same
+    /// transaction - so replicas starting together all see the same old version and all run the
+    /// same DDL concurrently. That DDL is largely `ALTER TABLE ... ALTER COLUMN ... TYPE`, which
+    /// rebuilds dependent constraints, and two of those racing produce an internal Postgres error:
+    /// `XX000: could not find tuple for constraint NNNNN`. The Helm chart makes it *more* likely,
+    /// not less - every pod waits on this job through a `wait-for-migrations-job` init container,
+    /// so they are all released to run the installer at the same instant.
+    ///
+    /// Running it here gives the Hangfire schema the same single owner the EF Core migrations
+    /// already have: one job pod, no concurrency left to serialize. Program.cs turns
+    /// <c>PrepareSchemaIfNecessary</c> off wherever this job is what applies migrations, and
+    /// leaves it on where the app itself does (development, `ForceRunDatabaseMigrations`) - both
+    /// of which are single-instance, so the race can't arise there either.
+    ///
+    /// Note this only runs any DDL at all on a fresh database or after a Hangfire.PostgreSql
+    /// upgrade; on an up-to-date schema every step short-circuits on its own version check.
+    /// </remarks>
+    private static void InstallHangfireSchema(string connectionString, ILogger logger)
+    {
+        logger.LogInformation(
+            "Installing/upgrading the Hangfire schema in {Schema}",
+            HangfireSchemaName
+        );
+
+        using var connection = new NpgsqlConnection(connectionString);
+        connection.Open();
+        PostgreSqlObjectsInstaller.Install(connection, HangfireSchemaName);
     }
 
     private static async Task MigrateAsync<TContext>(IServiceProvider services, ILogger logger)

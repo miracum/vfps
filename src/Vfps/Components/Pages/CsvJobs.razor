@@ -107,6 +107,41 @@ else
                             </BbAlertDescription>
                         </BbAlert>
                     }
+                    @* Only a pseudonymizing job can be told not to create: every other direction
+                       either reads pseudonyms or stores pairs the caller already holds. The app
+                       service rejects a mode set on one of those rather than ignoring it, so this
+                       must not offer one there. *@
+                    @if (SelectedDirection == PseudonymizationJobDirection.Pseudonymize)
+                    {
+                        <BbField Class="sm:col-span-3">
+                            <BbFieldLabel For="pseudonymizeMode">
+                                @Localizer["App.CsvJobs.PseudonymizeMode"]
+                            </BbFieldLabel>
+                            <BbFieldContent>
+                                <select
+                                    @bind="_pseudonymizeMode"
+                                    id="pseudonymizeMode"
+                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    <option value="@nameof(PseudonymizeMode.CreateIfMissing)">
+                                        @Localizer["App.CsvJobs.PseudonymizeModeCreateIfMissingOption"]
+                                    </option>
+                                    <option value="@nameof(PseudonymizeMode.FailIfMissing)">
+                                        @Localizer["App.CsvJobs.PseudonymizeModeFailIfMissingOption"]
+                                    </option>
+                                    <option value="@nameof(PseudonymizeMode.BlankIfMissing)">
+                                        @Localizer["App.CsvJobs.PseudonymizeModeBlankIfMissingOption"]
+                                    </option>
+                                </select>
+                            </BbFieldContent>
+                            @if (SelectedPseudonymizeMode == PseudonymizeMode.BlankIfMissing)
+                            {
+                                <p class="text-sm text-muted-foreground">
+                                    @Localizer["App.CsvJobs.PseudonymizeModeBlankIfMissingHint"]
+                                </p>
+                            }
+                        </BbField>
+                    }
                     @* An export has nothing to upload - its rows come from the database - so the
                        file picker and the header-row question don't apply to it. Encoding and
                        delimiter still do: they describe the file being written. *@
@@ -475,6 +510,23 @@ else
                                         </BbBadge>
                                     </div>
                                 }
+                                @* Its own badge rather than folded into the missing-value one
+                                   above: both render as an empty cell in the output and mean
+                                   opposite things - "the input had nothing here" versus "the
+                                   input had a value this namespace has never seen". *@
+                                @if (j.UnresolvedValueCount > 0)
+                                {
+                                    <div
+                                        class="mt-1"
+                                        title="@Localizer["App.CsvJobs.UnresolvedValueTitle"]"
+                                    >
+                                        <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
+                                            @(j.UnresolvedValueCount == 1
+                                                ? Localizer["App.CsvJobs.UnresolvedValueCountSingular", j.UnresolvedValueCount].Value
+                                                : Localizer["App.CsvJobs.UnresolvedValueCountPlural", j.UnresolvedValueCount].Value)
+                                        </BbBadge>
+                                    </div>
+                                }
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.CreatedAt"]">
@@ -580,6 +632,10 @@ else
     };
 
     private string _direction = nameof(PseudonymizationJobDirection.Pseudonymize);
+
+    // Defaults to today's behavior, which is also what the create-if-not-exist API does: a job
+    // submitted without thinking about this question behaves exactly as it always has.
+    private string _pseudonymizeMode = nameof(PseudonymizeMode.CreateIfMissing);
     private string _encoding = "utf-8";
     private string _delimiter = ",";
     private bool _hasHeaderRow = true;
@@ -603,6 +659,14 @@ else
 
     private PseudonymizationJobDirection SelectedDirection =>
         Enum.Parse<PseudonymizationJobDirection>(_direction);
+
+    // Only ever sent for a Pseudonymize job - the app service rejects it on any other direction,
+    // and the selector that sets it is not rendered there, so a direction change leaving a stale
+    // value behind must not reach the request.
+    private PseudonymizeMode SelectedPseudonymizeMode =>
+        SelectedDirection == PseudonymizationJobDirection.Pseudonymize
+            ? Enum.Parse<PseudonymizeMode>(_pseudonymizeMode)
+            : PseudonymizeMode.CreateIfMissing;
 
     // Whether the file picker was on screen before the last direction change - see
     // OnDirectionChanged.
@@ -968,7 +1032,8 @@ else
             _hasHeaderRow,
             mappings,
             SelectedDirection,
-            _fileName
+            _fileName,
+            SelectedPseudonymizeMode
         );
         var (job, uploadUrl) = await _jobAppService!.CreateJobAsync(
             request,

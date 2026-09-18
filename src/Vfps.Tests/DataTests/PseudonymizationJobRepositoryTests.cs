@@ -43,6 +43,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
             rowsProcessed: 200,
             badDataRowCount: 3,
             missingValueCount: 7,
+            unresolvedValueCount: 0,
             TestContext.Current.CancellationToken
         );
 
@@ -78,6 +79,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
             rowsProcessed: 200,
             badDataRowCount: 0,
             missingValueCount: 0,
+            unresolvedValueCount: 0,
             TestContext.Current.CancellationToken
         );
 
@@ -114,6 +116,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
             rowsProcessed: 1,
             badDataRowCount: 0,
             missingValueCount: 0,
+            unresolvedValueCount: 0,
             TestContext.Current.CancellationToken
         );
 
@@ -131,6 +134,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
             rowsProcessed: 1,
             badDataRowCount: 0,
             missingValueCount: 0,
+            unresolvedValueCount: 0,
             TestContext.Current.CancellationToken
         );
 

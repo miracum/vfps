@@ -18,6 +18,22 @@ service PseudonymService {
     };
   }
 
+  // resolve the pseudonym already stored for an original value, creating nothing. Returns
+  // NOT_FOUND when the namespace holds none - the difference from Create, which would generate
+  // one. Requires the same write access Create does: this is the same forward mapping, and a
+  // caller who may create a pseudonym for a value may already learn it that way.
+  //
+  // POST with the original value in the body, deliberately, even though this reads rather than
+  // writes: a GET would put the original value in the request path, where it would be recorded by
+  // every access log, proxy and browser history between the caller and this service. No operation
+  // on this API takes an original value in a URL.
+  rpc Resolve(PseudonymServiceResolveRequest) returns (PseudonymServiceResolveResponse) {
+    option (google.api.http) = {
+      post: "/v1/namespaces/{namespace}/pseudonyms:resolve"
+      body: "*"
+    };
+  }
+
   // get information about the given pseudonym. Including its original value.
   rpc Get(PseudonymServiceGetRequest) returns (PseudonymServiceGetResponse) {
     option (google.api.http) = {get: "/v1/namespaces/{namespace}/pseudonyms/{pseudonym_value}"};
@@ -109,6 +125,26 @@ message PseudonymServiceCreateResponse {
   Pseudonym pseudonym = 1;
   // every pseudonym stored for the requested original value after this call - length 1 unless
   // the target namespace allows multiple pseudonyms per original value.
+  repeated Pseudonym pseudonyms = 2;
+}
+
+// request to resolve the pseudonym already stored for an original value
+message PseudonymServiceResolveRequest {
+  // the namespace to look the original value up in
+  string namespace = 1;
+  // the original value whose pseudonym is wanted. Nothing is stored for it - if this namespace
+  // holds no pseudonym for it, the call returns NOT_FOUND rather than creating one.
+  string original_value = 2;
+}
+
+// response for resolving an original value's existing pseudonym
+message PseudonymServiceResolveResponse {
+  // the pseudonym found. For a multi-psn namespace this is the first (sequence_number 0)
+  // pseudonym of the full set below, mirroring PseudonymServiceCreateResponse.
+  Pseudonym pseudonym = 1;
+  // every pseudonym stored for the requested original value - length 1 unless the namespace
+  // allows multiple pseudonyms per original value. Never empty: an original value with none
+  // returns NOT_FOUND instead.
   repeated Pseudonym pseudonyms = 2;
 }
 

@@ -48,6 +48,7 @@ public interface IPseudonymizationJobRepository
         long rowsProcessed,
         int badDataRowCount,
         int missingValueCount,
+        int unresolvedValueCount,
         CancellationToken cancellationToken
     );
 
@@ -73,6 +74,7 @@ public interface IPseudonymizationJobRepository
         long rowsProcessed,
         int badDataRowCount,
         int missingValueCount,
+        int unresolvedValueCount,
         CancellationToken cancellationToken
     );
 

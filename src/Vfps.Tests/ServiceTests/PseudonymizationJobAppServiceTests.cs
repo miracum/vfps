@@ -59,6 +59,87 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task CreateJobAsync_WithAPseudonymizeMode_ShouldStoreItOnTheJob()
+    {
+        var (sut, repository, _, _) = CreateSut();
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
+            PseudonymizationJobDirection.Pseudonymize,
+            PseudonymizeMode: PseudonymizeMode.FailIfMissing
+        );
+
+        var (job, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("creator"),
+            CancellationToken.None
+        );
+
+        var stored = await repository.FindAsync(job.Id, CancellationToken.None);
+        stored!.PseudonymizeMode.Should().Be(PseudonymizeMode.FailIfMissing);
+    }
+
+    [Fact]
+    public async Task CreateJobAsync_WithoutAPseudonymizeMode_ShouldDefaultToCreateIfMissing()
+    {
+        // Today's behavior for every job submitted without thinking about the question.
+        var (sut, repository, _, _) = CreateSut();
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
+        );
+
+        var (job, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("creator"),
+            CancellationToken.None
+        );
+
+        var stored = await repository.FindAsync(job.Id, CancellationToken.None);
+        stored!.PseudonymizeMode.Should().Be(PseudonymizeMode.CreateIfMissing);
+    }
+
+    [Theory]
+    [InlineData(PseudonymizationJobDirection.Depseudonymize)]
+    [InlineData(PseudonymizationJobDirection.Import)]
+    public async Task CreateJobAsync_WithAPseudonymizeModeOnAnotherDirection_ShouldThrow(
+        PseudonymizationJobDirection direction
+    )
+    {
+        // Rejected rather than ignored: a caller asking for "never create a pseudonym" on a job
+        // that was never going to create one is confused about what it is submitting, and
+        // silently handing back the default would leave that confusion in place.
+        var (sut, _, _, _) = CreateSut();
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [
+                new ColumnMapping
+                {
+                    SourceColumn = "col1",
+                    TargetColumn = "col2",
+                    Namespace = "existingNamespace",
+                },
+            ],
+            direction,
+            PseudonymizeMode: PseudonymizeMode.FailIfMissing
+        );
+
+        var act = () =>
+            sut.CreateJobAsync(request, UserWithSubject("creator"), CancellationToken.None);
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
     public async Task CreateJobAsync_WithoutWriteAccessToNamespace_ShouldThrowForbidden()
     {
         var (sut, _, _, _) = CreateSut(new AuthorizationConfig { IsEnabled = true });

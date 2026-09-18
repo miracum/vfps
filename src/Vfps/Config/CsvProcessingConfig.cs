@@ -6,11 +6,12 @@ namespace Vfps.Config;
 public class CsvProcessingConfig
 {
     /// <summary>
-    /// How many rows' worth of values go into one batched round trip - an upsert when
-    /// pseudonymizing (CsvColumnTransformer.FlushChunkPseudonymizeAsync,
-    /// IPseudonymRepository.CreateIfNotExistBatchAsync), a reverse lookup when de-pseudonymizing
-    /// (FlushChunkDepseudonymizeAsync, IPseudonymRepository.FindAllByPseudonymValuesAsync), and
-    /// an import batch for the namespace-import direction. Named for the pseudonymize path it
+    /// How many rows' worth of values go into one batched round trip - all three resolved by
+    /// CsvColumnTransformer.FlushChunkAsync: an upsert when pseudonymizing
+    /// (IPseudonymRepository.CreateIfNotExistBatchAsync), a plain lookup when pseudonymizing in one
+    /// of the lookup-only PseudonymizeModes (FindAllByOriginalValuesAsync), a reverse lookup when
+    /// de-pseudonymizing (FindAllByPseudonymValuesAsync), and an import batch for the
+    /// namespace-import direction. Named for the pseudonymize path it
     /// was introduced for, but it now sizes every direction's chunk: de-pseudonymization used to
     /// resolve a chunk via concurrent single-value lookups and needed its own much smaller bound
     /// to protect the connection pool, and no longer does.
