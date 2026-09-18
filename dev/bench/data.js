@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789741172975,
+  "lastUpdate": 1789752716634,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -9654,6 +9654,66 @@ window.BENCHMARK_DATA = {
             "value": 1113.6986086918757,
             "unit": "ns",
             "range": "± 0.585030111367652"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "1e5852ff7c46c7b19f0be71150cf7f113dc6fe36",
+          "message": "feat: support for resolving pseudonyms, failing if they dont already exist (#333)\n\n* feat: support for resolving pseudonyms, failing if they dont already exist\n\n* Potential fix for pull request finding 'CodeQL / Missed opportunity to use Where'\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>\n\n* fix: description empty/null handling\n\n* fix: hangfire migrations in job\n\n---------\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>",
+          "timestamp": "2026-09-18T19:28:40+02:00",
+          "tree_id": "2db3d9faa5e9df0ece87b9da1a981c7b47c56f87",
+          "url": "https://github.com/miracum/vfps/commit/1e5852ff7c46c7b19f0be71150cf7f113dc6fe36"
+        },
+        "date": 1789752715883,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 707.9621882071862,
+            "unit": "ns",
+            "range": "± 5.419036385346555"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 358.79701445652887,
+            "unit": "ns",
+            "range": "± 1.01113457373225"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 379.4324773152669,
+            "unit": "ns",
+            "range": "± 4.093474840961598"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 707.2155854797363,
+            "unit": "ns",
+            "range": "± 18.6056063742964"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 752.2075315316519,
+            "unit": "ns",
+            "range": "± 2.1255091354973077"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 741.3354113442557,
+            "unit": "ns",
+            "range": "± 17.26193555272986"
           }
         ]
       }
