@@ -632,6 +632,29 @@ admin UI's [Access Control](#access-control) page. Earlier releases configured i
 `Authorization__NamespaceRules__*` section, which no longer exists - see
 [Migrating from `Authorization__NamespaceRules`](#migrating-from-authorizationnamespacerules).
 
+With `Authorization__IsEnabled` set, the whole API - gRPC, the JSON-transcoded REST routes
+(`/v1/namespaces/...`) and the FHIR operation (`/v1/fhir/$create-pseudonym`) - accepts **bearer
+tokens only**. A call arriving without one is refused by the request pipeline before it reaches a
+service method: gRPC clients get `UNAUTHENTICATED`, HTTP clients a `401` carrying
+`WWW-Authenticate: Bearer`. A machine client obtains its token from the authority the usual way - an
+OAuth2 `client_credentials` grant against a confidential client of its own, separate from
+`Authorization__ClientId`, which is the admin UI's - and the token's `aud` has to match
+`Authorization__Audience`. Namespace access is then resolved from the token's roles and `email`
+claim against the grants described above, so a valid token still only reaches the namespaces it has
+been granted.
+
+That pipeline-level `401` carries no body, so it is the one FHIR error the service answers without
+an `OperationOutcome`. Every refusal made *after* authentication - including a `403` for a namespace
+the token holds no grant on - is an `OperationOutcome` as documented under
+[FHIR operations](#fhir-operations).
+
+The gRPC health-checking service and the `/healthz`, `/livez` and `/readyz` endpoints stay
+anonymous, so probes and load balancers need no token. An admin's browser session, on the other
+hand, does *not* authenticate an API call: the login cookie is for the admin UI, and the API reads
+bearer tokens only. The bundled Swagger UI at `/swagger` therefore gains an **Authorize** button
+when authorization is enabled - paste an access token there, without the `Bearer ` prefix, before
+using _Try it out_.
+
 | Variable                     | Type     | Default        | Description                                                                                                              |
 | ---------------------------- | -------- | -------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `S3__IsEnabled`               | `bool`   | `false`        | Enable CSV pseudonymization jobs (admin UI upload/download + the Hangfire job runner). **Off by default** - also requires `ConnectionStrings__PostgreSQL`, since Hangfire reuses the same database for its job storage. Note that Hangfire itself (and its `/hangfire` dashboard) is enabled by any deployment with a PostgreSQL connection string, independent of this setting - it also schedules internal housekeeping such as the pseudonym-count metric recompute. |
