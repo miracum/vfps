@@ -136,11 +136,7 @@ spec:
               value: {{ include "vfps.database.connection-string" . }}
             - name: PGUSER
               value: {{ include "vfps.database.user" . }}
-            - name: PGPASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "vfps.database.db-secret-name" . }}
-                  key: {{ include "vfps.database.db-secret-key" . }}
+            {{- include "vfps.database.password-env" . | nindent 12 }}
             {{- with .Values.gracefulShutdown.shutdownTimeout }}
             - name: ShutdownTimeout
               value: {{ . | quote }}

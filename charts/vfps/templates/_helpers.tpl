@@ -163,6 +163,29 @@ Get the key inside the secret containing the DB user's password
 {{- end -}}
 
 {{/*
+The PGPASSWORD environment entry, which Npgsql and libpq both read.
+
+Emits nothing when a client certificate is configured. `cert` authentication in pg_hba.conf
+replaces the password rather than supplementing it - the server never issues a password
+challenge, so the variable would be a credential that exists only to go unused. Worse, the
+chart-created Secret would then be holding `database.password`, whose default is the literal
+string "postgres": a weak password that nobody chose, sitting in the namespace, that would
+become a real way in the moment the server's pg_hba is loosened.
+
+This is what `database.tls.clientCertificate` already documents ("replaces the password
+entirely").
+*/}}
+{{- define "vfps.database.password-env" -}}
+{{- if not .Values.database.tls.clientCertificate.existingSecret.name -}}
+- name: PGPASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "vfps.database.db-secret-name" . }}
+      key: {{ include "vfps.database.db-secret-key" . }}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Create the connection string from the host, port and database name.
 */}}
 {{- define "vfps.database.connection-string" -}}

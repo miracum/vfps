@@ -182,6 +182,138 @@ A few things are worth knowing beyond turning those on:
   started. Any restart of it is a full outage, softened only by the application's connection retry
   budget. For real availability use an external HA PostgreSQL or an operator such as CloudNativePG.
 
+## Connecting to CloudNativePG with client certificates
+
+[CloudNativePG](https://cloudnative-pg.io/) runs its own certificate authority and issues a TLS
+certificate for every cluster, so the database can authenticate vfps by client certificate instead
+of by password. PostgreSQL's `cert` authentication method _replaces_ the password rather than
+supplementing it - there is no password to leak, rotate or accidentally commit.
+
+### 1. Make the database require a certificate
+
+`cert` authentication is not CloudNativePG's default, so ask for it in the `Cluster`:
+
+```yaml
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: vfps-db
+spec:
+  bootstrap:
+    initdb:
+      database: vfps
+      owner: vfps # the role vfps logs in as; the certificate's CN must match it
+  postgresql:
+    pg_hba:
+      - hostssl vfps vfps all cert
+      - host vfps vfps all reject
+  # instances, storage and resources omitted
+```
+
+Rules listed here are inserted after CloudNativePG's own fixed rules and before its catch-all
+`host all all all scram-sha-256`, and the order of the two matters:
+
+- `hostssl ... cert` makes an encrypted connection as this role authenticate by client certificate.
+- `host ... reject` refuses anything the first rule did not match - that is, a _plaintext_
+  connection. Without it such a connection falls through to the catch-all and the role's password
+  still works, so "no password" would only describe how vfps happens to be configured rather than
+  what the database accepts.
+
+### 2. Issue a client certificate
+
+The Common Name **is** the login: under `cert` authentication PostgreSQL requires it to equal the
+role being logged in as. With the [cnpg plugin](https://cloudnative-pg.io/docs/devel/kubectl-plugin/):
+
+```sh
+kubectl cnpg certificate vfps-db-client-cert \
+  --cnpg-cluster vfps-db \
+  --cnpg-user vfps \
+  -n vfps
+```
+
+That writes a `kubernetes.io/tls` Secret with `tls.crt` and `tls.key` - the keys this chart expects
+by default - valid for 90 days.
+
+Without the plugin, sign one against the cluster's CA Secret (`<cluster>-ca`, which holds both
+`ca.crt` and `ca.key`; CloudNativePG uses it as the client CA as well as the server CA):
+
+```sh
+kubectl get secret vfps-db-ca -n vfps -o jsonpath='{.data.ca\.crt}' | base64 -d > ca.crt
+kubectl get secret vfps-db-ca -n vfps -o jsonpath='{.data.ca\.key}' | base64 -d > ca.key
+
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:2048 -out tls.key
+openssl req -new -key tls.key -subj "/CN=vfps" -out client.csr
+printf 'extendedKeyUsage=clientAuth\nbasicConstraints=critical,CA:FALSE\n' > client.ext
+openssl x509 -req -in client.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+  -days 90 -sha256 -extfile client.ext -out tls.crt
+
+kubectl create secret tls vfps-db-client-cert -n vfps --cert=tls.crt --key=tls.key
+```
+
+Note what the second command pulls onto your disk: `ca.key` signs every certificate in that
+cluster, including the servers' own. Delete it when you are done.
+
+### 3. Point the chart at both
+
+```yaml
+postgres:
+  enabled: false # the bundled PostgreSQL does not do certificate authentication
+
+database:
+  host: vfps-db-rw # CloudNativePG repoints this at the current primary on failover
+  port: 5432
+  database: vfps
+  username: vfps # must equal the certificate's CN
+  tls:
+    mode: VerifyFull
+    certificateAuthority:
+      existingSecret:
+        name: vfps-db-ca
+    clientCertificate:
+      existingSecret:
+        name: vfps-db-client-cert
+```
+
+This covers every component that opens a database connection - the API Deployment, the worker
+Deployment, and both containers of the migrations Job (which get the libpq spellings of the same
+settings, since one of them runs `psql` rather than Npgsql).
+
+A few things are worth knowing:
+
+- **No password is configured, mounted or created.** Setting `database.tls.clientCertificate` drops
+  the `PGPASSWORD` environment variable from every container and suppresses the Secret the chart
+  would otherwise build from `database.password`. `database.password` and `database.existingSecret`
+  are ignored in this mode.
+- **`VerifyFull` checks the hostname, so `database.host` has to be a name in the server
+  certificate.** CloudNativePG puts the `-rw`, `-r` and `-ro` Services in the SAN list, each as the
+  bare name and suffixed with `.<namespace>`, `.<namespace>.svc` and `.<namespace>.svc.cluster.local`.
+  Reaching the database under any other name - through an external load balancer, say - needs that
+  name added to `.spec.certificates.serverAltDNSNames` on the `Cluster`, or the handshake fails on
+  the name rather than on the chain.
+- **Only `ca.crt` is projected into the pods, never the whole Secret.** `<cluster>-ca` also contains
+  `ca.key`; mounting it wholesale would hand vfps the ability to mint credentials for its own
+  database.
+- **The private key must not be passphrase-protected**, since the passphrase would have to travel
+  in the connection string, which is a plain value in the pod spec.
+- **Renewal is yours to do.** CloudNativePG renews the certificates it manages - the CA, the server
+  and the streaming replication certificates - 7 days before they expire, but a client certificate
+  you issued for an application user is not one of them. It is valid for 90 days by default, and it
+  must also be re-issued when the cluster CA is renewed. Plan for that, or drive it with something
+  like cert-manager.
+
+To confirm a running deployment is really using the certificate rather than falling back to a
+password, ask the server what it sees:
+
+```sh
+kubectl exec -n vfps vfps-db-1 -- psql -U postgres -d vfps \
+  -c "select a.usename, s.ssl, s.version, s.client_dn
+        from pg_stat_ssl s join pg_stat_activity a on a.pid = s.pid
+       where a.usename = 'vfps'"
+```
+
+A populated `client_dn` - `/CN=vfps` - is the proof: it is set only when the client presented a
+certificate.
+
 ## Values
 
 | Key                                                          | Type   | Default                                                                                  | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
