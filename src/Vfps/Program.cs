@@ -45,6 +45,12 @@ if (args is ["migrate", ..])
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Read up front rather than where the authentication handlers are wired below, because three
+// separate parts of this file need it and one of them - the Swagger document - is configured
+// before that point: what the API accepts as a credential is part of its published contract.
+var authConfig = new AuthorizationConfig();
+builder.Configuration.GetSection("Authorization").Bind(authConfig);
+
 // Add services to the container.
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddBlazorBlueprintComponents();
@@ -132,6 +138,49 @@ builder.Services.AddSwaggerGen(c =>
     // Vfps.Protos and Hl7.Fhir.Model both define a type named "Meta", which otherwise
     // collide under Swashbuckle's default (short-name-only) schemaId generation.
     c.CustomSchemaIds(type => type.FullName?.Replace('+', '.'));
+
+    // Only described when it is actually required: with authorization disabled the API takes no
+    // credential at all, and an Authorize button on a deployment that ignores what you type into
+    // it is worse than none. With it enabled, the endpoints below are bearer-only - a browser
+    // session does not authenticate an API call - so without this, "Try it out" in the bundled
+    // Swagger UI has no way to send a token and can only ever answer 401.
+    if (authConfig.IsEnabled)
+    {
+        const string bearerScheme = "Bearer";
+
+        c.AddSecurityDefinition(
+            bearerScheme,
+            new OpenApiSecurityScheme
+            {
+                Type = SecuritySchemeType.Http,
+                Scheme = "bearer",
+                BearerFormat = "JWT",
+                In = ParameterLocation.Header,
+                Description =
+                    "An OIDC access token from the configured authority, whose audience must match "
+                    + "Authorization__Audience. Paste the token itself - Swagger UI adds the "
+                    + "\"Bearer \" prefix. Machine clients normally obtain one through an OAuth2 "
+                    + "client_credentials grant against a confidential client of their own.",
+            }
+        );
+
+        c.AddSecurityRequirement(
+            new OpenApiSecurityRequirement
+            {
+                {
+                    new OpenApiSecurityScheme
+                    {
+                        Reference = new OpenApiReference
+                        {
+                            Type = ReferenceType.SecurityScheme,
+                            Id = bearerScheme,
+                        },
+                    },
+                    Array.Empty<string>()
+                },
+            }
+        );
+    }
 });
 
 // A connection failure mid-outage (e.g. a Postgres upgrade/failover, or a rolling restart) would
@@ -255,9 +304,6 @@ builder.Services.AddSingleton<INamespacePermissionChecker, NamespacePermissionCh
 builder.Services.AddScoped<INamespaceAccessGrantRepository, NamespaceAccessGrantRepository>();
 builder.Services.AddScoped<INamespaceAccessGrantAppService, NamespaceAccessGrantAppService>();
 
-var authConfig = new AuthorizationConfig();
-builder.Configuration.GetSection("Authorization").Bind(authConfig);
-
 if (authConfig.IsEnabled)
 {
     builder
@@ -363,26 +409,55 @@ if (authConfig.IsEnabled)
         SessionRevalidatingAuthenticationStateProvider
     >();
 
-    // Gates the Hangfire dashboard (mapped further down, wherever Hangfire itself is enabled)
-    // behind an admin role rather than merely a login. The dashboard lists every job's arguments
-    // and parameters - for a CSV job that means the uploaded file's own name, the S3 object keys
-    // it reads and writes, and any failure detail - so "is signed in" is too low a bar: an
-    // account holding no namespace grants at all would otherwise read all of it.
-    //
-    // RequireAuthenticatedUser() stays alongside the admin check because the two do different
-    // jobs here: it is what turns an *unauthenticated* request into a real challenge/redirect
-    // into the OIDC login flow via ASP.NET Core's own authorization middleware, instead of the
-    // bare "Unauthorized" page Hangfire's own IDashboardAuthorizationFilter mechanism would
-    // render. An authenticated non-admin then gets a 403 from that same middleware.
-    //
-    // The admin test goes through INamespacePermissionChecker rather than a RequireRole over the
-    // configured admin role names, so it stays the one check used everywhere else in the app -
-    // the one that already knows about Authorization:RoleClaimType. It is resolved per request
-    // from the endpoint's own HttpContext (which is what AuthorizationHandlerContext.Resource is
-    // for an endpoint-routed request), since this policy has to be registered here, before the
-    // container that singleton lives in exists. Anything other than an HttpContext resource
-    // fails the assertion rather than skipping it - the dashboard is not a thing to fail open.
+    // The two endpoint-level policies this app has: one gating the API, one gating the Hangfire
+    // dashboard. Both live here rather than next to what they protect, because a policy has to be
+    // registered on the service collection before the container exists.
     builder.Services.AddAuthorization(options =>
+    {
+        // The authentication gate for the gRPC and JSON-transcoded REST API, applied to the
+        // service endpoints further down. Every RPC already resolves the caller's namespace
+        // permissions in the app-service layer (see PseudonymAppService), and an anonymous
+        // principal holds no grants, so a tokenless call is refused there too - but it is refused
+        // as PermissionDenied, after the request has been parsed and dispatched, and only for as
+        // long as every present and future entry point remembers to ask. This makes it a
+        // pipeline-level Unauthenticated that no service method can forget.
+        //
+        // Pinned to the bearer scheme rather than left on the "smart" default above, which is what
+        // makes the refusal a usable one: with no Authorization header that selector forwards to
+        // the cookie scheme, whose challenge is a 302 to the login page. A browser redirect is not
+        // an answer a gRPC client can interpret - grpc-dotnet reports it as "Bad gRPC response.
+        // HTTP status code: 302" - whereas the bearer challenge is a 401, which grpc-dotnet maps
+        // to StatusCode.Unauthenticated. It also means a browser session no longer authenticates
+        // an API call at all: with authorization enabled, Swagger UI's "Try it out" needs a bearer
+        // token like any other client, rather than riding on the admin's login cookie.
+        options.AddPolicy(
+            ApiAuthorizationPolicy,
+            policy =>
+                policy
+                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+                    .RequireAuthenticatedUser()
+        );
+
+        // Gates the Hangfire dashboard (mapped further down, wherever Hangfire itself is enabled)
+        // behind an admin role rather than merely a login. The dashboard lists every job's
+        // arguments and parameters - for a CSV job that means the uploaded file's own name, the S3
+        // object keys it reads and writes, and any failure detail - so "is signed in" is too low a
+        // bar: an account holding no namespace grants at all would otherwise read all of it.
+        //
+        // RequireAuthenticatedUser() stays alongside the admin check because the two do different
+        // jobs here: it is what turns an *unauthenticated* request into a real challenge/redirect
+        // into the OIDC login flow via ASP.NET Core's own authorization middleware, instead of the
+        // bare "Unauthorized" page Hangfire's own IDashboardAuthorizationFilter mechanism would
+        // render. An authenticated non-admin then gets a 403 from that same middleware.
+        //
+        // The admin test goes through INamespacePermissionChecker rather than a RequireRole over
+        // the configured admin role names, so it stays the one check used everywhere else in the
+        // app - the one that already knows about Authorization:RoleClaimType. It is resolved per
+        // request from the endpoint's own HttpContext (which is what
+        // AuthorizationHandlerContext.Resource is for an endpoint-routed request), since this
+        // policy has to be registered here, before the container that singleton lives in exists.
+        // Anything other than an HttpContext resource fails the assertion rather than skipping it -
+        // the dashboard is not a thing to fail open.
         options.AddPolicy(
             "HangfireDashboard",
             policy =>
@@ -394,8 +469,8 @@ if (authConfig.IsEnabled)
                             .RequestServices.GetRequiredService<INamespacePermissionChecker>()
                             .IsAdmin(context.User)
                     )
-        )
-    );
+        );
+    });
 }
 
 // Blazor Server keeps one process per replica but many circuits/cookies across replicas - the
@@ -726,8 +801,23 @@ app.UsePathBase("/ui");
 app.UseRouting();
 
 // Configure the HTTP request pipeline.
-app.MapGrpcService<PseudonymService>();
-app.MapGrpcService<NamespaceService>();
+var pseudonymEndpoints = app.MapGrpcService<PseudonymService>();
+var namespaceEndpoints = app.MapGrpcService<NamespaceService>();
+
+if (authConfig.IsEnabled)
+{
+    // Applied to the gRPC services rather than globally, and only when authorization is on at
+    // all: with it off the policy is never registered, and requiring a policy by a name nothing
+    // added throws per request rather than at startup. JSON transcoding hangs the RESTful routes
+    // off these same endpoint builders, so the /v1/... surface is covered by the same call - see
+    // the policy's own comment for why it is bearer-only and what that gate is for.
+    pseudonymEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
+    namespaceEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
+}
+
+// Left anonymous on purpose, like the /healthz endpoints below: a kubelet probe and a gRPC
+// health-checking load balancer carry no token, and the response says only whether the process is
+// serving.
 app.MapGrpcHealthChecksService();
 app.UseSwagger();
 app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "VFPS API v1"));
@@ -882,7 +972,26 @@ if (isHangfireEnabled)
         );
 }
 
-app.MapControllers();
+var controllerEndpoints = app.MapControllers();
+
+if (authConfig.IsEnabled)
+{
+    // FhirController is the same API under a different content type - $create-pseudonym reaches the
+    // same PseudonymAppService.CreateAsync the gRPC PseudonymService.Create does - so it gets the
+    // same gate rather than being left as the one unauthenticated way in.
+    //
+    // Applied to MapControllers rather than as an [Authorize] attribute on the controller for the
+    // same reason the gRPC services are gated here: the policy exists only when authorization is
+    // enabled, and an attribute naming a policy nothing registered throws per request instead of
+    // at startup. That it also covers any controller added later is the intended default for a
+    // service whose whole HTTP surface is the API - a deliberately public one opts out with
+    // [AllowAnonymous], which the authorization middleware honours over this.
+    //
+    // One wrinkle worth knowing before reading a trace: the 401 comes from the pipeline, so it
+    // carries no body. Every *authenticated* refusal this controller makes is still a FHIR
+    // OperationOutcome, but "no token at all" is answered before MVC is reached.
+    controllerEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
+}
 
 var shouldRunDatabaseMigrations =
     app.Environment.IsDevelopment()
@@ -917,6 +1026,12 @@ public partial class Program
     /// so a longer interval here costs freshness but never consistency.
     /// </summary>
     internal const int PseudonymCountRecomputeIntervalMinutes = 5;
+
+    /// <summary>
+    /// Name of the authorization policy gating the gRPC and JSON-transcoded REST API. Registered,
+    /// and applied to those endpoints, only when Authorization:IsEnabled is true.
+    /// </summary>
+    internal const string ApiAuthorizationPolicy = "Api";
 
     internal static readonly ActivitySource ActivitySource = new("Vfps");
 
