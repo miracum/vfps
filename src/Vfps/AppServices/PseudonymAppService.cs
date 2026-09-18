@@ -772,11 +772,13 @@ public class PseudonymAppService(
                 .ToList();
 
             foreach (
-                var pseudonym in await repository.FindAllByOriginalValuesAsync(
-                    group.Key,
-                    values,
-                    cancellationToken
-                )
+                var pseudonym in (
+                    await repository.FindAllByOriginalValuesAsync(
+                        group.Key,
+                        values,
+                        cancellationToken
+                    )
+                ).Where(pseudonym => pseudonym.SequenceNumber == 0)
             )
             {
                 // Sequence 0 only. A multi-psn namespace returns every stored sequence number for
@@ -784,10 +786,7 @@ public class PseudonymAppService(
                 // the first - matching the single-value CreateTrustedAsync overload the create
                 // path uses. TryAdd rather than the indexer keeps that first-wins regardless of
                 // the ordering the repository returned.
-                if (pseudonym.SequenceNumber == 0)
-                {
-                    resolved.TryAdd((group.Key, pseudonym.OriginalValue), pseudonym);
-                }
+                resolved.TryAdd((group.Key, pseudonym.OriginalValue), pseudonym);
             }
         }
 
