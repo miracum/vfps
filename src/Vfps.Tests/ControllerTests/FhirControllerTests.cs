@@ -38,6 +38,106 @@ public class FhirControllerTests : ServiceTestBase
         return controller;
     }
 
+    private static Parameters ResolveRequest(string namespaceName, string originalValue) =>
+        new()
+        {
+            Parameter = new List<Parameters.ParameterComponent>
+            {
+                new() { Name = "namespace", Value = new FhirString(namespaceName) },
+                new() { Name = "originalValue", Value = new FhirString(originalValue) },
+            },
+        };
+
+    [Fact]
+    public async Task ResolvePseudonym_WithAStoredOriginalValue_ShouldReturnItsExistingPseudonym()
+    {
+        var response = await sut.ResolvePseudonym(
+            ResolveRequest("existingNamespace", "an original value"),
+            TestContext.Current.CancellationToken
+        );
+
+        var parameters = response
+            .Should()
+            .BeOfType<OkObjectResult>()
+            .Which.Value.Should()
+            .BeOfType<Parameters>()
+            .Which;
+        parameters
+            .GetSingleValue<FhirString>("pseudonymValue")!
+            .Value.Should()
+            .Be("existingPseudonym");
+    }
+
+    [Fact]
+    public async Task ResolvePseudonym_WithAnUnknownOriginalValue_ShouldReturnNotFoundAndCreateNothing()
+    {
+        var countBefore = InMemoryPseudonymContext.Pseudonyms.Count();
+
+        var response = await sut.ResolvePseudonym(
+            ResolveRequest("existingNamespace", "never stored"),
+            TestContext.Current.CancellationToken
+        );
+
+        var outcome = response
+            .Should()
+            .BeOfType<NotFoundObjectResult>()
+            .Which.Value.Should()
+            .BeOfType<OperationOutcome>()
+            .Which;
+
+        // The diagnostics reach the caller's own logs and error reporting, so they name the
+        // namespace but never the value that was not found.
+        outcome
+            .Issue[0]
+            .Diagnostics.Should()
+            .NotContain("never stored")
+            .And.Contain("existingNamespace");
+
+        InMemoryPseudonymContext.Pseudonyms.Count().Should().Be(countBefore);
+    }
+
+    [Fact]
+    public async Task ResolvePseudonym_WithUnknownNamespace_ShouldReturnNotFoundOutcome()
+    {
+        var response = await sut.ResolvePseudonym(
+            ResolveRequest("noSuchNamespace", "an original value"),
+            TestContext.Current.CancellationToken
+        );
+
+        response
+            .Should()
+            .BeOfType<NotFoundObjectResult>()
+            .Which.Value.Should()
+            .BeOfType<OperationOutcome>();
+    }
+
+    [Fact]
+    public async Task ResolvePseudonym_WithBlankOriginalValue_ShouldReturnErrorOutcome()
+    {
+        var response = await sut.ResolvePseudonym(
+            ResolveRequest("existingNamespace", "   "),
+            TestContext.Current.CancellationToken
+        );
+
+        response
+            .Should()
+            .BeOfType<BadRequestObjectResult>()
+            .Which.Value.Should()
+            .BeOfType<OperationOutcome>();
+    }
+
+    [Fact]
+    public async Task ResolvePseudonym_WithNull_ShouldReturnErrorOutcome()
+    {
+        var response = await sut.ResolvePseudonym(null, TestContext.Current.CancellationToken);
+
+        response
+            .Should()
+            .BeOfType<BadRequestObjectResult>()
+            .Which.Value.Should()
+            .BeOfType<OperationOutcome>();
+    }
+
     [Fact]
     public async Task CreatePseudonym_WithEmptyBody_ShouldReturnErrorOutcome()
     {

@@ -1,3 +1,6 @@
+using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using Hl7.Fhir.Model;
 using Hl7.Fhir.Rest;
 using Microsoft.Extensions.DependencyInjection;
@@ -21,6 +24,71 @@ public class HttpEndpointTests(IntegrationTestFactory<Program, PseudonymContext>
         response.EnsureSuccessStatusCode();
 
         response.Content.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// The JSON-transcoded route for the Resolve RPC uses an AIP-136 custom-method suffix
+    /// (<c>pseudonyms:resolve</c>), which is a shape nothing else in this proto uses - so the
+    /// thing worth asserting is simply that ASP.NET routing serves it at all, rather than 404ing
+    /// on the colon, and that it answers the two cases differently.
+    /// </summary>
+    [Fact]
+    public async Task ResolvePseudonym_OverTheTranscodedRoute_ShouldAnswerFoundAndNotFound()
+    {
+        var db = factory.Services.GetService<PseudonymContext>()!;
+        var namespaceName = $"resolve-route-{Guid.NewGuid():N}";
+        db.Namespaces.Add(
+            new Data.Models.Namespace
+            {
+                Name = namespaceName,
+                Description = "resolve route test namespace",
+                PseudonymLength = 32,
+                CreatedAt = DateTime.UtcNow,
+                LastUpdatedAt = DateTime.UtcNow,
+                PseudonymGenerationMethod = PseudonymGenerationMethod.Unspecified,
+                PseudonymPrefix = "",
+                PseudonymSuffix = "",
+            }
+        );
+        db.SaveChanges();
+        db.ChangeTracker.Clear();
+
+        var client = factory.CreateClient();
+
+        var created = await client.PostAsJsonAsync(
+            $"/v1/namespaces/{namespaceName}/pseudonyms",
+            new { originalValue = "resolvable" },
+            TestContext.Current.CancellationToken
+        );
+        created.EnsureSuccessStatusCode();
+        var createdValue = JsonDocument
+            .Parse(await created.Content.ReadAsStringAsync(TestContext.Current.CancellationToken))
+            .RootElement.GetProperty("pseudonym")
+            .GetProperty("pseudonymValue")
+            .GetString();
+
+        var resolved = await client.PostAsJsonAsync(
+            $"/v1/namespaces/{namespaceName}/pseudonyms:resolve",
+            new { originalValue = "resolvable" },
+            TestContext.Current.CancellationToken
+        );
+
+        resolved.StatusCode.Should().Be(HttpStatusCode.OK);
+        JsonDocument
+            .Parse(await resolved.Content.ReadAsStringAsync(TestContext.Current.CancellationToken))
+            .RootElement.GetProperty("pseudonym")
+            .GetProperty("pseudonymValue")
+            .GetString()
+            .Should()
+            .Be(createdValue);
+
+        var missing = await client.PostAsJsonAsync(
+            $"/v1/namespaces/{namespaceName}/pseudonyms:resolve",
+            new { originalValue = "never stored" },
+            TestContext.Current.CancellationToken
+        );
+
+        missing.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

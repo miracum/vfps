@@ -45,6 +45,47 @@ public class PseudonymAppService(
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<Data.Models.Pseudonym>> ResolveAsync(
+        string namespaceName,
+        string originalValue,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        // Write access, not read - see the interface for why looking a mapping up is gated as
+        // though it were creating one.
+        if (!await permissionChecker.HasWriteAccessAsync(user, namespaceName, cancellationToken))
+        {
+            throw new ForbiddenException(
+                $"Write access to namespace '{namespaceName}' is required."
+            );
+        }
+
+        var @namespace =
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            ?? throw new NamespaceNotFoundException(namespaceName);
+
+        if (string.IsNullOrWhiteSpace(originalValue))
+        {
+            throw new ArgumentException(
+                "The original value must not be blank.",
+                nameof(originalValue)
+            );
+        }
+
+        // Ahead of the lookup, so a value this namespace could never have stored is rejected as
+        // invalid rather than reported as merely absent - the same ordering, and the same reason,
+        // as the validation in CreateTrustedAsync.
+        ValidateOriginalValue(@namespace, originalValue);
+
+        return await pseudonymRepository.FindAllByOriginalValueAsync(
+            namespaceName,
+            originalValue,
+            cancellationToken
+        );
+    }
+
+    /// <inheritdoc/>
     public async Task<Data.Models.Pseudonym> CreateTrustedAsync(
         string namespaceName,
         string originalValue,
@@ -694,6 +735,59 @@ public class PseudonymAppService(
                 // row for a key is the only one - indexer assignment rather than Add, purely so a
                 // stored duplicate predating those checks can't throw mid-job.
                 resolved[(group.Key, pseudonym.PseudonymValue)] = pseudonym;
+            }
+        }
+
+        return resolved;
+    }
+
+    /// <inheritdoc/>
+    public async Task<
+        IReadOnlyDictionary<(string Namespace, string OriginalValue), Data.Models.Pseudonym>
+    > ResolveTrustedBatchAsync(
+        IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)> requests,
+        CancellationToken cancellationToken
+    )
+    {
+        var resolved =
+            new Dictionary<(string Namespace, string OriginalValue), Data.Models.Pseudonym>();
+
+        if (requests.Count == 0)
+        {
+            return resolved;
+        }
+
+        // Structurally identical to ReverseLookupTrustedBatchAsync below, down to the grouping and
+        // the absent-means-not-found contract - only the index it rides and the column it matches
+        // on differ. Same fresh, pooled DbContext reasoning as the other trusted batch methods.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var repository = new PseudonymRepository(context);
+
+        foreach (var group in requests.GroupBy(r => r.Namespace.Name, StringComparer.Ordinal))
+        {
+            var values = group
+                .Select(r => r.OriginalValue)
+                .Where(v => !string.IsNullOrWhiteSpace(v))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
+
+            foreach (
+                var pseudonym in await repository.FindAllByOriginalValuesAsync(
+                    group.Key,
+                    values,
+                    cancellationToken
+                )
+            )
+            {
+                // Sequence 0 only. A multi-psn namespace returns every stored sequence number for
+                // an original value, and the one a pseudonymizing job substitutes into a cell is
+                // the first - matching the single-value CreateTrustedAsync overload the create
+                // path uses. TryAdd rather than the indexer keeps that first-wins regardless of
+                // the ordering the repository returned.
+                if (pseudonym.SequenceNumber == 0)
+                {
+                    resolved.TryAdd((group.Key, pseudonym.OriginalValue), pseudonym);
+                }
             }
         }
 

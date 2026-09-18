@@ -44,7 +44,9 @@ public class ApiAuthorizationTests(AuthorizationEnabledTestFactory factory)
             { HttpMethod.Get, "/v1/namespaces/existingNamespace/children" },
             { HttpMethod.Get, "/v1/namespaces/existingNamespace/pseudonyms" },
             { HttpMethod.Post, "/v1/namespaces/existingNamespace/pseudonyms" },
+            { HttpMethod.Post, "/v1/namespaces/existingNamespace/pseudonyms:resolve" },
             { HttpMethod.Post, "/v1/fhir/$create-pseudonym" },
+            { HttpMethod.Post, "/v1/fhir/$resolve-pseudonym" },
         };
 
     [Theory]

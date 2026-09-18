@@ -83,6 +83,69 @@ public class PseudonymService(IPseudonymAppService pseudonymAppService)
         return response;
     }
 
+    /// <inheritdoc/>
+    public override async Task<PseudonymServiceResolveResponse> Resolve(
+        PseudonymServiceResolveRequest request,
+        ServerCallContext context
+    )
+    {
+        IReadOnlyList<Data.Models.Pseudonym> pseudonyms;
+        try
+        {
+            pseudonyms = await pseudonymAppService.ResolveAsync(
+                request.Namespace,
+                request.OriginalValue,
+                context.GetUser(),
+                context.CancellationToken
+            );
+        }
+        catch (NamespaceNotFoundException)
+        {
+            var metadata = new Metadata { { "Namespace", request.Namespace } };
+
+            throw new RpcException(
+                new Status(
+                    StatusCode.NotFound,
+                    "The requested pseudonym namespace does not exist."
+                ),
+                metadata
+            );
+        }
+        catch (ForbiddenException ex)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
+        }
+        catch (ArgumentException ex)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
+        catch (OriginalValueValidationException ex)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
+
+        if (pseudonyms.Count == 0)
+        {
+            // Deliberately without the original value in the trailing metadata, unlike Get's
+            // "Pseudonym" entry above: a pseudonym is safe to echo back to a caller who already
+            // sent it, an original value is the thing this service exists to keep out of logs and
+            // error paths. The namespace alone is enough to tell the two 404s apart.
+            var metadata = new Metadata { { "Namespace", request.Namespace } };
+
+            throw new RpcException(
+                new Status(
+                    StatusCode.NotFound,
+                    "No pseudonym exists in the namespace for the requested original value."
+                ),
+                metadata
+            );
+        }
+
+        var response = new PseudonymServiceResolveResponse { Pseudonym = ToProto(pseudonyms[0]) };
+        response.Pseudonyms.AddRange(pseudonyms.Select(ToProto));
+        return response;
+    }
+
     private static Pseudonym ToProto(Data.Models.Pseudonym pseudonym) =>
         new()
         {

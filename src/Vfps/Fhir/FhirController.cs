@@ -181,6 +181,139 @@ public class FhirController(
     }
 
     /// <summary>
+    /// Resolve the pseudonym already stored for an original value, creating nothing.
+    /// </summary>
+    /// <param name="parametersResource">A FHIR Parameters resource</param>
+    /// <param name="cancellationToken">A cancellation token to abort the request</param>
+    /// <returns>
+    /// Either a FHIR Parameters resource containing the existing pseudonym or a FHIR
+    /// OperationOutcome - including a 404 when the namespace holds no pseudonym for the value,
+    /// which is the difference from $create-pseudonym.
+    /// </returns>
+    [HttpPost("$resolve-pseudonym")]
+    [ProducesResponseType(typeof(Parameters), 200)]
+    [ProducesResponseType(typeof(OperationOutcome), 400)]
+    [ProducesResponseType(typeof(OperationOutcome), 403)]
+    [ProducesResponseType(typeof(OperationOutcome), 404)]
+    [ProducesResponseType(typeof(OperationOutcome), 422)]
+    public async Task<ObjectResult> ResolvePseudonym(
+        [FromBody] Parameters? parametersResource,
+        CancellationToken cancellationToken = default
+    )
+    {
+        if (parametersResource is null)
+        {
+            logger.LogError("Bad Request: received request body is empty.");
+            return BadRequest(
+                Outcome(
+                    OperationOutcome.IssueType.Processing,
+                    "Received malformed or missing resource"
+                )
+            );
+        }
+
+        var namespaceName = parametersResource.GetSingleValue<FhirString>("namespace")?.Value;
+        var originalValue = parametersResource.GetSingleValue<FhirString>("originalValue")?.Value;
+
+        if (
+            namespaceName is null
+            || originalValue is null
+            || string.IsNullOrWhiteSpace(originalValue)
+        )
+        {
+            return BadRequest(
+                Outcome(
+                    OperationOutcome.IssueType.Processing,
+                    "namespace and/or originalValue are missing or blank in the Parameters request object"
+                )
+            );
+        }
+
+        // Same app service, and therefore the same write-access check, as $create-pseudonym and
+        // the gRPC Resolve - this facade must not have its own, weaker copy of either.
+        IReadOnlyList<Data.Models.Pseudonym> pseudonyms;
+        try
+        {
+            pseudonyms = await pseudonymAppService.ResolveAsync(
+                namespaceName,
+                originalValue,
+                User,
+                cancellationToken
+            );
+        }
+        catch (NamespaceNotFoundException)
+        {
+            return NotFound(
+                Outcome(
+                    OperationOutcome.IssueType.Processing,
+                    $"the namespace '{namespaceName}' could not be found."
+                )
+            );
+        }
+        catch (ForbiddenException ex)
+        {
+            return StatusCode(403, Outcome(OperationOutcome.IssueType.Forbidden, ex.Message));
+        }
+        catch (ArgumentException)
+        {
+            return BadRequest(
+                Outcome(OperationOutcome.IssueType.Processing, "originalValue must not be blank.")
+            );
+        }
+        catch (OriginalValueValidationException ex)
+        {
+            // 422 rather than 400 for the same reason as $create-pseudonym: the request is
+            // well-formed, the value just fails a rule the namespace enforces.
+            return UnprocessableEntity(
+                Outcome(OperationOutcome.IssueType.BusinessRule, ex.Message)
+            );
+        }
+
+        if (pseudonyms.Count == 0)
+        {
+            // Deliberately without the original value in the diagnostics, unlike the namespace
+            // name: an OperationOutcome travels into the caller's own logs and error reporting,
+            // and the value is the thing this service exists to keep out of both.
+            return NotFound(
+                Outcome(
+                    OperationOutcome.IssueType.NotFound,
+                    $"the namespace '{namespaceName}' holds no pseudonym for the requested original value."
+                )
+            );
+        }
+
+        return Ok(
+            new Parameters
+            {
+                Parameter = new List<Parameters.ParameterComponent>
+                {
+                    new() { Name = "namespace", Value = new FhirString(namespaceName) },
+                    new() { Name = "originalValue", Value = new FhirString(originalValue) },
+                    new()
+                    {
+                        Name = "pseudonymValue",
+                        Value = new FhirString(pseudonyms[0].PseudonymValue),
+                    },
+                },
+            }
+        );
+    }
+
+    private static OperationOutcome Outcome(OperationOutcome.IssueType code, string diagnostics) =>
+        new()
+        {
+            Issue =
+            [
+                new OperationOutcome.IssueComponent
+                {
+                    Severity = OperationOutcome.IssueSeverity.Error,
+                    Code = code,
+                    Diagnostics = diagnostics,
+                },
+            ],
+        };
+
+    /// <summary>
     ///     Returns the server's FHIR CapabilityStatement.
     ///     Note that this CapabilityStatement is not valid at this point as it does not include the custom operations.
     /// </summary>

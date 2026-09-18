@@ -118,6 +118,30 @@
   <data name="App.Common.Close" xml:space="preserve">
     <value>Schließen</value>
   </data>
+  <data name="App.CsvJobs.PseudonymizeMode" xml:space="preserve">
+    <value>Unbekannte Werte</value>
+  </data>
+  <data name="App.CsvJobs.PseudonymizeModeBlankIfMissingHint" xml:space="preserve">
+    <value>Unbekannte Werte werden als leere Zelle ausgegeben und gezählt - niemals als Originalwert, der sonst unpseudonymisiert in der Ausgabe stehen bliebe.</value>
+  </data>
+  <data name="App.CsvJobs.PseudonymizeModeBlankIfMissingOption" xml:space="preserve">
+    <value>Zelle leer lassen, wenn der Namespace einen Wert noch nicht kennt</value>
+  </data>
+  <data name="App.CsvJobs.PseudonymizeModeCreateIfMissingOption" xml:space="preserve">
+    <value>Pseudonym erzeugen, wenn der Namespace den Wert noch nicht kennt</value>
+  </data>
+  <data name="App.CsvJobs.PseudonymizeModeFailIfMissingOption" xml:space="preserve">
+    <value>Auftrag abbrechen, wenn der Namespace einen Wert noch nicht kennt</value>
+  </data>
+  <data name="App.CsvJobs.UnresolvedValueCountPlural" xml:space="preserve">
+    <value>{0} unbekannte Werte</value>
+  </data>
+  <data name="App.CsvJobs.UnresolvedValueCountSingular" xml:space="preserve">
+    <value>{0} unbekannter Wert</value>
+  </data>
+  <data name="App.CsvJobs.UnresolvedValueTitle" xml:space="preserve">
+    <value>Für diese Werte gab es im Namespace kein Pseudonym, und dieser Auftrag sollte keines erzeugen - sie wurden als leere Zellen ausgegeben.</value>
+  </data>
   <data name="App.Namespaces.ConfigureAccessAction" xml:space="preserve">
     <value>Zugriff konfigurieren</value>
   </data>

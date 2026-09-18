@@ -95,13 +95,24 @@ public interface IPseudonymizationJobAppService
     Task<int> ClearFinishedAsync(ClaimsPrincipal user, CancellationToken cancellationToken);
 }
 
+/// <summary>
+/// One CSV job to create, other than an export - see <see cref="CreateCsvExportJobRequest"/> for
+/// why that one has a request of its own.
+///
+/// <paramref name="PseudonymizeMode"/> decides what becomes of an original value the namespace
+/// holds no pseudonym for (see <see cref="Data.Models.PseudonymizeMode"/>). It is only valid to
+/// set away from its default on a <see cref="PseudonymizationJobDirection.Pseudonymize"/> job;
+/// every other direction rejects it rather than ignoring it, so a caller asking for a guarantee
+/// that job cannot give is told so instead of quietly receiving the default behavior.
+/// </summary>
 public record CreateCsvJobRequest(
     string Encoding,
     string Delimiter,
     bool HasHeaderRow,
     IReadOnlyList<ColumnMapping> ColumnMappings,
     PseudonymizationJobDirection Direction = PseudonymizationJobDirection.Pseudonymize,
-    string? OriginalFileName = null
+    string? OriginalFileName = null,
+    PseudonymizeMode PseudonymizeMode = PseudonymizeMode.CreateIfMissing
 );
 
 /// <summary>

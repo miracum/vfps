@@ -167,6 +167,31 @@ internal sealed class CsvPseudonymizationJobRunner(
             );
             throw;
         }
+        catch (UnresolvedOriginalValueException ex)
+        {
+            // The one CSV failure whose own message is safe to persist, and the one where a
+            // generic "see server logs" would be useless: this job was explicitly configured to
+            // fail on a value its namespace does not know, so *which* row and column stopped it is
+            // the answer the person who set that up came for. The message is built to carry only
+            // the job's own configuration back - see UnresolvedOriginalValueException.
+            logger.LogWarning(
+                "CSV pseudonymization job {JobId} stopped at data row {DataRow}: no pseudonym in "
+                    + "namespace {Namespace} for a value in column {Column}, and the job is set to "
+                    + "fail rather than create one.",
+                jobId,
+                ex.DataRowNumber,
+                ex.NamespaceName,
+                ex.SourceColumn
+            );
+            activity?.SetStatus(ActivityStatusCode.Error, ex.GetType().Name);
+            await jobRepository.UpdateStatusAsync(
+                jobId,
+                PseudonymizationJobStatus.Failed,
+                ex.Message,
+                CancellationToken.None
+            );
+            throw;
+        }
         catch (Exception ex)
         {
             // Never persist raw row content or the raw exception string here - this service's

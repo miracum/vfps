@@ -64,6 +64,49 @@ public enum PseudonymizationJobDirection
 }
 
 /// <summary>
+/// What a <see cref="PseudonymizationJobDirection.Pseudonymize"/> job does with an original value
+/// that has no pseudonym in its namespace yet. Ignored by every other direction.
+///
+/// Deliberately one enum rather than a "look up only" flag plus a separate miss policy: the two
+/// are not independent - there is no such thing as "create one, and also fail because there was
+/// none" - and a single member per reachable behavior is what keeps that state unrepresentable
+/// rather than merely unreachable.
+///
+/// Note what <see cref="BlankIfMissing"/> does *not* do: leave the field as it found it. That is
+/// what a de-pseudonymizing job does with a pseudonym it cannot resolve (harmless - the value
+/// stays a pseudonym), and doing the same here would write the raw original value into the very
+/// column the job was asked to pseudonymize. The failure mode of this feature has to be an empty
+/// field, never a leaked one.
+///
+/// New members are appended, never inserted, so existing stored integer values keep their meaning.
+/// </summary>
+public enum PseudonymizeMode
+{
+    /// <summary>
+    /// Generate one. The default, and what every job did before this existed - so every row stored
+    /// before this column existed reads back as this.
+    /// </summary>
+    CreateIfMissing,
+
+    /// <summary>
+    /// Never generate: fail the whole job at the first value with no pseudonym, before any part of
+    /// the chunk it was found in is written. The job exposes no output file - like every other
+    /// failure, whatever had already been streamed out is never linked as
+    /// <see cref="PseudonymizationJob.OutputObjectKey"/> and expires with the bucket's lifecycle
+    /// rule. For a caller whose file is supposed to contain only values the namespace already
+    /// knows, where one that isn't means the input is wrong rather than that a pseudonym is wanted.
+    /// </summary>
+    FailIfMissing,
+
+    /// <summary>
+    /// Never generate: write an empty field for each value with no pseudonym, count them into
+    /// <see cref="PseudonymizationJob.UnresolvedValueCount"/> and carry on. For a caller enriching
+    /// a file where some rows simply have no counterpart yet.
+    /// </summary>
+    BlankIfMissing,
+}
+
+/// <summary>
 /// One column of a CSV job: replaces the value in <see cref="SourceColumn"/> - interpreted
 /// according to the job's <see cref="PseudonymizationJob.Direction"/> - in
 /// <see cref="Namespace"/>, either in place or into <see cref="TargetColumn"/>.
@@ -123,6 +166,14 @@ public class PseudonymizationJob : TracksCreationAndUpdates
     public PseudonymizationJobDirection Direction { get; set; } =
         PseudonymizationJobDirection.Pseudonymize;
 
+    /// <summary>
+    /// Only meaningful when <see cref="Direction"/> is
+    /// <see cref="PseudonymizationJobDirection.Pseudonymize"/> - rejected at job creation for any
+    /// other direction rather than silently ignored, so a caller who sets it somewhere it cannot
+    /// apply is told rather than quietly given the default behavior.
+    /// </summary>
+    public PseudonymizeMode PseudonymizeMode { get; set; } = PseudonymizeMode.CreateIfMissing;
+
     /// <summary>Subject ("sub" claim) of the user who created this job.</summary>
     public required string CreatedBy { get; set; }
 
@@ -171,6 +222,20 @@ public class PseudonymizationJob : TracksCreationAndUpdates
     /// themselves.
     /// </summary>
     public int MissingValueCount { get; set; }
+
+    /// <summary>
+    /// <see cref="PseudonymizeMode.BlankIfMissing"/> only: fields written out empty because the
+    /// namespace held no pseudonym for their original value and the job was told not to create
+    /// one. Always 0 for every other mode - <see cref="PseudonymizeMode.CreateIfMissing"/> cannot
+    /// leave a value unresolved, and <see cref="PseudonymizeMode.FailIfMissing"/> fails the job
+    /// instead of counting.
+    ///
+    /// Distinct from <see cref="MissingValueCount"/>, which counts fields that were blank in the
+    /// *input*: those two look identical in the output file and mean entirely different things -
+    /// "there was nothing to pseudonymize" versus "there was, and this namespace has never seen
+    /// it". Like the counters above, a count only: the values themselves are never stored.
+    /// </summary>
+    public int UnresolvedValueCount { get; set; }
 
     /// <summary>
     /// Sanitized failure message only - never raw row content or a raw exception string, since

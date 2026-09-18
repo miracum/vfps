@@ -48,6 +48,69 @@ public interface IPseudonymAppService
     );
 
     /// <summary>
+    /// Resolves the pseudonym(s) already stored for <paramref name="originalValue"/> in
+    /// <paramref name="namespaceName"/>, creating nothing. The lookup-only counterpart to
+    /// <see cref="CreateAsync"/>, for a caller whose file or request is supposed to contain only
+    /// values the namespace already knows - where minting a pseudonym for one it doesn't would
+    /// quietly record a subject that was never meant to be in it.
+    ///
+    /// Requires write access, the same as <see cref="CreateAsync"/>: this is the same forward
+    /// mapping, and write access already lets a caller obtain it for any value it can supply. It
+    /// is not quite a subset, though, and the difference is worth knowing - a create call cannot
+    /// tell you whether the pseudonym it handed back already existed, and this one can. That makes
+    /// it an existence oracle over the namespace's original values ("was this subject ever in this
+    /// cohort?"), which is why it is gated on write rather than on read access.
+    ///
+    /// <paramref name="originalValue"/> is validated against the namespace's
+    /// <see cref="Namespace.OriginalValueValidationRegex"/> before the lookup, so an invalid value
+    /// is rejected identically whether or not a pseudonym happens to exist for it - the same
+    /// reason <see cref="CreateAsync"/> validates ahead of its own grow-to-N short circuit.
+    /// </summary>
+    /// <returns>
+    /// Every pseudonym stored for <paramref name="originalValue"/>, ordered by sequence number -
+    /// empty when the namespace holds none, which is the caller's "not found".
+    /// </returns>
+    /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
+    /// <exception cref="NamespaceNotFoundException">The namespace does not exist.</exception>
+    /// <exception cref="Authorization.ForbiddenException">
+    /// <paramref name="user"/> has no write access to it.
+    /// </exception>
+    /// <exception cref="OriginalValueValidationException">
+    /// <paramref name="originalValue"/> does not match the namespace's validation pattern.
+    /// </exception>
+    Task<IReadOnlyList<Pseudonym>> ResolveAsync(
+        string namespaceName,
+        string originalValue,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// The lookup-only counterpart to <see cref="CreateTrustedBatchAsync"/>, with the same trust
+    /// boundary and the same batching rationale - one round trip per distinct namespace rather
+    /// than one per value. Backs
+    /// <see cref="Data.Models.PseudonymizeMode.FailIfMissing"/> and
+    /// <see cref="Data.Models.PseudonymizeMode.BlankIfMissing"/> CSV jobs.
+    ///
+    /// Returns the same shape as <see cref="ReverseLookupTrustedBatchAsync"/>, deliberately: a
+    /// value with no stored pseudonym is simply absent from the dictionary rather than mapping to
+    /// null, so the two lookup-only paths and the create path are interchangeable behind one
+    /// resolver signature in <see cref="CsvProcessing.CsvColumnTransformer"/>. In a multi-psn
+    /// namespace the entry is the first (sequence number 0) pseudonym, matching what
+    /// <see cref="CreateTrustedAsync(Namespace, string, CancellationToken)"/> returns.
+    ///
+    /// No original-value validation here, unlike <see cref="ResolveAsync"/>: nothing is written, a
+    /// value that could never have been stored simply has nothing to find, and running a regex per
+    /// field per row to reach that same answer would be the dominant per-row cost.
+    /// </summary>
+    Task<
+        IReadOnlyDictionary<(string Namespace, string OriginalValue), Pseudonym>
+    > ResolveTrustedBatchAsync(
+        IReadOnlyList<(Namespace Namespace, string OriginalValue)> requests,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Same as <see cref="CreateAsync"/> but skips the per-call permission check - only for the
     /// CSV job runner, which already verified write access to every namespace a job's column
     /// mappings reference up front, at job creation time (see
