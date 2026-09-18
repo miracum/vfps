@@ -216,6 +216,17 @@ void ConfigurePseudonymContext(IServiceProvider isp, DbContextOptionsBuilder opt
         ConfigureNpgsqlResilience
     );
 
+// Who owns the schema: this process, or something that ran before it. Development and an
+// explicit ForceRunDatabaseMigrations mean the app migrates itself on startup (see the
+// Database.Migrate() calls at the very end); everywhere else a separate `migrate` run - the Helm
+// chart's migrations Job - has already done it, and each pod here just waits for that Job. The
+// same answer settles Hangfire's PrepareSchemaIfNecessary below, so the two schemas this app
+// depends on always have exactly one owner between them. Computed here, off the builder, because
+// the Hangfire registration needs it long before the WebApplication exists.
+var shouldRunDatabaseMigrations =
+    builder.Environment.IsDevelopment()
+    || builder.Configuration.GetValue<bool>("ForceRunDatabaseMigrations");
+
 // A factory, not a plain AddDbContext - PseudonymAppService's "trusted" methods
 // (CreateTrustedAsync/ReverseLookupTrustedAsync) use IDbContextFactory<PseudonymContext>
 // directly to get their own independent context per call, since the CSV job runner calls them
@@ -619,6 +630,19 @@ if (isHangfireEnabled)
                 options => options.UseNpgsqlConnection(hangfireConnectionString),
                 new PostgreSqlStorageOptions
                 {
+                    SchemaName = DatabaseMigrator.HangfireSchemaName,
+
+                    // Off wherever the migrations Job owns the schema, which is every deployment
+                    // that isn't development or ForceRunDatabaseMigrations. Left at the package
+                    // default of true, this installer runs in every replica's
+                    // PostgreSqlStorage constructor, and Install.sql serializes nothing: replicas
+                    // starting together run the same DDL concurrently and hit
+                    // `XX000: could not find tuple for constraint NNNNN`. The chart's
+                    // wait-for-migrations-job init container makes that worse rather than better,
+                    // since it releases every pod at the same instant. See
+                    // DatabaseMigrator.InstallHangfireSchema, which is what runs it instead.
+                    PrepareSchemaIfNecessary = shouldRunDatabaseMigrations,
+
                     // Hangfire.PostgreSql tracks "who is working on this job" via a fetchedat
                     // timestamp on the queue row, not a held lock - its dequeue query picks up any
                     // row whose fetchedat is older than InvisibilityTimeout (left at the package's
@@ -993,9 +1017,6 @@ if (authConfig.IsEnabled)
     controllerEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
 }
 
-var shouldRunDatabaseMigrations =
-    app.Environment.IsDevelopment()
-    || app.Configuration.GetValue<bool>("ForceRunDatabaseMigrations");
 if (shouldRunDatabaseMigrations)
 {
     // only ran in a development setup or when forced.
