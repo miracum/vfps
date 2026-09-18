@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.17.0](https://github.com/miracum/vfps/compare/v1.16.4...v1.17.0) (2026-09-18)
+
+
+### Features
+
+* **chart:** support for tls and client cert connections to cnpg ([#334](https://github.com/miracum/vfps/issues/334)) ([b683cb9](https://github.com/miracum/vfps/commit/b683cb90a03c3ceddc80a6dd15e019e81c6bb9c0))
+* support for resolving pseudonyms, failing if they dont already exist ([#333](https://github.com/miracum/vfps/issues/333)) ([1e5852f](https://github.com/miracum/vfps/commit/1e5852ff7c46c7b19f0be71150cf7f113dc6fe36))
+
+
+### Bug Fixes
+
+* guard fhir and grpc api behind Authorize ([#331](https://github.com/miracum/vfps/issues/331)) ([ed5ecfd](https://github.com/miracum/vfps/commit/ed5ecfdc90229b0ce32817e1bb8d61f2b1447e0c))
+
 ## [1.16.4](https://github.com/miracum/vfps/compare/v1.16.3...v1.16.4) (2026-09-17)
 
 
