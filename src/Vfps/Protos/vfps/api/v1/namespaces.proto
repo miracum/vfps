@@ -45,8 +45,11 @@ message Namespace {
   Meta meta = 1;
   // the name of the namespace
   string name = 2;
-  // a description for the namespace
-  string description = 3;
+  // a description for the namespace. Absent when the namespace has none - stored as NULL rather
+  // than as an empty string, which is what a namespace created without one carries. `optional`
+  // like every other nullable-backed field here, so that "never given a description" and "given
+  // an empty one" stay distinguishable rather than both arriving as "".
+  optional string description = 3;
   // the method to use when generating pseudonyms in the namespace
   PseudonymGenerationMethod pseudonym_generation_method = 4;
   // the length of the pseudonym. Note that the total length depends on the generation
@@ -121,8 +124,9 @@ message NamespaceServiceCreateRequest {
   optional string pseudonym_prefix = 4;
   // a suffix to append to each generated pseudonym
   optional string pseudonym_suffix = 5;
-  // a description for the namespace
-  string description = 6;
+  // a description for the namespace. Omit it to store none at all; sending an empty string
+  // stores an empty description, and the two read back differently.
+  optional string description = 6;
   // an optional regular expression used to validate an original value before a pseudonym is
   // generated for it. If set, values that don't match are rejected with a client error.
   optional string original_value_validation_regex = 7;

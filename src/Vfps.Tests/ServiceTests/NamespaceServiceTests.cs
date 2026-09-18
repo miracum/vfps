@@ -14,6 +14,232 @@ public class NamespaceServiceTests : ServiceTestBase
         sut = new Services.NamespaceService(CreateNamespaceAppService(namespaceRepository));
     }
 
+    /// <summary>
+    /// Stores a namespace with every nullable column actually NULL - which is what the admin UI's
+    /// create form leaves behind for a description nobody typed, and what the columns have always
+    /// permitted. Written through the context rather than the app service so the row is exactly
+    /// as null as the database allows, with no defaulting in between.
+    /// </summary>
+    private async Task<string> AddNamespaceWithNullColumnsAsync()
+    {
+        var name = $"allNullColumns-{Guid.NewGuid():N}";
+        InMemoryPseudonymContext.Namespaces.Add(
+            new Data.Models.Namespace
+            {
+                Name = name,
+                Description = null,
+                PseudonymLength = 16,
+                PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.Unspecified,
+                PseudonymPrefix = null,
+                PseudonymSuffix = null,
+                OriginalValueValidationRegex = null,
+                CreatedAt = DateTime.UtcNow,
+                LastUpdatedAt = DateTime.UtcNow,
+            }
+        );
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+
+        return name;
+    }
+
+    [Fact]
+    public async Task Get_WithNullColumns_ShouldReturnThemRatherThanThrow()
+    {
+        // Regression test: every string setter on the generated proto type rejects null, so
+        // mapping a nullable column straight across threw ArgumentNullException - a 500 on a row
+        // the database considers perfectly valid.
+        var name = await AddNamespaceWithNullColumnsAsync();
+
+        var response = await sut.Get(
+            new NamespaceServiceGetRequest { Name = name },
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
+
+        // Every one of them is `optional`, so a NULL column comes back absent rather than empty -
+        // which a client can tell apart from a deliberately empty one.
+        response.Namespace.HasDescription.Should().BeFalse();
+        response.Namespace.HasPseudonymPrefix.Should().BeFalse();
+        response.Namespace.HasPseudonymSuffix.Should().BeFalse();
+        response.Namespace.HasOriginalValueValidationRegex.Should().BeFalse();
+        response.Namespace.HasParentName.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Get_WithEmptyButNotNullColumns_ShouldStillReportThemAsPresent()
+    {
+        // The other half of the distinction above: an empty string was stored, so it is not
+        // absent. This is what every namespace created through the app service looks like, and
+        // the fix must not quietly turn those into absent fields.
+        var name = $"emptyColumns-{Guid.NewGuid():N}";
+        InMemoryPseudonymContext.Namespaces.Add(
+            new Data.Models.Namespace
+            {
+                Name = name,
+                Description = "",
+                PseudonymLength = 16,
+                PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.Unspecified,
+                PseudonymPrefix = "",
+                PseudonymSuffix = "",
+                OriginalValueValidationRegex = "",
+                CreatedAt = DateTime.UtcNow,
+                LastUpdatedAt = DateTime.UtcNow,
+            }
+        );
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+
+        var response = await sut.Get(
+            new NamespaceServiceGetRequest { Name = name },
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
+
+        response.Namespace.HasDescription.Should().BeTrue();
+        response.Namespace.Description.Should().BeEmpty();
+        response.Namespace.HasPseudonymPrefix.Should().BeTrue();
+        response.Namespace.HasPseudonymSuffix.Should().BeTrue();
+        response.Namespace.HasOriginalValueValidationRegex.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetAll_WithOneNullColumnRow_ShouldStillReturnEveryNamespace()
+    {
+        // The part that made this worth more than one bad response: GetAll projects the whole
+        // list, so the throwing row took every other namespace down with it - a single namespace
+        // created without a description was enough to make listing them fail for everyone.
+        var name = await AddNamespaceWithNullColumnsAsync();
+
+        var response = await sut.GetAll(
+            new NamespaceServiceGetAllRequest(),
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
+
+        response.Namespaces.Should().Contain(n => n.Name == name);
+        response.Namespaces.Should().Contain(n => n.Name == "existingNamespace");
+    }
+
+    [Fact]
+    public async Task ListChildren_WithANullColumnChild_ShouldStillReturnIt()
+    {
+        var parentName = $"nullChildParent-{Guid.NewGuid():N}";
+        InMemoryPseudonymContext.Namespaces.Add(
+            new Data.Models.Namespace
+            {
+                Name = parentName,
+                Description = "parent",
+                PseudonymLength = 16,
+                PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.Unspecified,
+                CreatedAt = DateTime.UtcNow,
+                LastUpdatedAt = DateTime.UtcNow,
+            }
+        );
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var childName = $"nullChild-{Guid.NewGuid():N}";
+        InMemoryPseudonymContext.Namespaces.Add(
+            new Data.Models.Namespace
+            {
+                Name = childName,
+                Description = null,
+                PseudonymLength = 16,
+                PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.Unspecified,
+                PseudonymPrefix = null,
+                PseudonymSuffix = null,
+                OriginalValueValidationRegex = null,
+                ParentName = parentName,
+                CreatedAt = DateTime.UtcNow,
+                LastUpdatedAt = DateTime.UtcNow,
+            }
+        );
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+
+        var response = await sut.ListChildren(
+            new NamespaceServiceListChildrenRequest { Name = parentName },
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
+
+        response.Namespaces.Should().ContainSingle(n => n.Name == childName);
+        response.Namespaces.Single().ParentName.Should().Be(parentName);
+    }
+
+    [Fact]
+    public async Task Get_AfterAnAdminUiCreateWithNoDescription_ShouldReturnIt()
+    {
+        // How the NULL rows actually get there, end to end. The gRPC surface cannot produce one -
+        // `description` is a plain proto3 string, so an omitted one arrives as "" - but the admin
+        // UI's form model types it as `string?` with no initializer and hands the app service a
+        // null for a field nobody typed into, which is stored verbatim. Every namespace created
+        // that way then broke the API's read side.
+        var name = $"uiCreated-{Guid.NewGuid():N}";
+        await CreateNamespaceAppService(new NamespaceRepository(InMemoryPseudonymContext))
+            .CreateAsync(
+                new Data.Models.Namespace
+                {
+                    Name = name,
+                    Description = null,
+                    PseudonymLength = 16,
+                    PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.Unspecified,
+                },
+                new System.Security.Claims.ClaimsPrincipal(),
+                CancellationToken.None
+            );
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+
+        var response = await sut.Get(
+            new NamespaceServiceGetRequest { Name = name },
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
+
+        response.Namespace.Name.Should().Be(name);
+        response.Namespace.HasDescription.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Create_WithoutADescription_ShouldStoreNoneRatherThanAnEmptyOne()
+    {
+        // The request field is `optional` too, so the distinction survives a round trip: omitting
+        // it stores NULL and reads back absent, rather than quietly becoming an empty description
+        // that nothing can tell apart from a deliberate one.
+        var name = $"noDescription-{Guid.NewGuid():N}";
+
+        var created = await sut.Create(
+            new NamespaceServiceCreateRequest { Name = name, PseudonymLength = 16 },
+            TestServerCallContext.Create()
+        );
+
+        created.Namespace.HasDescription.Should().BeFalse();
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+        InMemoryPseudonymContext
+            .Namespaces.Single(n => n.Name == name)
+            .Description.Should()
+            .BeNull();
+    }
+
+    [Fact]
+    public async Task Create_WithAnExplicitlyEmptyDescription_ShouldKeepItEmptyRatherThanAbsent()
+    {
+        var name = $"emptyDescription-{Guid.NewGuid():N}";
+
+        var created = await sut.Create(
+            new NamespaceServiceCreateRequest
+            {
+                Name = name,
+                PseudonymLength = 16,
+                Description = "",
+            },
+            TestServerCallContext.Create()
+        );
+
+        created.Namespace.HasDescription.Should().BeTrue();
+        created.Namespace.Description.Should().BeEmpty();
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+        InMemoryPseudonymContext
+            .Namespaces.Single(n => n.Name == name)
+            .Description.Should()
+            .BeEmpty();
+    }
+
     [Fact]
     public async Task Create_WithExistingNamespace_ShouldThrowAlreadyExistsError()
     {
