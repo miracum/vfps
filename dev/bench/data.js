@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789675918547,
+  "lastUpdate": 1789741172975,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -9594,6 +9594,66 @@ window.BENCHMARK_DATA = {
             "value": 1212.1051908220563,
             "unit": "ns",
             "range": "± 2.8116024487543334"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "ed5ecfdc90229b0ce32817e1bb8d61f2b1447e0c",
+          "message": "fix: guard fhir and grpc api behind Authorize (#331)",
+          "timestamp": "2026-09-18T16:16:45+02:00",
+          "tree_id": "000ca31cba805d78bc20a2100e9663a643548ef5",
+          "url": "https://github.com/miracum/vfps/commit/ed5ecfdc90229b0ce32817e1bb8d61f2b1447e0c"
+        },
+        "date": 1789741172174,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1046.711328799908,
+            "unit": "ns",
+            "range": "± 2.504576544602155"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 702.539975459759,
+            "unit": "ns",
+            "range": "± 1.780315665951361"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 731.219449860709,
+            "unit": "ns",
+            "range": "± 0.8756472937975015"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 991.8986619069026,
+            "unit": "ns",
+            "range": "± 1.5515088148049572"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1169.6246263063872,
+            "unit": "ns",
+            "range": "± 2.3613922698277485"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 1113.6986086918757,
+            "unit": "ns",
+            "range": "± 0.585030111367652"
           }
         ]
       }
