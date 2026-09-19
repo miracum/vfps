@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.18.1](https://github.com/miracum/vfps/compare/v1.18.0...v1.18.1) (2026-09-19)
+
+
+### Bug Fixes
+
+* added favicon and logos ([#338](https://github.com/miracum/vfps/issues/338)) ([a353d61](https://github.com/miracum/vfps/commit/a353d61ed5adf5303dc94f1bb695c7190f8d6822))
+
 ## [1.18.0](https://github.com/miracum/vfps/compare/v1.17.0...v1.18.0) (2026-09-19)
 
 
