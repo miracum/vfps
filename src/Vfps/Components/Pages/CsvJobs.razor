@@ -219,7 +219,7 @@ else
                             @foreach (var row in _columnMappings)
                             {
                                 <div class="bb:flex bb:flex-wrap bb:items-end bb:gap-2 bb:rounded-lg bb:border bb:p-3">
-                                    <BbField>
+                                    <BbField Class="bb:w-40 bb:flex-1">
                                         <BbFieldLabel For="@row.SourceColumnId">
                                             @Localizer["App.CsvJobs.SourceColumn"]
                                         </BbFieldLabel>
@@ -233,7 +233,7 @@ else
                                             />
                                         </BbFieldContent>
                                     </BbField>
-                                    <BbField>
+                                    <BbField Class="bb:w-40 bb:flex-1">
                                         <BbFieldLabel For="@row.TargetColumnId">
                                             @Localizer["App.CsvJobs.TargetColumn"]
                                         </BbFieldLabel>
@@ -245,7 +245,7 @@ else
                                             />
                                         </BbFieldContent>
                                     </BbField>
-                                    <BbField>
+                                    <BbField Class="bb:w-40 bb:flex-1">
                                         <BbFieldLabel For="@row.NamespaceId">@Localizer["App.Nav.Namespaces"]</BbFieldLabel>
                                         <BbFieldContent>
                                             <select
@@ -306,7 +306,7 @@ else
                                below rather than sitting there meaning nothing. *@
                             @if (!ImportsIntoNamespaceColumn)
                             {
-                                <BbField>
+                                <BbField Class="bb:w-40 bb:flex-1">
                                     <BbFieldLabel For="jobNamespace">@Localizer["App.Nav.Namespaces"]</BbFieldLabel>
                                     <BbFieldContent>
                                         <select
@@ -329,7 +329,7 @@ else
                                selector the transform mappings above use. *@
                             @if (IsImport)
                             {
-                                <BbField>
+                                <BbField Class="bb:w-40 bb:flex-1">
                                     <BbFieldLabel For="originalValueColumn">
                                         @Localizer["App.CsvJobs.OriginalValueColumn"]
                                     </BbFieldLabel>
@@ -342,7 +342,7 @@ else
                                         />
                                     </BbFieldContent>
                                 </BbField>
-                                <BbField>
+                                <BbField Class="bb:w-40 bb:flex-1">
                                     <BbFieldLabel For="pseudonymValueColumn">
                                         @Localizer["App.CsvJobs.PseudonymValueColumn"]
                                     </BbFieldLabel>
@@ -355,7 +355,7 @@ else
                                         />
                                     </BbFieldContent>
                                 </BbField>
-                                <BbField>
+                                <BbField Class="bb:w-40 bb:flex-1">
                                     <BbFieldLabel For="namespaceColumn">
                                         @Localizer["App.CsvJobs.NamespaceColumn"]
                                     </BbFieldLabel>
