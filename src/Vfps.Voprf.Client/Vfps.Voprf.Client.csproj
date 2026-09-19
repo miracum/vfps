@@ -2,7 +2,7 @@
   <PropertyGroup>
     <RootNamespace>Vfps.Voprf.Client</RootNamespace>
     <!-- Vfps publishes RID-specific and references this; without the RID its
-         locked-mode restore fails on this project's lock file -->
+      locked-mode restore fails on this project's lock file -->
     <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>

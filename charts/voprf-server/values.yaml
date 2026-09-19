@@ -75,6 +75,12 @@ auth:
   clientCertificate:
     # -- SHA-256 thumbprints allowed to call, hex encoded. Empty accepts any certificate chaining
     # to a trusted root, which is only as narrow as that root.
+    #
+    # Leave it empty when the root is a CA issued for this service alone - a dedicated
+    # cert-manager CA issuer, say. **A thumbprint list does not survive certificate rotation**:
+    # a renewed certificate has the same issuer and subject but a new thumbprint, so cert-manager
+    # renewing behind your back would lock every caller out. Pin thumbprints only against
+    # long-lived, manually managed certificates.
     allowedThumbprints: []
     # -- check revocation online. Off by default: an unreachable CRL or OCSP responder would
     # otherwise take this service down with it.

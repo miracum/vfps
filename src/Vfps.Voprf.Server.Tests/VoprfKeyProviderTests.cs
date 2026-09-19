@@ -15,7 +15,7 @@ public class VoprfKeyProviderTests : IDisposable
     private readonly List<string> files = [];
 
     /// <summary>RFC 9497's skSm, base64 encoded.</summary>
-    private const string ValidKeyBase64 = "5vc/NEt5s3nxoN034H/2LjjZ9xNFzmKuOpvGCwTM2Qk=";
+    private const string ValidKeyBase64 = "5vc/NEt5s3nxoN034H/2LjjZ9xNFzmKuOpvGCwTM2Qk="; // gitleaks:allow - RFC 9497 test vector
     private const string ValidPublicKeyHex =
         "c803e2cc6b05fc15064549b5920659ca4a77b2cca6f04f6b357009335476ad4e";
 

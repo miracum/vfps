@@ -2,7 +2,7 @@
   <PropertyGroup>
     <RootNamespace>Vfps.Voprf</RootNamespace>
     <!-- matches Vfps.Voprf.Server, which publishes RID-specific; without it that
-         project's locked-mode restore fails on this one's lock file -->
+      project's locked-mode restore fails on this one's lock file -->
     <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <!-- the libsodium P/Invoke surface passes pinned spans as raw pointers -->

@@ -2,7 +2,7 @@
   <PropertyGroup>
     <RootNamespace>Vfps.Voprf.Protos</RootNamespace>
     <!-- matches Vfps.Voprf.Server, which publishes RID-specific; without it that
-         project's locked-mode restore fails on this one's lock file -->
+      project's locked-mode restore fails on this one's lock file -->
     <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <!-- generated protobuf code is not ours to document or style -->

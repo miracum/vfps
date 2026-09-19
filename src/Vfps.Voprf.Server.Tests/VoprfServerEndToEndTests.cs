@@ -22,7 +22,7 @@ public class VoprfServerEndToEndTests
     /// <summary>
     /// A fixed key - RFC 9497's own skSm - so the expected outputs can be computed locally.
     /// </summary>
-    private const string PrivateKeyBase64 = "5vc/NEt5s3nxoN034H/2LjjZ9xNFzmKuOpvGCwTM2Qk=";
+    private const string PrivateKeyBase64 = "5vc/NEt5s3nxoN034H/2LjjZ9xNFzmKuOpvGCwTM2Qk="; // gitleaks:allow - RFC 9497 test vector
 
     [ExcludeFromCodeCoverage]
     private sealed class Factory : WebApplicationFactory<Program>

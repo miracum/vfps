@@ -79,6 +79,118 @@ would be refused with 403 - a symptom that reads exactly like an ordinary creden
 The chart and the server both refuse that pairing outright. Use `auth.mode: Jwt`, which a mesh
 can carry, or leave TLS on.
 
+### Mutual TLS with cert-manager
+
+Give the pair their own CA. It is then the trust boundary, and because it issues for nothing
+else, "chains to this CA" is as narrow as naming individual certificates - while surviving
+renewal, which naming them does not.
+
+```yaml
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata: { name: voprf-selfsign, namespace: vfps }
+spec: { selfSigned: {} }
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate            # the CA itself
+metadata: { name: voprf-ca, namespace: vfps }
+spec:
+  isCA: true
+  commonName: voprf-ca
+  secretName: voprf-ca
+  privateKey: { algorithm: ECDSA, size: 256 }
+  issuerRef: { name: voprf-selfsign, kind: Issuer }
+---
+apiVersion: cert-manager.io/v1
+kind: Issuer                 # everything below is signed by it
+metadata: { name: voprf-ca, namespace: vfps }
+spec:
+  ca: { secretName: voprf-ca }
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate            # what the server presents
+metadata: { name: voprf-server-tls, namespace: vfps }
+spec:
+  secretName: voprf-server-tls
+  issuerRef: { name: voprf-ca, kind: Issuer }
+  usages: [server auth]
+  dnsNames:
+    - voprf-server
+    - voprf-server.vfps.svc
+    - voprf-server.vfps.svc.cluster.local
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate            # what vfps presents
+metadata: { name: voprf-client-tls, namespace: vfps }
+spec:
+  secretName: voprf-client-tls
+  issuerRef: { name: voprf-ca, kind: Issuer }
+  usages: [client auth]
+  commonName: vfps
+```
+
+Then point the chart at the server certificate, and at the CA so client certificates can be
+validated against it:
+
+```yaml
+tls:
+  existingSecret: voprf-server-tls
+
+auth:
+  mode: ClientCertificate
+  clientCertificate:
+    allowedThumbprints: []   # the CA is the boundary - see below
+
+# The container trusts the public roots; a private CA has to be added. .NET on Linux honours
+# SSL_CERT_FILE for building the client certificate's chain.
+extraVolumes:
+  - name: client-ca
+    secret:
+      secretName: voprf-server-tls
+      items: [{ key: ca.crt, path: ca.crt }]
+extraVolumeMounts:
+  - name: client-ca
+    mountPath: /secrets/client-ca
+    readOnly: true
+extraEnv:
+  - name: SSL_CERT_FILE
+    value: /secrets/client-ca/ca.crt
+```
+
+`SSL_CERT_FILE` *replaces* the trust store rather than adding to it. That is fine here because
+the server dials nothing outbound - but if you later switch to `auth.mode: Jwt`, its OIDC
+discovery call needs the public roots too, so supply a bundle containing both.
+
+#### Do not pin thumbprints against rotating certificates
+
+`allowedThumbprints` narrows beyond the CA, and it does work - but a renewed certificate has the
+same issuer and the same subject with a **new thumbprint**, so the first cert-manager renewal
+locks every caller out. With a CA issued for this service alone you gain nothing by pinning:
+leave the list empty and let the CA be the boundary. Keep thumbprints for long-lived certificates
+you rotate by hand.
+
+#### The client side
+
+vfps presents its certificate through the gRPC client's handler:
+
+```csharp
+builder.Services.AddVoprfPseudonymizer(builder.Configuration);
+
+builder.Services
+    .AddGrpcClient<Vfps.Voprf.Protos.VoprfService.VoprfServiceClient>()
+    .ConfigurePrimaryHttpMessageHandler(() =>
+    {
+        var handler = new HttpClientHandler();
+        handler.ClientCertificates.Add(
+            X509CertificateLoader.LoadPkcs12FromFile("/secrets/voprf-client/client.pfx", null));
+        return handler;
+    });
+```
+
+cert-manager writes `tls.crt` and `tls.key`; .NET wants one PKCS#12. Either add
+`keystores: { pkcs12: { create: true, passwordSecretRef: ... } }` to the client `Certificate` and
+mount the resulting `keystore.p12`, or combine the two files at startup.
+
 ### Reaching the service is the security boundary
 
 Evaluation reveals nothing about any input, so the service leaks nothing by answering. What it
