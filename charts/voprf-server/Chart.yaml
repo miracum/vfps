@@ -14,6 +14,10 @@ sources:
   - https://github.com/miracum/vfps/tree/master/charts/voprf-server
 maintainers:
   - name: miracum
+dependencies:
+  - name: common
+    repository: oci://ghcr.io/miracum/charts
+    version: 0.1.1
 deprecated: false
 kubeVersion: ">= 1.21.0"
 version: 0.1.0 # x-release-please-version

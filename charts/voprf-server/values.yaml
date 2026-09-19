@@ -168,16 +168,22 @@ securityContext:
   seccompProfile:
     type: RuntimeDefault
 
-resources:
-  requests:
-    cpu: 100m
-    memory: 96Mi
-  limits:
-    memory: 256Mi
-
-# -- kept modest on purpose. An evaluation is one scalar multiplication plus a proof, so this
-# saturates CPU long before memory; a CPU limit would throttle bursts of exactly the work the
-# service exists to do.
+# set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if resources is set (resources is recommended for production).
+# More information: <https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15>
+#
+# micro rather than nano: an evaluation is one scalar multiplication per element plus a proof, so
+# this saturates CPU long before memory, and nano's 150m limit would throttle a batch. Set
+# `resources` outright in production - a CPU limit throttles exactly the work the service exists
+# to do, and only you know how much of it there is.
+resourcesPreset: "micro"
+# -- configure the voprf-server container's resource requests and limits
+resources: {}
+# limits:
+#   cpu: 500m
+#   memory: 256Mi
+# requests:
+#   cpu: 100m
+#   memory: 96Mi
 
 autoscaling:
   enabled: false
@@ -209,6 +215,14 @@ affinity: {}
 # -- spread replicas across nodes so a single node taking the whole service out is not the
 # default posture
 topologySpreadConstraints: []
+
+tests:
+  automountServiceAccountToken: false
+  # set container resources according to one common preset (allowed values: none, nano, micro, small, medium, large, xlarge, 2xlarge). This is ignored if tests.resources is set.
+  # More information: <https://github.com/bitnami/charts/blob/main/bitnami/common/templates/_resources.tpl#L15>
+  resourcesPreset: "nano"
+  # -- configure the test pods resource requests and limits
+  resources: {}
 
 # -- extra environment variables, e.g. `SSL_CERT_FILE` pointing at a mounted CA bundle for mTLS
 extraEnv: []
