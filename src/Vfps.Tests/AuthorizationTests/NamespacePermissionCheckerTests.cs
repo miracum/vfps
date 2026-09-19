@@ -297,6 +297,102 @@ public class NamespacePermissionCheckerTests
         permissions.HasWriteAccess("anything").Should().BeTrue();
     }
 
+    private static ClaimsPrincipal ServiceAccount(string name, params string[] roles) =>
+        new(
+            new ClaimsIdentity(
+                roles
+                    .Select(r => new Claim("roles", r))
+                    .Append(new Claim(VfpsClaimTypes.ServiceAccount, name)),
+                "test"
+            )
+        );
+
+    [Fact]
+    public async Task ServiceAccountGrant_ShouldMatchOnlyThatAccount()
+    {
+        var sut = CreateSut(
+            new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] },
+            Grants.ForServiceAccount("ns1", "etl-pipeline", read: true, write: true)
+        );
+
+        var matching = await sut.ResolveAsync(
+            ServiceAccount("etl-pipeline"),
+            CancellationToken.None
+        );
+        matching.HasReadAccess("ns1").Should().BeTrue();
+        matching.HasWriteAccess("ns1").Should().BeTrue();
+        matching.HasReverseLookupAccess("ns1").Should().BeFalse();
+        matching.HasReadAccess("ns2").Should().BeFalse();
+
+        var other = await sut.ResolveAsync(ServiceAccount("other-account"), CancellationToken.None);
+        other.HasReadAccess("ns1").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task ServiceAccountGrant_ShouldNotMatchAUserHoldingTheSameNameAsARole()
+    {
+        // A role and a service account are different grantees that happen to share a string -
+        // the grantee type is what tells them apart, not the name.
+        var sut = CreateSut(
+            new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] },
+            Grants.ForServiceAccount("ns1", "etl-pipeline", read: true)
+        );
+
+        var permissions = await sut.ResolveAsync(
+            UserWithRoles("etl-pipeline"),
+            CancellationToken.None
+        );
+
+        permissions.HasReadAccess("ns1").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task AServiceAccount_ShouldNotMatchRoleOrEmailGrants()
+    {
+        // Belt and braces: a service-account principal carries no roles and no email, and the
+        // matching itself is also keyed on the grantee type.
+        var sut = CreateSut(
+            new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] },
+            Grants.ForRole("ns1", "reader", read: true),
+            Grants.ForEmail("ns1", "user@example.org", read: true)
+        );
+
+        var permissions = await sut.ResolveAsync(
+            ServiceAccount("etl-pipeline", "reader"),
+            CancellationToken.None
+        );
+
+        permissions.HasReadAccess("ns1").Should().BeFalse();
+    }
+
+    [Fact]
+    public void AServiceAccount_ShouldNeverBeAnAdmin()
+    {
+        // Whatever it is granted, and even if an admin role somehow reached its principal: a
+        // service account's whole authority is its namespace grants, so it can never create or
+        // delete a namespace, manage grants, or reach the Hangfire dashboard.
+        var sut = CreateSut(new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] });
+
+        sut.IsAdmin(ServiceAccount("etl-pipeline", "admin")).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task AServiceAccount_ShouldStillMatchAGrantCoveringEveryNamespace()
+    {
+        var sut = CreateSut(
+            new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] },
+            Grants.ForServiceAccount(null, "etl-pipeline", write: true)
+        );
+
+        var permissions = await sut.ResolveAsync(
+            ServiceAccount("etl-pipeline"),
+            CancellationToken.None
+        );
+
+        permissions.HasWriteAccessToAllNamespaces.Should().BeTrue();
+        permissions.HasWriteAccess("any-namespace-at-all").Should().BeTrue();
+    }
+
     private sealed class ThrowingGrantCache : INamespaceAccessGrantCache
     {
         public Task<IReadOnlyList<NamespaceAccessGrant>> GetAllAsync(

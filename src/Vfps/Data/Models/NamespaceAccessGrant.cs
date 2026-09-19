@@ -19,6 +19,14 @@ public enum GranteeType
     /// which roles they hold. Stored and matched lower-cased.
     /// </summary>
     Email,
+
+    /// <summary>
+    /// A <see cref="ServiceAccount"/>, matched by name against the principal a service-account
+    /// access token authenticates as. Unlike the two above - whose truth lives at the identity
+    /// provider, so they are free text here - the grantee is a row in this database, and a grant
+    /// can only name an account that exists.
+    /// </summary>
+    ServiceAccount,
 }
 
 /// <summary>
@@ -49,7 +57,10 @@ public class NamespaceAccessGrant : TracksCreationAndUpdates
 
     public GranteeType GranteeType { get; set; }
 
-    /// <summary>The role name or email address, depending on <see cref="GranteeType"/>.</summary>
+    /// <summary>
+    /// The role name, email address or service-account name, depending on
+    /// <see cref="GranteeType"/>.
+    /// </summary>
     public required string Grantee { get; set; }
 
     /// <summary>Namespace browsing and pseudonym listing (without original values).</summary>

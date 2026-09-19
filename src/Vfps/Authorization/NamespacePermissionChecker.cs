@@ -21,6 +21,17 @@ public class NamespacePermissionChecker(
             return true;
         }
 
+        // A service account is never an admin, whatever it is granted and whatever the token's
+        // principal claims. Its whole authority is the grants an admin made to it, so there is no
+        // path by which a leaked service-account token can create or delete a namespace, manage
+        // grants, or reach the Hangfire dashboard. Checked before the role test rather than
+        // relying on the principal simply carrying no roles: this is a guarantee, not a
+        // side effect of how AccessTokenAuthenticationHandler happens to build the principal.
+        if (user.GetServiceAccountName() is not null)
+        {
+            return false;
+        }
+
         var userRoles = GetUserRoles(user);
         return Config.AdminRoles.Any(userRoles.Contains);
     }
@@ -39,12 +50,19 @@ public class NamespacePermissionChecker(
             return NamespacePermissions.Unrestricted;
         }
 
-        var userRoles = GetUserRoles(user);
-        var userEmail = user.GetEmail()?.ToLowerInvariant();
+        var serviceAccountName = user.GetServiceAccountName();
+
+        // A service account is resolved against service-account grants and nothing else. Its
+        // principal carries neither roles nor an email to begin with (see
+        // AccessTokenAuthenticationHandler), so this changes no real request - it is here so the
+        // separation is a property of the authorization code rather than of how one particular
+        // handler happens to build a principal.
+        var userRoles = serviceAccountName is null ? GetUserRoles(user) : [];
+        var userEmail = serviceAccountName is null ? user.GetEmail()?.ToLowerInvariant() : null;
 
         var grants = await grantCache.GetAllAsync(cancellationToken);
         return new NamespacePermissions(
-            grants.Where(grant => AppliesTo(grant, userRoles, userEmail))
+            grants.Where(grant => AppliesTo(grant, userRoles, userEmail, serviceAccountName))
         );
     }
 
@@ -72,7 +90,8 @@ public class NamespacePermissionChecker(
     private static bool AppliesTo(
         NamespaceAccessGrant grant,
         HashSet<string> userRoles,
-        string? userEmail
+        string? userEmail,
+        string? serviceAccountName
     ) =>
         grant.GranteeType switch
         {
@@ -80,6 +99,10 @@ public class NamespacePermissionChecker(
             // Grantee is stored already lower-cased (see NamespaceAccessGrantAppService), so the
             // claim side is all that needs normalizing - done once by the caller, not per grant.
             GranteeType.Email => userEmail is not null && userEmail == grant.Grantee,
+            // Only ever non-null for a service-account access token, so a person can never match
+            // one of these grants and a service account can never match the other two.
+            GranteeType.ServiceAccount => serviceAccountName is not null
+                && serviceAccountName == grant.Grantee,
             _ => false,
         };
 

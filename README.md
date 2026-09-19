@@ -187,6 +187,73 @@ becomes the namespace whose access is being configured, and each role in `ReadRo
 to `"*"` has no UI equivalent any more and has to be re-created per namespace. Remove the
 `Authorization__NamespaceRules__*` variables from your deployment; they are now ignored.
 
+### Access Tokens
+
+Not every client can obtain a token from the identity provider. A data-integration job may belong
+to a team that can't get a confidential client provisioned in the realm, or run in a tool with no
+OAuth2 support at all. For those, vfps can issue its own bearer credentials - set
+`Authorization__AccessTokens__IsEnabled` to `true` (it is off by default) and two things appear in
+the admin UI.
+
+**Personal access tokens** are self-service: any signed-in user creates them on the **Access
+tokens** page, and a token *acts as its creator*. It captures the identity they hold at that
+moment - their subject, their verified email address and their roles - and every request made
+with it resolves against the same grants their browser session does. Nobody can grant themselves
+anything by creating one, which is why no admin role is needed to do it.
+
+**Service accounts** are the other half, and are admin-only: they are principals of their own, for
+a client that belongs to no person. Create one on the **Service accounts** page, then grant it
+access exactly like a role or a user - *Configure access* on the Namespaces page, with **Service
+account** as the grantee type - and issue it a token. Rotating that token is issuing a second one,
+rolling it out, and revoking the first; the grants belong to the account, so they never move.
+
+Both kinds are presented the same way as an identity provider's token, so no client needs changing:
+
+```sh
+curl -H "Authorization: Bearer vfps_sat_..." \
+  http://localhost:8080/v1/namespaces/test/pseudonyms \
+  -H "Content-Type: application/json" \
+  -d '{"originalValue": "to be pseudonymized"}'
+
+grpcurl \
+  -plaintext \
+  -H "authorization: Bearer vfps_sat_..." \
+  -import-path src/Vfps/ \
+  -proto src/Vfps/Protos/vfps/api/v1/pseudonyms.proto \
+  -d '{"namespace": "test", "originalValue": "to be pseudonymized"}' \
+  127.0.0.1:8081 \
+  vfps.api.v1.PseudonymService/Create
+```
+
+A token is shown **once**, when it is created: only its SHA-256 hash is stored, so one that has
+been lost can be replaced but never recovered. The `vfps_pat_`/`vfps_sat_` prefix is fixed so that
+a leaked token is findable by a secret scanner and recognizable in a log.
+
+Things worth knowing before switching this on:
+
+- **A token always expires.** `Authorization__AccessTokens__DefaultLifetime` pre-fills the form and
+  `Authorization__AccessTokens__MaximumLifetime` caps it. Expiry is the bound that holds without
+  anyone noticing anything is wrong - a token whose owner has left, or that was pasted into a CI
+  log, stops working on its own.
+- **Revoking is immediate on the replica that does it**, and takes effect on the others within
+  `Authorization__GrantCacheDuration`, the same window that bounds a withdrawn grant. Admins see
+  every token in the deployment, and can revoke anyone's, on the Access tokens page.
+- **A service account is never an admin**, whatever it is granted: it cannot create or delete a
+  namespace, manage access grants, or open the Hangfire dashboard. A personal access token, by
+  contrast, is as powerful as its owner - an admin's token can do admin-only API operations, though
+  no token can sign in to the admin UI, which is cookie-authenticated.
+- **No token can create another token.** Otherwise a leaked one could renew itself indefinitely and
+  its expiry would stop meaning anything.
+- **A personal token's identity is a snapshot.** Roles withdrawn at the identity provider are not
+  reflected in a token already issued - revoke it (or let it expire) when someone's roles change.
+  Grants, on the other hand, are read live, so editing or removing one takes effect at once.
+- **Last used** is recorded per token, written back on a timer
+  (`Authorization__AccessTokens__UsageFlushInterval`) rather than per request, so it lags by up to
+  that interval. It is there to tell a token still in use from one nobody has touched in months.
+
+Deleting a service account deletes its tokens *and* its access grants, so that an account later
+re-created under the same name doesn't silently inherit them.
+
 ### CSV Processing
 
 Upload a CSV file to pseudonymize or de-pseudonymize one or more columns as a background job. Files are streamed directly to and from S3-compatible object storage.
@@ -648,6 +715,10 @@ Available configuration options which can be set as environment variables:
 | `Authorization__UsePushedAuthorizationRequests`    | `bool`       | `true`              | Use RFC 9126 Pushed Authorization Requests when the authority advertises support for them. Set to `false` against older IdPs (e.g. pre-Quarkus Keycloak, before ~v19) whose PAR endpoint incorrectly rejects `redirect_uri`, which otherwise breaks every login with `invalid_request: Invalid parameter: redirect_uri`. |
 | `Authorization__AdminRoles__0`, `__1`, ...          | `string`     | -                   | Roles granting full access: all namespaces, plus namespace create/delete, plus managing every access grant. This is the only access setting that stays in configuration - somebody has to be an admin before there is any UI to grant anything from. |
 | `Authorization__GrantCacheDuration`                | `TimeSpan`   | `"0.00:00:30"`      | How long a replica may answer permission checks from its in-memory snapshot of the access grants before re-reading them. The replica an admin makes a change on applies it immediately; this bounds how long the *other* replicas can still honour a grant that was just edited or revoked. Set to `"0"` to read the grants on every check instead, at the cost of a database round trip per permission check - including one per pseudonym `Create`. |
+| `Authorization__AccessTokens__IsEnabled`           | `bool`       | `false`             | Let vfps issue its own bearer credentials - self-service personal access tokens, and admin-managed service accounts - for clients that can't get a token from the identity provider. See [Access Tokens](#access-tokens). **Off by default**: a long-lived static credential is strictly more exposed than a short-lived IdP-issued one, so a deployment that requires every caller to come through the identity provider leaves this unset and the whole feature, UI included, stays invisible. Requires `Authorization__IsEnabled`. |
+| `Authorization__AccessTokens__DefaultLifetime`     | `TimeSpan`   | `"90.00:00:00"`     | Lifetime pre-filled when creating a token. |
+| `Authorization__AccessTokens__MaximumLifetime`     | `TimeSpan`   | `"365.00:00:00"`    | The longest lifetime a token may be created with. Set to `"0"` to lift the cap - tokens still always expire, the creator just picks any date. |
+| `Authorization__AccessTokens__UsageFlushInterval`  | `TimeSpan`   | `"0.00:01:00"`      | How often each replica writes back the "last used" timestamps it has accumulated. Authentication only records them in memory, so this decides how stale that column can be, not how much work a request does. Purely informational - nothing about authentication or authorization reads it. |
 
 Per-namespace access is **not** configuration: it lives in the database and is managed from the
 admin UI's [Access Control](#access-control) page. Earlier releases configured it through an
@@ -664,6 +735,13 @@ OAuth2 `client_credentials` grant against a confidential client of its own, sepa
 `Authorization__Audience`. Namespace access is then resolved from the token's roles and `email`
 claim against the grants described above, so a valid token still only reaches the namespaces it has
 been granted.
+
+A client that can't get a confidential client of its own provisioned in the realm can instead
+present a **vfps-issued access token** - `Authorization: Bearer vfps_pat_...` or `vfps_sat_...` -
+once `Authorization__AccessTokens__IsEnabled` is on. The two credentials share the header and are
+told apart by that prefix, so each request reaches exactly one handler: a vfps token is never sent
+to the identity provider, and keeps working while the authority is unreachable. See
+[Access Tokens](#access-tokens).
 
 That pipeline-level `401` carries no body, so it is the one FHIR error the service answers without
 an `OperationOutcome`. Every refusal made *after* authentication - including a `403` for a namespace
