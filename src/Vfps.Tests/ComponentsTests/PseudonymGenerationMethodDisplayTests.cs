@@ -13,10 +13,14 @@ public class PseudonymGenerationMethodDisplayTests
     [Fact]
     public void SelectableFor_WithoutAVoprfServer_ShouldNotOfferVoprf()
     {
-        var methods = PseudonymGenerationMethodDisplay.SelectableFor(new PseudonymizationMethodsLookup());
+        var methods = PseudonymGenerationMethodDisplay.SelectableFor(
+            new PseudonymizationMethodsLookup()
+        );
 
         methods.Should().NotContain(PseudonymGenerationMethod.Voprf);
-        methods.Should().Contain(PseudonymGenerationMethod.Uuid4, "the random methods are always available");
+        methods
+            .Should()
+            .Contain(PseudonymGenerationMethod.Uuid4, "the random methods are always available");
     }
 
     [Fact]

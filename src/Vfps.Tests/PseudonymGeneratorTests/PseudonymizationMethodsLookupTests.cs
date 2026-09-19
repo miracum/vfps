@@ -126,8 +126,8 @@ public class PseudonymizationMethodsLookupTests
     [Fact]
     public void GetFixedPseudonymLength_ForVoprf_WithAConfiguredServer_ShouldReturnItsLength()
     {
-        var generator = A.Fake<IValueDependentPseudonymGenerator>(
-            options => options.Implements<IHasFixedPseudonymLength>()
+        var generator = A.Fake<IValueDependentPseudonymGenerator>(options =>
+            options.Implements<IHasFixedPseudonymLength>()
         );
         A.CallTo(() => ((IHasFixedPseudonymLength)generator).FixedPseudonymLength).Returns(86u);
 
