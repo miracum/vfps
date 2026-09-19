@@ -438,7 +438,7 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
     }
 
     private async Task SelectNamespaceAsync(string namespaceName) =>
-        await TreeNode(namespaceName).Locator("span.truncate").First.ClickAsync();
+        await TreeNode(namespaceName).Locator("[data-namespace-label]").First.ClickAsync();
 
     private static string UniqueName() => $"e2e-ns-{UniqueSuffix()}";
 }

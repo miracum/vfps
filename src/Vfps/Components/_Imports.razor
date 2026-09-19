@@ -2,6 +2,10 @@
 @using System.Security.Claims
 @using BlazorBlueprint.Components
 @using BlazorBlueprint.Icons.Lucide.Components
+@* v4 moved BbPortalHost from .Primitives.Services into .Primitives. Razor renders an
+   unresolved component as a literal element with no build error, so without this every overlay -
+   dialogs, popovers, tooltips - silently stops rendering. *@
+@using BlazorBlueprint.Primitives
 @using BlazorBlueprint.Primitives.Services
 @using Microsoft.AspNetCore.Components
 @using Microsoft.AspNetCore.Components.Authorization

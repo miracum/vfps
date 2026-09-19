@@ -7,19 +7,19 @@
 
 <PageTitle>@Localizer["App.Pseudonyms.PageTitle", NamespaceName]</PageTitle>
 
-<div class="mx-auto max-w-5xl space-y-6">
+<div class="bb:mx-auto bb:space-y-6">
     <div>
-        <BbButton Variant="ButtonVariant.Link" Href="/ui/namespaces" Class="px-0">
+        <BbButton Variant="ButtonVariant.Link" Href="/ui/namespaces" Class="bb:px-0">
             <LucideIcon Name="arrow-left" Size="16" />
             @Localizer["App.Pseudonyms.BackToNamespaces"]
         </BbButton>
-        <div class="flex items-center gap-2">
-            <LucideIcon Name="key-round" Size="24" Class="text-primary" />
-            <h1 class="text-2xl font-semibold tracking-tight">@Localizer["App.Pseudonyms.Heading", NamespaceName]</h1>
+        <div class="bb:flex bb:items-center bb:gap-2">
+            <LucideIcon Name="key-round" Size="24" Class="bb:text-primary" />
+            <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Pseudonyms.Heading", NamespaceName]</h1>
         </div>
     </div>
 
-    <div class="grid gap-6 md:grid-cols-2">
+    <div class="bb:grid bb:gap-6 bb:md:grid-cols-2">
         <BbCard>
             <BbCardHeader>
                 <BbCardTitle>@Localizer["App.Pseudonyms.CreateTitle"]</BbCardTitle>
@@ -27,9 +27,9 @@
                     @Localizer["App.Pseudonyms.CreateDescription"]
                 </BbCardDescription>
             </BbCardHeader>
-            <BbCardContent Class="space-y-3">
-                <div class="flex flex-wrap items-end gap-2">
-                    <BbField Class="w-full max-w-sm">
+            <BbCardContent Class="bb:space-y-3">
+                <div class="bb:flex bb:flex-wrap bb:items-end bb:gap-2">
+                    <BbField Class="bb:w-full bb:max-w-sm">
                         <BbFieldLabel For="originalValue">@Localizer["App.Pseudonyms.OriginalValue"]</BbFieldLabel>
                         <BbFieldContent>
                             <BbInput @bind-Value="_createValue" Id="originalValue" Required="true" />
@@ -45,8 +45,8 @@
                 }
                 @if (_createResult is not null)
                 {
-                    <p class="text-sm">
-                        @Localizer["App.Pseudonyms.PseudonymLabel"]: <code class="rounded bg-muted px-1.5 py-0.5">@_createResult.PseudonymValue</code>
+                    <p class="bb:text-sm">
+                        @Localizer["App.Pseudonyms.PseudonymLabel"]: <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5">@_createResult.PseudonymValue</code>
                     </p>
                 }
             </BbCardContent>
@@ -59,9 +59,9 @@
                     @Localizer["App.Pseudonyms.ReverseLookupDescription"]
                 </BbCardDescription>
             </BbCardHeader>
-            <BbCardContent Class="space-y-3">
-                <div class="flex flex-wrap items-end gap-2">
-                    <BbField Class="w-full max-w-sm">
+            <BbCardContent Class="bb:space-y-3">
+                <div class="bb:flex bb:flex-wrap bb:items-end bb:gap-2">
+                    <BbField Class="bb:w-full bb:max-w-sm">
                         <BbFieldLabel For="lookupValue">@Localizer["App.Pseudonyms.PseudonymValue"]</BbFieldLabel>
                         <BbFieldContent>
                             <BbInput @bind-Value="_lookupValue" Id="lookupValue" />
@@ -77,8 +77,8 @@
                 }
                 @if (_lookupResult is not null)
                 {
-                    <p class="text-sm">
-                        @Localizer["App.Pseudonyms.OriginalValueLabel"]: <code class="rounded bg-muted px-1.5 py-0.5">@_lookupResult.OriginalValue</code>
+                    <p class="bb:text-sm">
+                        @Localizer["App.Pseudonyms.OriginalValueLabel"]: <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5">@_lookupResult.OriginalValue</code>
                     </p>
                 }
             </BbCardContent>
@@ -94,19 +94,19 @@
                     @Localizer["App.Pseudonyms.ChainDescription", NamespaceName]
                 </BbCardDescription>
             </BbCardHeader>
-            <BbCardContent Class="space-y-3">
-                <p class="text-sm">
+            <BbCardContent Class="bb:space-y-3">
+                <p class="bb:text-sm">
                     @Localizer["App.Pseudonyms.ChainOriginalValue"]:
-                    <code class="rounded bg-muted px-1.5 py-0.5 text-xs">@_chainSourceValue</code>
+                    <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5 bb:text-xs">@_chainSourceValue</code>
                 </p>
-                <div class="flex flex-wrap items-end gap-2">
-                    <BbField Class="w-full max-w-sm">
+                <div class="bb:flex bb:flex-wrap bb:items-end bb:gap-2">
+                    <BbField Class="bb:w-full bb:max-w-sm">
                         <BbFieldLabel For="chainTarget">@Localizer["App.Pseudonyms.ChainTarget"]</BbFieldLabel>
                         <BbFieldContent>
                             <select
                                 @bind="_chainTargetNamespace"
                                 id="chainTarget"
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                             >
                                 @foreach (var child in _children)
                                 {
@@ -130,9 +130,9 @@
                 }
                 @if (_chainResult is not null)
                 {
-                    <p class="text-sm">
+                    <p class="bb:text-sm">
                         @Localizer["App.Pseudonyms.PseudonymLabel"]:
-                        <code class="rounded bg-muted px-1.5 py-0.5">@_chainResult.PseudonymValue</code>
+                        <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5">@_chainResult.PseudonymValue</code>
                         <BbButton
                             Variant="ButtonVariant.Link"
                             Size="ButtonSize.Small"
@@ -178,18 +178,18 @@
                             Title="@Localizer["App.Pseudonyms.PseudonymLabel"]"
                         >
                             <CellTemplate Context="p">
-                                <code class="rounded bg-muted px-1.5 py-0.5 text-xs">@p.PseudonymValue</code>
+                                <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5 bb:text-xs">@p.PseudonymValue</code>
                             </CellTemplate>
                         </BbDataGridPropertyColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.Pseudonyms.OriginalValueLabel"]">
                             <ChildContent Context="p">
                                 @if (p.OriginalValue is { } revealed)
                                 {
-                                    <code class="rounded bg-muted px-1.5 py-0.5 text-xs">@revealed</code>
+                                    <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5 bb:text-xs">@revealed</code>
                                 }
                                 else
                                 {
-                                    <span class="text-muted-foreground">&mdash;</span>
+                                    <span class="bb:text-muted-foreground">&mdash;</span>
                                 }
                             </ChildContent>
                         </BbDataGridTemplateColumn>

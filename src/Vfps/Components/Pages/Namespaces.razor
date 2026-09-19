@@ -17,11 +17,11 @@
 
 <PageTitle>@Localizer["App.Nav.Namespaces"]</PageTitle>
 
-<div class="mx-auto max-w-5xl space-y-6">
-    <div class="flex flex-wrap items-center justify-between gap-2">
-        <div class="flex items-center gap-2">
-            <LucideIcon Name="database" Size="24" Class="text-primary" />
-            <h1 class="text-2xl font-semibold tracking-tight">@Localizer["App.Nav.Namespaces"]</h1>
+<div class="bb:mx-auto bb:space-y-6">
+    <div class="bb:flex bb:flex-wrap bb:items-center bb:justify-between bb:gap-2">
+        <div class="bb:flex bb:items-center bb:gap-2">
+            <LucideIcon Name="database" Size="24" Class="bb:text-primary" />
+            <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Nav.Namespaces"]</h1>
         </div>
         <BbButton
             id="showCreateNamespaceFormButton"
@@ -51,13 +51,13 @@
         <BbAlert Variant="AlertVariant.Danger">
             <BbAlertTitle>@Localizer["App.Namespaces.DeleteConfirmTitle", _pendingDelete.Name]</BbAlertTitle>
             <BbAlertDescription>
-                <p class="mb-3">
+                <p class="bb:mb-3">
                     @Localizer["App.Namespaces.DeleteConfirmBodyPrefix"]
                     <strong>@_pendingDelete.Name</strong>
                     @Localizer["App.Namespaces.DeleteConfirmBodySuffix"]
                 </p>
-                <div class="flex flex-wrap items-end gap-2">
-                    <BbField Class="w-64">
+                <div class="bb:flex bb:flex-wrap bb:items-end bb:gap-2">
+                    <BbField Class="bb:w-64">
                         <BbFieldContent>
                             <BbInput
                                 @ref="_deleteConfirmationInput"
@@ -112,7 +112,7 @@
 
             @if (!_isAdmin)
             {
-                <BbAlert Variant="AlertVariant.Warning" Class="mb-4">
+                <BbAlert Variant="AlertVariant.Warning" Class="bb:mb-4">
                     <BbAlertTitle>@Localizer["App.Namespaces.NoPermissionTitle"]</BbAlertTitle>
                     <BbAlertDescription>
                         @Localizer["App.Namespaces.NoPermissionDescription"]
@@ -125,7 +125,7 @@
                 OnValidSubmit="CreateNamespaceAsync"
             >
                 <DataAnnotationsValidator />
-                <fieldset disabled="@(!_isAdmin)" class="contents">
+                <fieldset disabled="@(!_isAdmin)" class="bb:contents">
                     @* One field per row, label right-aligned in a narrow column and the control
                        in a wide one - the layout the component library's own dialog example uses.
                        col-span-3 is the one utility in it that the shipped blazorblueprint.css
@@ -136,10 +136,10 @@
                        against their right edge otherwise, and an overlay scrollbar paints over
                        them outright. *@
                     <div
-                        class="grid gap-4 py-4"
+                        class="bb:grid bb:gap-4 bb:py-4"
                         style="max-height: 60vh; overflow-y: auto; padding-right: 1rem;"
                     >
-                        <div class="grid grid-cols-4 items-center gap-4">
+                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
                             <BbLabel For="name" Class="text-right">@Localizer["App.Common.Name"]</BbLabel>
                             <div class="col-span-3">
                                 <BbInput
@@ -150,20 +150,20 @@
                                 />
                             </div>
                         </div>
-                        <div class="grid grid-cols-4 items-center gap-4">
+                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
                             <BbLabel For="description" Class="text-right">@Localizer["App.Common.Description"]</BbLabel>
                             <div class="col-span-3">
                                 <BbInput @bind-Value="_newNamespace.Description" Id="description" />
                             </div>
                         </div>
-                        <div class="grid grid-cols-4 items-center gap-4">
+                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
                             <BbLabel For="method" Class="text-right">@Localizer["App.Namespaces.GenerationMethod"]</BbLabel>
                             <div class="col-span-3">
                                 <select
                                     @bind="_selectedMethod"
                                     @bind:after="OnMethodChanged"
                                     id="method"
-                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                                 >
                                     @foreach (var method in PseudonymGenerationMethodDisplay.Selectable)
                                     {
@@ -174,8 +174,8 @@
                                 </select>
                             </div>
                         </div>
-                        <div class="grid grid-cols-4 items-start gap-4">
-                            <BbLabel For="length" Class="text-right pt-2">@Localizer["App.Namespaces.Length"]</BbLabel>
+                        <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
+                            <BbLabel For="length" Class="text-right bb:pt-2">@Localizer["App.Namespaces.Length"]</BbLabel>
                             <div class="col-span-3">
                                 <BbNumericInput
                                     @bind-Value="_newNamespace.PseudonymLength"
@@ -186,26 +186,26 @@
                                 />
                                 @if (FixedPseudonymLength is not null)
                                 {
-                                    <p class="mt-1 text-xs text-muted-foreground">
+                                    <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
                                         @Localizer["App.Namespaces.FixedLengthNote", FixedPseudonymLength]
                                     </p>
                                 }
                             </div>
                         </div>
-                        <div class="grid grid-cols-4 items-center gap-4">
+                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
                             <BbLabel For="prefix" Class="text-right">@Localizer["App.Namespaces.Prefix"]</BbLabel>
                             <div class="col-span-3">
                                 <BbInput @bind-Value="_newNamespace.PseudonymPrefix" Id="prefix" />
                             </div>
                         </div>
-                        <div class="grid grid-cols-4 items-center gap-4">
+                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
                             <BbLabel For="suffix" Class="text-right">@Localizer["App.Namespaces.Suffix"]</BbLabel>
                             <div class="col-span-3">
                                 <BbInput @bind-Value="_newNamespace.PseudonymSuffix" Id="suffix" />
                             </div>
                         </div>
-                        <div class="grid grid-cols-4 items-start gap-4">
-                            <BbLabel For="validationRegex" Class="text-right pt-2">@Localizer["App.Namespaces.ValidationRegex"]</BbLabel>
+                        <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
+                            <BbLabel For="validationRegex" Class="text-right bb:pt-2">@Localizer["App.Namespaces.ValidationRegex"]</BbLabel>
                             <div class="col-span-3">
                                 @* Immediate rather than on-blur: the whole point of the checker
                                    below is to react while the pattern is being typed. Each
@@ -218,7 +218,7 @@
                                     UpdateTiming="UpdateTiming.Immediate"
                                     Id="validationRegex"
                                 />
-                                <p class="mt-1 text-xs text-muted-foreground">
+                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
                                     @Localizer["App.Namespaces.ValidationRegexHelp"]
                                 </p>
 
@@ -230,24 +230,24 @@
                                     {
                                         <p
                                             id="validationRegexError"
-                                            class="mt-2 flex items-start gap-1 text-xs text-destructive"
+                                            class="bb:mt-2 bb:flex bb:items-start bb:gap-1 bb:text-xs bb:text-destructive"
                                         >
-                                            <LucideIcon Name="x" Size="14" Class="shrink-0" />
+                                            <LucideIcon Name="x" Size="14" Class="bb:shrink-0" />
                                             @* The regex parser's own message, which names the
                                                offending construct and its offset - far more use
                                                than a generic "invalid pattern". Not localized:
                                                it comes from the .NET runtime. *@
-                                            <span class="font-mono">@_validationRegexError</span>
+                                            <span class="bb:font-mono">@_validationRegexError</span>
                                         </p>
                                     }
                                     else
                                     {
-                                        <div class="mt-2 space-y-2">
+                                        <div class="bb:mt-2 bb:space-y-2">
                                             <p
                                                 id="validationRegexValid"
-                                                class="flex items-center gap-1 text-xs regex-check-ok"
+                                                class="bb:flex bb:items-center bb:gap-1 bb:text-xs regex-check-ok"
                                             >
-                                                <LucideIcon Name="check" Size="14" Class="shrink-0" />
+                                                <LucideIcon Name="check" Size="14" Class="bb:shrink-0" />
                                                 @Localizer["App.Namespaces.ValidationRegexValid"]
                                             </p>
                                             @* A pattern that compiles still isn't necessarily the
@@ -265,13 +265,13 @@
                                                passed through as a literal attribute name and
                                                takes the whole circuit down when the browser
                                                rejects it. *@
-                                            <div class="flex flex-wrap items-center gap-2">
+                                            <div class="bb:flex bb:flex-wrap bb:items-center bb:gap-2">
                                                 <BbInput
                                                     @bind-Value="_validationRegexSample"
                                                     @bind-Value:after="UpdateValidationRegexSampleMatch"
                                                     UpdateTiming="UpdateTiming.Immediate"
                                                     Id="validationRegexSample"
-                                                    Class="w-64"
+                                                    Class="bb:w-64"
                                                     Placeholder="@Localizer["App.Namespaces.ValidationRegexSamplePlaceholder"]"
                                                     AriaLabel="@Localizer["App.Namespaces.ValidationRegexSamplePlaceholder"]"
                                                 />
@@ -279,9 +279,9 @@
                                                 {
                                                     <span
                                                         id="validationRegexSampleResult"
-                                                        class="@(matches ? "flex items-center gap-1 text-xs regex-check-ok" : "flex items-center gap-1 text-xs text-destructive")"
+                                                        class="@(matches ? "bb:flex bb:items-center bb:gap-1 bb:text-xs regex-check-ok" : "bb:flex bb:items-center bb:gap-1 bb:text-xs bb:text-destructive")"
                                                     >
-                                                        <LucideIcon Name="@(matches ? "check" : "x")" Size="14" Class="shrink-0" />
+                                                        <LucideIcon Name="@(matches ? "check" : "x")" Size="14" Class="bb:shrink-0" />
                                                         @(matches
                                                             ? Localizer["App.Namespaces.ValidationRegexSampleAccepted"].Value
                                                             : Localizer["App.Namespaces.ValidationRegexSampleRejected"].Value)
@@ -293,7 +293,7 @@
                                 }
                             </div>
                         </div>
-                        <div class="grid grid-cols-4 items-center gap-4">
+                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
                             <BbLabel For="allowsMultiplePseudonyms" Class="text-right">@Localizer["App.Namespaces.AllowsMultiplePseudonyms"]</BbLabel>
                             <div class="col-span-3">
                                 <BbSwitch
@@ -302,13 +302,13 @@
                                 />
                             </div>
                         </div>
-                        <div class="grid grid-cols-4 items-start gap-4">
-                            <BbLabel For="parentName" Class="text-right pt-2">@Localizer["App.Namespaces.Parent"]</BbLabel>
+                        <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
+                            <BbLabel For="parentName" Class="text-right bb:pt-2">@Localizer["App.Namespaces.Parent"]</BbLabel>
                             <div class="col-span-3">
                                 <select
                                     @bind="_newNamespace.ParentName"
                                     id="parentName"
-                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                                 >
                                     <option value="">@Localizer["App.Namespaces.NoParent"]</option>
                                     @foreach (var candidate in _namespaces)
@@ -316,12 +316,12 @@
                                         <option value="@candidate.Name">@candidate.Name</option>
                                     }
                                 </select>
-                                <p class="mt-1 text-xs text-muted-foreground">
+                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
                                     @Localizer["App.Namespaces.ParentHelp"]
                                 </p>
                             </div>
                         </div>
-                        <div class="grid grid-cols-4 items-start gap-4">
+                        <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
                             <BbLabel For="ensureParentPseudonymExists" Class="text-right">@Localizer["App.Namespaces.EnsureParentPseudonymExists"]</BbLabel>
                             <div class="col-span-3">
                                 <BbSwitch
@@ -329,13 +329,13 @@
                                     Id="ensureParentPseudonymExists"
                                     Disabled="@string.IsNullOrEmpty(_newNamespace.ParentName)"
                                 />
-                                <p class="mt-1 text-xs text-muted-foreground">
+                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
                                     @Localizer["App.Namespaces.EnsureParentPseudonymExistsHelp"]
                                 </p>
                             </div>
                         </div>
                     </div>
-                    <BbDialogFooter Class="mt-4">
+                    <BbDialogFooter Class="bb:mt-4">
                         <BbButton
                             id="cancelCreateNamespaceButton"
                             Type="ButtonType.Button"
@@ -397,13 +397,13 @@
         <BbCardContent>
             @if (_namespaces.Count == 0)
             {
-                <p class="text-sm text-muted-foreground">
+                <p class="bb:text-sm bb:text-muted-foreground">
                     @Localizer["App.Namespaces.HierarchyEmpty"]
                 </p>
             }
             else
             {
-                <div class="grid gap-4 md:grid-cols-2">
+                <div class="bb:grid bb:gap-4 bb:md:grid-cols-2">
                     <div>
                         @* Our own search field rather than BbTreeView's ShowSearch one, for two
                            reasons: the component only filters in its data-driven mode (this tree is
@@ -417,7 +417,7 @@
                             Id="namespaceSearch"
                             Placeholder="@Localizer["App.Namespaces.HierarchySearchPlaceholder"]"
                             AriaLabel="@Localizer["App.Namespaces.HierarchySearchPlaceholder"]"
-                            Class="mb-2 h-8 text-sm"
+                            Class="bb:mb-2 bb:h-8 bb:text-sm"
                         />
                         @* SelectionMode has to be set explicitly: the tree defaults to None, which
                            reports no selection at all and would leave SelectedValueChanged silent.
@@ -445,17 +445,17 @@
                         </BbTreeView>
                         @if (RootNamespaces.Count == 0)
                         {
-                            <p class="text-sm text-muted-foreground">
+                            <p class="bb:text-sm bb:text-muted-foreground">
                                 @Localizer["App.Namespaces.HierarchyNoMatches"]
                             </p>
                         }
                     </div>
 
-                    <div id="namespaceDetails" class="rounded-md border border-border p-4">
+                    <div id="namespaceDetails" class="bb:rounded-md bb:border bb:border-border bb:p-4">
                         @if (SelectedNamespace is { } selected)
                         {
                             <NamespaceDetails Namespace="selected" TimeZone="_browserTimeZone" />
-                            <div class="mt-4 flex flex-wrap gap-2">
+                            <div class="bb:mt-4 bb:flex bb:flex-wrap bb:gap-2">
                                 <BbButton
                                     Variant="ButtonVariant.Outline"
                                     Size="ButtonSize.Small"
@@ -486,7 +486,7 @@
                         }
                         else
                         {
-                            <p class="text-sm text-muted-foreground">
+                            <p class="bb:text-sm bb:text-muted-foreground">
                                 @Localizer["App.Namespaces.HierarchySelectHint"]
                             </p>
                         }
