@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.18.0](https://github.com/miracum/vfps/compare/v1.17.0...v1.18.0) (2026-09-19)
+
+
+### Features
+
+* added support for personal access tokens and service accounts ([#335](https://github.com/miracum/vfps/issues/335)) ([ecf1ab6](https://github.com/miracum/vfps/commit/ecf1ab62d2f4d6cccfb03b19a718bd3ea9ccc617))
+
+
+### Miscellaneous Chores
+
+* **deps:** upgraded blazor blueprint to v4 ([#337](https://github.com/miracum/vfps/issues/337)) ([5569977](https://github.com/miracum/vfps/commit/5569977d158445d0d9cc61872242950985b9f60d))
+
 ## [1.17.0](https://github.com/miracum/vfps/compare/v1.16.4...v1.17.0) (2026-09-18)
 
 
