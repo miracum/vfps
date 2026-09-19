@@ -73,6 +73,9 @@
   <data name="App.AccessControl.AdminsOnlyTitle" xml:space="preserve">
     <value>Admins only</value>
   </data>
+  <data name="App.AccessControl.AllNamespaces" xml:space="preserve">
+    <value>All namespaces</value>
+  </data>
   <data name="App.AccessControl.DisabledDescription" xml:space="preserve">
     <value>{0} is {1}, so every request has full read, write, and reverse-lookup access to every namespace regardless of role.</value>
   </data>
@@ -103,6 +106,9 @@
   <data name="App.AccessControl.GranteeRolePlaceholder" xml:space="preserve">
     <value>vfps-ns-example-read</value>
   </data>
+  <data name="App.AccessControl.GranteeServiceAccountHelp" xml:space="preserve">
+    <value>Matched against the service account an access token authenticates as. A service account is never an admin - it holds exactly the access granted to it here.</value>
+  </data>
   <data name="App.AccessControl.GranteeType" xml:space="preserve">
     <value>Grantee type</value>
   </data>
@@ -112,8 +118,110 @@
   <data name="App.AccessControl.GranteeTypeRole" xml:space="preserve">
     <value>Role</value>
   </data>
+  <data name="App.AccessControl.GranteeTypeServiceAccount" xml:space="preserve">
+    <value>Service account</value>
+  </data>
   <data name="App.AccessControl.NoNamespacesExist" xml:space="preserve">
     <value>No namespaces exist yet.</value>
+  </data>
+  <data name="App.AccessControl.NoServiceAccounts" xml:space="preserve">
+    <value>No service accounts exist yet. Create one on the Service accounts page first.</value>
+  </data>
+  <data name="App.AccessTokens.AllDescription" xml:space="preserve">
+    <value>Every token in this deployment, personal and service-account alike. Shown to admins so a leaked credential can be found and revoked.</value>
+  </data>
+  <data name="App.AccessTokens.AllTitle" xml:space="preserve">
+    <value>All tokens</value>
+  </data>
+  <data name="App.AccessTokens.ColumnCreated" xml:space="preserve">
+    <value>Created</value>
+  </data>
+  <data name="App.AccessTokens.ColumnExpires" xml:space="preserve">
+    <value>Expires</value>
+  </data>
+  <data name="App.AccessTokens.ColumnLastUsed" xml:space="preserve">
+    <value>Last used</value>
+  </data>
+  <data name="App.AccessTokens.CopiedAction" xml:space="preserve">
+    <value>Copied</value>
+  </data>
+  <data name="App.AccessTokens.CopyAction" xml:space="preserve">
+    <value>Copy</value>
+  </data>
+  <data name="App.AccessTokens.CreateAction" xml:space="preserve">
+    <value>Create token</value>
+  </data>
+  <data name="App.AccessTokens.CreateDescription" xml:space="preserve">
+    <value>A personal access token acts as you: it reaches exactly the namespaces you can reach, and stops working when your access is withdrawn or the token expires.</value>
+  </data>
+  <data name="App.AccessTokens.CreateTitle" xml:space="preserve">
+    <value>Create a personal access token</value>
+  </data>
+  <data name="App.AccessTokens.ErrorTitle" xml:space="preserve">
+    <value>Access token error</value>
+  </data>
+  <data name="App.AccessTokens.FeatureDisabledDescription" xml:space="preserve">
+    <value>Set {0} to true to let users create personal access tokens and admins create service accounts. Until then, every API caller needs a token from the identity provider.</value>
+  </data>
+  <data name="App.AccessTokens.FeatureDisabledTitle" xml:space="preserve">
+    <value>Access tokens are disabled</value>
+  </data>
+  <data name="App.AccessTokens.IssuedDescription" xml:space="preserve">
+    <value>This is the only time the token is shown. Only its hash is stored, so if you lose it you will have to create a new one.</value>
+  </data>
+  <data name="App.AccessTokens.IssuedTitle" xml:space="preserve">
+    <value>Copy your new token now</value>
+  </data>
+  <data name="App.AccessTokens.LifetimeHelp" xml:space="preserve">
+    <value>At most {0} days. A token always expires - that is what limits the damage if it leaks.</value>
+  </data>
+  <data name="App.AccessTokens.LifetimeHelpUncapped" xml:space="preserve">
+    <value>A token always expires - that is what limits the damage if it leaks.</value>
+  </data>
+  <data name="App.AccessTokens.LifetimeLabel" xml:space="preserve">
+    <value>Valid for (days)</value>
+  </data>
+  <data name="App.AccessTokens.MineDescription" xml:space="preserve">
+    <value>Revoking a token stops it working everywhere within the grant cache duration, and immediately on this replica.</value>
+  </data>
+  <data name="App.AccessTokens.MineTitle" xml:space="preserve">
+    <value>My tokens</value>
+  </data>
+  <data name="App.AccessTokens.NameHelp" xml:space="preserve">
+    <value>What this token is for, so you can tell it apart from your others later.</value>
+  </data>
+  <data name="App.AccessTokens.NameLabel" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="App.AccessTokens.NamePlaceholder" xml:space="preserve">
+    <value>nightly ETL run</value>
+  </data>
+  <data name="App.AccessTokens.Never" xml:space="preserve">
+    <value>Never</value>
+  </data>
+  <data name="App.AccessTokens.NoTokens" xml:space="preserve">
+    <value>No tokens yet.</value>
+  </data>
+  <data name="App.AccessTokens.RevokeAction" xml:space="preserve">
+    <value>Revoke</value>
+  </data>
+  <data name="App.AccessTokens.StatusActive" xml:space="preserve">
+    <value>Active</value>
+  </data>
+  <data name="App.AccessTokens.StatusExpired" xml:space="preserve">
+    <value>Expired</value>
+  </data>
+  <data name="App.AccessTokens.StatusRevoked" xml:space="preserve">
+    <value>Revoked</value>
+  </data>
+  <data name="App.AccessTokens.TypePersonal" xml:space="preserve">
+    <value>Personal</value>
+  </data>
+  <data name="App.AccessTokens.TypeServiceAccount" xml:space="preserve">
+    <value>Service account</value>
+  </data>
+  <data name="App.AccessTokens.UsageHint" xml:space="preserve">
+    <value>Send it to the API as {0}, exactly like a token from the identity provider.</value>
   </data>
   <data name="App.Common.Close" xml:space="preserve">
     <value>Close</value>
@@ -607,6 +715,9 @@
   <data name="App.Nav.AccessControl" xml:space="preserve">
     <value>Access Control</value>
   </data>
+  <data name="App.Nav.AccessTokens" xml:space="preserve">
+    <value>Access tokens</value>
+  </data>
   <data name="App.Nav.ApiDocs" xml:space="preserve">
     <value>API Docs</value>
   </data>
@@ -618,6 +729,9 @@
   </data>
   <data name="App.Nav.Pseudonyms" xml:space="preserve">
     <value>Pseudonyms</value>
+  </data>
+  <data name="App.Nav.ServiceAccounts" xml:space="preserve">
+    <value>Service accounts</value>
   </data>
   <data name="App.NotFound.Description" xml:space="preserve">
     <value>Sorry, there's nothing at this address.</value>
@@ -693,5 +807,53 @@
   </data>
   <data name="App.Pseudonyms.SearchWithOriginalValuePlaceholder" xml:space="preserve">
     <value>Search by pseudonym or original value</value>
+  </data>
+  <data name="App.ServiceAccounts.CreateAction" xml:space="preserve">
+    <value>Create service account</value>
+  </data>
+  <data name="App.ServiceAccounts.CreateDescription" xml:space="preserve">
+    <value>A service account is a principal of its own, for a client that belongs to no person. Grant it access per namespace on the Namespaces page, then issue it a token below.</value>
+  </data>
+  <data name="App.ServiceAccounts.CreateTitle" xml:space="preserve">
+    <value>Create a service account</value>
+  </data>
+  <data name="App.ServiceAccounts.DeleteAction" xml:space="preserve">
+    <value>Delete account</value>
+  </data>
+  <data name="App.ServiceAccounts.DeleteConfirm" xml:space="preserve">
+    <value>Delete '{0}'? Its access grants and every token issued for it go with it.</value>
+  </data>
+  <data name="App.ServiceAccounts.DescriptionLabel" xml:space="preserve">
+    <value>Description</value>
+  </data>
+  <data name="App.ServiceAccounts.DescriptionPlaceholder" xml:space="preserve">
+    <value>What this account is for</value>
+  </data>
+  <data name="App.ServiceAccounts.ErrorTitle" xml:space="preserve">
+    <value>Service account error</value>
+  </data>
+  <data name="App.ServiceAccounts.GrantsTitle" xml:space="preserve">
+    <value>Access</value>
+  </data>
+  <data name="App.ServiceAccounts.IssueTokenAction" xml:space="preserve">
+    <value>Issue token</value>
+  </data>
+  <data name="App.ServiceAccounts.NameHelp" xml:space="preserve">
+    <value>2-64 characters of lower-case letters, digits and hyphens. Cannot be changed later - the access grants name it by value.</value>
+  </data>
+  <data name="App.ServiceAccounts.NameLabel" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="App.ServiceAccounts.NoAccounts" xml:space="preserve">
+    <value>No service accounts yet.</value>
+  </data>
+  <data name="App.ServiceAccounts.NoDescription" xml:space="preserve">
+    <value>No description.</value>
+  </data>
+  <data name="App.ServiceAccounts.NoGrants" xml:space="preserve">
+    <value>No access granted yet. Use Configure access on the Namespaces page and pick this account as the grantee.</value>
+  </data>
+  <data name="App.ServiceAccounts.TokensTitle" xml:space="preserve">
+    <value>Tokens</value>
   </data>
 </root>

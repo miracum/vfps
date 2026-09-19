@@ -1,0 +1,443 @@
+@page "/access-tokens"
+@rendermode InteractiveServer
+@using Microsoft.Extensions.Options
+@using Vfps.Config
+@using Vfps.Data.Models
+@inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
+@inject INamespacePermissionChecker PermissionChecker
+@inject IAccessTokenAppService AccessTokenAppService
+@inject IStringLocalizer<SharedResources> Localizer
+@inject IJSRuntime JS
+@inject ILogger<AccessTokens> Logger
+
+@*
+    Self-service personal access tokens: any signed-in user can mint a credential that carries
+    their own access, for a client that can't get a token from the identity provider. Service
+    accounts - the admin-managed kind, with access of their own - live on their own page.
+*@
+
+<PageTitle>@Localizer["App.Nav.AccessTokens"]</PageTitle>
+
+<div class="mx-auto max-w-5xl space-y-6">
+    <div class="flex items-center gap-2">
+        <LucideIcon Name="key-round" Size="24" Class="text-primary" />
+        <h1 class="text-2xl font-semibold tracking-tight">@Localizer["App.Nav.AccessTokens"]</h1>
+    </div>
+
+    @if (!AuthorizationConfigOptions.Value.IsEnabled)
+    {
+        <BbAlert Variant="AlertVariant.Info">
+            <BbAlertTitle>@Localizer["App.AccessControl.DisabledTitle"]</BbAlertTitle>
+            <BbAlertDescription>
+                @((MarkupString)
+                    string.Format(
+                        Localizer["App.AccessControl.DisabledDescription"].Value,
+                        "<code>Authorization__IsEnabled</code>",
+                        "<code>false</code>"
+                    ))
+            </BbAlertDescription>
+        </BbAlert>
+    }
+    else if (!TokenConfig.IsEnabled)
+    {
+        <BbAlert Variant="AlertVariant.Info">
+            <BbAlertTitle>@Localizer["App.AccessTokens.FeatureDisabledTitle"]</BbAlertTitle>
+            <BbAlertDescription>
+                @((MarkupString)
+                    string.Format(
+                        Localizer["App.AccessTokens.FeatureDisabledDescription"].Value,
+                        "<code>Authorization__AccessTokens__IsEnabled</code>"
+                    ))
+            </BbAlertDescription>
+        </BbAlert>
+    }
+    else
+    {
+        @if (_issuedSecret is not null)
+        {
+            @* Shown once and never again: only the hash is stored, so navigating away without
+               copying this means creating a new token. *@
+            <BbAlert Variant="AlertVariant.Warning">
+                <BbAlertTitle>@Localizer["App.AccessTokens.IssuedTitle"]</BbAlertTitle>
+                <BbAlertDescription>
+                    <p class="mb-3">@Localizer["App.AccessTokens.IssuedDescription"]</p>
+                    <div class="flex flex-wrap items-center gap-2">
+                        <BbInput
+                            id="issuedTokenSecret"
+                            Value="@_issuedSecret"
+                            ReadOnly="true"
+                            Class="font-mono w-full sm:w-[34rem]"
+                        />
+                        <BbButton id="copyIssuedTokenButton" Variant="ButtonVariant.Outline" OnClick="CopySecretAsync">
+                            @(_secretCopied
+                                ? Localizer["App.AccessTokens.CopiedAction"]
+                                : Localizer["App.AccessTokens.CopyAction"])
+                        </BbButton>
+                        <BbButton Variant="ButtonVariant.Ghost" OnClick="DismissSecret">
+                            @Localizer["App.Common.Close"]
+                        </BbButton>
+                    </div>
+                    <p class="mt-3 text-xs">
+                        @((MarkupString)
+                            string.Format(
+                                Localizer["App.AccessTokens.UsageHint"].Value,
+                                "<code>Authorization: Bearer &lt;token&gt;</code>"
+                            ))
+                    </p>
+                </BbAlertDescription>
+            </BbAlert>
+        }
+
+        @if (_error is not null)
+        {
+            <BbAlert Variant="AlertVariant.Danger">
+                <BbAlertTitle>@Localizer["App.AccessTokens.ErrorTitle"]</BbAlertTitle>
+                <BbAlertDescription>@_error</BbAlertDescription>
+            </BbAlert>
+        }
+
+        <BbCard>
+            <BbCardHeader>
+                <BbCardTitle>@Localizer["App.AccessTokens.CreateTitle"]</BbCardTitle>
+                <BbCardDescription>@Localizer["App.AccessTokens.CreateDescription"]</BbCardDescription>
+            </BbCardHeader>
+            <BbCardContent>
+                <EditForm Model="_newToken" FormName="create-access-token" OnValidSubmit="CreateAsync">
+                    <div class="grid gap-4 sm:grid-cols-2">
+                        <BbField>
+                            <BbFieldLabel For="newTokenName">@Localizer["App.AccessTokens.NameLabel"]</BbFieldLabel>
+                            <BbFieldContent>
+                                <BbInput
+                                    @bind-Value="_newToken.Name"
+                                    Id="newTokenName"
+                                    Required="true"
+                                    Placeholder="@Localizer["App.AccessTokens.NamePlaceholder"].Value"
+                                />
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    @Localizer["App.AccessTokens.NameHelp"]
+                                </p>
+                            </BbFieldContent>
+                        </BbField>
+                        <BbField>
+                            <BbFieldLabel For="newTokenLifetime">
+                                @Localizer["App.AccessTokens.LifetimeLabel"]
+                            </BbFieldLabel>
+                            <BbFieldContent>
+                                <BbNumericInput
+                                    @bind-Value="_newToken.LifetimeDays"
+                                    Id="newTokenLifetime"
+                                    Min="1"
+                                    Max="@MaximumLifetimeDays"
+                                />
+                                <p class="mt-1 text-xs text-muted-foreground">
+                                    @LifetimeHelp
+                                </p>
+                            </BbFieldContent>
+                        </BbField>
+                    </div>
+                    <BbButton
+                        id="createAccessTokenButton"
+                        Type="ButtonType.Submit"
+                        Loading="_isCreating"
+                        Class="mt-4"
+                        IconPosition="IconPosition.Start"
+                    >
+                        <Icon>
+                            <LucideIcon Name="plus" Size="16" />
+                        </Icon>
+                        <ChildContent>
+                            @Localizer["App.AccessTokens.CreateAction"]
+                        </ChildContent>
+                    </BbButton>
+                </EditForm>
+            </BbCardContent>
+        </BbCard>
+
+        <BbCard>
+            <BbCardHeader>
+                <BbCardTitle>@Localizer["App.AccessTokens.MineTitle"]</BbCardTitle>
+                <BbCardDescription>@Localizer["App.AccessTokens.MineDescription"]</BbCardDescription>
+            </BbCardHeader>
+            <BbCardContent>
+                @TokenTable(_myTokens, showOwner: false)
+            </BbCardContent>
+        </BbCard>
+
+        @if (_isAdmin)
+        {
+            <BbCard>
+                <BbCardHeader>
+                    <BbCardTitle>@Localizer["App.AccessTokens.AllTitle"]</BbCardTitle>
+                    <BbCardDescription>@Localizer["App.AccessTokens.AllDescription"]</BbCardDescription>
+                </BbCardHeader>
+                <BbCardContent>
+                    @TokenTable(_allTokens, showOwner: true)
+                </BbCardContent>
+            </BbCard>
+        }
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private ClaimsPrincipal _user = new();
+    private bool _isAdmin;
+    private IReadOnlyList<AccessToken> _myTokens = [];
+    private IReadOnlyList<AccessToken> _allTokens = [];
+    private readonly NewTokenModel _newToken = new();
+    private bool _isCreating;
+    private string? _error;
+    private string? _issuedSecret;
+    private bool _secretCopied;
+    private TimeZoneInfo _browserTimeZone = TimeZoneInfo.Utc;
+
+    private AccessTokenConfig TokenConfig => AuthorizationConfigOptions.Value.AccessTokens;
+
+    private int MaximumLifetimeDays =>
+        TokenConfig.MaximumLifetime > TimeSpan.Zero
+            ? (int)Math.Ceiling(TokenConfig.MaximumLifetime.TotalDays)
+            : int.MaxValue;
+
+    private string LifetimeHelp =>
+        TokenConfig.MaximumLifetime > TimeSpan.Zero
+            ? string.Format(
+                Localizer["App.AccessTokens.LifetimeHelp"].Value,
+                MaximumLifetimeDays
+            )
+            : Localizer["App.AccessTokens.LifetimeHelpUncapped"].Value;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user =
+            AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
+        _isAdmin = PermissionChecker.IsAdmin(_user);
+        _newToken.LifetimeDays = Math.Max(1, (int)Math.Round(TokenConfig.DefaultLifetime.TotalDays));
+
+        if (IsUsable)
+        {
+            await LoadAsync();
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && IsUsable)
+        {
+            await ResolveBrowserTimeZoneAsync();
+        }
+    }
+
+    private bool IsUsable => AuthorizationConfigOptions.Value.IsEnabled && TokenConfig.IsEnabled;
+
+    private async Task LoadAsync()
+    {
+        _myTokens = await AccessTokenAppService.GetMineAsync(_user, CancellationToken.None);
+
+        if (_isAdmin)
+        {
+            _allTokens = await AccessTokenAppService.GetAllAsync(_user, CancellationToken.None);
+        }
+    }
+
+    private async Task CreateAsync()
+    {
+        _isCreating = true;
+        _error = null;
+        _issuedSecret = null;
+        _secretCopied = false;
+
+        try
+        {
+            var issued = await AccessTokenAppService.CreatePersonalAsync(
+                _newToken.Name,
+                TimeSpan.FromDays(_newToken.LifetimeDays),
+                _user,
+                CancellationToken.None
+            );
+
+            _issuedSecret = issued.Secret;
+            _newToken.Reset();
+            await LoadAsync();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _isCreating = false;
+        }
+    }
+
+    private async Task RevokeAsync(AccessToken token)
+    {
+        _error = null;
+
+        try
+        {
+            await AccessTokenAppService.RevokeAsync(token.Id, _user, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task DeleteAsync(AccessToken token)
+    {
+        _error = null;
+
+        try
+        {
+            await AccessTokenAppService.DeleteAsync(token.Id, _user, CancellationToken.None);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+
+        await LoadAsync();
+    }
+
+    private async Task CopySecretAsync()
+    {
+        if (_issuedSecret is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _secretCopied = await JS.InvokeAsync<bool>("vfpsClipboard.copy", _issuedSecret);
+        }
+        catch (Microsoft.JSInterop.JSException ex)
+        {
+            // The value is on screen either way - a failed copy is a convenience lost, not an
+            // error worth interrupting the one chance to read the token.
+            Logger.LogWarning(ex, "Failed to copy the issued access token to the clipboard");
+            _secretCopied = false;
+        }
+    }
+
+    private void DismissSecret()
+    {
+        _issuedSecret = null;
+        _secretCopied = false;
+    }
+
+    private async Task ResolveBrowserTimeZoneAsync()
+    {
+        try
+        {
+            var ianaId = await JS.InvokeAsync<string>("vfpsTimeZone.get");
+            _browserTimeZone = TimeZoneInfo.FindSystemTimeZoneById(ianaId);
+        }
+        catch (Exception ex)
+            when (ex is Microsoft.JSInterop.JSException or TimeZoneNotFoundException)
+        {
+            Logger.LogWarning(ex, "Failed to resolve the browser's time zone, defaulting to UTC");
+            return;
+        }
+
+        StateHasChanged();
+    }
+
+    private string Format(DateTimeOffset? timestamp) =>
+        timestamp is null
+            ? Localizer["App.AccessTokens.Never"].Value
+            : TimeZoneInfo.ConvertTime(timestamp.Value, _browserTimeZone).ToString("g");
+
+    private (string Label, BadgeVariant Variant) Status(AccessToken token)
+    {
+        if (token.RevokedAt is not null)
+        {
+            return (Localizer["App.AccessTokens.StatusRevoked"].Value, BadgeVariant.Destructive);
+        }
+
+        return token.ExpiresAt <= DateTimeOffset.UtcNow
+            ? (Localizer["App.AccessTokens.StatusExpired"].Value, BadgeVariant.Secondary)
+            : (Localizer["App.AccessTokens.StatusActive"].Value, BadgeVariant.Default);
+    }
+
+    private string Owner(AccessToken token) =>
+        token.TokenType == AccessTokenType.ServiceAccount
+            ? token.ServiceAccountName ?? string.Empty
+            : token.Username ?? token.Subject ?? string.Empty;
+
+    private RenderFragment TokenTable(IReadOnlyList<AccessToken> tokens, bool showOwner) =>
+        @<div>
+            @if (tokens.Count == 0)
+            {
+                <p class="text-sm text-muted-foreground">@Localizer["App.AccessTokens.NoTokens"]</p>
+            }
+            else
+            {
+                <div class="space-y-2">
+                    @foreach (var token in tokens)
+                    {
+                        var status = Status(token);
+                        <div class="rounded-md border border-border p-3">
+                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <BbBadge Variant="@status.Variant">@status.Label</BbBadge>
+                                    <span class="text-sm font-medium">@token.Name</span>
+                                    @if (showOwner)
+                                    {
+                                        <BbBadge Variant="BadgeVariant.Outline">
+                                            @(token.TokenType == AccessTokenType.ServiceAccount
+                                                ? Localizer["App.AccessTokens.TypeServiceAccount"]
+                                                : Localizer["App.AccessTokens.TypePersonal"])
+                                        </BbBadge>
+                                        <span class="text-sm text-muted-foreground">@Owner(token)</span>
+                                    }
+                                    <code class="text-xs text-muted-foreground">@token.TokenId</code>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    @if (token.RevokedAt is null)
+                                    {
+                                        <BbButton
+                                            id="@($"revokeToken-{token.Id}")"
+                                            Variant="ButtonVariant.Outline"
+                                            Size="ButtonSize.Small"
+                                            OnClick="@(() => RevokeAsync(token))"
+                                        >
+                                            @Localizer["App.AccessTokens.RevokeAction"]
+                                        </BbButton>
+                                    }
+                                    <BbButton
+                                        id="@($"deleteToken-{token.Id}")"
+                                        Variant="ButtonVariant.Destructive"
+                                        Size="ButtonSize.Small"
+                                        OnClick="@(() => DeleteAsync(token))"
+                                    >
+                                        @Localizer["App.Common.Delete"]
+                                    </BbButton>
+                                </div>
+                            </div>
+                            <div class="mt-2 flex flex-wrap gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                                <span>@Localizer["App.AccessTokens.ColumnCreated"]: @Format(token.CreatedAt)</span>
+                                <span>@Localizer["App.AccessTokens.ColumnExpires"]: @Format(token.ExpiresAt)</span>
+                                <span>@Localizer["App.AccessTokens.ColumnLastUsed"]: @Format(token.LastUsedAt)</span>
+                            </div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>;
+
+    private sealed class NewTokenModel
+    {
+        public string Name { get; set; } = string.Empty;
+        public int LifetimeDays { get; set; } = 90;
+
+        /// <summary>
+        /// Clears the label only - the lifetime is left as it was, since someone creating a
+        /// second token usually wants it to live as long as the first.
+        /// </summary>
+        public void Reset() => Name = string.Empty;
+    }
+}

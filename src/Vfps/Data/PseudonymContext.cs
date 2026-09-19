@@ -145,6 +145,61 @@ public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbCo
             .HasForeignKey(c => c.NamespaceName)
             .OnDelete(DeleteBehavior.Cascade);
 
+        // Access tokens and the service accounts they can belong to.
+        //
+        // One table for both token types (see AccessToken): the credential, its expiry and its
+        // revocation are identical either way, and a single table is what lets one authentication
+        // handler and one cache serve both.
+        modelBuilder.Entity<AccessToken>().HasKey(t => t.Id);
+
+        // The public half of the token string. Unique because it is what an incoming token is
+        // resolved by - a duplicate would make authentication ambiguous rather than merely
+        // untidy.
+        modelBuilder
+            .Entity<AccessToken>()
+            .HasIndex(t => t.TokenId)
+            .HasDatabaseName("ix_access_tokens_token_id")
+            .IsUnique();
+
+        // "My tokens" is the only listing a non-admin ever performs, and it runs on every visit
+        // to the access-tokens page.
+        modelBuilder
+            .Entity<AccessToken>()
+            .HasIndex(t => t.Subject)
+            .HasDatabaseName("ix_access_tokens_subject")
+            .HasFilter("subject IS NOT NULL");
+
+        // Cascade: a token that authenticates as an account that no longer exists could never
+        // resolve to a principal again, so keeping it would only leave a live-looking credential
+        // in the UI. The account's *grants* are deleted by ServiceAccountAppService, which has to
+        // do it explicitly - Grantee is a plain string with no foreign key to cascade from.
+        modelBuilder
+            .Entity<AccessToken>()
+            .HasOne(t => t.ServiceAccount)
+            .WithMany(a => a.Tokens)
+            .HasForeignKey(t => t.ServiceAccountName)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Stored as JSON rather than a Postgres text[], for the same reason PseudonymizationJob's
+        // column mappings are: the test suite runs this model on SQLite, which has no array type.
+        var rolesConverter = new ValueConverter<List<string>, string>(
+            v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
+            v =>
+                JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null)
+                ?? new List<string>()
+        );
+        var rolesComparer = new ValueComparer<List<string>>(
+            (a, b) => a != null && b != null && a.SequenceEqual(b),
+            v => v.Aggregate(0, (hash, role) => HashCode.Combine(hash, role.GetHashCode())),
+            v => v.ToList()
+        );
+        var rolesProperty = modelBuilder.Entity<AccessToken>().Property(t => t.Roles);
+        rolesProperty.HasConversion(rolesConverter, rolesComparer);
+        if (Database.IsNpgsql())
+        {
+            rolesProperty.HasColumnType("jsonb");
+        }
+
         // via https://blog.dangl.me/archive/handling-datetimeoffset-in-sqlite-with-entity-framework-core/
         // only really relevant for unit/integration-testing
         if (Database.IsSqlite())
@@ -179,4 +234,6 @@ public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbCo
     public DbSet<PseudonymizationJob> PseudonymizationJobs { get; set; }
     public DbSet<PseudonymCount> PseudonymCounts { get; set; }
     public DbSet<NamespaceAccessGrant> NamespaceAccessGrants { get; set; }
+    public DbSet<ServiceAccount> ServiceAccounts { get; set; }
+    public DbSet<AccessToken> AccessTokens { get; set; }
 }

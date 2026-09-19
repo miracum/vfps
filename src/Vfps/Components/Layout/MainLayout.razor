@@ -195,6 +195,21 @@
                 AuthenticationState is null
                     ? new ClaimsPrincipal()
                     : (await AuthenticationState).User;
+
+            // Personal access tokens are self-service, so this one is for everyone who is signed
+            // in - a token carries only its owner's own access, and managing your own credentials
+            // needs no special authority.
+            if (AuthorizationConfigOptions.Value.AccessTokens.IsEnabled)
+            {
+                items.Add(
+                    new NavItemDefinition
+                    {
+                        Text = Localizer["App.Nav.AccessTokens"],
+                        Href = "/ui/access-tokens",
+                    }
+                );
+            }
+
             if (PermissionChecker.IsAdmin(user))
             {
                 items.Add(
@@ -204,6 +219,17 @@
                         Href = "/ui/access-control",
                     }
                 );
+
+                if (AuthorizationConfigOptions.Value.AccessTokens.IsEnabled)
+                {
+                    items.Add(
+                        new NavItemDefinition
+                        {
+                            Text = Localizer["App.Nav.ServiceAccounts"],
+                            Href = "/ui/service-accounts",
+                        }
+                    );
+                }
             }
         }
 

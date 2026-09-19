@@ -315,13 +315,46 @@ builder.Services.AddSingleton<INamespacePermissionChecker, NamespacePermissionCh
 builder.Services.AddScoped<INamespaceAccessGrantRepository, NamespaceAccessGrantRepository>();
 builder.Services.AddScoped<INamespaceAccessGrantAppService, NamespaceAccessGrantAppService>();
 
+// vfps-issued access tokens - personal ones, which act as the user who created them, and
+// service-account ones, which act as a principal an admin granted access to. Registered
+// unconditionally, like the grant services above: the app services enforce
+// Authorization:AccessTokens:IsEnabled themselves, so the UI can inject them and explain why the
+// feature is off rather than failing to resolve a dependency. The authentication scheme that
+// consumes them, on the other hand, only exists when the feature is on - see below.
+builder.Services.AddSingleton<IAccessTokenCache, AccessTokenCache>();
+builder.Services.AddSingleton<IAccessTokenUsageTracker, AccessTokenUsageTracker>();
+builder.Services.AddHostedService<AccessTokenUsageFlushBackgroundService>();
+builder.Services.AddScoped<IAccessTokenRepository, AccessTokenRepository>();
+builder.Services.AddScoped<IServiceAccountRepository, ServiceAccountRepository>();
+builder.Services.AddScoped<IAccessTokenAppService, AccessTokenAppService>();
+builder.Services.AddScoped<IServiceAccountAppService, ServiceAccountAppService>();
+
 if (authConfig.IsEnabled)
 {
+    // Which of the two bearer handlers a request belongs to. Both credentials travel in the same
+    // Authorization header - one header is what keeps every existing client (grpc-dotnet call
+    // credentials, the FHIR endpoint, Swagger UI's Authorize button) working unchanged with
+    // either - so the token's own prefix is what tells them apart: a JWT is three dot-separated
+    // base64url segments and can never start with "vfps_".
+    //
+    // Anything not recognisably a vfps token goes to the JWT handler, including a request with no
+    // Authorization header at all: its challenge is the 401 the API contract promises.
+    string SelectBearerScheme(HttpContext context) =>
+        authConfig.AccessTokens.IsEnabled
+        && context
+            .Request.Headers.Authorization.ToString()
+            .AsSpan()
+            .TrimStart()
+            .StartsWith($"Bearer {AccessTokenSecret.Prefix}", StringComparison.OrdinalIgnoreCase)
+            ? AccessTokenDefaults.AuthenticationScheme
+            : JwtBearerDefaults.AuthenticationScheme;
+
     builder
         .Services.AddAuthentication(options =>
         {
             // Route browser requests (Blazor UI) to the cookie scheme and everything else
-            // (gRPC/REST callers presenting a bearer token) to JWT bearer.
+            // (gRPC/REST callers presenting a bearer token) to whichever bearer handler owns the
+            // credential presented.
             options.DefaultScheme = "smart";
             options.DefaultChallengeScheme = "smart";
         })
@@ -334,9 +367,20 @@ if (authConfig.IsEnabled)
                     context
                         .Request.Headers.Authorization.ToString()
                         .StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-                        ? JwtBearerDefaults.AuthenticationScheme
+                        ? SelectBearerScheme(context)
                         : CookieAuthenticationDefaults.AuthenticationScheme;
             }
+        )
+        // What the API policy below is pinned to. A policy scheme rather than listing both bearer
+        // schemes on the policy itself, because ASP.NET Core's policy evaluator runs *every*
+        // scheme a policy names and merges the successes: a vfps token would then also be handed
+        // to the JWT handler, which fetches the authority's discovery document before it even
+        // looks at the token. Routing to exactly one handler is what keeps a vfps-issued token
+        // working while the identity provider is unreachable - a good part of why one is issued.
+        .AddPolicyScheme(
+            ApiBearerScheme,
+            "Bearer (identity provider or vfps-issued)",
+            options => options.ForwardDefaultSelector = SelectBearerScheme
         )
         .AddCookie(options =>
         {
@@ -412,6 +456,21 @@ if (authConfig.IsEnabled)
             options.TokenValidationParameters.RoleClaimType = authConfig.RoleClaimType;
         });
 
+    // Only registered when the feature is on, so that a deployment which forbids static
+    // credentials has no handler that could accept one: with the scheme absent, the selector
+    // above never routes to it and a "vfps_..." token is handed to the JWT handler, which
+    // refuses it as the malformed JWT it is.
+    if (authConfig.AccessTokens.IsEnabled)
+    {
+        builder
+            .Services.AddAuthentication()
+            .AddScheme<AuthenticationSchemeOptions, AccessTokenAuthenticationHandler>(
+                AccessTokenDefaults.AuthenticationScheme,
+                displayName: null,
+                configureOptions: _ => { }
+            );
+    }
+
     // Replaces Blazor's default ServerAuthenticationStateProvider, which hands a circuit the
     // principal it was created with and then never revisits it. Registered only inside this
     // block: with authorization off there is no identity to revalidate in the first place.
@@ -441,12 +500,14 @@ if (authConfig.IsEnabled)
         // to StatusCode.Unauthenticated. It also means a browser session no longer authenticates
         // an API call at all: with authorization enabled, Swagger UI's "Try it out" needs a bearer
         // token like any other client, rather than riding on the admin's login cookie.
+        //
+        // Pinned to ApiBearerScheme rather than to JwtBearer itself, so that a vfps-issued access
+        // token is an equally valid API credential: that policy scheme forwards to whichever of
+        // the two bearer handlers owns the token presented, and to JWT bearer - hence the 401 -
+        // when there is none.
         options.AddPolicy(
             ApiAuthorizationPolicy,
-            policy =>
-                policy
-                    .AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
-                    .RequireAuthenticatedUser()
+            policy => policy.AddAuthenticationSchemes(ApiBearerScheme).RequireAuthenticatedUser()
         );
 
         // Gates the Hangfire dashboard (mapped further down, wherever Hangfire itself is enabled)
@@ -1053,6 +1114,13 @@ public partial class Program
     /// and applied to those endpoints, only when Authorization:IsEnabled is true.
     /// </summary>
     internal const string ApiAuthorizationPolicy = "Api";
+
+    /// <summary>
+    /// Name of the policy scheme that picks the bearer handler a presented credential belongs to
+    /// - the identity provider's JWTs, or vfps's own access tokens. Registered, like
+    /// <see cref="ApiAuthorizationPolicy"/> itself, only when Authorization:IsEnabled is true.
+    /// </summary>
+    internal const string ApiBearerScheme = "ApiBearer";
 
     internal static readonly ActivitySource ActivitySource = new("Vfps");
 

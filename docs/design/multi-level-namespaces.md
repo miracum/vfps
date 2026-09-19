@@ -13,7 +13,7 @@
 Today every vfps namespace is a flat, independent bucket: one `original_value` maps to
 one (or, in a multi-psn namespace, several) `pseudonym_value`, and there is no
 relationship between namespaces at all. Several real projects need more than one
-*level* of pseudonymization for the same underlying subject, e.g.:
+_level_ of pseudonymization for the same underlying subject, e.g.:
 
 - a hospital-wide MPI/PID is pseudonymized once into a project-level pseudonym, and
   that project pseudonym is then re-pseudonymized into a study- or
@@ -41,15 +41,15 @@ same mental model, not a guess at one:
   with several parents is shown once in each parent's tree. A domain with no parent
   is a **root domain** — its original values are raw external identifiers (MPI/PID).
   (§1.2, §3.1)
-- **What a child domain actually stores**: the *pseudonym value of the parent domain*
-  becomes the *original value* fed into the child domain's own pseudonym generation.
+- **What a child domain actually stores**: the _pseudonym value of the parent domain_
+  becomes the _original value_ fed into the child domain's own pseudonym generation.
   This is why it's called a higher pseudonymization "stage"/"level" — it's pseudonym
   chaining, not namespace grouping. (§1.2, §1.3, Glossar "Originalwert")
 - **Sibling domain**: purely a UI convenience — a domain that shares the same
   parent(s) as another domain. Not a distinct relationship in the data model.
 - **Optional per-parent-link validation** (`validateValuesViaParents`, §4.1.3, §3.1):
   - `OFF` — no check (default).
-  - `VALIDATE` — the value must be well-formed *and* already exist as a pseudonym in
+  - `VALIDATE` — the value must be well-formed _and_ already exist as a pseudonym in
     the parent domain.
   - `ENSURE_EXISTS` — the value must exist as a pseudonym in the parent domain
     (existence only, no format check).
@@ -103,7 +103,7 @@ same mental model, not a guess at one:
 
 ## 4. Key insight: what's already possible vs. what's actually missing
 
-Pseudonym *chaining* — the core mechanic behind gPAS's hierarchy — already works in
+Pseudonym _chaining_ — the core mechanic behind gPAS's hierarchy — already works in
 vfps with **zero code changes**: `PseudonymService.Create` takes an arbitrary
 `original_value` string for any namespace, so calling `Create` on namespace `study-a`
 with `original_value` set to a pseudonym previously generated in namespace `project`
@@ -274,7 +274,7 @@ violation surface. There is no cascade-delete-the-subtree option.
 #### Parent-existence validation on pseudonym creation
 
 When a namespace has `ParentValidationMode = EnsureExists`, an original value must
-already exist as a *pseudonym value* in the parent namespace:
+already exist as a _pseudonym value_ in the parent namespace:
 
 ```sql
 SELECT EXISTS (
@@ -291,7 +291,7 @@ input to the child.
 
 **Where it runs**: in `PseudonymAppService`, immediately after the existing
 `ValidateOriginalValue` regex check and before any generation — cheap in-memory check
-first, then the round trip. It applies to *every* create path, including the
+first, then the round trip. It applies to _every_ create path, including the
 `CreateTrustedAsync` overloads: "trusted" there means the permission check was already
 done up front by the CSV job runner, not that data-integrity rules are skipped.
 
@@ -342,7 +342,7 @@ public class ParentPseudonymNotFoundException(string namespaceName, string paren
 ```
 
 Note the message deliberately does not echo the original value back — consistent with
-the existing validation exceptions, which report the *pattern* rather than the
+the existing validation exceptions, which report the _pattern_ rather than the
 rejected value.
 
 Mapped in `Services/PseudonymService.cs` to `StatusCode.FailedPrecondition` — the
@@ -355,7 +355,7 @@ simply absent upstream.)
 reasoning that reverse lookup is infrequent. This check makes it a hot path for
 validating namespaces, so expect one uncached indexed read per create there. If that
 shows up in benchmarks, a positive-only cache is safe to add and follows the idiom
-already established in `CachingNamespaceRepository`: cache a *hit*, never a *miss* —
+already established in `CachingNamespaceRepository`: cache a _hit_, never a _miss_ —
 a miss must stay uncached because the parent value legitimately appears moments later
 (create in parent, then create in child), while a hit can never become stale, since
 v1 has no per-pseudonym delete and namespace deletion is blocked while children exist.
@@ -469,18 +469,18 @@ open questions remain.
 
 ## 8. Scope decisions
 
-| # | Question | Decision |
-|---|----------|----------|
-| 1 | Single parent vs. multi-parent (DAG) | **Single parent** — plain self-referencing FK |
-| 2 | Is `parent_name` mutable after creation? | **Immutable**, set at creation only |
-| 3 | Parent-existence validation | **In scope** as an opt-in `EnsureExists` mode |
-| 4 | Cascade delete | **Not in scope** |
-| 5 | Deleting a namespace that has children | **Restrict** — refuse, children first |
-| 6 | Authorization inheritance parent → child | **No inheritance**, grants stay explicit |
-| 7 | Hierarchy depth limit | **No limit** |
-| 8 | Discovery API shape | **Non-recursive `ListChildren`**, called per level |
-| 9 | Multi-psn parent interaction | Confirmed — no special-casing needed |
-| 10 | UI scope | **Minimal** (parent column, picker, pseudonymize-into-child) |
+| #   | Question                                 | Decision                                                     |
+| --- | ---------------------------------------- | ------------------------------------------------------------ |
+| 1   | Single parent vs. multi-parent (DAG)     | **Single parent** — plain self-referencing FK                |
+| 2   | Is `parent_name` mutable after creation? | **Immutable**, set at creation only                          |
+| 3   | Parent-existence validation              | **In scope** as an opt-in `EnsureExists` mode                |
+| 4   | Cascade delete                           | **Not in scope**                                             |
+| 5   | Deleting a namespace that has children   | **Restrict** — refuse, children first                        |
+| 6   | Authorization inheritance parent → child | **No inheritance**, grants stay explicit                     |
+| 7   | Hierarchy depth limit                    | **No limit**                                                 |
+| 8   | Discovery API shape                      | **Non-recursive `ListChildren`**, called per level           |
+| 9   | Multi-psn parent interaction             | Confirmed — no special-casing needed                         |
+| 10  | UI scope                                 | **Minimal** (parent column, picker, pseudonymize-into-child) |
 
 ## 9. Implementation checklist
 

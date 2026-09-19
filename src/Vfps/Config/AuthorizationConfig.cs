@@ -68,4 +68,10 @@ public class AuthorizationConfig
     /// can run before it notices. Values below a second are clamped.
     /// </summary>
     public TimeSpan SessionRevalidationInterval { get; set; } = TimeSpan.FromMinutes(5);
+
+    /// <summary>
+    /// vfps-issued personal access tokens and service accounts - the credential a caller uses
+    /// when it can't obtain one from the identity provider. Off unless switched on explicitly.
+    /// </summary>
+    public AccessTokenConfig AccessTokens { get; set; } = new();
 }

@@ -73,6 +73,9 @@
   <data name="App.AccessControl.AdminsOnlyTitle" xml:space="preserve">
     <value>Nur für Admins</value>
   </data>
+  <data name="App.AccessControl.AllNamespaces" xml:space="preserve">
+    <value>Alle Namespaces</value>
+  </data>
   <data name="App.AccessControl.DisabledDescription" xml:space="preserve">
     <value>{0} ist {1}, daher hat jede Anfrage vollen Lese-, Schreib- und Reverse-Lookup-Zugriff auf jeden Namespace, unabhängig von der Rolle.</value>
   </data>
@@ -103,6 +106,9 @@
   <data name="App.AccessControl.GranteeRolePlaceholder" xml:space="preserve">
     <value>vfps-ns-example-read</value>
   </data>
+  <data name="App.AccessControl.GranteeServiceAccountHelp" xml:space="preserve">
+    <value>Wird mit dem Dienstkonto abgeglichen, als das sich ein Zugriffstoken authentifiziert. Ein Dienstkonto ist niemals Administrator - es besitzt genau den hier erteilten Zugriff.</value>
+  </data>
   <data name="App.AccessControl.GranteeType" xml:space="preserve">
     <value>Art</value>
   </data>
@@ -112,8 +118,110 @@
   <data name="App.AccessControl.GranteeTypeRole" xml:space="preserve">
     <value>Rolle</value>
   </data>
+  <data name="App.AccessControl.GranteeTypeServiceAccount" xml:space="preserve">
+    <value>Dienstkonto</value>
+  </data>
   <data name="App.AccessControl.NoNamespacesExist" xml:space="preserve">
     <value>Es sind noch keine Namespaces vorhanden.</value>
+  </data>
+  <data name="App.AccessControl.NoServiceAccounts" xml:space="preserve">
+    <value>Es existieren noch keine Dienstkonten. Legen Sie zuerst eines auf der Seite Dienstkonten an.</value>
+  </data>
+  <data name="App.AccessTokens.AllDescription" xml:space="preserve">
+    <value>Alle Token dieser Installation, persönliche wie Dienstkonto-Token. Für Administratoren sichtbar, damit ein kompromittiertes Token gefunden und widerrufen werden kann.</value>
+  </data>
+  <data name="App.AccessTokens.AllTitle" xml:space="preserve">
+    <value>Alle Token</value>
+  </data>
+  <data name="App.AccessTokens.ColumnCreated" xml:space="preserve">
+    <value>Erstellt</value>
+  </data>
+  <data name="App.AccessTokens.ColumnExpires" xml:space="preserve">
+    <value>Läuft ab</value>
+  </data>
+  <data name="App.AccessTokens.ColumnLastUsed" xml:space="preserve">
+    <value>Zuletzt verwendet</value>
+  </data>
+  <data name="App.AccessTokens.CopiedAction" xml:space="preserve">
+    <value>Kopiert</value>
+  </data>
+  <data name="App.AccessTokens.CopyAction" xml:space="preserve">
+    <value>Kopieren</value>
+  </data>
+  <data name="App.AccessTokens.CreateAction" xml:space="preserve">
+    <value>Token erstellen</value>
+  </data>
+  <data name="App.AccessTokens.CreateDescription" xml:space="preserve">
+    <value>Ein persönliches Zugriffstoken handelt als Sie selbst: Es erreicht genau die Namespaces, die Sie erreichen, und funktioniert nicht mehr, sobald Ihr Zugriff entzogen wird oder das Token abläuft.</value>
+  </data>
+  <data name="App.AccessTokens.CreateTitle" xml:space="preserve">
+    <value>Persönliches Zugriffstoken erstellen</value>
+  </data>
+  <data name="App.AccessTokens.ErrorTitle" xml:space="preserve">
+    <value>Fehler beim Zugriffstoken</value>
+  </data>
+  <data name="App.AccessTokens.FeatureDisabledDescription" xml:space="preserve">
+    <value>Setzen Sie {0} auf true, damit Benutzer persönliche Zugriffstoken und Administratoren Dienstkonten anlegen können. Bis dahin benötigt jeder API-Aufrufer ein Token vom Identity Provider.</value>
+  </data>
+  <data name="App.AccessTokens.FeatureDisabledTitle" xml:space="preserve">
+    <value>Zugriffstoken sind deaktiviert</value>
+  </data>
+  <data name="App.AccessTokens.IssuedDescription" xml:space="preserve">
+    <value>Das Token wird nur dieses eine Mal angezeigt. Gespeichert wird lediglich sein Hash - geht es verloren, müssen Sie ein neues erstellen.</value>
+  </data>
+  <data name="App.AccessTokens.IssuedTitle" xml:space="preserve">
+    <value>Kopieren Sie Ihr neues Token jetzt</value>
+  </data>
+  <data name="App.AccessTokens.LifetimeHelp" xml:space="preserve">
+    <value>Höchstens {0} Tage. Ein Token läuft immer ab - das begrenzt den Schaden, falls es abhandenkommt.</value>
+  </data>
+  <data name="App.AccessTokens.LifetimeHelpUncapped" xml:space="preserve">
+    <value>Ein Token läuft immer ab - das begrenzt den Schaden, falls es abhandenkommt.</value>
+  </data>
+  <data name="App.AccessTokens.LifetimeLabel" xml:space="preserve">
+    <value>Gültig für (Tage)</value>
+  </data>
+  <data name="App.AccessTokens.MineDescription" xml:space="preserve">
+    <value>Ein widerrufenes Token funktioniert auf dieser Replik sofort nicht mehr, auf allen anderen innerhalb der Cache-Dauer für Zugriffsregeln.</value>
+  </data>
+  <data name="App.AccessTokens.MineTitle" xml:space="preserve">
+    <value>Meine Token</value>
+  </data>
+  <data name="App.AccessTokens.NameHelp" xml:space="preserve">
+    <value>Wofür dieses Token gedacht ist, damit Sie es später von Ihren anderen unterscheiden können.</value>
+  </data>
+  <data name="App.AccessTokens.NameLabel" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="App.AccessTokens.NamePlaceholder" xml:space="preserve">
+    <value>nächtlicher ETL-Lauf</value>
+  </data>
+  <data name="App.AccessTokens.Never" xml:space="preserve">
+    <value>Nie</value>
+  </data>
+  <data name="App.AccessTokens.NoTokens" xml:space="preserve">
+    <value>Noch keine Token vorhanden.</value>
+  </data>
+  <data name="App.AccessTokens.RevokeAction" xml:space="preserve">
+    <value>Widerrufen</value>
+  </data>
+  <data name="App.AccessTokens.StatusActive" xml:space="preserve">
+    <value>Aktiv</value>
+  </data>
+  <data name="App.AccessTokens.StatusExpired" xml:space="preserve">
+    <value>Abgelaufen</value>
+  </data>
+  <data name="App.AccessTokens.StatusRevoked" xml:space="preserve">
+    <value>Widerrufen</value>
+  </data>
+  <data name="App.AccessTokens.TypePersonal" xml:space="preserve">
+    <value>Persönlich</value>
+  </data>
+  <data name="App.AccessTokens.TypeServiceAccount" xml:space="preserve">
+    <value>Dienstkonto</value>
+  </data>
+  <data name="App.AccessTokens.UsageHint" xml:space="preserve">
+    <value>Senden Sie es als {0} an die API, genau wie ein Token vom Identity Provider.</value>
   </data>
   <data name="App.Common.Close" xml:space="preserve">
     <value>Schließen</value>
@@ -607,6 +715,9 @@
   <data name="App.Nav.AccessControl" xml:space="preserve">
     <value>Zugriffskontrolle</value>
   </data>
+  <data name="App.Nav.AccessTokens" xml:space="preserve">
+    <value>Zugriffstoken</value>
+  </data>
   <data name="App.Nav.ApiDocs" xml:space="preserve">
     <value>API-Dokumentation</value>
   </data>
@@ -618,6 +729,9 @@
   </data>
   <data name="App.Nav.Pseudonyms" xml:space="preserve">
     <value>Pseudonyme</value>
+  </data>
+  <data name="App.Nav.ServiceAccounts" xml:space="preserve">
+    <value>Dienstkonten</value>
   </data>
   <data name="App.NotFound.Description" xml:space="preserve">
     <value>Leider gibt es unter dieser Adresse nichts.</value>
@@ -693,5 +807,53 @@
   </data>
   <data name="App.Pseudonyms.SearchWithOriginalValuePlaceholder" xml:space="preserve">
     <value>Nach Pseudonym- oder Originalwert suchen</value>
+  </data>
+  <data name="App.ServiceAccounts.CreateAction" xml:space="preserve">
+    <value>Dienstkonto erstellen</value>
+  </data>
+  <data name="App.ServiceAccounts.CreateDescription" xml:space="preserve">
+    <value>Ein Dienstkonto ist ein eigenständiges Prinzipal für Clients, die zu keiner Person gehören. Erteilen Sie ihm auf der Seite Namespaces Zugriff pro Namespace und stellen Sie ihm anschließend unten ein Token aus.</value>
+  </data>
+  <data name="App.ServiceAccounts.CreateTitle" xml:space="preserve">
+    <value>Dienstkonto erstellen</value>
+  </data>
+  <data name="App.ServiceAccounts.DeleteAction" xml:space="preserve">
+    <value>Konto löschen</value>
+  </data>
+  <data name="App.ServiceAccounts.DeleteConfirm" xml:space="preserve">
+    <value>'{0}' löschen? Die Zugriffsregeln und alle dafür ausgestellten Token werden mitgelöscht.</value>
+  </data>
+  <data name="App.ServiceAccounts.DescriptionLabel" xml:space="preserve">
+    <value>Beschreibung</value>
+  </data>
+  <data name="App.ServiceAccounts.DescriptionPlaceholder" xml:space="preserve">
+    <value>Wofür dieses Konto gedacht ist</value>
+  </data>
+  <data name="App.ServiceAccounts.ErrorTitle" xml:space="preserve">
+    <value>Fehler beim Dienstkonto</value>
+  </data>
+  <data name="App.ServiceAccounts.GrantsTitle" xml:space="preserve">
+    <value>Zugriff</value>
+  </data>
+  <data name="App.ServiceAccounts.IssueTokenAction" xml:space="preserve">
+    <value>Token ausstellen</value>
+  </data>
+  <data name="App.ServiceAccounts.NameHelp" xml:space="preserve">
+    <value>2-64 Zeichen aus Kleinbuchstaben, Ziffern und Bindestrichen. Später nicht mehr änderbar - die Zugriffsregeln verweisen namentlich darauf.</value>
+  </data>
+  <data name="App.ServiceAccounts.NameLabel" xml:space="preserve">
+    <value>Name</value>
+  </data>
+  <data name="App.ServiceAccounts.NoAccounts" xml:space="preserve">
+    <value>Noch keine Dienstkonten vorhanden.</value>
+  </data>
+  <data name="App.ServiceAccounts.NoDescription" xml:space="preserve">
+    <value>Keine Beschreibung.</value>
+  </data>
+  <data name="App.ServiceAccounts.NoGrants" xml:space="preserve">
+    <value>Noch kein Zugriff erteilt. Verwenden Sie auf der Seite Namespaces die Aktion Zugriff konfigurieren und wählen Sie dieses Konto als Berechtigten aus.</value>
+  </data>
+  <data name="App.ServiceAccounts.TokensTitle" xml:space="preserve">
+    <value>Token</value>
   </data>
 </root>

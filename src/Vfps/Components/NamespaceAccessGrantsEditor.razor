@@ -1,6 +1,7 @@
 @using System.Security.Claims
 @using Vfps.Data.Models
 @inject INamespaceAccessGrantAppService GrantAppService
+@inject IServiceAccountAppService ServiceAccountAppService
 @inject IStringLocalizer<SharedResources> Localizer
 
 @*
@@ -24,31 +25,64 @@
                 <BbFieldLabel For="newGrantType">@Localizer["App.AccessControl.GranteeType"]</BbFieldLabel>
                 <BbFieldContent>
                     <select
-                        @bind="_newGrant.GranteeType"
+                        value="@_newGrant.GranteeType"
+                        @onchange="OnGranteeTypeChanged"
                         id="newGrantType"
                         class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         <option value="@GranteeType.Role">@Localizer["App.AccessControl.GranteeTypeRole"]</option>
                         <option value="@GranteeType.Email">@Localizer["App.AccessControl.GranteeTypeEmail"]</option>
+                        @if (AreServiceAccountsEnabled)
+                        {
+                            <option value="@GranteeType.ServiceAccount">
+                                @Localizer["App.AccessControl.GranteeTypeServiceAccount"]
+                            </option>
+                        }
                     </select>
                 </BbFieldContent>
             </BbField>
             <BbField>
                 <BbFieldLabel For="newGrantGrantee">@Localizer["App.AccessControl.Grantee"]</BbFieldLabel>
                 <BbFieldContent>
-                    <BbInput
-                        @bind-Value="_newGrant.Grantee"
-                        Id="newGrantGrantee"
-                        Required="true"
-                        Placeholder="@(_newGrant.GranteeType == GranteeType.Email
-                            ? Localizer["App.AccessControl.GranteeEmailPlaceholder"].Value
-                            : Localizer["App.AccessControl.GranteeRolePlaceholder"].Value)"
-                    />
-                    <p class="mt-1 text-xs text-muted-foreground">
-                        @(_newGrant.GranteeType == GranteeType.Email
-                            ? Localizer["App.AccessControl.GranteeEmailHelp"]
-                            : Localizer["App.AccessControl.GranteeRoleHelp"])
-                    </p>
+                    @* A picker rather than a text box for service accounts: unlike a role name or
+                       an email address - whose truth lives at the identity provider, so anything
+                       typed here is a claim about something this app can't see - a service
+                       account is a row in this database, and a grant naming one that doesn't
+                       exist could never match anything. *@
+                    @if (_newGrant.GranteeType == GranteeType.ServiceAccount)
+                    {
+                        <select
+                            @bind="_newGrant.Grantee"
+                            id="newGrantGrantee"
+                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            @foreach (var account in _serviceAccounts)
+                            {
+                                <option value="@account.Name">@account.Name</option>
+                            }
+                        </select>
+                        <p class="mt-1 text-xs text-muted-foreground">
+                            @(_serviceAccounts.Count == 0
+                                ? Localizer["App.AccessControl.NoServiceAccounts"]
+                                : Localizer["App.AccessControl.GranteeServiceAccountHelp"])
+                        </p>
+                    }
+                    else
+                    {
+                        <BbInput
+                            @bind-Value="_newGrant.Grantee"
+                            Id="newGrantGrantee"
+                            Required="true"
+                            Placeholder="@(_newGrant.GranteeType == GranteeType.Email
+                                ? Localizer["App.AccessControl.GranteeEmailPlaceholder"].Value
+                                : Localizer["App.AccessControl.GranteeRolePlaceholder"].Value)"
+                        />
+                        <p class="mt-1 text-xs text-muted-foreground">
+                            @(_newGrant.GranteeType == GranteeType.Email
+                                ? Localizer["App.AccessControl.GranteeEmailHelp"]
+                                : Localizer["App.AccessControl.GranteeRoleHelp"])
+                        </p>
+                    }
                 </BbFieldContent>
             </BbField>
         </div>
@@ -202,9 +236,18 @@
     [Parameter]
     public EventCallback OnChanged { get; set; }
 
+    /// <summary>
+    /// Whether the service-account grantee type is offered at all - false when vfps-issued access
+    /// tokens are switched off, since an account with no way to authenticate is only a confusing
+    /// third option in the list.
+    /// </summary>
+    [Parameter]
+    public bool AreServiceAccountsEnabled { get; set; }
+
     private readonly NewGrantModel _newGrant = new();
     private List<NamespaceAccessGrant> _scopedGrants = [];
     private List<NamespaceAccessGrant> _globalGrants = [];
+    private List<ServiceAccount> _serviceAccounts = [];
     private bool _isCreating;
     private string? _createError;
     private string? _error;
@@ -228,6 +271,16 @@
 
     private async Task LoadAsync()
     {
+        if (AreServiceAccountsEnabled)
+        {
+            _serviceAccounts =
+            [
+                .. await ServiceAccountAppService.GetAllAsync(User, CancellationToken.None),
+            ];
+
+            DefaultGranteeToFirstServiceAccount();
+        }
+
         var grants = await GrantAppService.GetAllAsync(User, CancellationToken.None);
 
         _scopedGrants =
@@ -264,6 +317,7 @@
 
             _newGrant.Reset();
             await LoadAsync();
+            DefaultGranteeToFirstServiceAccount();
             await OnChanged.InvokeAsync();
         }
         catch (Exception ex)
@@ -326,10 +380,46 @@
         await OnChanged.InvokeAsync();
     }
 
+    /// <summary>
+    /// Switching the grantee type clears the grantee, because the old value can't be right for
+    /// the new type - a role name is not an email address, and neither is a service account the
+    /// picker has to select by name.
+    /// </summary>
+    private void OnGranteeTypeChanged(ChangeEventArgs args)
+    {
+        _newGrant.GranteeType = Enum.TryParse<GranteeType>(args.Value?.ToString(), out var parsed)
+            ? parsed
+            : GranteeType.Role;
+        _newGrant.Grantee = string.Empty;
+
+        DefaultGranteeToFirstServiceAccount();
+    }
+
+    /// <summary>
+    /// Keeps the picker's displayed selection and the bound value in agreement: a &lt;select&gt;
+    /// shows its first option when nothing matches, so an empty grantee would otherwise submit
+    /// blank while the form appears to have an account chosen.
+    /// </summary>
+    private void DefaultGranteeToFirstServiceAccount()
+    {
+        if (
+            _newGrant.GranteeType == GranteeType.ServiceAccount
+            && _newGrant.Grantee.Length == 0
+            && _serviceAccounts.Count > 0
+        )
+        {
+            _newGrant.Grantee = _serviceAccounts[0].Name;
+        }
+    }
+
     private string GranteeTypeLabel(GranteeType granteeType) =>
-        granteeType == GranteeType.Email
-            ? Localizer["App.AccessControl.GranteeTypeEmail"].Value
-            : Localizer["App.AccessControl.GranteeTypeRole"].Value;
+        granteeType switch
+        {
+            GranteeType.Email => Localizer["App.AccessControl.GranteeTypeEmail"].Value,
+            GranteeType.ServiceAccount =>
+                Localizer["App.AccessControl.GranteeTypeServiceAccount"].Value,
+            _ => Localizer["App.AccessControl.GranteeTypeRole"].Value,
+        };
 
     private string PermissionSummary(NamespaceAccessGrant grant)
     {

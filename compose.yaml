@@ -146,6 +146,9 @@ services:
       # kics-scan ignore-line
       Authorization__ClientSecret: "vfps-web-secret"
       Authorization__AdminRoles__0: "vfps-admin"
+      # vfps-issued access tokens: off by default in a real deployment, on here so the
+      # Access tokens and Service accounts pages are reachable when trying the stack out.
+      Authorization__AccessTokens__IsEnabled: "true"
       # requires externally-reachable seaweedfs. host.docker-internal doesnt quite work.
       #S3__IsEnabled: "true"
       S3__ServiceUrl: "http://host.docker.internal:9000"

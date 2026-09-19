@@ -1,9 +1,10 @@
-html, body {
-    height: 100%;
+html,
+body {
+  height: 100%;
 }
 
 body {
-    margin: 0;
+  margin: 0;
 }
 
 /*
@@ -28,25 +29,25 @@ body {
  * reliably reaches the actual rendered element here.
  */
 .badge-completed {
-    border-color: transparent;
-    background-color: #16a34a; /* Tailwind green-600 */
-    color: #fff;
+  border-color: transparent;
+  background-color: #16a34a; /* Tailwind green-600 */
+  color: #fff;
 }
 
 .badge-completed:hover {
-    background-color: #15803d; /* Tailwind green-700 */
+  background-color: #15803d; /* Tailwind green-700 */
 }
 
 /* Shared by the Stalled status badge and the "N malformed rows" warning badge - both are the
    same amber "heads up, not necessarily broken" look. */
 .badge-warning-amber {
-    border-color: #fcd34d; /* Tailwind amber-300 */
-    background-color: #fffbeb; /* Tailwind amber-50 */
-    color: #92400e; /* Tailwind amber-800 */
+  border-color: #fcd34d; /* Tailwind amber-300 */
+  background-color: #fffbeb; /* Tailwind amber-50 */
+  color: #92400e; /* Tailwind amber-800 */
 }
 
 .issue-text-stalled {
-    color: #b45309; /* Tailwind amber-700 */
+  color: #b45309; /* Tailwind amber-700 */
 }
 
 /*
@@ -59,11 +60,11 @@ body {
  * muddy, and a verdict is exactly the wrong thing to have to squint at.
  */
 .regex-check-ok {
-    color: #15803d; /* Tailwind green-700 */
+  color: #15803d; /* Tailwind green-700 */
 }
 
 .dark .regex-check-ok {
-    color: #4ade80; /* Tailwind green-400 */
+  color: #4ade80; /* Tailwind green-400 */
 }
 
 /*
@@ -73,7 +74,7 @@ body {
  * class-merging problem described above doesn't apply here - the rule just has to exist.
  */
 .col-span-3 {
-    grid-column: span 3 / span 3;
+  grid-column: span 3 / span 3;
 }
 
 /*
@@ -85,13 +86,13 @@ body {
  * nothing here is a Tailwind utility, and an escaped colon isn't a kebab-case selector either.
  */
 .theme-icon-dark {
-    display: none;
+  display: none;
 }
 
 .dark .theme-icon-light {
-    display: none;
+  display: none;
 }
 
 .dark .theme-icon-dark {
-    display: block;
+  display: block;
 }

@@ -97,4 +97,16 @@ public class NamespaceAccessGrantRepository(PseudonymContext context)
             .NamespaceAccessGrants.Where(g => g.Id == id)
             .ExecuteDeleteAsync(cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<int> DeleteByGranteeAsync(
+        GranteeType granteeType,
+        string grantee,
+        CancellationToken cancellationToken
+    )
+    {
+        return await context
+            .NamespaceAccessGrants.Where(g => g.GranteeType == granteeType && g.Grantee == grantee)
+            .ExecuteDeleteAsync(cancellationToken);
+    }
 }

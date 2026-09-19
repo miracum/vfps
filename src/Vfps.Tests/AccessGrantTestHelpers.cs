@@ -40,6 +40,22 @@ internal static class Grants
         bool reverseLookup = false
     ) => Build(namespaceName, GranteeType.Email, email, read, write, reverseLookup);
 
+    public static NamespaceAccessGrant ForServiceAccount(
+        string? namespaceName,
+        string serviceAccountName,
+        bool read = false,
+        bool write = false,
+        bool reverseLookup = false
+    ) =>
+        Build(
+            namespaceName,
+            GranteeType.ServiceAccount,
+            serviceAccountName,
+            read,
+            write,
+            reverseLookup
+        );
+
     private static NamespaceAccessGrant Build(
         string? namespaceName,
         GranteeType granteeType,

@@ -38,4 +38,18 @@ public interface INamespaceAccessGrantRepository
 
     /// <summary>Deletes a grant by id. A no-op if it doesn't exist.</summary>
     Task DeleteAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes every grant made to one grantee, across all namespaces. Exists for service-account
+    /// deletion: <see cref="NamespaceAccessGrant.Grantee"/> holds role names and email addresses
+    /// too, so it can't carry a foreign key, and without this a re-created account would silently
+    /// inherit the deleted one's access - the same trap the cascade on
+    /// <see cref="NamespaceAccessGrant.NamespaceName"/> exists to avoid.
+    /// </summary>
+    /// <returns>How many grants were deleted.</returns>
+    Task<int> DeleteByGranteeAsync(
+        GranteeType granteeType,
+        string grantee,
+        CancellationToken cancellationToken
+    );
 }

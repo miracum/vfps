@@ -52,4 +52,25 @@ public static class ClaimsPrincipalExtensions
     /// </remarks>
     private static bool IsEmailVerified(ClaimsPrincipal user) =>
         bool.TryParse(user.FindFirstValue("email_verified"), out var isVerified) && isVerified;
+
+    /// <summary>
+    /// The <see cref="Data.Models.ServiceAccount"/> this caller is, or null if it is a person -
+    /// whether signed in through the browser, presenting an IdP-issued JWT, or presenting a
+    /// personal access token, all three of which are the *user*, not a service account.
+    /// </summary>
+    public static string? GetServiceAccountName(this ClaimsPrincipal user) =>
+        user.FindFirstValue(VfpsClaimTypes.ServiceAccount);
+
+    /// <summary>
+    /// Whether this request was authenticated with a vfps-issued access token rather than a
+    /// browser session or an IdP-issued bearer token.
+    /// </summary>
+    /// <remarks>
+    /// Used to refuse the one thing a token must not do: mint another one. A personal access
+    /// token carries its owner's full identity, so every permission check it passes is one they
+    /// would pass themselves - but letting it create tokens would let a leaked credential renew
+    /// itself indefinitely, outliving the expiry that is the whole point of issuing it.
+    /// </remarks>
+    public static bool IsAccessTokenPrincipal(this ClaimsPrincipal user) =>
+        user.HasClaim(claim => claim.Type == VfpsClaimTypes.TokenId);
 }

@@ -1,3 +1,3 @@
 window.vfpsTimeZone = {
-    get: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
+  get: () => Intl.DateTimeFormat().resolvedOptions().timeZone,
 };
