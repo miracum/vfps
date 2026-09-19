@@ -1,1 +1,3 @@
 packages.lock.json
+charts/*/templates/
+CHANGELOG.md

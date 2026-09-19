@@ -5,7 +5,7 @@
 spread across three zones, backed by a replicated CloudNativePG cluster - and then breaks it on
 purpose while asserting that it keeps its promises.
 
-It replaces the old `nightly-chaos.yaml`, which installed the *published* chart with
+It replaces the old `nightly-chaos.yaml`, which installed the _published_ chart with
 `replicaCount: 3` and the bundled single-instance PostgreSQL, killed one vfps pod a minute, and
 asserted the failure rate stayed under 0.1%. That covered exactly one failure mode - an API pod
 dying - against the one component whose failure was guaranteed to be a total outage anyway. This
@@ -23,16 +23,16 @@ a new value - and that idempotency is the contract callers build their retries o
 
 So a failover that loses committed transactions does not show up as errors. It shows up as a
 pseudonym the caller already holds that no longer resolves, and a later `Create` for the same
-original value quietly returning a *different* pseudonym - one research subject silently split into
+original value quietly returning a _different_ pseudonym - one research subject silently split into
 two. Every pod is `Running`, every probe is green, the error rate is zero, and the data is wrong.
 
 The test therefore gates on three properties:
 
-| | Property | How it is measured | Budget |
-| --- | --- | --- | --- |
-| **P1** | **Availability.** Calls succeed within a bounded client retry budget **and a per-call deadline**. | Two durations: the longest run of seconds with no successful call, and total failure-equivalent seconds. | `RESILIENCE_MAX_OUTAGE_SECONDS` (30) and `RESILIENCE_MAX_UNAVAILABLE_SECONDS` - see §7. |
-| **P2** | **Pseudonym stability.** Every `(original → pseudonym)` pair observed before chaos re-`Create`s to the byte-identical pseudonym afterwards. | Sampled ledger, replayed in a verification pass. | **Zero.** |
-| **P3** | **Reverse lookup survives.** `Get(namespace, pseudonym_value)` for that same sample still returns its original value. | Same verification pass. | **Zero.** |
+|        | Property                                                                                                                                    | How it is measured                                                                                       | Budget                                                                                  |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| **P1** | **Availability.** Calls succeed within a bounded client retry budget **and a per-call deadline**.                                           | Two durations: the longest run of seconds with no successful call, and total failure-equivalent seconds. | `RESILIENCE_MAX_OUTAGE_SECONDS` (30) and `RESILIENCE_MAX_UNAVAILABLE_SECONDS` - see §7. |
+| **P2** | **Pseudonym stability.** Every `(original → pseudonym)` pair observed before chaos re-`Create`s to the byte-identical pseudonym afterwards. | Sampled ledger, replayed in a verification pass.                                                         | **Zero.**                                                                               |
+| **P3** | **Reverse lookup survives.** `Get(namespace, pseudonym_value)` for that same sample still returns its original value.                       | Same verification pass.                                                                                  | **Zero.**                                                                               |
 
 P2 and P3 are the reason this exists. P1 alone was already covered, weakly, by the old nightly.
 
@@ -95,13 +95,13 @@ postgresql:
 With CNPG's default asynchronous streaming replication, a promoted standby may be behind the
 primary's last acknowledged commit. A pseudonym vfps already returned to a caller can therefore be
 gone after failover - which is exactly the P2/P3 violation above. Left async, the test would be both
-flaky *and* right to fail: a real defect indistinguishable from noise.
+flaky _and_ right to fail: a real defect indistinguishable from noise.
 
 Requiring one standby to acknowledge every commit means promotion cannot lose an acknowledged write.
 That is what makes P2 and P3 legitimately zero-tolerance.
 
 **Hard consequence:** never take down more than one database instance at a time. With three instances
-and `number: 1`, losing the primary leaves two and writes continue; losing a primary *and* a standby
+and `number: 1`, losing the primary leaves two and writes continue; losing a primary _and_ a standby
 leaves one, quorum is unreachable, and writes block indefinitely. That is correct PostgreSQL
 behaviour, not a vfps bug. `run.sh` therefore sequences primary kills by cluster health rather than
 by a timer, and never runs two database scenarios concurrently.
@@ -129,7 +129,7 @@ CNPG's non-superuser app owner is sufficient.
 ## 4. Install to steady state before any chaos
 
 Non-negotiable, and the most likely source of a confusing red build. The migrations Job plus the
-`wait-for-migrations-job` init container mean a database disruption *during* install fails
+`wait-for-migrations-job` init container mean a database disruption _during_ install fails
 `helm upgrade --wait` outright, and `migrationsJob.backoffLimit: 3` gives only so much cover.
 `run.sh` waits for three ready CNPG instances and a completed rollout before applying the first
 chaos object.
@@ -140,14 +140,14 @@ Run sequentially under continuous load. Durations are `DURATION_*` variables in 
 window is computed as their sum plus `LOAD_MARGIN_SECONDS`, so the two halves can never disagree
 about how long the run is.
 
-| # | Scenario | Mechanism | What it proves |
-| --- | --- | --- | --- |
-| 0 | `baseline` | nothing injected | The ambient error floor. Without it you cannot tell a chaos-induced failure from a flaky runner. |
-| 1 | `vfps-pod-kill` | `PodChaos/pod-kill`, `mode: one`, Schedule @45s | Replicas, PDB, Service endpoint churn. |
-| 2 | `cnpg-primary-kill` | one-shot `PodChaos`, selector `cnpg.io/instanceRole: primary`, repeated as health allows | **The headline.** A real failover: promotion, `-rw` repointing, `EnableRetryOnFailure` riding it out. P2 and P3 are decided here. |
-| 3 | `db-network-partition` | `NetworkChaos/partition`, 20s bursts | A distinct failure mode from 2: the database is *up* but unreachable, so Npgsql sees timeouts rather than resets. Tests `Timeout=60` and the retry policy, not failover. |
-| 4 | `rollout` | `kubectl rollout restart` | HA notes §2 - `preStop`, `terminationGracePeriodSeconds`, `minReadySeconds`. |
-| 5 | `drain` | `kubectl drain --timeout=120s` | HA notes §1's PDB deadlock. **A drain that times out is the failure.** `run.sh` uncordons either way so the cluster is healthy before verification. |
+| #   | Scenario               | Mechanism                                                                                | What it proves                                                                                                                                                           |
+| --- | ---------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0   | `baseline`             | nothing injected                                                                         | The ambient error floor. Without it you cannot tell a chaos-induced failure from a flaky runner.                                                                         |
+| 1   | `vfps-pod-kill`        | `PodChaos/pod-kill`, `mode: one`, Schedule @45s                                          | Replicas, PDB, Service endpoint churn.                                                                                                                                   |
+| 2   | `cnpg-primary-kill`    | one-shot `PodChaos`, selector `cnpg.io/instanceRole: primary`, repeated as health allows | **The headline.** A real failover: promotion, `-rw` repointing, `EnableRetryOnFailure` riding it out. P2 and P3 are decided here.                                        |
+| 3   | `db-network-partition` | `NetworkChaos/partition`, 20s bursts                                                     | A distinct failure mode from 2: the database is _up_ but unreachable, so Npgsql sees timeouts rather than resets. Tests `Timeout=60` and the retry policy, not failover. |
+| 4   | `rollout`              | `kubectl rollout restart`                                                                | HA notes §2 - `preStop`, `terminationGracePeriodSeconds`, `minReadySeconds`.                                                                                             |
+| 5   | `drain`                | `kubectl drain --timeout=120s`                                                           | HA notes §1's PDB deadlock. **A drain that times out is the failure.** `run.sh` uncordons either way so the cluster is healthy before verification.                      |
 
 ## 6. Load generator
 
@@ -157,7 +157,7 @@ with Chaos Mesh and CloudNativePG behind it and takes the better part of twenty 
 only ever run on purpose. The Job opts in with `-explicit only`, alongside
 `-trait Category=Resilience`.
 
-A skipped explicit test is reported as *skipped* rather than *not discovered*, so the assembly still
+A skipped explicit test is reported as _skipped_ rather than _not discovered_, so the assembly still
 exits 0 and a solution-wide `dotnet test` does not fail on it. That also means forgetting
 `-explicit only` would give a green Job that ran nothing - which is precisely what the timeline guard
 in §6 catches, since a skipped test emits no CSV.
@@ -183,9 +183,9 @@ Phases, all driven by `RESILIENCE_*` environment variables:
 
 ### No load-testing framework
 
-NBomber became proprietary with License Agreement 3.0 (2025-09-01): *"NBomber is not free for
+NBomber became proprietary with License Agreement 3.0 (2025-09-01): _"NBomber is not free for
 organizational use. Any use by, for, or on behalf of an organization ... requires a valid Commercial
-Subscription."* Only v4 and earlier are Apache-2.0. It has been **removed from the repository
+Subscription."_ Only v4 and earlier are Apache-2.0. It has been **removed from the repository
 entirely**, along with the `RunStressSimulation` scenario that used it.
 
 Rather than swap one third-party dependency for another, the resilience test uses none. This is not
@@ -262,14 +262,14 @@ six-minute trimmed run and would have measured **3.4%** across the seventeen-min
 identical service behaviour, opposite verdicts, decided by nothing but which scenario set happened to
 run. So P1 is two durations instead:
 
-| Gate | Default | Why |
-| --- | --- | --- |
-| `RESILIENCE_MAX_OUTAGE_SECONDS` | 30 | Longest run of consecutive seconds in which load was offered and nothing succeeded. Run-length independent, so it means the same thing on both scenario sets, and it is the number an operator actually cares about: *how long was it down?* |
+| Gate                                 | Default          | Why                                                                                                                                                                                                                                                   |
+| ------------------------------------ | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `RESILIENCE_MAX_OUTAGE_SECONDS`      | 30               | Longest run of consecutive seconds in which load was offered and nothing succeeded. Run-length independent, so it means the same thing on both scenario sets, and it is the number an operator actually cares about: _how long was it down?_          |
 | `RESILIENCE_MAX_UNAVAILABLE_SECONDS` | 150 (60 on a PR) | Total failure-equivalent seconds, `(failed + shed) / rate`. Catches chronic flakiness that never blacks out a whole second and so never trips the gate above. Scales with the number of disruptions, hence the smaller allowance for the trimmed run. |
 
 **Both defaults are provisional**, set at roughly 2x the first two observed CI runs (16s longest
 outage, 34s total across two disruptions). They are a starting point to be revised as runs
-accumulate, not a measurement - but revise them *as durations*. Reverting to a percentage would
+accumulate, not a measurement - but revise them _as durations_. Reverting to a percentage would
 reintroduce the run-length coupling above.
 
 A single-primary PostgreSQL failover costs an outage by construction: the primary dies, a standby is
@@ -331,7 +331,7 @@ P1, P2 or P3 - which is the run you actually want it for.
 ## 10. Deliberately out of scope
 
 - **CSV job resilience.** Resumable CSV jobs are implemented but deliberately unmerged (HA notes,
-  "Deferred"), so on master a job killed mid-processing restarts from row 0 *by design*. A test
+  "Deferred"), so on master a job killed mid-processing restarts from row 0 _by design_. A test
   asserting otherwise would fail correctly and tell us nothing. Revisit when `resumable-csv` lands.
 - **S3 / object storage**, which CSV jobs need and nothing else does.
 - **NetworkPolicy.** The chart can render one; enabling it here would require allowing the

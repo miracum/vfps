@@ -467,7 +467,6 @@ database:
         # -- key within the Secret holding the PEM private key
         privateKeyKey: "tls.key"
 
-
 dataProtection:
   # -- certificates encrypting the ASP.NET Core Data Protection key ring at rest.
   #

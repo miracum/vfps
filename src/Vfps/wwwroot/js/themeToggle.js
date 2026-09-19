@@ -1,9 +1,9 @@
 function vfpsToggleDarkMode() {
-    document.documentElement.classList.toggle("dark");
-    localStorage.setItem(
-        "vfps-dark-mode",
-        document.documentElement.classList.contains("dark") ? "1" : "0"
-    );
+  document.documentElement.classList.toggle("dark");
+  localStorage.setItem(
+    "vfps-dark-mode",
+    document.documentElement.classList.contains("dark") ? "1" : "0",
+  );
 }
 
 // Blazor's enhanced navigation patches the live DOM to match each newly-fetched page rather
