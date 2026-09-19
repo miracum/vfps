@@ -16,7 +16,7 @@ public interface IVoprfPseudonymizer
     /// <summary>Pseudonymizes one value.</summary>
     /// <param name="originalValue">The value to pseudonymize. Must not be empty.</param>
     /// <param name="cancellationToken">Cancels the round trip to the server.</param>
-    Task<Pseudonym> PseudonymizeAsync(
+    Task<VoprfPseudonym> PseudonymizeAsync(
         string originalValue,
         CancellationToken cancellationToken = default
     );
@@ -30,7 +30,7 @@ public interface IVoprfPseudonymizer
     /// Cheaper than the same values one at a time - one request, one proof, one verification -
     /// and the server cannot tell a batch of related values from a batch of unrelated ones.
     /// </remarks>
-    Task<IReadOnlyList<Pseudonym>> PseudonymizeAsync(
+    Task<IReadOnlyList<VoprfPseudonym>> PseudonymizeAsync(
         IReadOnlyList<string> originalValues,
         CancellationToken cancellationToken = default
     );
@@ -85,7 +85,7 @@ public sealed class VoprfPseudonymizer : IVoprfPseudonymizer
     }
 
     /// <inheritdoc/>
-    public async Task<Pseudonym> PseudonymizeAsync(
+    public async Task<VoprfPseudonym> PseudonymizeAsync(
         string originalValue,
         CancellationToken cancellationToken = default
     )
@@ -97,7 +97,7 @@ public sealed class VoprfPseudonymizer : IVoprfPseudonymizer
     }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<Pseudonym>> PseudonymizeAsync(
+    public async Task<IReadOnlyList<VoprfPseudonym>> PseudonymizeAsync(
         IReadOnlyList<string> originalValues,
         CancellationToken cancellationToken = default
     )
@@ -109,6 +109,41 @@ public sealed class VoprfPseudonymizer : IVoprfPseudonymizer
             return [];
         }
 
+        if (originalValues.Count <= options.MaxBatchSize)
+        {
+            return await EvaluateChunkAsync(originalValues, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        // The server rejects an oversized batch outright rather than truncating it, and callers
+        // batch on their own terms - a CSV chunk is a thousand rows by default. Each chunk gets
+        // its own proof and is verified on its own, so this costs round trips and changes nothing
+        // about the results.
+        var pseudonyms = new List<VoprfPseudonym>(originalValues.Count);
+        for (var offset = 0; offset < originalValues.Count; offset += options.MaxBatchSize)
+        {
+            var take = Math.Min(options.MaxBatchSize, originalValues.Count - offset);
+
+            var chunk = new string[take];
+            for (var i = 0; i < take; i++)
+            {
+                chunk[i] = originalValues[offset + i];
+            }
+
+            pseudonyms.AddRange(
+                await EvaluateChunkAsync(chunk, cancellationToken).ConfigureAwait(false)
+            );
+        }
+
+        return pseudonyms;
+    }
+
+    /// <summary>One request's worth of values: blind, evaluate, verify, unblind.</summary>
+    private async Task<IReadOnlyList<VoprfPseudonym>> EvaluateChunkAsync(
+        IReadOnlyList<string> originalValues,
+        CancellationToken cancellationToken
+    )
+    {
         var publicKey = await GetPublicKeyAsync(cancellationToken).ConfigureAwait(false);
 
         var requests = new VoprfRequest[originalValues.Count];
@@ -156,13 +191,13 @@ public sealed class VoprfPseudonymizer : IVoprfPseudonymizer
                 publicKey
             );
 
-            var pseudonyms = new Pseudonym[outputs.Length];
+            var pseudonyms = new VoprfPseudonym[outputs.Length];
             for (var i = 0; i < outputs.Length; i++)
             {
                 try
                 {
-                    pseudonyms[i] = new Pseudonym(
-                        Format(outputs[i].AsSpan(0, options.Length)),
+                    pseudonyms[i] = new VoprfPseudonym(
+                        Qualify(Format(outputs[i].AsSpan(0, options.Length)), response.KeyId),
                         response.KeyId
                     );
                 }
@@ -288,6 +323,34 @@ public sealed class VoprfPseudonymizer : IVoprfPseudonymizer
         }
 
         return encoded;
+    }
+
+    /// <summary>
+    /// Prefixes the pseudonym with the generation that produced it, when configured to.
+    /// </summary>
+    /// <exception cref="VoprfException">
+    /// The server's key id contains the separator, which would make the two halves impossible to
+    /// tell apart. The server refuses such an id at startup; this is the guard for one that
+    /// predates that check.
+    /// </exception>
+    private string Qualify(string pseudonym, string keyId)
+    {
+        if (!options.IncludeKeyIdInPseudonym)
+        {
+            return pseudonym;
+        }
+
+        if (keyId.Contains(VoprfClientOptions.KeyIdSeparator, StringComparison.Ordinal))
+        {
+            throw new VoprfException(
+                $"The server's key id '{keyId}' contains '{VoprfClientOptions.KeyIdSeparator}', "
+                    + "which is the separator used to qualify a pseudonym with its key. Rename the "
+                    + "key id, or turn off "
+                    + $"{VoprfClientOptions.SectionName}:{nameof(VoprfClientOptions.IncludeKeyIdInPseudonym)}."
+            );
+        }
+
+        return string.Concat(keyId, stackalloc[] { VoprfClientOptions.KeyIdSeparator }, pseudonym);
     }
 
     private string Format(ReadOnlySpan<byte> output) =>

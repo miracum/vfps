@@ -33,6 +33,7 @@ using Vfps.Metrics;
 using Vfps.PseudonymGenerators;
 using Vfps.Services;
 using Vfps.Tracing;
+using Vfps.Voprf.Client;
 
 // `migrate` applies pending EF Core migrations and exits. This is what the container image ships
 // instead of the two `dotnet ef migrations bundle` executables it used to carry - see
@@ -243,7 +244,36 @@ builder.Services.AddScoped<PseudonymContext>(isp =>
     isp.GetRequiredService<IDbContextFactory<PseudonymContext>>().CreateDbContext()
 );
 
-builder.Services.AddSingleton<PseudonymizationMethodsLookup>();
+// The VOPRF pseudonym generator, when a key-holding server is configured for this deployment.
+// Off by default, matching this codebase's optional-feature idiom: with no Voprf:Address the
+// generator is simply absent and PSEUDONYM_GENERATION_METHOD_VOPRF is not an available method,
+// which NamespaceAppService reports at namespace-creation time rather than at first use.
+var voprfConfig = new VoprfClientOptions();
+builder.Configuration.GetSection(VoprfClientOptions.SectionName).Bind(voprfConfig);
+
+if (!string.IsNullOrWhiteSpace(voprfConfig.Address))
+{
+    // Validates the options as it registers them - a missing pinned public key or an
+    // unparseable address fails startup rather than the first pseudonym.
+    builder.Services.AddVoprfPseudonymizer(options =>
+    {
+        options.Address = voprfConfig.Address;
+        options.PublicKey = voprfConfig.PublicKey;
+        options.ExpectedKeyId = voprfConfig.ExpectedKeyId;
+        options.AllowUnpinnedPublicKey = voprfConfig.AllowUnpinnedPublicKey;
+        options.MaxBatchSize = voprfConfig.MaxBatchSize;
+        options.IncludeKeyIdInPseudonym = voprfConfig.IncludeKeyIdInPseudonym;
+        options.Format = voprfConfig.Format;
+        options.Length = voprfConfig.Length;
+        options.Normalization = voprfConfig.Normalization;
+    });
+
+    builder.Services.AddSingleton<IValueDependentPseudonymGenerator, VoprfPseudonymGenerator>();
+}
+
+builder.Services.AddSingleton<PseudonymizationMethodsLookup>(serviceProvider =>
+    new(serviceProvider.GetService<IValueDependentPseudonymGenerator>())
+);
 
 var cacheConfig = new CacheConfig();
 builder.Configuration.GetSection("Pseudonymization:Caching").Bind(cacheConfig);

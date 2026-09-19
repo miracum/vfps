@@ -194,6 +194,10 @@ per-key authorization above becomes something the application has to implement.
 which key produced it. A store that does not record it cannot be migrated, because there is no
 way to tell which rows are done.
 
+`Vfps.Voprf.Client` does this by default by prefixing each pseudonym with `<keyId>.`, so every
+stored value is self-describing without a column of its own. A key id containing `.` would make
+those two halves ambiguous, so this server refuses to start with one.
+
 Nothing can check this for you — each server only ever sees its own key — so **always change
 `KeyId` when you change `KeyInfo`**. Two generations sharing an id is the one mistake a migration
 cannot be walked back from.

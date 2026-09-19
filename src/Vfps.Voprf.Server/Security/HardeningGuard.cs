@@ -136,5 +136,17 @@ internal static class HardeningGuard
                     + "pseudonyms can record which key produced them."
             );
         }
+        else if (key.KeyId.Contains('.', StringComparison.Ordinal))
+        {
+            // Clients may carry the key id in the pseudonym itself as "<keyId>.<pseudonym>", so
+            // that every stored value says which generation produced it. A dot inside the id
+            // would make those two halves impossible to tell apart - and the symptom would be a
+            // store that cannot be migrated, discovered only at the rotation it was meant to
+            // enable.
+            errors.Add(
+                $"{prefix}:KeyId '{key.KeyId}' contains '.', which clients use to separate the "
+                    + "key id from the pseudonym. Use an id without one."
+            );
+        }
     }
 }

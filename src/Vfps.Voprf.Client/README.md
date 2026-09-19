@@ -49,9 +49,32 @@ development — it logs a warning on every fetch saying exactly what was given u
 on the id first says plainly that the address was re-pointed at another deployment rather than
 reporting a proof failure that reads like tampering.
 
-## Store `KeyId` with the pseudonym
+## The key id rides in the pseudonym
 
-`PseudonymizeAsync` returns a `Pseudonym`, not a `string`, because a pseudonym is meaningless
+By default a pseudonym comes back as `<keyId>.<pseudonym>`:
+
+```
+v1.7fZ2ZSHDXCFmMPoZnQxLbkpg...
+```
+
+A pseudonym is meaningless without knowing which key produced it, and nothing else in a stored
+value says. Carrying the id in the value makes every row self-describing: after a rotation you can
+see at a glance which rows still belong to the old generation, which is what makes migrating them
+one at a time possible at all.
+
+The id comes from the server's own answer, not from configuration here - so unlike a hand-set
+prefix it cannot go stale. Repoint the client at another generation and the prefix follows.
+
+`.` is the separator because it appears in neither base64url nor hex, so the halves are always
+unambiguous. The server refuses to start with a key id containing one.
+
+Set `IncludeKeyIdInPseudonym: false` where an external system has to match stored values
+byte-for-byte against its own RFC 9497 computation. You then have no record of which key produced
+what, and a rotation becomes unmigratable - that is the trade.
+
+## `KeyId` is also on the result
+
+`PseudonymizeAsync` returns a `VoprfPseudonym`, not a `string`, because a pseudonym is meaningless
 without knowing which key produced it. Rotating a key does not re-key a store — the old pseudonyms
 simply belong to the old key — so a store that did not record the generation cannot be migrated:
 there is no way to tell which rows are done. It costs one column. See the server's README for the
@@ -71,6 +94,7 @@ cannot tell a batch of related values from a batch of unrelated ones. The server
 
 | Setting | Default | Effect |
 | --- | --- | --- |
+| `IncludeKeyIdInPseudonym` | `true` | Prefix each pseudonym with `<keyId>.` |
 | `Format` | `Base64Url` | Unpadded base64url, or lowercase hex |
 | `Length` | 64 | Bytes kept, 16–64. Truncation is sound the way SHA-512/256 is; what shrinks is collision resistance, near 2^64 at 16 bytes |
 | `Normalization` | `FormC` | Unicode normalization applied before UTF-8 encoding |

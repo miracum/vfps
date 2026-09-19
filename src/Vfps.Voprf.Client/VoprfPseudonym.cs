@@ -13,7 +13,7 @@ namespace Vfps.Voprf.Client;
 /// belong to the old key - so a store that did not record which generation each row came from
 /// cannot be migrated: there is no way to tell which rows are already done. It costs one column.
 /// </remarks>
-public readonly record struct Pseudonym(string Value, string KeyId)
+public readonly record struct VoprfPseudonym(string Value, string KeyId)
 {
     /// <summary>The pseudonym itself, for callers that already know the generation.</summary>
     public override string ToString() => Value;

@@ -47,9 +47,40 @@ public class NamespaceAppService(
             );
         }
 
-        // Some generation methods (UUIDs, SHA-256 hex) have no configurable length at all - catch
-        // a mismatch here, at namespace creation, rather than leaving it to fail lazily on every
-        // subsequent pseudonym creation in this namespace.
+        // A namespace whose method no longer has a generator could never mint a pseudonym, and
+        // the failure would otherwise land on whoever first tried to use it rather than on
+        // whoever created it. VOPRF is the live case: it is only available where a VOPRF server
+        // is configured.
+        if (!methodsLookup.IsSupported(namespaceToCreate.PseudonymGenerationMethod))
+        {
+            throw new PseudonymGenerators.PseudonymGenerationMethodNotSupportedException(
+                namespaceToCreate.PseudonymGenerationMethod
+            );
+        }
+
+        // A value-dependent method derives the pseudonym from the original value, so a value has
+        // exactly one pseudonym and there is no second distinct one to hand out. Allowing the
+        // combination would mean a multi-pseudonym request either failing later or - worse -
+        // quietly storing the same value twice under different sequence numbers.
+        if (
+            namespaceToCreate.AllowsMultiplePseudonyms
+            && PseudonymGenerators.PseudonymizationMethodsLookup.IsValueDependent(
+                namespaceToCreate.PseudonymGenerationMethod
+            )
+        )
+        {
+            throw new ArgumentException(
+                $"The '{namespaceToCreate.PseudonymGenerationMethod}' pseudonym generation method "
+                    + "derives the pseudonym from the original value, so a value has exactly one "
+                    + "pseudonym. It cannot be combined with allowing multiple pseudonyms per "
+                    + "original value.",
+                nameof(namespaceToCreate)
+            );
+        }
+
+        // Some generation methods (UUIDs, SHA-256 hex, VOPRF) have no configurable length at all -
+        // catch a mismatch here, at namespace creation, rather than leaving it to fail lazily on
+        // every subsequent pseudonym creation in this namespace.
         var fixedLength = methodsLookup.GetFixedPseudonymLength(
             namespaceToCreate.PseudonymGenerationMethod
         );

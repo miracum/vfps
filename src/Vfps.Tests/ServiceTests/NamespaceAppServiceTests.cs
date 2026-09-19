@@ -1,6 +1,8 @@
 using System.Security.Claims;
+using FakeItEasy;
 using Vfps.Config;
 using Vfps.Data.Models;
+using Vfps.PseudonymGenerators;
 
 namespace Vfps.Tests.ServiceTests;
 
@@ -67,6 +69,115 @@ public class NamespaceAppServiceTests : ServiceTestBase
             );
 
         await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
+    }
+
+    /// <summary>
+    /// A lookup with a VOPRF generator wired in, standing in for a deployment that has a VOPRF
+    /// server configured. The generator itself is faked - what is under test is namespace
+    /// creation's handling of the method, not the protocol.
+    /// </summary>
+    private static PseudonymizationMethodsLookup LookupWithVoprf(uint fixedLength = 86)
+    {
+        var generator = A.Fake<IValueDependentPseudonymGenerator>(options =>
+            options.Implements<IHasFixedPseudonymLength>()
+        );
+        A.CallTo(() => ((IHasFixedPseudonymLength)generator).FixedPseudonymLength)
+            .Returns(fixedLength);
+
+        return new PseudonymizationMethodsLookup(generator);
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithVoprfAndNoConfiguredServer_ShouldThrowNotSupported()
+    {
+        // Nothing could mint a pseudonym in such a namespace, and the failure belongs to whoever
+        // creates it rather than to whoever first tries to use it.
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var act = () =>
+            sut.CreateAsync(
+                new Data.Models.Namespace
+                {
+                    Name = "should-not-be-created",
+                    PseudonymLength = 86,
+                    PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.Voprf,
+                },
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<PseudonymGenerationMethodNotSupportedException>();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithVoprfAndMultiplePseudonyms_ShouldThrowArgumentException()
+    {
+        // The combination the whole value-dependent seam has to refuse: a VOPRF pseudonym is a
+        // function of the original value, so there is no second distinct one to hand out. Allowing
+        // it would mean either a later failure or the same value stored twice under different
+        // sequence numbers.
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository, LookupWithVoprf());
+
+        var act = () =>
+            sut.CreateAsync(
+                new Data.Models.Namespace
+                {
+                    Name = "should-not-be-created",
+                    PseudonymLength = 86,
+                    PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.Voprf,
+                    AllowsMultiplePseudonyms = true,
+                },
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithVoprfAndMismatchedLength_ShouldThrowArgumentOutOfRange()
+    {
+        // The VOPRF output length is a deployment-wide contract, not a per-namespace choice -
+        // enforced through the same IHasFixedPseudonymLength path UUIDs use.
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository, LookupWithVoprf(fixedLength: 86));
+
+        var act = () =>
+            sut.CreateAsync(
+                new Data.Models.Namespace
+                {
+                    Name = "should-not-be-created",
+                    PseudonymLength = 32,
+                    PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.Voprf,
+                },
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ArgumentOutOfRangeException>();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithVoprfConfiguredCorrectly_ShouldSucceed()
+    {
+        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var sut = CreateNamespaceAppService(namespaceRepository, LookupWithVoprf());
+
+        var created = await sut.CreateAsync(
+            new Data.Models.Namespace
+            {
+                Name = "voprf-namespace",
+                PseudonymLength = 86,
+                PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.Voprf,
+            },
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        created.Name.Should().Be("voprf-namespace");
+        created.PseudonymGenerationMethod.Should().Be(Protos.PseudonymGenerationMethod.Voprf);
     }
 
     [Theory]

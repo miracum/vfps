@@ -145,11 +145,22 @@ public class ServiceTestBase : IDisposable
         INamespaceRepository namespaceRepository,
         AuthorizationConfig? config = null,
         params NamespaceAccessGrant[] grants
+    ) => CreateNamespaceAppService(namespaceRepository, null, config, grants);
+
+    /// <param name="methodsLookup">
+    /// The generation methods available to this service, for tests that care whether a
+    /// value-dependent method (VOPRF) is configured. Null means none is - the default.
+    /// </param>
+    protected NamespaceAppService CreateNamespaceAppService(
+        INamespaceRepository namespaceRepository,
+        PseudonymizationMethodsLookup? methodsLookup,
+        AuthorizationConfig? config = null,
+        params NamespaceAccessGrant[] grants
     ) =>
         new(
             namespaceRepository,
             CreatePermissionChecker(config, grants),
-            new PseudonymizationMethodsLookup(),
+            methodsLookup ?? new PseudonymizationMethodsLookup(),
             new TestPseudonymContextFactory(BuildContextOptions)
         );
 

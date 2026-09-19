@@ -59,6 +59,52 @@ public class VoprfClientOptions
     /// </remarks>
     public bool AllowUnpinnedPublicKey { get; set; }
 
+    /// <summary>
+    /// Most values sent in one request. Longer lists are split across several round trips.
+    /// </summary>
+    /// <remarks>
+    /// The server enforces its own cap (<c>VoprfServer:MaxBatchSize</c>, 128 by default) and
+    /// rejects anything larger outright, so this is not a tuning knob so much as the client's
+    /// half of a wire contract - it must not exceed what the server allows. It matters because
+    /// callers batch on their own terms: a CSV chunk is a thousand rows by default, which without
+    /// splitting would be rejected in full.
+    ///
+    /// Each chunk is covered by its own proof and verified independently, so splitting costs
+    /// round trips but changes no output.
+    /// </remarks>
+    public int MaxBatchSize { get; set; } = 128;
+
+    /// <summary>
+    /// Prefix each pseudonym with the key generation that produced it, as
+    /// <c>&lt;keyId&gt;.&lt;pseudonym&gt;</c>. On by default.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// A pseudonym is meaningless without knowing which key made it, and nothing else in the
+    /// stored value says. Carrying the key id in the value itself makes every row self-describing:
+    /// after a rotation you can tell at a glance which rows still belong to the old generation,
+    /// which is what makes migrating them one at a time possible at all.
+    /// </para>
+    /// <para>
+    /// The id comes from the server's own answer rather than from configuration here, so unlike a
+    /// hand-set prefix it cannot be stale - repoint this client at another generation and the
+    /// prefix follows, with nothing to remember to change.
+    /// </para>
+    /// <para>
+    /// The cost is that the stored value is no longer the bare RFC 9497 output, so another
+    /// implementation holding the same key reproduces the part after the separator rather than
+    /// the whole string. Turn this off where an external system has to match stored values
+    /// byte-for-byte; you then have no record of which key produced what.
+    /// </para>
+    /// </remarks>
+    public bool IncludeKeyIdInPseudonym { get; set; } = true;
+
+    /// <summary>
+    /// Separates the key id from the pseudonym. Chosen because it appears in neither base64url
+    /// nor hex, so the two parts are always unambiguous.
+    /// </summary>
+    public const char KeyIdSeparator = '.';
+
     /// <summary>How the pseudonym's bytes are rendered as text.</summary>
     public PseudonymFormat Format { get; set; } = PseudonymFormat.Base64Url;
 
@@ -117,6 +163,13 @@ public class VoprfClientOptions
                     + "to verify the server's proofs against, which is the whole of what the "
                     + "verifiable variant provides. Set it, or set "
                     + $"{SectionName}:AllowUnpinnedPublicKey for development."
+            );
+        }
+
+        if (MaxBatchSize < 1)
+        {
+            throw new VoprfClientConfigurationException(
+                $"{SectionName}:MaxBatchSize must be at least 1; got {MaxBatchSize}."
             );
         }
 

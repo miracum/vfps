@@ -107,7 +107,12 @@ public class VoprfPseudonymizerTests
         );
 
         pseudonym.KeyId.Should().Be("test-key");
-        pseudonym.Value.Should().Be(Base64Url.EncodeToString(Locally("alice@example.com")));
+
+        // Qualified with the generation that produced it, so the stored value alone says which
+        // key it belongs to - see VoprfClientOptions.IncludeKeyIdInPseudonym.
+        pseudonym
+            .Value.Should()
+            .Be("test-key." + Base64Url.EncodeToString(Locally("alice@example.com")));
     }
 
     [Fact]
@@ -233,8 +238,53 @@ public class VoprfPseudonymizerTests
             TestContext.Current.CancellationToken
         );
 
-        pseudonym.Value.Should().HaveLength(32);
-        Convert.ToHexStringLower(Locally("alice@example.com")).Should().StartWith(pseudonym.Value);
+        // The key id prefix is not part of the truncated pseudonym - Length counts the output.
+        const string Qualifier = "test-key.";
+        pseudonym.Value.Should().StartWith(Qualifier);
+
+        var truncated = pseudonym.Value[Qualifier.Length..];
+        truncated.Should().HaveLength(32);
+        Convert.ToHexStringLower(Locally("alice@example.com")).Should().StartWith(truncated);
+    }
+
+    [Fact]
+    public async Task The_key_id_can_be_left_out_of_the_pseudonym()
+    {
+        // For a deployment whose stored values have to match what another RFC 9497 implementation
+        // computes from the same key, byte for byte.
+        using var factory = new Factory();
+        var pseudonymizer = Create(factory, options => options.IncludeKeyIdInPseudonym = false);
+
+        var pseudonym = await pseudonymizer.PseudonymizeAsync(
+            "alice@example.com",
+            TestContext.Current.CancellationToken
+        );
+
+        pseudonym.Value.Should().Be(Base64Url.EncodeToString(Locally("alice@example.com")));
+        pseudonym.KeyId.Should().Be("test-key");
+    }
+
+    [Fact]
+    public async Task A_qualified_pseudonym_splits_back_into_its_key_id_and_pseudonym()
+    {
+        // The property the prefix exists for: a stored value on its own says which key produced
+        // it, which is what makes a rotation migratable row by row.
+        using var factory = new Factory();
+        var pseudonymizer = Create(factory);
+
+        var pseudonym = await pseudonymizer.PseudonymizeAsync(
+            "alice@example.com",
+            TestContext.Current.CancellationToken
+        );
+
+        var separator = pseudonym.Value.IndexOf('.', StringComparison.Ordinal);
+        separator.Should().BePositive();
+
+        pseudonym.Value[..separator].Should().Be(pseudonym.KeyId);
+        pseudonym
+            .Value[(separator + 1)..]
+            .Should()
+            .Be(Base64Url.EncodeToString(Locally("alice@example.com")));
     }
 
     [Fact]
