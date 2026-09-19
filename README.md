@@ -1,9 +1,12 @@
 # vfps
 
+<p align="center"><img width="279" src="docs/img/text-logo.svg" alt="Vfps Logo"></p>
+
 ![Latest Version](https://img.shields.io/github/v/release/miracum/vfps)
 ![License](https://img.shields.io/github/license/miracum/vfps)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/miracum/vfps/badge)](https://api.securityscorecards.dev/projects/github.com/miracum/vfps)
 [![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
+
 
 A [very fast](#e2e-load-testing) and [resource-efficient](#resource-efficiency) pseudonym service.
 

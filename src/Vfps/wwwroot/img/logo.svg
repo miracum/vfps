@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" data-dc-tpl="9" viewBox="4 5 112 78" role="img"
+    aria-label="Vfps logo: the letter V drawn as a mask"
+    style="display: block; width: 215px; height: 150px;">
+    <style>
+        @media (prefers-color-scheme: dark) {
+            path { fill: #7ab0d0; }
+        }
+    </style>
+    <path data-dc-tpl="10"
+        d="M6.2 11.1 Q1 2.4 10 5.6 Q21 11.3 30.3 14.3 Q34 16 36.9 19.4 L55 41 Q60 47 65 41 L83.1 19.4 Q86 16 89.7 14.3 Q99 11.3 110 5.6 Q119 2.4 113.8 11.1 C99.9 35.7 83.3 58.1 63.8 78.5 Q60 85.5 56.2 78.5 C36.7 58.1 20.1 35.7 6.2 11.1 ZM25.45 21.56 A13 6 53.4 0 1 40.95 42.44 A13 6 53.4 0 1 25.45 21.56 ZM94.55 21.56 A13 6 126.6 0 1 79.05 42.44 A13 6 126.6 0 1 94.55 21.56 Z"
+        fill="#1D3557" fill-rule="evenodd"></path>
+</svg>
