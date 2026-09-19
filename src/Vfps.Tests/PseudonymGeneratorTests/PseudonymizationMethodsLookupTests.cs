@@ -109,6 +109,34 @@ public class PseudonymizationMethodsLookupTests
         act.Should().Throw<PseudonymGenerationMethodNotSupportedException>();
     }
 
+    // Regression: this used to throw for VOPRF on a deployment with no VOPRF server, and the
+    // admin UI evaluates it *while rendering* the namespace form. The exception tore down the
+    // Blazor circuit, the page fell back to static rendering, and the next form post failed with
+    // "The POST request does not specify which form is being submitted" - a message pointing at
+    // @formname and saying nothing about the actual cause.
+    [Fact]
+    public void GetFixedPseudonymLength_ForAnUnsupportedMethod_ShouldReturnNullRatherThanThrow()
+    {
+        var act = () => sut.GetFixedPseudonymLength(PseudonymGenerationMethod.Voprf);
+
+        act.Should().NotThrow();
+        sut.GetFixedPseudonymLength(PseudonymGenerationMethod.Voprf).Should().BeNull();
+    }
+
+    [Fact]
+    public void GetFixedPseudonymLength_ForVoprf_WithAConfiguredServer_ShouldReturnItsLength()
+    {
+        var generator = A.Fake<IValueDependentPseudonymGenerator>(
+            options => options.Implements<IHasFixedPseudonymLength>()
+        );
+        A.CallTo(() => ((IHasFixedPseudonymLength)generator).FixedPseudonymLength).Returns(86u);
+
+        new PseudonymizationMethodsLookup(generator)
+            .GetFixedPseudonymLength(PseudonymGenerationMethod.Voprf)
+            .Should()
+            .Be(86u);
+    }
+
     // The former SHA-256 method's enum number (2) is `reserved` in the proto, not reused - an
     // existing namespace created before its removal would still have this stored. Generate() must
     // fail loudly and clearly for it rather than silently producing something or throwing a raw

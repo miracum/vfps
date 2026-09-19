@@ -101,10 +101,26 @@ public class PseudonymizationMethodsLookup
     /// Used to validate a namespace's PseudonymLength upfront at namespace-creation time (see
     /// NamespaceAppService.CreateAsync) and to drive the admin UI's namespace-creation form.
     /// </summary>
-    public uint? GetFixedPseudonymLength(PseudonymGenerationMethod method) =>
-        IsValueDependent(method)
+    /// <remarks>
+    /// Null also when nothing can generate for <paramref name="method"/> at all - a removed
+    /// method, or VOPRF with no server configured. This is a question about a method, asked to
+    /// shape a form, so it answers rather than throwing: the admin UI evaluates it while
+    /// rendering, and an exception there tears down the Blazor circuit, after which the page
+    /// falls back to static rendering and the next form post fails with a message about
+    /// `@formname` that says nothing about the real cause. Whether a method may be used at all
+    /// is <see cref="IsSupported"/>'s question, and namespace creation asks it separately.
+    /// </remarks>
+    public uint? GetFixedPseudonymLength(PseudonymGenerationMethod method)
+    {
+        if (!IsSupported(method))
+        {
+            return null;
+        }
+
+        return IsValueDependent(method)
             ? (GetValueDependentGenerator(method) as IHasFixedPseudonymLength)?.FixedPseudonymLength
             : (this[method] as IHasFixedPseudonymLength)?.FixedPseudonymLength;
+    }
 
     /// <summary>
     /// Generates a pseudonym for <paramref name="method"/>. Every registered generator is

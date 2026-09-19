@@ -165,7 +165,7 @@
                                     id="method"
                                     class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                                 >
-                                    @foreach (var method in PseudonymGenerationMethodDisplay.Selectable)
+                                    @foreach (var method in PseudonymGenerationMethodDisplay.SelectableFor(MethodsLookup))
                                     {
                                         <option value="@method">
                                             @PseudonymGenerationMethodDisplay.FriendlyName(method)
