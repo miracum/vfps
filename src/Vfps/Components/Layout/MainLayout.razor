@@ -10,33 +10,33 @@
 @inject IStringLocalizer<SharedResources> Localizer
 
 <BbResponsiveNavProvider>
-    <header class="flex h-16 shrink-0 items-center gap-4 border-b bg-background px-4 md:px-6">
-        <a href="/ui" class="flex shrink-0 items-center gap-2 font-semibold">
-            <LucideIcon Name="shield-check" Size="22" Class="text-primary" />
+    <header class="bb:flex bb:h-16 bb:shrink-0 bb:items-center bb:gap-4 bb:border-b bb:bg-background bb:px-4">
+        <a href="/ui" class="bb:flex bb:shrink-0 bb:items-center bb:gap-2 bb:font-semibold">
+            <LucideIcon Name="shield-check" Size="22" Class="bb:text-primary" />
             <span>Vfps</span>
         </a>
 
         <BbResponsiveNavItems Items="@_navItems" />
 
-        <div class="ml-auto flex items-center gap-3">
+        <div class="ml-auto bb:flex bb:items-center bb:gap-3">
             <button
                 type="button"
                 onclick="vfpsToggleDarkMode()"
                 aria-label="@Localizer["App.MainLayout.ToggleDarkMode"]"
-                class="inline-flex h-10 w-10 items-center justify-center rounded-md hover:bg-accent hover:text-accent-foreground"
+                class="bb:inline-flex bb:h-10 bb:w-10 bb:items-center bb:justify-center bb:rounded-md bb:hover:bg-accent bb:hover:text-accent-foreground"
             >
                 <LucideIcon Name="moon" Size="18" Class="theme-icon-light" />
                 <LucideIcon Name="sun" Size="18" Class="theme-icon-dark" />
             </button>
 
-            <div class="flex items-center gap-1 text-xs text-muted-foreground">
+            <div class="bb:flex bb:items-center bb:gap-1 bb:text-xs bb:text-muted-foreground">
                 @for (var i = 0; i < SupportedCultures.Length; i++)
                 {
                     var culture = SupportedCultures[i];
                     <a
                         href="@BuildCultureUrl(culture)"
                         data-enhance-nav="false"
-                        class="rounded px-1.5 py-0.5 uppercase hover:bg-accent hover:text-accent-foreground @(IsCurrentCulture(culture) ? "font-semibold text-foreground" : "")"
+                        class="bb:rounded bb:px-1.5 bb:py-0.5 bb:uppercase bb:hover:bg-accent bb:hover:text-accent-foreground @(IsCurrentCulture(culture) ? "bb:font-semibold bb:text-foreground" : "")"
                     >
                         @culture
                     </a>
@@ -51,9 +51,9 @@
             {
                 <AuthorizeView>
                     <Authorized>
-                        <div class="flex items-center gap-2">
+                        <div class="bb:flex bb:items-center bb:gap-2">
                             <BbPopover>
-                                <BbPopoverTrigger AsChild="false" class="rounded-full cursor-pointer">
+                                <BbPopoverTrigger AsChild="false" class="bb:rounded-full bb:cursor-pointer">
                                     <BbAvatar Size="AvatarSize.Small">
                                         <BbAvatarFallback>@Initials(context.User)</BbAvatarFallback>
                                     </BbAvatar>
@@ -65,27 +65,27 @@
                                         var email = Email(context.User);
                                         var roles = Roles(context.User);
                                     }
-                                    <div class="space-y-3">
+                                    <div class="bb:space-y-3">
                                         <div>
-                                            <p class="text-sm font-medium">
+                                            <p class="bb:text-sm bb:font-medium">
                                                 @(displayName ?? username ?? Localizer["App.MainLayout.UnknownUser"].Value)
                                             </p>
                                             @if (displayName is not null && username is not null)
                                             {
-                                                <p class="text-xs text-muted-foreground">@username</p>
+                                                <p class="bb:text-xs bb:text-muted-foreground">@username</p>
                                             }
                                         </div>
-                                        <dl class="space-y-1.5 text-xs">
-                                            <div class="flex items-center justify-between gap-2">
-                                                <dt class="text-muted-foreground">@Localizer["App.MainLayout.Email"]</dt>
-                                                <dd class="truncate">@(email ?? "—")</dd>
+                                        <dl class="bb:space-y-1.5 bb:text-xs">
+                                            <div class="bb:flex bb:items-center bb:justify-between bb:gap-2">
+                                                <dt class="bb:text-muted-foreground">@Localizer["App.MainLayout.Email"]</dt>
+                                                <dd class="bb:truncate">@(email ?? "—")</dd>
                                             </div>
                                             <div>
-                                                <dt class="text-muted-foreground">@Localizer["App.MainLayout.Roles"]</dt>
-                                                <dd class="mt-1 flex flex-wrap gap-1">
+                                                <dt class="bb:text-muted-foreground">@Localizer["App.MainLayout.Roles"]</dt>
+                                                <dd class="bb:mt-1 bb:flex bb:flex-wrap bb:gap-1">
                                                     @if (roles.Count == 0)
                                                     {
-                                                        <span class="text-muted-foreground">@Localizer["App.MainLayout.NoRoles"]</span>
+                                                        <span class="bb:text-muted-foreground">@Localizer["App.MainLayout.NoRoles"]</span>
                                                     }
                                                     else
                                                     {
@@ -102,9 +102,6 @@
                                     </div>
                                 </BbPopoverContent>
                             </BbPopover>
-                            <span class="hidden text-sm text-muted-foreground sm:inline">
-                                @context.User.Identity?.Name
-                            </span>
                             <form
                                 action="/ui/authentication/logout"
                                 method="post"
@@ -137,11 +134,11 @@
         <BbResponsiveNavTrigger />
     </header>
 
-    <main class="flex-1 overflow-auto p-6 md:p-8">
+    <main class="bb:flex-1 bb:overflow-auto bb:p-6">
         @Body
     </main>
 
-    <footer class="shrink-0 border-t px-4 py-3 text-center text-xs text-muted-foreground md:px-6">
+    <footer class="bb:shrink-0 bb:border-t bb:px-4 bb:py-3 bb:text-center bb:text-xs bb:text-muted-foreground">
         Vfps v@(AppVersion)
     </footer>
 </BbResponsiveNavProvider>

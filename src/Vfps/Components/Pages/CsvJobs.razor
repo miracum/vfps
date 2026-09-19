@@ -20,7 +20,7 @@
 
 @if (!S3ConfigOptions.Value.IsEnabled)
 {
-    <div class="mx-auto max-w-5xl">
+    <div class="bb:mx-auto">
         <BbAlert Variant="AlertVariant.Warning">
             <BbAlertTitle>@Localizer["App.CsvJobs.DisabledTitle"]</BbAlertTitle>
             <BbAlertDescription>
@@ -36,10 +36,10 @@
 }
 else
 {
-    <div class="mx-auto max-w-5xl space-y-6">
-        <div class="flex items-center gap-2">
-            <LucideIcon Name="file-spreadsheet" Size="24" Class="text-primary" />
-            <h1 class="text-2xl font-semibold tracking-tight">@Localizer["App.CsvJobs.PageTitle"]</h1>
+    <div class="bb:mx-auto bb:space-y-6">
+        <div class="bb:flex bb:items-center bb:gap-2">
+            <LucideIcon Name="file-spreadsheet" Size="24" Class="bb:text-primary" />
+            <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.CsvJobs.PageTitle"]</h1>
         </div>
 
         @if (S3ConfigOptions.Value.ObjectRetentionDays > 0)
@@ -68,16 +68,16 @@ else
                     @Localizer["App.CsvJobs.NewJobDescription"]
                 </BbCardDescription>
             </BbCardHeader>
-            <BbCardContent Class="space-y-6">
-                <div class="grid gap-4 sm:grid-cols-3">
-                    <BbField Class="sm:col-span-3">
+            <BbCardContent Class="bb:space-y-6">
+                <div class="bb:grid bb:gap-4 bb:sm:grid-cols-3">
+                    <BbField>
                         <BbFieldLabel For="direction">@Localizer["App.CsvJobs.Direction"]</BbFieldLabel>
                         <BbFieldContent>
                             <select
                                 @bind="_direction"
                                 @bind:after="OnDirectionChanged"
                                 id="direction"
-                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                             >
                                 <option value="@nameof(PseudonymizationJobDirection.Pseudonymize)">
                                     @Localizer["App.CsvJobs.DirectionPseudonymizeOption"]
@@ -99,7 +99,7 @@ else
                     @if (SelectedDirection is PseudonymizationJobDirection.Depseudonymize
                         or PseudonymizationJobDirection.Export)
                     {
-                        <BbAlert Variant="AlertVariant.Warning" Class="sm:col-span-3">
+                        <BbAlert Variant="AlertVariant.Warning">
                             <BbAlertDescription>
                                 @(SelectedDirection == PseudonymizationJobDirection.Export
                                     ? Localizer["App.CsvJobs.ExportWarning"].Value
@@ -113,7 +113,7 @@ else
                        must not offer one there. *@
                     @if (SelectedDirection == PseudonymizationJobDirection.Pseudonymize)
                     {
-                        <BbField Class="sm:col-span-3">
+                        <BbField>
                             <BbFieldLabel For="pseudonymizeMode">
                                 @Localizer["App.CsvJobs.PseudonymizeMode"]
                             </BbFieldLabel>
@@ -121,7 +121,7 @@ else
                                 <select
                                     @bind="_pseudonymizeMode"
                                     id="pseudonymizeMode"
-                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                    class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                                 >
                                     <option value="@nameof(PseudonymizeMode.CreateIfMissing)">
                                         @Localizer["App.CsvJobs.PseudonymizeModeCreateIfMissingOption"]
@@ -136,7 +136,7 @@ else
                             </BbFieldContent>
                             @if (SelectedPseudonymizeMode == PseudonymizeMode.BlankIfMissing)
                             {
-                                <p class="text-sm text-muted-foreground">
+                                <p class="bb:text-sm bb:text-muted-foreground">
                                     @Localizer["App.CsvJobs.PseudonymizeModeBlankIfMissingHint"]
                                 </p>
                             }
@@ -147,7 +147,7 @@ else
                        delimiter still do: they describe the file being written. *@
                     @if (RequiresInputFile)
                     {
-                        <BbField Class="sm:col-span-3">
+                        <BbField>
                             <BbFieldLabel For="csvFileInput">@Localizer["App.CsvJobs.CsvFile"]</BbFieldLabel>
                             <BbFieldContent>
                                 <input
@@ -155,7 +155,7 @@ else
                                     id="csvFileInput"
                                     accept=".csv,text/csv"
                                     @onchange="OnFileSelectedAsync"
-                                    class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm file:border-0 file:bg-transparent file:text-sm file:font-medium"
+                                    class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:file:border-0 bb:file:bg-transparent bb:file:text-sm bb:file:font-medium"
                                 />
                             </BbFieldContent>
                         </BbField>
@@ -182,13 +182,13 @@ else
                         <BbField>
                             <BbFieldLabel For="hasHeaderRow">@Localizer["App.CsvJobs.HeaderRow"]</BbFieldLabel>
                             <BbFieldContent>
-                                <div class="flex h-10 items-center gap-2">
+                                <div class="bb:flex bb:h-10 bb:items-center bb:gap-2">
                                     <BbCheckbox
                                         Checked="_hasHeaderRow"
                                         CheckedChanged="OnHasHeaderRowChangedAsync"
                                         Id="hasHeaderRow"
                                     />
-                                    <label for="hasHeaderRow" class="text-sm">@Localizer["App.CsvJobs.HasHeaderRow"]</label>
+                                    <label for="hasHeaderRow" class="bb:text-sm">@Localizer["App.CsvJobs.HasHeaderRow"]</label>
                                 </div>
                             </BbFieldContent>
                         </BbField>
@@ -202,8 +202,8 @@ else
                 @if (IsColumnTransform)
                 {
                     <div>
-                        <h3 class="text-sm font-medium">@Localizer["App.CsvJobs.ColumnMappings"]</h3>
-                        <p class="mt-1 text-sm text-muted-foreground">
+                        <h3 class="bb:text-sm bb:font-medium">@Localizer["App.CsvJobs.ColumnMappings"]</h3>
+                        <p class="bb:mt-1 bb:text-sm bb:text-muted-foreground">
                             @if (_direction == nameof(PseudonymizationJobDirection.Depseudonymize))
                             {
                                 <text>@Localizer["App.CsvJobs.ColumnMappingsHintDepseudonymize"]</text>
@@ -215,11 +215,11 @@ else
                             @Localizer["App.CsvJobs.ColumnMappingsHintSuffix"]
                         </p>
 
-                        <div class="mt-3 space-y-3">
+                        <div class="bb:mt-3 bb:space-y-3">
                             @foreach (var row in _columnMappings)
                             {
-                                <div class="flex flex-wrap items-end gap-2 rounded-lg border p-3">
-                                    <BbField Class="w-48">
+                                <div class="bb:flex bb:flex-wrap bb:items-end bb:gap-2 bb:rounded-lg bb:border bb:p-3">
+                                    <BbField>
                                         <BbFieldLabel For="@row.SourceColumnId">
                                             @Localizer["App.CsvJobs.SourceColumn"]
                                         </BbFieldLabel>
@@ -233,7 +233,7 @@ else
                                             />
                                         </BbFieldContent>
                                     </BbField>
-                                    <BbField Class="w-48">
+                                    <BbField>
                                         <BbFieldLabel For="@row.TargetColumnId">
                                             @Localizer["App.CsvJobs.TargetColumn"]
                                         </BbFieldLabel>
@@ -245,13 +245,13 @@ else
                                             />
                                         </BbFieldContent>
                                     </BbField>
-                                    <BbField Class="w-48">
+                                    <BbField>
                                         <BbFieldLabel For="@row.NamespaceId">@Localizer["App.Nav.Namespaces"]</BbFieldLabel>
                                         <BbFieldContent>
                                             <select
                                                 @bind="row.Namespace"
                                                 id="@row.NamespaceId"
-                                                class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                                class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                                             >
                                                 <option value="">@Localizer["App.CsvJobs.SelectNamespace"]</option>
                                                 @foreach (var ns in _namespaces)
@@ -274,7 +274,7 @@ else
                             }
                         </div>
 
-                        <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="AddMappingRow" Class="mt-3">
+                        <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="AddMappingRow" Class="bb:mt-3">
                             <LucideIcon Name="plus" Size="16" />
                             @Localizer["App.CsvJobs.AddColumnMapping"]
                         </BbButton>
@@ -285,7 +285,7 @@ else
                     @* One form for both: an export picks a namespace, and an import picks the same
                        plus which two columns of its file hold the pair. *@
                     <div>
-                        <h3 class="text-sm font-medium">
+                        <h3 class="bb:text-sm bb:font-medium">
                             @(!IsImport
                                 ? Localizer["App.CsvJobs.ExportTitle"].Value
                                 : ImportsIntoNamespaceColumn
@@ -294,25 +294,25 @@ else
                                     ? Localizer["App.CsvJobs.ImportTitleNamespaceColumn"].Value
                                     : Localizer["App.CsvJobs.ImportTitle"].Value)
                         </h3>
-                        <p class="mt-1 text-sm text-muted-foreground">
+                        <p class="bb:mt-1 bb:text-sm bb:text-muted-foreground">
                             @(IsImport
                                 ? Localizer["App.CsvJobs.ImportHint"].Value
                                 : Localizer["App.CsvJobs.ExportHint"].Value)
                         </p>
 
-                        <div class="mt-3 flex flex-wrap items-end gap-2 rounded-lg border p-3">
+                        <div class="bb:mt-3 bb:flex bb:flex-wrap bb:items-end bb:gap-2 bb:rounded-lg bb:border bb:p-3">
                             @* An import that reads its namespace from a column has no single
                                namespace to pick, so the picker gives way to the column selector
                                below rather than sitting there meaning nothing. *@
                             @if (!ImportsIntoNamespaceColumn)
                             {
-                                <BbField Class="w-48">
+                                <BbField>
                                     <BbFieldLabel For="jobNamespace">@Localizer["App.Nav.Namespaces"]</BbFieldLabel>
                                     <BbFieldContent>
                                         <select
                                             @bind="_namespaceMapping.Namespace"
                                             id="jobNamespace"
-                                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                                            class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                                         >
                                             <option value="">@Localizer["App.CsvJobs.SelectNamespace"]</option>
                                             @foreach (var ns in _namespaces)
@@ -329,7 +329,7 @@ else
                                selector the transform mappings above use. *@
                             @if (IsImport)
                             {
-                                <BbField Class="w-48">
+                                <BbField>
                                     <BbFieldLabel For="originalValueColumn">
                                         @Localizer["App.CsvJobs.OriginalValueColumn"]
                                     </BbFieldLabel>
@@ -342,7 +342,7 @@ else
                                         />
                                     </BbFieldContent>
                                 </BbField>
-                                <BbField Class="w-48">
+                                <BbField>
                                     <BbFieldLabel For="pseudonymValueColumn">
                                         @Localizer["App.CsvJobs.PseudonymValueColumn"]
                                     </BbFieldLabel>
@@ -355,7 +355,7 @@ else
                                         />
                                     </BbFieldContent>
                                 </BbField>
-                                <BbField Class="w-48">
+                                <BbField>
                                     <BbFieldLabel For="namespaceColumn">
                                         @Localizer["App.CsvJobs.NamespaceColumn"]
                                     </BbFieldLabel>
@@ -373,7 +373,7 @@ else
                         </div>
                         @if (IsImport)
                         {
-                            <p class="mt-2 text-sm text-muted-foreground">
+                            <p class="bb:mt-2 bb:text-sm bb:text-muted-foreground">
                                 @(ImportsIntoNamespaceColumn
                                     ? Localizer["App.CsvJobs.NamespaceColumnSetHint"].Value
                                     : Localizer["App.CsvJobs.NamespaceColumnHint"].Value)
@@ -409,13 +409,13 @@ else
             <BbCardContent>
                 @if (_showClearFinishedConfirm)
                 {
-                    <BbAlert Variant="AlertVariant.Warning" Class="mb-4">
+                    <BbAlert Variant="AlertVariant.Warning" Class="bb:mb-4">
                         <BbAlertTitle>@Localizer["App.CsvJobs.ClearFinishedJobsConfirmTitle"]</BbAlertTitle>
                         <BbAlertDescription>
-                            <p class="mb-3">
+                            <p class="bb:mb-3">
                                 @Localizer["App.CsvJobs.ClearFinishedJobsConfirmBody"]
                             </p>
-                            <div class="flex items-center gap-2">
+                            <div class="bb:flex bb:items-center bb:gap-2">
                                 <BbButton
                                     Variant="ButtonVariant.Destructive"
                                     Loading="_isClearingFinished"
@@ -439,12 +439,12 @@ else
                     <Columns>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Id"]">
                             <ChildContent Context="j">
-                                <code class="text-xs">@j.Id.ToString()[..8]</code>
+                                <code class="bb:text-xs">@j.Id.ToString()[..8]</code>
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.File"]">
                             <ChildContent Context="j">
-                                <div class="max-w-40 truncate text-xs" title="@JobSubject(j)">
+                                <div class="bb:truncate bb:text-xs" title="@JobSubject(j)">
                                     @(JobSubject(j) ?? "—")
                                 </div>
                             </ChildContent>
@@ -465,29 +465,29 @@ else
                             <ChildContent Context="j">
                                 @if (j.TotalBytes > 0)
                                 {
-                                    <div class="flex items-center gap-2">
-                                        <BbProgress Value="@(100.0 * j.BytesProcessed / j.TotalBytes)" Class="w-24" />
-                                        <span class="text-xs text-muted-foreground">
+                                    <div class="bb:flex bb:items-center bb:gap-2">
+                                        <BbProgress Value="@(100.0 * j.BytesProcessed / j.TotalBytes)" Class="bb:w-24" />
+                                        <span class="bb:text-xs bb:text-muted-foreground">
                                             @Localizer["App.CsvJobs.RowsCount", j.RowsProcessed]
                                         </span>
                                     </div>
                                 }
                                 else
                                 {
-                                    <span class="text-xs text-muted-foreground">
+                                    <span class="bb:text-xs bb:text-muted-foreground">
                                         @Localizer["App.CsvJobs.RowsCount", j.RowsProcessed]
                                     </span>
                                 }
                                 @if (ThroughputTextFor(j) is { } throughputText)
                                 {
-                                    <div class="mt-1 text-xs text-muted-foreground">
+                                    <div class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
                                         @throughputText
                                     </div>
                                 }
                                 @if (j.BadDataRowCount > 0)
                                 {
                                     <div
-                                        class="mt-1"
+                                        class="bb:mt-1"
                                         title="@Localizer["App.CsvJobs.BadDataRowTitle"]"
                                     >
                                         <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
@@ -500,7 +500,7 @@ else
                                 @if (j.MissingValueCount > 0)
                                 {
                                     <div
-                                        class="mt-1"
+                                        class="bb:mt-1"
                                         title="@Localizer["App.CsvJobs.MissingValueTitle"]"
                                     >
                                         <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
@@ -517,7 +517,7 @@ else
                                 @if (j.UnresolvedValueCount > 0)
                                 {
                                     <div
-                                        class="mt-1"
+                                        class="bb:mt-1"
                                         title="@Localizer["App.CsvJobs.UnresolvedValueTitle"]"
                                     >
                                         <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
@@ -545,22 +545,22 @@ else
                                 )
                                 {
                                     <div
-                                        class="flex max-w-xs items-start gap-1.5 text-xs @(j.Status == PseudonymizationJobStatus.Stalled ? "issue-text-stalled" : "text-destructive")"
+                                        class="bb:flex bb:items-start bb:gap-1.5 bb:text-xs @(j.Status == PseudonymizationJobStatus.Stalled ? "issue-text-stalled" : "bb:text-destructive")"
                                         title="@j.ErrorMessage"
                                     >
                                         <LucideIcon
                                             Name="@(j.Status == PseudonymizationJobStatus.Stalled ? "clock-alert" : "triangle-alert")"
                                             Size="14"
-                                            Class="mt-0.5 shrink-0"
+                                            Class="bb:mt-0.5 bb:shrink-0"
                                         />
-                                        <span class="truncate">@j.ErrorMessage</span>
+                                        <span class="bb:truncate">@j.ErrorMessage</span>
                                     </div>
                                 }
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.Common.Actions"]">
                             <ChildContent Context="j">
-                                <div class="flex items-center gap-2">
+                                <div class="bb:flex bb:items-center bb:gap-2">
                                     @if (j.Status == PseudonymizationJobStatus.Completed)
                                     {
                                         <BbButton

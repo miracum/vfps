@@ -96,3 +96,25 @@ body {
 .dark .theme-icon-dark {
   display: block;
 }
+
+/*
+ * Three utilities that v4 of BlazorBlueprint stopped shipping. Since v4 every utility in
+ * blazorblueprint.css carries a `bb:` prefix, and the bundle still only contains the ones that
+ * library's own components happen to use - these three no longer appear under either name, so
+ * `bb:ml-auto` would be just as dead as `ml-auto`. They are written out here for the same reason
+ * .col-span-3 above is, and kept unprefixed so the markup reads like the plain Tailwind it is.
+ *
+ * ml-auto is the load-bearing one: it is what pushes the theme/language/account controls to the
+ * right-hand end of the header bar in MainLayout.razor.
+ */
+.ml-auto {
+  margin-left: auto;
+}
+
+.ml-1 {
+  margin-left: 0.25rem;
+}
+
+.text-right {
+  text-align: right;
+}

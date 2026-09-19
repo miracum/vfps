@@ -14,13 +14,13 @@
 <div>
     @if (_createError is not null)
     {
-        <BbAlert Variant="AlertVariant.Danger" Class="mb-4">
+        <BbAlert Variant="AlertVariant.Danger" Class="bb:mb-4">
             <BbAlertTitle>@Localizer["App.AccessControl.AddGrantErrorTitle"]</BbAlertTitle>
             <BbAlertDescription>@_createError</BbAlertDescription>
         </BbAlert>
     }
     <EditForm Model="_newGrant" FormName="add-namespace-access-grant" OnValidSubmit="CreateGrantAsync">
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="bb:grid bb:gap-4 bb:sm:grid-cols-2">
             <BbField>
                 <BbFieldLabel For="newGrantType">@Localizer["App.AccessControl.GranteeType"]</BbFieldLabel>
                 <BbFieldContent>
@@ -28,7 +28,7 @@
                         value="@_newGrant.GranteeType"
                         @onchange="OnGranteeTypeChanged"
                         id="newGrantType"
-                        class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                     >
                         <option value="@GranteeType.Role">@Localizer["App.AccessControl.GranteeTypeRole"]</option>
                         <option value="@GranteeType.Email">@Localizer["App.AccessControl.GranteeTypeEmail"]</option>
@@ -54,14 +54,14 @@
                         <select
                             @bind="_newGrant.Grantee"
                             id="newGrantGrantee"
-                            class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                            class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                         >
                             @foreach (var account in _serviceAccounts)
                             {
                                 <option value="@account.Name">@account.Name</option>
                             }
                         </select>
-                        <p class="mt-1 text-xs text-muted-foreground">
+                        <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
                             @(_serviceAccounts.Count == 0
                                 ? Localizer["App.AccessControl.NoServiceAccounts"]
                                 : Localizer["App.AccessControl.GranteeServiceAccountHelp"])
@@ -77,7 +77,7 @@
                                 ? Localizer["App.AccessControl.GranteeEmailPlaceholder"].Value
                                 : Localizer["App.AccessControl.GranteeRolePlaceholder"].Value)"
                         />
-                        <p class="mt-1 text-xs text-muted-foreground">
+                        <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
                             @(_newGrant.GranteeType == GranteeType.Email
                                 ? Localizer["App.AccessControl.GranteeEmailHelp"]
                                 : Localizer["App.AccessControl.GranteeRoleHelp"])
@@ -86,18 +86,18 @@
                 </BbFieldContent>
             </BbField>
         </div>
-        <div class="mt-4 flex flex-wrap items-center gap-4">
-            <div class="flex items-center gap-2">
+        <div class="bb:mt-4 bb:flex bb:flex-wrap bb:items-center bb:gap-4">
+            <div class="bb:flex bb:items-center bb:gap-2">
                 <BbSwitch @bind-Checked="_newGrant.CanRead" Id="newGrantCanRead" />
-                <label for="newGrantCanRead" class="text-sm">@Localizer["App.AccessControl.Read"]</label>
+                <label for="newGrantCanRead" class="bb:text-sm">@Localizer["App.AccessControl.Read"]</label>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="bb:flex bb:items-center bb:gap-2">
                 <BbSwitch @bind-Checked="_newGrant.CanWrite" Id="newGrantCanWrite" />
-                <label for="newGrantCanWrite" class="text-sm">@Localizer["App.AccessControl.Write"]</label>
+                <label for="newGrantCanWrite" class="bb:text-sm">@Localizer["App.AccessControl.Write"]</label>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="bb:flex bb:items-center bb:gap-2">
                 <BbSwitch @bind-Checked="_newGrant.CanReverseLookup" Id="newGrantCanReverseLookup" />
-                <label for="newGrantCanReverseLookup" class="text-sm">
+                <label for="newGrantCanReverseLookup" class="bb:text-sm">
                     @Localizer["App.AccessControl.ReverseLookup"]
                 </label>
             </div>
@@ -106,7 +106,7 @@
             id="addAccessGrantButton"
             Type="ButtonType.Submit"
             Loading="_isCreating"
-            Class="mt-4"
+            Class="bb:mt-4"
             IconPosition="IconPosition.Start"
         >
             <Icon>
@@ -120,10 +120,10 @@
 
     @* Below the add controls on purpose: the list grows as grants are added, and above them it
        would push the form further down the dialog with every one. *@
-    <div class="mt-4 border-t pt-4">
+    <div class="bb:mt-4 bb:border-t bb:pt-4">
         @if (_error is not null)
         {
-            <BbAlert Variant="AlertVariant.Danger" Class="mb-4">
+            <BbAlert Variant="AlertVariant.Danger" Class="bb:mb-4">
                 <BbAlertTitle>@Localizer["App.AccessControl.GrantErrorTitle"]</BbAlertTitle>
                 <BbAlertDescription>@_error</BbAlertDescription>
             </BbAlert>
@@ -131,22 +131,22 @@
 
         @if (_scopedGrants.Count == 0)
         {
-            <p class="text-sm text-muted-foreground">
+            <p class="bb:text-sm bb:text-muted-foreground">
                 @Localizer["App.AccessControl.NoGrantsForNamespace"]
             </p>
         }
         else
         {
-            <div class="space-y-2">
+            <div class="bb:space-y-2">
                 @foreach (var grant in _scopedGrants)
                 {
-                    <div class="rounded-md border border-border p-3">
-                        <div class="flex flex-wrap items-center justify-between gap-2">
-                            <div class="flex items-center gap-2">
+                    <div class="bb:rounded-md bb:border bb:border-border bb:p-3">
+                        <div class="bb:flex bb:flex-wrap bb:items-center bb:justify-between bb:gap-2">
+                            <div class="bb:flex bb:items-center bb:gap-2">
                                 <BbBadge Variant="BadgeVariant.Secondary">
                                     @GranteeTypeLabel(grant.GranteeType)
                                 </BbBadge>
-                                <span class="text-sm">@grant.Grantee</span>
+                                <span class="bb:text-sm">@grant.Grantee</span>
                             </div>
                             <BbButton
                                 id="@($"deleteGrant-{grant.Id}")"
@@ -157,37 +157,37 @@
                                 @Localizer["App.Common.Delete"]
                             </BbButton>
                         </div>
-                        <div class="mt-2 flex flex-wrap items-center gap-4">
-                            <div class="flex items-center gap-2">
+                        <div class="bb:mt-2 bb:flex bb:flex-wrap bb:items-center bb:gap-4">
+                            <div class="bb:flex bb:items-center bb:gap-2">
                                 <BbSwitch
                                     @bind-Checked="grant.CanRead"
                                     @bind-Checked:after="@(() => SaveGrantAsync(grant))"
                                     Id="@($"grant-{grant.Id}-read")"
                                     Disabled="@(_savingGrantId == grant.Id)"
                                 />
-                                <label for="@($"grant-{grant.Id}-read")" class="text-sm">
+                                <label for="@($"grant-{grant.Id}-read")" class="bb:text-sm">
                                     @Localizer["App.AccessControl.Read"]
                                 </label>
                             </div>
-                            <div class="flex items-center gap-2">
+                            <div class="bb:flex bb:items-center bb:gap-2">
                                 <BbSwitch
                                     @bind-Checked="grant.CanWrite"
                                     @bind-Checked:after="@(() => SaveGrantAsync(grant))"
                                     Id="@($"grant-{grant.Id}-write")"
                                     Disabled="@(_savingGrantId == grant.Id)"
                                 />
-                                <label for="@($"grant-{grant.Id}-write")" class="text-sm">
+                                <label for="@($"grant-{grant.Id}-write")" class="bb:text-sm">
                                     @Localizer["App.AccessControl.Write"]
                                 </label>
                             </div>
-                            <div class="flex items-center gap-2">
+                            <div class="bb:flex bb:items-center bb:gap-2">
                                 <BbSwitch
                                     @bind-Checked="grant.CanReverseLookup"
                                     @bind-Checked:after="@(() => SaveGrantAsync(grant))"
                                     Id="@($"grant-{grant.Id}-reverse-lookup")"
                                     Disabled="@(_savingGrantId == grant.Id)"
                                 />
-                                <label for="@($"grant-{grant.Id}-reverse-lookup")" class="text-sm">
+                                <label for="@($"grant-{grant.Id}-reverse-lookup")" class="bb:text-sm">
                                     @Localizer["App.AccessControl.ReverseLookup"]
                                 </label>
                             </div>
@@ -199,20 +199,20 @@
 
         @if (_globalGrants.Count > 0)
         {
-            <div class="mt-4">
-                <p class="text-sm font-medium">@Localizer["App.AccessControl.GlobalGrantsTitle"]</p>
-                <p class="text-xs text-muted-foreground">
+            <div class="bb:mt-4">
+                <p class="bb:text-sm bb:font-medium">@Localizer["App.AccessControl.GlobalGrantsTitle"]</p>
+                <p class="bb:text-xs bb:text-muted-foreground">
                     @Localizer["App.AccessControl.GlobalGrantsDescription"]
                 </p>
-                <div class="mt-2 space-y-1">
+                <div class="bb:mt-2 bb:space-y-1">
                     @foreach (var grant in _globalGrants)
                     {
-                        <div class="flex flex-wrap items-center gap-2 text-sm">
+                        <div class="bb:flex bb:flex-wrap bb:items-center bb:gap-2 bb:text-sm">
                             <BbBadge Variant="BadgeVariant.Outline">
                                 @GranteeTypeLabel(grant.GranteeType)
                             </BbBadge>
                             <span>@grant.Grantee</span>
-                            <span class="text-xs text-muted-foreground">@PermissionSummary(grant)</span>
+                            <span class="bb:text-xs bb:text-muted-foreground">@PermissionSummary(grant)</span>
                         </div>
                     }
                 </div>
