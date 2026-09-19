@@ -1,0 +1,210 @@
+# -- number of replicas. The server is stateless beyond its key, so scaling it is
+# horizontal and needs no coordination - every replica must be given the same key.
+replicaCount: 2
+
+image:
+  registry: ghcr.io
+  repository: miracum/vfps/voprf-server
+  pullPolicy: IfNotPresent
+  # -- overrides the image tag, which defaults to the chart's appVersion
+  tag: ""
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+# -- ASPNETCORE_ENVIRONMENT. Anything but `Development` refuses to start with
+# `hardening.enabled=false`, which is what keeps a development configuration from reaching a
+# cluster by being forgotten.
+environment: Production
+
+# The key this server evaluates under. It is the whole secret: anyone holding it can compute
+# every pseudonym this deployment has ever issued.
+key:
+  # -- `Seed` (recommended), `File`, `Base64`, or `Ephemeral`.
+  #
+  # A private key is a reduced ristretto255 scalar, which no ordinary tool emits - roughly
+  # fifteen of every sixteen values `openssl rand 32` produces are out of range. A *seed* has no
+  # such constraint, and RFC 9497's DeriveKeyPair turns it into a key. So generate a seed:
+  #
+  #     openssl rand -out voprf.seed 32
+  #     kubectl create secret generic voprf-key --from-file=seed=voprf.seed
+  source: Seed
+
+  # -- name of an existing Secret holding the key material. Preferred over `value`: a mounted
+  # secret does not appear in the pod's environment or in `kubectl describe`.
+  existingSecret: ""
+  # -- key within `existingSecret` holding the seed (or the private key, for source File/Base64)
+  existingSecretKey: seed
+
+  # -- the seed inline, base64 encoded. Convenient for a quick trial; prefer `existingSecret`.
+  # @default -- empty
+  value: ""
+
+  # -- names this key generation, and selects it.
+  #
+  # One setting doing both jobs on purpose. It is mixed into RFC 9497's DeriveKeyPair, so against
+  # a given seed it picks which key is derived; and it is returned with every answer and carried
+  # in each pseudonym as `<keyId>.<pseudonym>`, so a store can tell which key produced which row.
+  #
+  # Tying them together is what makes a rotation one edit and makes it impossible for a stored
+  # row to claim a generation that no longer means anything. (The server underneath exposes the
+  # derivation label and the id separately; the chart deliberately does not, because a new key
+  # wearing an old label leaves a store that cannot be migrated.)
+  #
+  # Must not contain `.` - that is the separator between the id and the pseudonym.
+  keyId: v1
+
+# Transport security. The blinded elements are not secret, but the answers are what a caller is
+# authenticated to receive.
+tls:
+  # -- name of a Secret with `tls.crt` and `tls.key` (cert-manager's layout). Required unless
+  # `hardening.requireTls` is false.
+  existingSecret: ""
+  certFileName: tls.crt
+  keyFileName: tls.key
+
+auth:
+  # -- `ClientCertificate` (mutual TLS) or `Jwt`.
+  #
+  # Mutual TLS suits a service called by other services: no identity provider to depend on, and
+  # the caller is identified before the first byte of the body. It needs the issuing CA in the
+  # container's trust store - mount it and point `SSL_CERT_FILE` at it via `extraEnv`.
+  mode: ClientCertificate
+
+  clientCertificate:
+    # -- SHA-256 thumbprints allowed to call, hex encoded. Empty accepts any certificate chaining
+    # to a trusted root, which is only as narrow as that root.
+    allowedThumbprints: []
+    # -- check revocation online. Off by default: an unreachable CRL or OCSP responder would
+    # otherwise take this service down with it.
+    checkRevocation: false
+
+  jwt:
+    # -- OIDC issuer, e.g. a Keycloak realm URL
+    authority: ""
+    # -- audience the token must carry. Leaving it empty disables audience validation, which makes
+    # every token the issuer hands out a licence to use this key.
+    audience: ""
+    # -- scope a token must carry to call BlindEvaluate
+    requiredScope: ""
+
+# Every protection is on by default. See charts/voprf-server/README.md.
+hardening:
+  # -- master switch. `false` relaxes TLS, authentication, reflection and error detail all at
+  # once; the server refuses to start that way unless `environment` is Development.
+  enabled: true
+  # -- reject requests that did not arrive over TLS. Leave on even behind a mesh unless the hop
+  # between it and this pod is itself trusted.
+  requireTls: true
+  # -- reject unauthenticated callers
+  requireAuthentication: true
+  # -- serve gRPC server reflection. Off: it maps the service surface to anyone who can connect.
+  enableReflection: false
+  # -- return exception detail to callers. Off: a failure distinguishing "not a valid element"
+  # from "not a canonical encoding" tells a caller probing the group more than it needs.
+  enableDetailedErrors: false
+  # -- most blinded elements accepted per call. Each costs a scalar multiplication.
+  maxBatchSize: 128
+  # -- largest request accepted, in bytes
+  maxReceiveMessageSizeBytes: 65536
+  rateLimit:
+    enabled: true
+    # -- calls allowed per caller per window. Counts calls, not elements - batching is the
+    # behaviour worth encouraging, since it costs one proof instead of many.
+    permitsPerWindow: 600
+    window: "0.00:01:00"
+    queueLimit: 0
+
+service:
+  type: ClusterIP
+  # -- the gRPC port. TLS terminates here when `tls.existingSecret` is set.
+  grpcPort: 8081
+  # -- plaintext port serving only the health checks, for kubelet probes.
+  #
+  # Kubernetes' own gRPC probes cannot speak TLS, so a hardened deployment has no way to probe
+  # the real port. This listener exists for that: the server's TLS check exempts the health
+  # endpoints and rejects everything else on a plaintext connection with 421, so no evaluation
+  # can be performed through it.
+  healthPort: 8080
+  annotations: {}
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+  # -- the server never calls the Kubernetes API
+  automountServiceAccountToken: false
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+  fsGroup: 65534
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  privileged: false
+  capabilities:
+    drop:
+      - ALL
+  # -- nothing is ever written to disk: the key is read once at startup and the process is
+  # stateless afterwards
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 65534
+  runAsGroup: 65534
+  seccompProfile:
+    type: RuntimeDefault
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 96Mi
+  limits:
+    memory: 256Mi
+
+# -- kept modest on purpose. An evaluation is one scalar multiplication plus a proof, so this
+# saturates CPU long before memory; a CPU limit would throttle bursts of exactly the work the
+# service exists to do.
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+networkPolicy:
+  enabled: true
+  # -- allow ingress from anywhere. Off by default: reaching this service at all is the security
+  # boundary, because anyone who can call it can pseudonymize anything they can guess.
+  allowExternal: false
+  # -- allow all egress. Off by default; the server calls nothing outbound except an OIDC
+  # authority when `auth.mode: Jwt`.
+  allowExternalEgress: false
+  # -- pods in these namespaces may call the service
+  ingressNSMatchLabels: {}
+  ingressNSPodMatchLabels: {}
+  extraIngress: []
+  extraEgress: []
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+# -- spread replicas across nodes so a single node taking the whole service out is not the
+# default posture
+topologySpreadConstraints: []
+
+# -- extra environment variables, e.g. `SSL_CERT_FILE` pointing at a mounted CA bundle for mTLS
+extraEnv: []
+extraVolumes: []
+extraVolumeMounts: []

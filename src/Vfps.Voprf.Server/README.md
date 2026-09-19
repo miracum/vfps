@@ -56,6 +56,12 @@ cannot reach production by being forgotten - carrying it there takes deliberatel
 Health checks (`/healthz` and `grpc.health.v1.Health`) are always anonymous and exempt from
 the TLS check, so a probe on the pod network still works.
 
+`RequireTls` is independent of the rest: turning it off serves gRPC over plaintext with
+authentication, rate limiting and everything else still enforced, for a deployment behind a mesh
+that terminates TLS. The one pairing refused is plaintext with `Mode: ClientCertificate` - a
+client certificate is presented during the TLS handshake, so no caller could ever authenticate
+and every request would be refused with a 403 indistinguishable from bad credentials.
+
 ### Why this needs protecting at all
 
 Evaluation reveals nothing about any input, so the service leaks nothing by answering. What it
@@ -105,7 +111,7 @@ openssl rand -out voprf.seed 32
 ```
 
 ```jsonc
-"Key": { "Source": "Seed", "FilePath": "/run/secrets/voprf.seed", "KeyInfo": "v1", "KeyId": "v1" }
+"Key": { "Source": "Seed", "FilePath": "/run/secrets/voprf.seed", "KeyId": "v1" }
 ```
 
 That is the whole of it. `Source` defaults to `Seed`, and any 32 random bytes are a valid seed.
@@ -138,22 +144,22 @@ generation by address.
 
 ```
                      ┌────────────────────────┐
-  clients ──────────▶│ voprf-v1   KeyInfo: v1 │   the generation being migrated away from
+  clients ──────────▶│ voprf-v1     KeyId: v1 │   the generation being migrated away from
                      └────────────────────────┘
                      ┌────────────────────────┐
-  clients ──────────▶│ voprf-v2   KeyInfo: v2 │   the generation new pseudonyms belong to
+  clients ──────────▶│ voprf-v2     KeyId: v2 │   the generation new pseudonyms belong to
                      └────────────────────────┘
                               one seed
 ```
 
-Both derive from the **same seed** — `KeyInfo` is mixed into the derivation, so a second
-generation is a different `KeyInfo` and a different `KeyId`, not a second secret:
+Both derive from the **same seed**: `KeyId` is mixed into the derivation as RFC 9497's `info`
+label, so a second generation is a different `KeyId` — not a second secret:
 
 ```jsonc
 // voprf-v1                                    // voprf-v2
 "Key": { "Source": "Seed",                     "Key": { "Source": "Seed",
          "FilePath": "/run/secrets/voprf.seed",          "FilePath": "/run/secrets/voprf.seed",
-         "KeyInfo": "v1", "KeyId": "v1" }                "KeyInfo": "v2", "KeyId": "v2" }
+         "KeyId": "v1" }                                 "KeyId": "v2" }
 ```
 
 ### The procedure
@@ -163,7 +169,7 @@ generation is a different `KeyInfo` and a different `KeyId`, not a second secret
 | 1. Deploy | Stand up `voprf-v2` alongside `voprf-v1` | Nothing routes to v2 yet. Fetch its public key with `GetPublicKey` and pin it in the clients that will need it. |
 | 2. Cut over | Point clients writing *new* pseudonyms at `voprf-v2` | New pseudonyms are v2. Anything still reading or writing v1 keeps its old endpoint and keeps working. Per-client, at whatever pace suits. |
 | 3. Migrate | Re-pseudonymize the store from the original identifiers against `voprf-v2` | Both endpoints serve. Rows carry `key_id` so you can tell which are done. |
-| 4. Retire | Delete the `voprf-v1` deployment and its `KeyInfo` | Anything still pointing at v1 fails to connect rather than silently getting a different pseudonym. |
+| 4. Retire | Delete the `voprf-v1` deployment | Anything still pointing at v1 fails to connect rather than silently getting a different pseudonym. |
 
 Step 1 exists so no client is asked to trust a key it has not seen: it pins v2's public key while
 v1 is still doing the work. Step 4 is deliberately a hard break — a retired generation that
@@ -198,9 +204,10 @@ way to tell which rows are done.
 stored value is self-describing without a column of its own. A key id containing `.` would make
 those two halves ambiguous, so this server refuses to start with one.
 
-Nothing can check this for you — each server only ever sees its own key — so **always change
-`KeyId` when you change `KeyInfo`**. Two generations sharing an id is the one mistake a migration
-cannot be walked back from.
+`KeyId` is both the name and, for a seed, the selector - so a new key and a new name arrive
+together and a stored row can never claim a generation that no longer means anything. RFC 9497
+takes the two as independent values and `VoprfKeyPair.Derive` still does; this server's
+configuration deliberately does not expose them separately.
 
 ### What rotation does not fix
 
@@ -212,14 +219,14 @@ the old values — the same migration, run urgently.
 ### Separating domains
 
 The same mechanism keeps data that should not link from linking: give each domain its own
-`KeyInfo`, `KeyId` and deployment. Pseudonyms from different keys are unrelatable, so the same
+`KeyId` and deployment. Pseudonyms from different keys are unrelatable, so the same
 person in two systems keyed separately cannot be matched across them.
 
 ### The other sources
 
 | Source | Reads | Use when |
 | --- | --- | --- |
-| `Seed` | `Key:FilePath` or `Key:Base64`, plus `Key:KeyInfo` | **the default** |
+| `Seed` | `Key:FilePath` or `Key:Base64`, selected by `Key:KeyId` | **the default** |
 | `File` | `Key:FilePath` | importing a key that already exists, e.g. from another RFC 9497 implementation |
 | `Base64` | `Key:Base64` | the same, from an environment variable |
 | `Ephemeral` | nothing | development only; refused while hardened |

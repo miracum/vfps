@@ -1,0 +1,135 @@
+{{ template "chart.header" . }}
+
+{{ template "chart.typeBadge" . }}
+
+{{ template "chart.description" . }}
+
+{{ template "chart.homepageLine" . }}
+
+The key-holding half of [RFC 9497](https://www.rfc-editor.org/rfc/rfc9497.html) VOPRF
+pseudonymization. It holds the key and **never sees an identifier**; clients blind their values,
+this service evaluates them and proves it used the key it published, and the client unblinds the
+result. It therefore does not, and cannot, return pseudonyms.
+
+Deploy it alongside [`vfps`](../vfps) and point that at it — see
+[`src/Vfps.Voprf.Server/README.md`](../../src/Vfps.Voprf.Server/README.md) for the server itself
+and [`src/Vfps.Voprf.Client/README.md`](../../src/Vfps.Voprf.Client/README.md) for the client.
+
+## Installation
+
+```sh
+# 1. a seed - any 32 random bytes; the key is derived from it (RFC 9497 DeriveKeyPair)
+openssl rand -out voprf.seed 32
+kubectl create secret generic voprf-key --from-file=seed=voprf.seed -n vfps
+
+# 2. a server certificate, e.g. from cert-manager, with the usual tls.crt / tls.key
+
+helm install voprf-server oci://ghcr.io/miracum/vfps/charts/voprf-server -n vfps \
+  --set key.existingSecret=voprf-key \
+  --set tls.existingSecret=voprf-tls
+```
+
+`openssl rand 32` is **not** a key: a private key is a reduced ristretto255 scalar, and roughly
+fifteen of every sixteen random 32-byte values are out of range. It is a perfectly good *seed*,
+which is why `key.source` defaults to `Seed`.
+
+## Pin the public key
+
+Clients must pin it out of band. A server evaluating under a substituted key would report the
+matching public key and every proof would still verify — so a client that trusts whatever the
+server offers has verified only that the server can do arithmetic consistently.
+
+```sh
+kubectl logs -n vfps deploy/voprf-server | grep 'public key'
+```
+
+That value goes into vfps's `Voprf:PublicKey`.
+
+## Hardening
+
+Everything is on by default, and the chart refuses to render a configuration that would be
+unsafe or would not start — with a message naming the value to set, rather than a
+`CrashLoopBackOff` and a container log.
+
+| Default | |
+| --- | --- |
+| TLS required | `hardening.requireTls` |
+| Callers authenticated (mTLS or OIDC) | `hardening.requireAuthentication` |
+| Per-caller rate limit, 600/min | `hardening.rateLimit` |
+| gRPC reflection off, no error detail | `hardening.enableReflection`, `hardening.enableDetailedErrors` |
+| Default-deny NetworkPolicy | `networkPolicy` |
+| Non-root, read-only rootfs, all capabilities dropped, `RuntimeDefault` seccomp | `securityContext` |
+| No service account token mounted | `serviceAccount.automountServiceAccountToken` |
+| Ephemeral keys refused | `key.source` |
+
+`hardening.enabled: false` relaxes all of it at once, and the **server refuses to start that way
+unless `environment: Development`** — so a development configuration cannot reach a cluster by
+being forgotten.
+
+### Running without TLS
+
+`hardening.requireTls: false` serves gRPC over plaintext while **everything else stays
+enforced** - authentication, the rate limit, the batch caps, no reflection, no ephemeral keys.
+It is for a deployment where a mesh or ingress terminates TLS in front of the pod and the hop
+from there is itself trusted.
+
+It cannot be combined with `auth.mode: ClientCertificate`: a client certificate is presented
+during the TLS handshake, so over plaintext no caller could ever authenticate and every request
+would be refused with 403 - a symptom that reads exactly like an ordinary credentials problem.
+The chart and the server both refuse that pairing outright. Use `auth.mode: Jwt`, which a mesh
+can carry, or leave TLS on.
+
+### Reaching the service is the security boundary
+
+Evaluation reveals nothing about any input, so the service leaks nothing by answering. What it
+does is answer *with the key*: anyone who can call it can pseudonymize anything they can guess,
+and where the input space is enumerable — national IDs, dates of birth — that is the whole of the
+confidentiality the pseudonyms have.
+
+Hence the default-deny NetworkPolicy. Callers opt in by carrying the label:
+
+```yaml
+metadata:
+  labels:
+    voprf-server-client: "true"
+```
+
+### The plaintext health port
+
+Kubernetes' own gRPC probes cannot speak TLS, so a hardened deployment would otherwise have no
+way to be probed. The chart runs a second, HTTP/1.1, plaintext listener on
+`service.healthPort` for exactly that.
+
+Nothing can be evaluated through it, for two independent reasons: the server's TLS check exempts
+only the health endpoints and answers everything else on a plaintext connection with `421`, and
+the listener speaks HTTP/1.1, which gRPC cannot use at all.
+
+## Rotation
+
+A VOPRF key cannot be rotated like a certificate: a pseudonym is a function of the key, so
+changing it changes every pseudonym, and a stored one cannot be re-keyed without the original
+value. Rotation is a data migration, and it needs two generations serving at once — which here
+means **two releases of this chart**, since a server holds exactly one key.
+
+Both can derive from the same seed: `key.keyId` names the generation *and* selects which key is
+derived from that seed, so a second generation is one setting.
+
+```sh
+helm install voprf-server-v2 oci://ghcr.io/miracum/vfps/charts/voprf-server -n vfps \
+  --set key.existingSecret=voprf-key --set key.keyId=v2 \
+  --set tls.existingSecret=voprf-tls
+```
+
+Then move clients over, re-pseudonymize, and delete the old release. vfps carries `keyId` in each
+pseudonym as `v1.<pseudonym>`, so you can tell which rows still belong to the old generation.
+
+RFC 9497 actually takes two values here - a label mixed into the key derivation, and the id
+reported alongside answers - and the server exposes both. The chart deliberately does not. Their
+only interesting combination is a new key under an old id, which leaves every stored row claiming
+a generation that no longer means anything; one setting makes that unreachable.
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}

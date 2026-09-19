@@ -58,6 +58,28 @@ internal static class HardeningGuard
             );
         }
 
+        // A client certificate is presented during the TLS handshake, so there is no way to send
+        // one over a plaintext connection. Left alone this starts, reports a healthy posture,
+        // passes its probes - and refuses every call with 403, which reads exactly like an
+        // ordinary authentication failure and sends whoever is debugging it into the client's
+        // certificates instead of here.
+        if (
+            config.Hardening.IsEnabled
+            && config.Hardening.RequireAuthentication
+            && config.Authentication.Mode == AuthenticationMode.ClientCertificate
+            && !config.Hardening.RequireTls
+        )
+        {
+            errors.Add(
+                $"{VoprfServerConfig.SectionName}:Authentication:Mode is ClientCertificate with "
+                    + "Hardening:RequireTls false. A client certificate is presented during the TLS "
+                    + "handshake, so on a plaintext connection no caller could ever authenticate and "
+                    + "every request would be refused. Turn RequireTls back on, or use "
+                    + "Authentication:Mode Jwt, which a mesh terminating TLS in front of this "
+                    + "process can carry."
+            );
+        }
+
         if (config.MaxBatchSize <= 0)
         {
             errors.Add($"{VoprfServerConfig.SectionName}:MaxBatchSize must be greater than zero.");

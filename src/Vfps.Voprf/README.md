@@ -114,7 +114,7 @@ different batch, and a reordered batch.
   somewhere other than beside the outputs.
 - **Key rotation invalidates every output** it ever produced, and a store of outputs cannot
   be re-keyed without the original values. Use `VoprfKeyPair.Derive` with a versioned
-  `keyInfo` if you intend to rotate.
+  `keyInfo` if you intend to rotate (the server exposes that as its key id).
 - **The server is an oracle.** Evaluation leaks nothing about the input, but a server that
   answers without limit lets anyone who can reach it evaluate anything. Rate limit and
   authenticate callers as you would any other use of the key.

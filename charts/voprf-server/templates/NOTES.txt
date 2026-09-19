@@ -1,0 +1,32 @@
+{{ .Chart.Name }} is deployed as {{ include "voprf-server.fullname" . }}.
+
+The key holder never sees an identifier, and never returns a pseudonym - clients blind their
+values, this service evaluates them under its key and proves it did so, and the client unblinds
+the result. Point vfps at it with:
+
+    Voprf:
+      Address: "{{ ternary "https" "http" (and .Values.hardening.enabled .Values.hardening.requireTls) }}://{{ include "voprf-server.fullname" . }}:{{ .Values.service.grpcPort }}"
+      ExpectedKeyId: "{{ .Values.key.keyId }}"
+      PublicKey: "<pinned out of band - see below>"
+
+1. Pin the public key. Verification means nothing without it: a server evaluating under a
+   substituted key would report the matching public key and every proof would still check out.
+   This server logs its own at startup -
+
+     kubectl logs -n {{ .Release.Namespace }} deploy/{{ include "voprf-server.fullname" . }} | grep 'public key'
+
+   - and that value goes into vfps's Voprf:PublicKey.
+{{ if .Values.networkPolicy.enabled }}
+2. Callers need the label {{ include "voprf-server.fullname" . }}-client: "true" to reach
+   the service, or they will be denied by the NetworkPolicy.
+{{ end }}
+{{- if not .Values.hardening.enabled }}
+
+  WARNING: hardening.enabled is false. This deployment serves the key over plaintext to
+  unauthenticated callers. It is a development configuration.
+{{- end }}
+{{- if eq .Values.key.source "Ephemeral" }}
+
+  WARNING: key.source is Ephemeral. The key is regenerated on every restart, so every pseudonym
+  issued under it becomes unreproducible when a pod is replaced.
+{{- end }}

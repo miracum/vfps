@@ -83,6 +83,13 @@ public class VoprfServerEndToEndTests
             ["VoprfServer:Hardening:RequireAuthentication"] = requireAuthentication
                 ? "true"
                 : "false",
+            // Bearer tokens rather than the default client certificates: TestServer cannot do
+            // TLS, and a client certificate is presented during the TLS handshake - so mutual
+            // TLS over this transport would reject every caller for want of a handshake rather
+            // than for want of credentials, and a rejection test would pass without testing
+            // anything. HardeningGuard refuses that combination outright.
+            ["VoprfServer:Authentication:Mode"] = "Jwt",
+            ["VoprfServer:Authentication:Jwt:Authority"] = "https://idp.invalid/realms/test",
             ["VoprfServer:Hardening:RateLimit:IsEnabled"] = "false",
         };
 

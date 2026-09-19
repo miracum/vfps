@@ -114,9 +114,11 @@ public sealed class VoprfKeyProvider : IVoprfKeyProvider
                     : ReadSeedFile(config.FilePath);
                 try
                 {
+                    // The key id doubles as RFC 9497's derivation label - see KeyConfig.KeyId
+                    // for why the two are one setting here.
                     return VoprfKeyPair.Derive(
                         seed,
-                        System.Text.Encoding.UTF8.GetBytes(config.KeyInfo)
+                        System.Text.Encoding.UTF8.GetBytes(config.KeyId)
                     );
                 }
                 finally

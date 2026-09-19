@@ -1,0 +1,44 @@
+{{- if not (and .Values.hardening.enabled .Values.hardening.requireTls) }}
+{{/*
+Only runs against a plaintext deployment: the probe port is HTTP/1.1 and unauthenticated by
+design, which is what makes it testable without minting a client certificate. A hardened
+deployment's real port cannot be exercised here without one.
+*/}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "voprf-server.fullname" . }}-test-connection"
+  labels:
+    {{- include "voprf-server.labels" . | nindent 4 }}
+    {{ include "voprf-server.fullname" . }}-client: "true"
+  annotations:
+    helm.sh/hook: test
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: false
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: health
+      image: curlimages/curl:8.11.1
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+      args:
+        - --fail
+        - --silent
+        - --show-error
+        - "http://{{ include "voprf-server.fullname" . }}-health:{{ .Values.service.healthPort }}/healthz"
+      resources:
+        requests:
+          cpu: 10m
+          memory: 32Mi
+        limits:
+          memory: 64Mi
+{{- end }}

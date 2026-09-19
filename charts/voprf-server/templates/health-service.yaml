@@ -1,0 +1,21 @@
+{{/*
+The probe port gets its own Service so the helm test can reach it, and so a mesh or scrape
+config can address it separately from the port that actually evaluates. Nothing but the health
+endpoints answers here - see the deployment's comment on Kestrel__Endpoints__Health__Url.
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "voprf-server.fullname" . }}-health
+  labels:
+    {{- include "voprf-server.labels" . | nindent 4 }}
+    app.kubernetes.io/component: health
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.service.healthPort }}
+      targetPort: health
+      protocol: TCP
+      name: health
+  selector:
+    {{- include "voprf-server.selectorLabels" . | nindent 4 }}

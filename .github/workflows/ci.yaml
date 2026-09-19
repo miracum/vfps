@@ -109,6 +109,100 @@ jobs:
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
+
+  # Built here rather than in a workflow of its own so the chart job below can install the image
+  # this PR produced. standard-build.yaml drives the root Dockerfile, so these are the same steps
+  # by hand - the reason grpc-utils has its own workflow and this does not is that grpc-utils
+  # ships no chart to test against.
+  build-voprf-server-image:
+    name: build voprf-server image
+    runs-on: ubuntu-24.04
+    permissions:
+      packages: write
+      contents: read
+    outputs:
+      image-version: ${{ steps.container_voprf_server_meta.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Container meta for the VOPRF server image
+        id: container_voprf_server_meta
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        with:
+          images: |
+            ghcr.io/${{ github.repository }}/voprf-server
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+
+      # Vfps.Voprf.Server.Tests covers the server and Vfps.Voprf.Client, and runs nowhere
+      # else: the build-test layer above is scoped to src/Vfps.Tests. The test stage runs
+      # `dotnet test` in the image, so a failing test fails this job. cacheonly: nothing
+      # consumes the coverage it writes.
+      - name: Run the VOPRF server and client tests
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          push: false
+          target: test
+          outputs: type=cacheonly
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          file: voprf-server.Dockerfile
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        # Pushed on pull_request too, unlike the other images here: ct install runs in a kind
+        # cluster that pulls this tag from ghcr.io, so an unpublished image would make the chart
+        # untestable. Forked PRs have no package write access and fall back to the chart's own
+        # default tag (see helm-extra-set-args below).
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Single platform on purpose: the app publishes --runtime=linux-x64, and unlike the root
+      # Dockerfile this runtime stage is not pinned to $BUILDPLATFORM - so linux/arm64 would
+      # pull an arm64 base image and fill it with x64 binaries.
+      - name: Build and push the VOPRF server image
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        with:
+          push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name }}
+          target: runtime
+          tags: ${{ steps.container_voprf_server_meta.outputs.tags }}
+          labels: ${{ steps.container_voprf_server_meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          file: voprf-server.Dockerfile
+
+  # Its own chart because it is its own deployment - one process, one key (see
+  # charts/voprf-server/README.md). standard-chart-publish takes a single chart-path, so a
+  # second chart is a second call rather than a second entry.
+  voprf-server-chart:
+    needs:
+      - build-voprf-server-image
+    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@a22046808f8ee1af34781418e0e59fd23be420c5 # v1.28.0
+    permissions:
+      contents: read
+      packages: write # to push the chart and its signature/attestation to ghcr.io
+      id-token: write # for keyless chart signing and OIDC-based attestations
+      attestations: write # to publish build provenance attestations
+      artifact-metadata: write # required by actions/attest-build-provenance
+    with:
+      chart-path: charts/voprf-server
+      registry: ghcr.io/${{ github.repository }}/charts
+      version: ${{ github.event_name == 'pull_request' && format('0.0.0-pr{0}', github.event.pull_request.number) || '' }}
+      lint-config: .github/ct/ct.yaml
+      install-config: .github/ct/install.yaml
+      # Same reasoning as the vfps chart above: test against the image this PR built, and fall
+      # back to the chart's default tag for forked PRs, whose image is never pushed.
+      helm-extra-set-args: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) && format('--set=image.tag={0}', needs.build-voprf-server-image.outputs.image-version) || '' }}
+    secrets:
+      github-token: ${{ secrets.GITHUB_TOKEN }}
+
   add-code-coverage:
     runs-on: ubuntu-24.04
     name: add code coverage

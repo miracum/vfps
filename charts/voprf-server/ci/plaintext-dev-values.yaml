@@ -1,0 +1,23 @@
+# ct install exercises the chart end to end, and the hardened default cannot be installed
+# unattended: it requires a TLS certificate and a key seed that only a real deployment has. This
+# deploys the development posture instead - which is exactly the configuration the server refuses
+# to start with unless the environment says Development, so the install also proves that guard
+# lets the intended case through.
+#
+# Deliberately no key material here: an ephemeral key needs none, and committing a seed - even a
+# throwaway one - would put key-shaped bytes in the repository for a secret scanner to find and a
+# reader to mistake for a real one.
+environment: Development
+
+key:
+  source: Ephemeral
+
+hardening:
+  enabled: false
+  requireTls: false
+  requireAuthentication: false
+
+replicaCount: 1
+
+podDisruptionBudget:
+  enabled: false

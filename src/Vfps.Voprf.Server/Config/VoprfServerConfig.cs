@@ -65,20 +65,24 @@ public class KeyConfig
     public string Base64 { get; set; } = string.Empty;
 
     /// <summary>
-    /// Public label separating this key from others derived from the same seed, for
-    /// <see cref="KeySource.Seed"/> - a tenant, a column, a key generation. Not a secret.
-    /// </summary>
-    public string KeyInfo { get; set; } = string.Empty;
-
-    /// <summary>
-    /// Names the generation of the key this server holds. Returned alongside every answer so a
-    /// store of pseudonyms can record which key produced them.
+    /// Names the generation of the key this server holds, and for <see cref="KeySource.Seed"/>
+    /// selects it.
     /// </summary>
     /// <remarks>
-    /// Must change whenever the key material behind it changes. Two generations sharing an id
-    /// leaves a store with no way to say which one produced a given pseudonym, which is the one
-    /// thing that makes a migration unrecoverable - and no server can catch that for you, since
-    /// each one only ever sees its own key.
+    /// <para>
+    /// One setting doing both jobs deliberately. It is mixed into RFC 9497's
+    /// <c>DeriveKeyPair</c> as the <c>info</c> label, so against a given seed it decides which
+    /// key is derived; and it is returned with every answer, and carried in each pseudonym as
+    /// <c>&lt;keyId&gt;.&lt;pseudonym&gt;</c>, so a store can record which key produced which row.
+    /// </para>
+    /// <para>
+    /// The specification takes those as two independent values, and
+    /// <see cref="VoprfKeyPair.Derive"/> still does. Exposing them separately here would buy only
+    /// one combination that is not already reachable: a new key wearing an old id, which leaves
+    /// every stored row claiming a generation that no longer means anything - the one mistake a
+    /// migration cannot be walked back from. Tying them together makes it unreachable, and makes
+    /// a rotation a single edit.
+    /// </para>
     /// </remarks>
     public string KeyId { get; set; } = "v1";
 }
@@ -94,8 +98,8 @@ public enum KeySource
 
     /// <summary>
     /// Derive the key from a seed (RFC 9497 <c>DeriveKeyPair</c>) held in
-    /// <see cref="KeyConfig.FilePath"/> or <see cref="KeyConfig.Base64"/>, labelled with
-    /// <see cref="KeyConfig.KeyInfo"/>. The default, and the one to reach for.
+    /// <see cref="KeyConfig.FilePath"/> or <see cref="KeyConfig.Base64"/>, selected by
+    /// <see cref="KeyConfig.KeyId"/>. The default, and the one to reach for.
     /// </summary>
     /// <remarks>
     /// A private key is a scalar below the group order, which no ordinary tool emits: the order
@@ -105,8 +109,8 @@ public enum KeySource
     /// order). A <em>seed</em> has no such constraint: any 32 random bytes will do, and
     /// <c>DeriveKeyPair</c> is the specification's own way of turning them into a key.
     ///
-    /// It also makes rotation cheap - a new <see cref="KeyConfig.KeyInfo"/> against the same
-    /// seed is a new, unrelated key - and lets one seed in a secret store back several.
+    /// It also makes rotation cheap - a new <see cref="KeyConfig.KeyId"/> against the same seed
+    /// is a new, unrelated key - and lets one seed in a secret store back several.
     /// </remarks>
     Seed,
 

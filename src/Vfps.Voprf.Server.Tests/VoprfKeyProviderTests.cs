@@ -122,10 +122,13 @@ public class VoprfKeyProviderTests : IDisposable
     }
 
     [Fact]
-    public void A_seed_derives_the_same_key_every_time_and_key_info_separates_them()
+    public void A_seed_derives_the_same_key_every_time_and_the_key_id_separates_them()
     {
         // Exactly what `openssl rand 32` produces. Unlike a key, arbitrary random bytes are a
         // valid seed - DeriveKeyPair is what turns them into a scalar below the group order.
+        //
+        // The key id is the derivation label as well as the name, so changing it against one
+        // seed is what a rotation does: a different, unrelated key from the same secret.
         var seed = Convert.ToBase64String(
             System.Security.Cryptography.RandomNumberGenerator.GetBytes(32)
         );
@@ -135,7 +138,7 @@ public class VoprfKeyProviderTests : IDisposable
             {
                 Source = KeySource.Seed,
                 Base64 = seed,
-                KeyInfo = "column-a",
+                KeyId = "column-a",
             }
         );
         using var second = Create(
@@ -143,7 +146,7 @@ public class VoprfKeyProviderTests : IDisposable
             {
                 Source = KeySource.Seed,
                 Base64 = seed,
-                KeyInfo = "column-a",
+                KeyId = "column-a",
             }
         );
         using var other = Create(
@@ -151,7 +154,7 @@ public class VoprfKeyProviderTests : IDisposable
             {
                 Source = KeySource.Seed,
                 Base64 = seed,
-                KeyInfo = "column-b",
+                KeyId = "column-b",
             }
         );
 

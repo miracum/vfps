@@ -1,0 +1,65 @@
+{{- if .Values.networkPolicy.enabled }}
+{{/*
+Reaching this service at all is the security boundary: evaluation reveals nothing about any
+input, but anyone who can call it can pseudonymize anything they can guess. So ingress is
+default-deny and callers opt in by carrying the client label.
+*/}}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "voprf-server.fullname" . }}
+  labels:
+    {{- include "voprf-server.labels" . | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "voprf-server.selectorLabels" . | nindent 6 }}
+  policyTypes:
+    - Ingress
+    - Egress
+  egress:
+  {{- if .Values.networkPolicy.allowExternalEgress }}
+    - {}
+  {{- else }}
+    # DNS, so the OIDC authority can be resolved under auth.mode Jwt. Nothing else is dialled
+    # outbound; add auth.mode=Jwt's issuer via networkPolicy.extraEgress.
+    - ports:
+        - port: 53
+          protocol: UDP
+        - port: 53
+          protocol: TCP
+    {{- with .Values.networkPolicy.extraEgress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  ingress:
+    # The health port is listed alongside grpc because a pod reaching it needs a rule too -
+    # kubelet probes come from the node and are unaffected by NetworkPolicy, but the chart's own
+    # helm test and any in-cluster monitoring are not. It answers only liveness.
+    - ports:
+        - port: grpc
+        - port: health
+      {{- if not .Values.networkPolicy.allowExternal }}
+      from:
+        - podSelector:
+            matchLabels:
+              {{ include "voprf-server.fullname" . }}-client: "true"
+        {{- if .Values.networkPolicy.ingressNSMatchLabels }}
+        - namespaceSelector:
+            matchLabels:
+              {{- range $key, $value := .Values.networkPolicy.ingressNSMatchLabels }}
+              {{ $key | quote }}: {{ $value | quote }}
+              {{- end }}
+          {{- if .Values.networkPolicy.ingressNSPodMatchLabels }}
+          podSelector:
+            matchLabels:
+              {{- range $key, $value := .Values.networkPolicy.ingressNSPodMatchLabels }}
+              {{ $key | quote }}: {{ $value | quote }}
+              {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- with .Values.networkPolicy.extraIngress }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+{{- end }}

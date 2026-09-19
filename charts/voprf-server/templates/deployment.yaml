@@ -1,0 +1,200 @@
+{{- include "voprf-server.validateValues" . }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "voprf-server.fullname" . }}
+  labels:
+    {{- include "voprf-server.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "voprf-server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "voprf-server.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "voprf-server.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: voprf-server
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.registry }}/{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: grpc
+              containerPort: {{ .Values.service.grpcPort }}
+              protocol: TCP
+            - name: health
+              containerPort: {{ .Values.service.healthPort }}
+              protocol: TCP
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: {{ .Values.environment | quote }}
+            - name: DOTNET_ENVIRONMENT
+              value: {{ .Values.environment | quote }}
+
+            # The real endpoint. HTTP/2 only - gRPC needs it, and nothing else is served here.
+            - name: Kestrel__Endpoints__Grpc__Url
+              value: {{ printf "%s://0.0.0.0:%v" (ternary "https" "http" (and .Values.hardening.enabled .Values.hardening.requireTls)) .Values.service.grpcPort | quote }}
+            - name: Kestrel__Endpoints__Grpc__Protocols
+              value: Http2
+            {{- if .Values.tls.existingSecret }}
+            - name: Kestrel__Endpoints__Grpc__Certificate__Path
+              value: {{ printf "/secrets/tls/%s" .Values.tls.certFileName | quote }}
+            - name: Kestrel__Endpoints__Grpc__Certificate__KeyPath
+              value: {{ printf "/secrets/tls/%s" .Values.tls.keyFileName | quote }}
+            {{- end }}
+
+            # Probe-only listener. Kubernetes' gRPC probes cannot speak TLS, so a hardened
+            # deployment would otherwise be unprobeable. Safe because the server's TLS check
+            # exempts the health endpoints and answers everything else on a plaintext connection
+            # with 421 - no evaluation can happen through this port.
+            - name: Kestrel__Endpoints__Health__Url
+              value: {{ printf "http://0.0.0.0:%v" .Values.service.healthPort | quote }}
+            - name: Kestrel__Endpoints__Health__Protocols
+              value: Http1
+
+            - name: VoprfServer__Key__Source
+              value: {{ .Values.key.source | quote }}
+            {{- if ne .Values.key.source "Ephemeral" }}
+            - name: VoprfServer__Key__FilePath
+              value: {{ printf "/secrets/key/%s" .Values.key.existingSecretKey | quote }}
+            {{- end }}
+            - name: VoprfServer__Key__KeyId
+              value: {{ .Values.key.keyId | quote }}
+
+            - name: VoprfServer__MaxBatchSize
+              value: {{ .Values.hardening.maxBatchSize | quote }}
+            - name: VoprfServer__Hardening__IsEnabled
+              value: {{ .Values.hardening.enabled | quote }}
+            - name: VoprfServer__Hardening__RequireTls
+              value: {{ .Values.hardening.requireTls | quote }}
+            - name: VoprfServer__Hardening__RequireAuthentication
+              value: {{ .Values.hardening.requireAuthentication | quote }}
+            - name: VoprfServer__Hardening__EnableReflection
+              value: {{ .Values.hardening.enableReflection | quote }}
+            - name: VoprfServer__Hardening__EnableDetailedErrors
+              value: {{ .Values.hardening.enableDetailedErrors | quote }}
+            - name: VoprfServer__Hardening__MaxReceiveMessageSizeBytes
+              value: {{ .Values.hardening.maxReceiveMessageSizeBytes | quote }}
+            - name: VoprfServer__Hardening__RateLimit__IsEnabled
+              value: {{ .Values.hardening.rateLimit.enabled | quote }}
+            - name: VoprfServer__Hardening__RateLimit__PermitsPerWindow
+              value: {{ .Values.hardening.rateLimit.permitsPerWindow | quote }}
+            - name: VoprfServer__Hardening__RateLimit__Window
+              value: {{ .Values.hardening.rateLimit.window | quote }}
+            - name: VoprfServer__Hardening__RateLimit__QueueLimit
+              value: {{ .Values.hardening.rateLimit.queueLimit | quote }}
+
+            - name: VoprfServer__Authentication__Mode
+              value: {{ .Values.auth.mode | quote }}
+            {{- if eq .Values.auth.mode "Jwt" }}
+            - name: VoprfServer__Authentication__Jwt__Authority
+              value: {{ .Values.auth.jwt.authority | quote }}
+            - name: VoprfServer__Authentication__Jwt__Audience
+              value: {{ .Values.auth.jwt.audience | quote }}
+            - name: VoprfServer__Authentication__Jwt__RequiredScope
+              value: {{ .Values.auth.jwt.requiredScope | quote }}
+            {{- else }}
+            - name: VoprfServer__Authentication__ClientCertificate__CheckRevocation
+              value: {{ .Values.auth.clientCertificate.checkRevocation | quote }}
+            {{- range $index, $thumbprint := .Values.auth.clientCertificate.allowedThumbprints }}
+            - name: {{ printf "VoprfServer__Authentication__ClientCertificate__AllowedThumbprints__%d" $index | quote }}
+              value: {{ $thumbprint | quote }}
+            {{- end }}
+            {{- end }}
+
+            # readOnlyRootFilesystem: the single-file host needs somewhere writable to extract to
+            - name: DOTNET_BUNDLE_EXTRACT_BASE_DIR
+              value: /tmp
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          # A failed key load exits the process at startup rather than on the first call, so a
+          # pod that is listening at all has a usable key.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            failureThreshold: 30
+            periodSeconds: 2
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: health
+            periodSeconds: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if ne .Values.key.source "Ephemeral" }}
+            - name: key
+              mountPath: /secrets/key
+              readOnly: true
+            {{- end }}
+            {{- if .Values.tls.existingSecret }}
+            - name: tls
+              mountPath: /secrets/tls
+              readOnly: true
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        {{- if ne .Values.key.source "Ephemeral" }}
+        - name: key
+          secret:
+            secretName: {{ include "voprf-server.keySecretName" . }}
+            defaultMode: 0400
+        {{- end }}
+        {{- if .Values.tls.existingSecret }}
+        - name: tls
+          secret:
+            secretName: {{ .Values.tls.existingSecret }}
+            defaultMode: 0400
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

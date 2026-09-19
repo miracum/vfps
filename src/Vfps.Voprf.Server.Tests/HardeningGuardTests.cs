@@ -98,6 +98,46 @@ public class HardeningGuardTests
     }
 
     [Fact]
+    public void Mutual_tls_without_tls_is_refused()
+    {
+        // It would otherwise start, look healthy, and refuse every call with 403 - a symptom
+        // indistinguishable from an ordinary authentication failure.
+        var config = Valid();
+        config.Authentication.Mode = AuthenticationMode.ClientCertificate;
+        config.Hardening.RequireTls = false;
+
+        HardeningGuard
+            .Validate(config, isDevelopment: false)
+            .Should()
+            .ContainSingle()
+            .Which.Should()
+            .Contain("presented during the TLS handshake");
+    }
+
+    [Fact]
+    public void Bearer_tokens_without_tls_are_allowed()
+    {
+        // The coherent version of the same posture: a mesh terminates TLS in front of the
+        // process and the token still authenticates the caller.
+        var config = Valid();
+        config.Hardening.RequireTls = false;
+        config.Authentication.Mode = AuthenticationMode.Jwt;
+        config.Authentication.Jwt.Authority = "https://idp.example/realms/vfps";
+
+        HardeningGuard.Validate(config, isDevelopment: false).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Plaintext_with_authentication_delegated_upstream_is_allowed()
+    {
+        var config = Valid();
+        config.Hardening.RequireTls = false;
+        config.Hardening.RequireAuthentication = false;
+
+        HardeningGuard.Validate(config, isDevelopment: false).Should().BeEmpty();
+    }
+
+    [Fact]
     public void An_empty_key_id_is_refused()
     {
         var config = Valid();
