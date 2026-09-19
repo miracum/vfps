@@ -91,7 +91,7 @@ jobs:
     needs:
       - build
       - detect-app-changes
-    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@a22046808f8ee1af34781418e0e59fd23be420c5 # v1.28.0
+    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@0f51c105337941201f1c16c611cf92567cccde8c # v1.28.1
     permissions:
       contents: read
       packages: write # to push the chart and its signature/attestation to ghcr.io
@@ -199,7 +199,7 @@ jobs:
     needs:
       - build-voprf-server-image
       - detect-app-changes
-    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@a22046808f8ee1af34781418e0e59fd23be420c5 # v1.28.0
+    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@0f51c105337941201f1c16c611cf92567cccde8c # v1.28.1
     permissions:
       contents: read
       packages: write # to push the chart and its signature/attestation to ghcr.io
