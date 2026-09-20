@@ -371,8 +371,8 @@
       },
       "Google.Protobuf": {
         "type": "Transitive",
-        "resolved": "3.31.1",
-        "contentHash": "gSnJbUmGiOTdWddPhqzrEscHq9Ls6sqRDPB9WptckyjTUyx70JOOAaDLkFff8gManZNN3hllQ4aQInnQyq/Z/A=="
+        "resolved": "3.36.2",
+        "contentHash": "Ci1q1iJg74qAE5riTA2FbMS0wPbpruPQI/JQ9DrAsRo2VsSxgt1e/pmxGxgrci+pXJEgrSYg2vPl8rrStZkclQ=="
       },
       "Grpc.AspNetCore.Server": {
         "type": "Transitive",
@@ -498,6 +498,11 @@
         "dependencies": {
           "NodaTime": "3.2.2"
         }
+      },
+      "libsodium": {
+        "type": "Transitive",
+        "resolved": "1.0.22",
+        "contentHash": "KPD9SloJFclrsjnhABu7dzWrcyYkwPbvx5l1gRSPAX/0n+OBtSiVCKtGFv4n+ecWUHU0tCG9LSSwoZZx673zBQ=="
       },
       "Markdig": {
         "type": "Transitive",
@@ -857,9 +862,35 @@
         "dependencies": {
           "Planetarium.LruCacheNet": "1.2.0"
         }
+      },
+      "vfps.voprf": {
+        "type": "Project",
+        "dependencies": {
+          "libsodium": "[1.0.22, )"
+        }
+      },
+      "vfps.voprf.client": {
+        "type": "Project",
+        "dependencies": {
+          "Grpc.Net.ClientFactory": "[2.83.0, )",
+          "Vfps.Voprf": "[1.18.1, )",
+          "Vfps.Voprf.Contracts": "[1.18.1, )"
+        }
+      },
+      "vfps.voprf.contracts": {
+        "type": "Project",
+        "dependencies": {
+          "Google.Protobuf": "[3.36.2, )",
+          "Grpc.Core.Api": "[2.83.0, )"
+        }
       }
     },
     "net10.0/linux-x64": {
+      "libsodium": {
+        "type": "Transitive",
+        "resolved": "1.0.22",
+        "contentHash": "KPD9SloJFclrsjnhABu7dzWrcyYkwPbvx5l1gRSPAX/0n+OBtSiVCKtGFv4n+ecWUHU0tCG9LSSwoZZx673zBQ=="
+      },
       "SQLitePCLRaw.lib.e_sqlite3": {
         "type": "Transitive",
         "resolved": "2.1.12",

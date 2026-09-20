@@ -92,16 +92,16 @@ compute_load_seconds() {
   IFS=',' read -ra selected <<<"${SCENARIOS}"
   for scenario in "${selected[@]}"; do
     case "${scenario}" in
-      baseline) total=$((total + DURATION_BASELINE)) ;;
-      vfps-pod-kill) total=$((total + DURATION_VFPS_POD_KILL)) ;;
-      cnpg-primary-kill) total=$((total + DURATION_CNPG_PRIMARY_KILL)) ;;
-      db-network-partition) total=$((total + DURATION_DB_NETWORK_PARTITION)) ;;
-      rollout) total=$((total + DURATION_ROLLOUT)) ;;
-      drain) total=$((total + DURATION_DRAIN)) ;;
-      *)
-        echo "unknown scenario '${scenario}' in SCENARIOS" >&2
-        exit 2
-        ;;
+    baseline) total=$((total + DURATION_BASELINE)) ;;
+    vfps-pod-kill) total=$((total + DURATION_VFPS_POD_KILL)) ;;
+    cnpg-primary-kill) total=$((total + DURATION_CNPG_PRIMARY_KILL)) ;;
+    db-network-partition) total=$((total + DURATION_DB_NETWORK_PARTITION)) ;;
+    rollout) total=$((total + DURATION_ROLLOUT)) ;;
+    drain) total=$((total + DURATION_DRAIN)) ;;
+    *)
+      echo "unknown scenario '${scenario}' in SCENARIOS" >&2
+      exit 2
+      ;;
     esac
   done
   echo $((total + LOAD_MARGIN_SECONDS))
@@ -334,12 +334,12 @@ run_scenarios() {
 
   for scenario in "${selected[@]}"; do
     case "${scenario}" in
-      baseline) scenario_baseline ;;
-      vfps-pod-kill) scenario_vfps_pod_kill ;;
-      cnpg-primary-kill) scenario_cnpg_primary_kill || true ;;
-      db-network-partition) scenario_db_network_partition ;;
-      rollout) scenario_rollout ;;
-      drain) scenario_drain || true ;;
+    baseline) scenario_baseline ;;
+    vfps-pod-kill) scenario_vfps_pod_kill ;;
+    cnpg-primary-kill) scenario_cnpg_primary_kill || true ;;
+    db-network-partition) scenario_db_network_partition ;;
+    rollout) scenario_rollout ;;
+    drain) scenario_drain || true ;;
     esac
   done
 
@@ -428,44 +428,44 @@ main() {
   load_seconds="$(compute_load_seconds)"
 
   case "${command}" in
-    up)
-      create_cluster
-      load_images
-      install_cnpg
-      install_chaos_mesh
-      install_vfps
-      wait_steady_state
-      ;;
-    scenarios)
-      LOAD_SECONDS="${load_seconds}"
-      start_loadgen "${load_seconds}"
-      run_scenarios
-      ;;
-    collect)
-      collect
-      summary
-      ;;
-    down)
-      kind delete cluster --name "${CLUSTER_NAME}"
-      ;;
-    all)
-      log "load window: ${load_seconds}s across scenarios [${SCENARIOS}]"
-      create_cluster
-      load_images
-      install_cnpg
-      install_chaos_mesh
-      install_vfps
-      wait_steady_state
-      LOAD_SECONDS="${load_seconds}"
-      start_loadgen "${load_seconds}"
-      run_scenarios
-      collect
-      summary
-      ;;
-    *)
-      echo "usage: $0 [all|up|scenarios|collect|down]" >&2
-      exit 2
-      ;;
+  up)
+    create_cluster
+    load_images
+    install_cnpg
+    install_chaos_mesh
+    install_vfps
+    wait_steady_state
+    ;;
+  scenarios)
+    LOAD_SECONDS="${load_seconds}"
+    start_loadgen "${load_seconds}"
+    run_scenarios
+    ;;
+  collect)
+    collect
+    summary
+    ;;
+  down)
+    kind delete cluster --name "${CLUSTER_NAME}"
+    ;;
+  all)
+    log "load window: ${load_seconds}s across scenarios [${SCENARIOS}]"
+    create_cluster
+    load_images
+    install_cnpg
+    install_chaos_mesh
+    install_vfps
+    wait_steady_state
+    LOAD_SECONDS="${load_seconds}"
+    start_loadgen "${load_seconds}"
+    run_scenarios
+    collect
+    summary
+    ;;
+  *)
+    echo "usage: $0 [all|up|scenarios|collect|down]" >&2
+    exit 2
+    ;;
   esac
 }
 

@@ -109,6 +109,19 @@ enum PseudonymGenerationMethod {
   // A fully cryptographically-safe randomly generated string encoded as Base32, using the
   // alphabet defined in RFC 4648, section 6 (https://datatracker.ietf.org/doc/html/rfc4648#section-6).
   PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_BASE32_ENCODED = 7;
+  // Derived from the original value by a verifiable oblivious pseudorandom function
+  // (RFC 9497), evaluated by a separate key-holding service that never sees the value.
+  //
+  // Unlike every other method here this one is deterministic: the same original value always
+  // yields the same pseudonym, which is what lets two deployments holding the same key agree on
+  // pseudonyms without ever exchanging the values behind them. The consequences are that a
+  // namespace using it cannot allow multiple pseudonyms per original value (there is only one
+  // pseudonym to be had), and that its pseudonym length is fixed by the VOPRF client's
+  // configuration rather than chosen per namespace.
+  //
+  // Requires a configured VOPRF server; namespace creation fails with FAILED_PRECONDITION
+  // otherwise.
+  PSEUDONYM_GENERATION_METHOD_VOPRF = 8;
 }
 
 // request to create a new namespace

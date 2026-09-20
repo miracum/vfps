@@ -166,20 +166,134 @@ public class PseudonymAppService(
             StringComparer.Ordinal
         );
         var newSequenceCandidates = new List<Data.Models.Pseudonym>((int)(count - existing.Count));
-        for (var sequenceNumber = existing.Count; sequenceNumber < count; sequenceNumber++)
+
+        if (PseudonymizationMethodsLookup.IsValueDependent(@namespace.PseudonymGenerationMethod))
         {
+            // Exactly one pseudonym exists for a given value under a value-dependent method, so
+            // there is no growing to do and nothing to retry against a collision. Namespace
+            // creation refuses to pair such a method with AllowsMultiplePseudonyms, which is what
+            // keeps count above 1 from reaching here; the guard stays because an existing
+            // namespace's method could change meaning under a future migration, and silently
+            // storing the same value twice under different sequence numbers would be worse than
+            // failing.
+            if (count > 1)
+            {
+                throw new MultiplePseudonymsNotAllowedException(@namespace.Name);
+            }
+
             newSequenceCandidates.Add(
                 new Data.Models.Pseudonym
                 {
                     NamespaceName = @namespace.Name,
                     OriginalValue = originalValue,
-                    PseudonymValue = GenerateUniquePseudonymValue(@namespace, knownPseudonymValues),
-                    SequenceNumber = sequenceNumber,
+                    PseudonymValue = await GenerateFromValueAsync(
+                        @namespace,
+                        originalValue,
+                        cancellationToken
+                    ),
+                    SequenceNumber = existing.Count,
                 }
             );
         }
+        else
+        {
+            for (var sequenceNumber = existing.Count; sequenceNumber < count; sequenceNumber++)
+            {
+                newSequenceCandidates.Add(
+                    new Data.Models.Pseudonym
+                    {
+                        NamespaceName = @namespace.Name,
+                        OriginalValue = originalValue,
+                        PseudonymValue = GenerateUniquePseudonymValue(
+                            @namespace,
+                            knownPseudonymValues
+                        ),
+                        SequenceNumber = sequenceNumber,
+                    }
+                );
+            }
+        }
 
         return await repository.CreateSetIfNotExistAsync(newSequenceCandidates, cancellationToken);
+    }
+
+    /// <summary>
+    /// Resolves every held-back value-dependent entry in as few round trips as possible.
+    /// </summary>
+    /// <remarks>
+    /// Deduplicated by original value rather than by (namespace, value): the generator's output
+    /// depends only on the value, so the same value needed by two namespaces costs one evaluation
+    /// and differs only in the prefix and suffix each namespace adds afterwards.
+    /// </remarks>
+    private async Task GenerateDeferredAsync(
+        List<(
+            (string Namespace, string OriginalValue) Key,
+            Data.Models.Namespace Namespace
+        )> deferred,
+        Dictionary<(string Namespace, string OriginalValue), Data.Models.Pseudonym> distinctByKey,
+        CancellationToken cancellationToken
+    )
+    {
+        using var activity = Program.ActivitySource.StartActivity("GeneratePseudonymBatchDerived");
+
+        var distinctValues = new List<string>();
+        var indexByValue = new Dictionary<string, int>(StringComparer.Ordinal);
+        foreach (var (key, _) in deferred)
+        {
+            if (indexByValue.TryAdd(key.OriginalValue, distinctValues.Count))
+            {
+                distinctValues.Add(key.OriginalValue);
+            }
+        }
+
+        activity?.SetTag("DistinctValueCount", distinctValues.Count);
+
+        // Every value-dependent method shares the one generator, so this is a single call
+        // regardless of how many namespaces the chunk spans.
+        var generator = methodsLookup.GetValueDependentGenerator(
+            deferred[0].Namespace.PseudonymGenerationMethod
+        );
+        var generated = await generator.GeneratePseudonymsAsync(distinctValues, cancellationToken);
+
+        if (generated.Count != distinctValues.Count)
+        {
+            throw new PseudonymUpsertFailedException(deferred[0].Namespace.Name);
+        }
+
+        foreach (var (key, @namespace) in deferred)
+        {
+            var value = generated[indexByValue[key.OriginalValue]];
+
+            distinctByKey[key] = new Data.Models.Pseudonym
+            {
+                NamespaceName = @namespace.Name,
+                OriginalValue = key.OriginalValue,
+                PseudonymValue = @namespace.PseudonymPrefix + value + @namespace.PseudonymSuffix,
+            };
+        }
+    }
+
+    /// <summary>
+    /// One pseudonym derived from the original value itself, by whatever service backs the
+    /// namespace's method. Unlike the random generators this can fail for reasons unrelated to
+    /// the value - the VOPRF server being unreachable, or answering under a key the configured
+    /// public key does not verify - and those failures propagate rather than being retried here.
+    /// </summary>
+    private async Task<string> GenerateFromValueAsync(
+        Data.Models.Namespace @namespace,
+        string originalValue,
+        CancellationToken cancellationToken
+    )
+    {
+        using var activity = Program.ActivitySource.StartActivity("GeneratePseudonym");
+        activity?.SetTag("Method", @namespace.PseudonymGenerationMethod.ToString());
+
+        var generator = methodsLookup.GetValueDependentGenerator(
+            @namespace.PseudonymGenerationMethod
+        );
+        var generated = await generator.GeneratePseudonymsAsync([originalValue], cancellationToken);
+
+        return @namespace.PseudonymPrefix + generated[0] + @namespace.PseudonymSuffix;
     }
 
     // Bounded retries against an in-batch collision - astronomically unlikely for any registered
@@ -261,6 +375,10 @@ public class PseudonymAppService(
         var distinctByKey =
             new Dictionary<(string Namespace, string OriginalValue), Data.Models.Pseudonym>();
 
+        // Deferred entries are not in distinctByKey yet, so they need their own set to dedupe
+        // against - a CSV chunk repeats the same value constantly.
+        var deferredKeys = new HashSet<(string Namespace, string OriginalValue)>();
+
         // One span for the whole batch's generation, tagged with how many values it covered -
         // deliberately not one per value as the single-value path does (see
         // GenerateUniquePseudonymValue). This loop runs once per CSV chunk, so at the default
@@ -269,6 +387,15 @@ public class PseudonymAppService(
         // unreadable, all to time an in-memory call that has never been the thing worth looking
         // at here. The aggregate is what that question actually needs, and the per-method
         // breakdown already exists as a continuously-run microbenchmark (Vfps.Benchmarks).
+        // Value-dependent methods are held back from the loop below and resolved together
+        // afterwards: their generator talks to another service, and a call per value would turn
+        // one chunk into a thousand round trips.
+        var deferred =
+            new List<(
+                (string Namespace, string OriginalValue) Key,
+                Data.Models.Namespace Namespace
+            )>();
+
         using (var activity = Program.ActivitySource.StartActivity("GeneratePseudonymBatch"))
         {
             foreach (var (@namespace, originalValue) in requests)
@@ -282,12 +409,23 @@ public class PseudonymAppService(
                 }
 
                 var key = (@namespace.Name, originalValue);
-                if (distinctByKey.ContainsKey(key))
+                if (distinctByKey.ContainsKey(key) || deferredKeys.Contains(key))
                 {
                     continue;
                 }
 
                 ValidateOriginalValue(@namespace, originalValue);
+
+                if (
+                    PseudonymizationMethodsLookup.IsValueDependent(
+                        @namespace.PseudonymGenerationMethod
+                    )
+                )
+                {
+                    deferredKeys.Add(key);
+                    deferred.Add((key, @namespace));
+                    continue;
+                }
 
                 var pseudonymValue = methodsLookup.Generate(
                     @namespace.PseudonymGenerationMethod,
@@ -310,6 +448,11 @@ public class PseudonymAppService(
             }
 
             activity?.SetTag("GeneratedCount", distinctByKey.Count);
+        }
+
+        if (deferred.Count > 0)
+        {
+            await GenerateDeferredAsync(deferred, distinctByKey, cancellationToken);
         }
 
         var upserted = await repository.CreateIfNotExistBatchAsync(

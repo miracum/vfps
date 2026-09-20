@@ -21,6 +21,7 @@ DISABLE_LINTERS:
   - REPOSITORY_GRYPE
   - CSHARP_ROSLYNATOR
   - MARKDOWN_MARKDOWNLINT
+  - MARKDOWN_MARKDOWN_TABLE_FORMATTER
 
 SHOW_ELAPSED_TIME: true
 FILEIO_REPORTER: false
@@ -48,7 +49,7 @@ REPOSITORY_TRIVY_CONFIG_FILE: .trivy.yaml
 # yamllint's parser with real syntax errors - not just style complaints. `ct lint` (see the
 # chart job in ci.yaml) is the actual YAML/schema linter for the chart; this just keeps
 # MegaLinter's generic yamllint off files it can't parse.
-YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: (charts/vfps/templates/)
+YAML_YAMLLINT_FILTER_REGEX_EXCLUDE: (charts/[^/]+/templates/)
 
 ACTION_ZIZMOR_UNSECURED_ENV_VARIABLES:
   - GITHUB_TOKEN

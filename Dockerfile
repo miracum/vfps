@@ -6,6 +6,12 @@ ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     DOTNET_ENVIRONMENT="Production"
 
 COPY src/Directory.Build.props src/
+COPY src/Vfps.Voprf/Vfps.Voprf.csproj src/Vfps.Voprf/
+COPY src/Vfps.Voprf/packages.lock.json src/Vfps.Voprf/
+COPY src/Vfps.Voprf.Contracts/Vfps.Voprf.Contracts.csproj src/Vfps.Voprf.Contracts/
+COPY src/Vfps.Voprf.Contracts/packages.lock.json src/Vfps.Voprf.Contracts/
+COPY src/Vfps.Voprf.Client/Vfps.Voprf.Client.csproj src/Vfps.Voprf.Client/
+COPY src/Vfps.Voprf.Client/packages.lock.json src/Vfps.Voprf.Client/
 COPY src/Vfps/Vfps.csproj src/Vfps/
 COPY src/Vfps/packages.lock.json src/Vfps/
 

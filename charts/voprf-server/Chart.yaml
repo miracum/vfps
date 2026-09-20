@@ -1,0 +1,32 @@
+apiVersion: v2
+name: voprf-server
+description: The key-holding half of vfps's verifiable oblivious pseudonymization (RFC 9497).
+type: application
+home: https://github.com/miracum/vfps
+keywords:
+  - grpc
+  - pseudonymization
+  - oprf
+  - voprf
+  - research
+  - data protection
+sources:
+  - https://github.com/miracum/vfps/tree/master/charts/voprf-server
+maintainers:
+  - name: miracum
+dependencies:
+  - name: common
+    repository: oci://ghcr.io/miracum/charts
+    version: 0.1.1
+deprecated: false
+kubeVersion: ">= 1.21.0"
+version: 0.1.0 # x-release-please-version
+appVersion: 1.18.1 # x-release-please-version
+annotations:
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/containsSecurityUpdates: "false"
+  artifacthub.io/operator: "false"
+  artifacthub.io/prerelease: "true"
+  artifacthub.io/changes: |-
+    - kind: added
+      description: initial release of the VOPRF evaluation server chart

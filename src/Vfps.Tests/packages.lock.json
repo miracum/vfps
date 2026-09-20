@@ -245,8 +245,8 @@
       },
       "Google.Protobuf": {
         "type": "Transitive",
-        "resolved": "3.31.1",
-        "contentHash": "gSnJbUmGiOTdWddPhqzrEscHq9Ls6sqRDPB9WptckyjTUyx70JOOAaDLkFff8gManZNN3hllQ4aQInnQyq/Z/A=="
+        "resolved": "3.36.2",
+        "contentHash": "Ci1q1iJg74qAE5riTA2FbMS0wPbpruPQI/JQ9DrAsRo2VsSxgt1e/pmxGxgrci+pXJEgrSYg2vPl8rrStZkclQ=="
       },
       "Grpc.AspNetCore": {
         "type": "Transitive",
@@ -429,6 +429,11 @@
         "dependencies": {
           "NodaTime": "3.2.2"
         }
+      },
+      "libsodium": {
+        "type": "Transitive",
+        "resolved": "1.0.22",
+        "contentHash": "KPD9SloJFclrsjnhABu7dzWrcyYkwPbvx5l1gRSPAX/0n+OBtSiVCKtGFv4n+ecWUHU0tCG9LSSwoZZx673zBQ=="
       },
       "Markdig": {
         "type": "Transitive",
@@ -1415,7 +1420,29 @@
           "OpenTelemetry.Extensions.Hosting": "[1.19.0, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.19.0, )",
           "OpenTelemetry.Instrumentation.Http": "[1.19.0, )",
-          "OpenTelemetry.Instrumentation.Runtime": "[1.19.0, )"
+          "OpenTelemetry.Instrumentation.Runtime": "[1.19.0, )",
+          "Vfps.Voprf.Client": "[1.18.1, )"
+        }
+      },
+      "vfps.voprf": {
+        "type": "Project",
+        "dependencies": {
+          "libsodium": "[1.0.22, )"
+        }
+      },
+      "vfps.voprf.client": {
+        "type": "Project",
+        "dependencies": {
+          "Grpc.Net.ClientFactory": "[2.83.0, )",
+          "Vfps.Voprf": "[1.18.1, )",
+          "Vfps.Voprf.Contracts": "[1.18.1, )"
+        }
+      },
+      "vfps.voprf.contracts": {
+        "type": "Project",
+        "dependencies": {
+          "Google.Protobuf": "[3.36.2, )",
+          "Grpc.Core.Api": "[2.83.0, )"
         }
       }
     }

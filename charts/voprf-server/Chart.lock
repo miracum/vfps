@@ -1,0 +1,6 @@
+dependencies:
+- name: common
+  repository: oci://ghcr.io/miracum/charts
+  version: 0.1.1
+digest: sha256:3b4197f05f9252040b18a477157b9302cbff559d05bff23dff11858d2a08f24a
+generated: "2026-09-20T01:43:59.058317529+02:00"

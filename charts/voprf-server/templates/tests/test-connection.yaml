@@ -1,0 +1,64 @@
+{{- if not (and .Values.hardening.enabled .Values.hardening.requireTls) }}
+{{/*
+Only runs against a plaintext deployment: the probe port is HTTP/1.1 and unauthenticated by
+design, which is what makes it testable without minting a client certificate. A hardened
+deployment's real port cannot be exercised here without one.
+*/}}
+apiVersion: v1
+kind: Pod
+metadata:
+  name: "{{ include "voprf-server.fullname" . }}-test-connection"
+  labels:
+    # Deliberately NOT voprf-server.labels: that helper carries the selector labels, which would
+    # make this pod an endpoint of both Services - so half the connections to the health Service
+    # would be routed to this curl container, which listens on nothing - and would put it inside
+    # the NetworkPolicy's podSelector, whose egress rule allows only DNS. Either one alone hangs
+    # the test until it times out.
+    helm.sh/chart: {{ include "voprf-server.chart" . }}
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+    app.kubernetes.io/part-of: vfps
+    app.kubernetes.io/component: test
+    # What the NetworkPolicy's ingress rule admits.
+    {{ include "voprf-server.fullname" . }}-client: "true"
+  annotations:
+    helm.sh/hook: test
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  automountServiceAccountToken: {{ .Values.tests.automountServiceAccountToken }}
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: health
+      image: curlimages/curl:8.11.1
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+      args:
+        - --fail
+        - --silent
+        - --show-error
+        # The Deployment is ready before this runs, but DNS and endpoint propagation are not
+        # instant - retry rather than turn a few seconds of lag into a failed install.
+        - --retry
+        - "10"
+        - --retry-all-errors
+        - --retry-delay
+        - "2"
+        - --connect-timeout
+        - "5"
+        - --max-time
+        - "10"
+        - "http://{{ include "voprf-server.fullname" . }}-health:{{ .Values.service.healthPort }}/healthz"
+      {{- if .Values.tests.resources }}
+      resources: {{- toYaml .Values.tests.resources | nindent 10 }}
+      {{- else if ne .Values.tests.resourcesPreset "none" }}
+      resources: {{- include "common.resources.preset" (dict "type" .Values.tests.resourcesPreset) | nindent 10 }}
+      {{- end }}
+{{- end }}

@@ -7,7 +7,6 @@
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/miracum/vfps/badge)](https://api.securityscorecards.dev/projects/github.com/miracum/vfps)
 [![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
 
-
 A [very fast](#e2e-load-testing) and [resource-efficient](#resource-efficiency) pseudonym service.
 
 Supports horizontal service replication for highly-available deployments.

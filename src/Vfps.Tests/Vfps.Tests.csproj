@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Vfps.Voprf\Vfps.Voprf.csproj" />
     <ProjectReference Include="..\Vfps\Vfps.csproj" />
   </ItemGroup>
 </Project>
