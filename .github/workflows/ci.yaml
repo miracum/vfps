@@ -47,7 +47,7 @@ jobs:
   # the other.
   detect-app-changes:
     name: detect changes affecting chart deployability
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     outputs:
@@ -132,7 +132,7 @@ jobs:
   # ships no chart to test against.
   build-voprf-server-image:
     name: build voprf-server image
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       packages: write
       contents: read
@@ -226,7 +226,7 @@ jobs:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
   add-code-coverage:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     name: add code coverage
     needs:
       - build
@@ -288,7 +288,7 @@ jobs:
 
   test-api:
     name: test api
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs:
       - build
     permissions:
@@ -405,7 +405,7 @@ jobs:
 
   test-e2e:
     name: test e2e (playwright)
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     needs:
       - build
     permissions:
@@ -488,7 +488,7 @@ jobs:
 
   test-migrations:
     name: test migrations
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     permissions:
       contents: read
     needs:
