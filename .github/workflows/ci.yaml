@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   build:
-    uses: miracum/.github/.github/workflows/standard-build.yaml@56f97afca6189a2fafd4e5d7cbabc6c9b83c8a85 # v1.22.4
+    uses: miracum/.github/.github/workflows/standard-build.yaml@869881c224354c744e09f1d9bba9d47b5c698b44 # v1.26.0
     permissions:
       contents: write
       id-token: write
@@ -152,7 +152,7 @@ jobs:
             ghcr.io/${{ github.repository }}/voprf-server
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
       # Vfps.Voprf.Server.Tests covers the server and Vfps.Voprf.Client, and runs nowhere
       # else: the build-test layer above is scoped to src/Vfps.Tests. The test stage runs
@@ -169,7 +169,7 @@ jobs:
           file: voprf-server.Dockerfile
 
       - name: Login to GitHub Container Registry
-        uses: docker/login-action@af1e73f918a031802d376d3c8bbc3fe56130a9b0 # v4.4.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         # Pushed on pull_request too, unlike the other images here: ct install runs in a kind
         # cluster that pulls this tag from ghcr.io, so an unpublished image would make the chart
         # untestable. Forked PRs have no package write access and fall back to the chart's own
@@ -537,7 +537,7 @@ jobs:
         run: dotnet test src/Vfps.IntegrationTests --configuration=Release
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@56f97afca6189a2fafd4e5d7cbabc6c9b83c8a85 # v1.22.4
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@869881c224354c744e09f1d9bba9d47b5c698b44 # v1.26.0
     permissions:
       contents: read
       pull-requests: write
