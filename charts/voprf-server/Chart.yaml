@@ -27,6 +27,10 @@ annotations:
   artifacthub.io/containsSecurityUpdates: "false"
   artifacthub.io/operator: "false"
   artifacthub.io/prerelease: "true"
+  # When using the list of objects option the valid supported kinds are
+  # added, changed, deprecated, removed, fixed and security.
   artifacthub.io/changes: |-
-    - kind: added
-      description: initial release of the VOPRF evaluation server chart
+    # When using the list of objects option the valid supported kinds are
+    # added, changed, deprecated, removed, fixed and security.
+    - kind: changed
+      description: updated ghcr.io/miracum/vfps/voprf-server to v1.18.1 # x-release-please-version
