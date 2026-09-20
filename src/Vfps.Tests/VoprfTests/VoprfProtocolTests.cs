@@ -122,6 +122,34 @@ public class VoprfProtocolTests
     }
 
     [Fact]
+    public void A_proof_whose_response_is_not_a_canonical_scalar_is_refused()
+    {
+        // Found by VoprfProtocolPropertyTests sweeping every bit of a proof: this one bit, and
+        // only this one, used to survive. libsodium's scalar multiplication reads 255 bits and
+        // ignores the top one, so s and s + 2^255 take every element to the same place and the
+        // recomputed challenge came out identical - the proof verified in a form the server had
+        // not sent. RFC 9497's DeserializeScalar rules out the non-canonical encoding, and
+        // VerifyProof now enforces that.
+        using var keyPair = VoprfKeyPair.Generate();
+        using var request = VoprfClient.Blind(Identifier);
+
+        var (evaluated, proof) = VoprfServer.BlindEvaluate(keyPair, request.BlindedElement);
+
+        var malleated = proof.ToBytes();
+        malleated[^1] |= 0x80;
+
+        var finalize = () =>
+            VoprfClient.Finalize(
+                request,
+                evaluated,
+                VoprfProof.Parse(malleated),
+                keyPair.PublicKey
+            );
+
+        finalize.Should().Throw<VoprfVerificationException>();
+    }
+
+    [Fact]
     public void A_proof_from_one_batch_does_not_verify_against_another()
     {
         using var keyPair = VoprfKeyPair.Generate();

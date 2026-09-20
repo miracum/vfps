@@ -45,11 +45,14 @@ public sealed class VoprfProof
     /// <param name="proof">Exactly <see cref="Length"/> bytes.</param>
     /// <exception cref="VoprfException">The length is wrong.</exception>
     /// <remarks>
-    /// The two scalars are not range-checked here. A value at or above the group order, or
-    /// zero, cannot make a proof verify - it only makes it fail - so there is nothing to
-    /// gain by rejecting it earlier, and
-    /// <see cref="VoprfClient.Finalize(VoprfRequest, ReadOnlySpan{byte}, VoprfProof, ReadOnlySpan{byte})"/>
-    /// is where the decision belongs.
+    /// The two scalars are not range-checked here, but they are checked before they are used:
+    /// <c>VerifyProof</c> refuses a non-canonical one, as RFC 9497's <c>DeserializeScalar</c>
+    /// requires. That check is not optional. libsodium's scalar multiplication ignores a
+    /// scalar's top bit, so a proof whose response has that bit set verifies exactly when the
+    /// original does - the two are different encodings that take the same value. Rejecting
+    /// them in <c>VerifyProof</c> rather than here keeps every refusal indistinguishable to a
+    /// hostile server, which is the reason that method returns false rather than explaining
+    /// itself.
     /// </remarks>
     public static VoprfProof Parse(ReadOnlySpan<byte> proof)
     {

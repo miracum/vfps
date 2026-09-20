@@ -106,6 +106,22 @@ Alongside them are the attacks the mode exists to catch: a server answering unde
 substituted key, a tampered evaluated element, a tampered proof, a proof that covers a
 different batch, and a reordered batch.
 
+### Property tests
+
+Those state each guarantee once, for one identifier and one batch size. `VoprfProtocolPropertyTests`
+and `VoprfInternalsPropertyTests` state them for generated inputs instead, using
+[FsCheck](https://fscheck.github.io/FsCheck/): the exchange round-trips for any input including
+the empty one, a batch of any size agrees with the same inputs one at a time, **every** bit of a
+proof, an evaluated element and a pinned public key is caught when flipped, and substituting the
+key for any single element of a batch is caught.
+
+That last pair earns its place. The bit sweep found that flipping the top bit of a proof's
+response scalar produced a proof that still verified — libsodium's scalar multiplication reads
+255 bits and ignores the top one, so `s` and `s + 2^255` take every element to the same place.
+RFC 9497's `DeserializeScalar` rules out the non-canonical encoding and `VerifyProof` now
+enforces it. The example-based tests could not have found it: they flip the first bit, and the
+first bit was never the problem.
+
 ## Limitations
 
 - **A pseudonym is not anonymity.** Where the input space is enumerable — email addresses,

@@ -6,7 +6,7 @@ namespace Vfps.PseudonymGenerators;
 /// this; there is deliberately no deterministic alternative (a former SHA-256-based one was
 /// removed, since determinism is incompatible with a multi-psn namespace generating several
 /// distinct pseudonyms for the same original value in one call - see
-/// <see cref="Vfps.Data.Models.Namespace.AllowsMultiplePseudonyms"/>).
+/// <see cref="Data.Models.Namespace.AllowsMultiplePseudonyms"/>).
 /// </summary>
 public interface IPseudonymGenerator
 {

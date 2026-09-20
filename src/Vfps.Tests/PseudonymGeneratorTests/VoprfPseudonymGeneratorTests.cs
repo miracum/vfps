@@ -1,7 +1,11 @@
 using System.Buffers.Text;
 using FakeItEasy;
+using FsCheck;
+using FsCheck.Fluent;
+using FsCheck.Xunit;
 using Microsoft.Extensions.Options;
 using Vfps.PseudonymGenerators;
+using Vfps.Voprf;
 using Vfps.Voprf.Client;
 
 namespace Vfps.Tests.PseudonymGeneratorTests;
@@ -60,6 +64,28 @@ public class VoprfPseudonymGeneratorTests
         encoded.Length.Should().Be((int)expected);
     }
 
+    // The five cases above name the numbers so a reader can see them; this says the same thing
+    // for every length and format a namespace could actually be configured with. The formula and
+    // the encoder are separate pieces of code that have to agree, and the one place they would
+    // not is base64url's ceil(4n/3): it is exact only because the output is never padded.
+    [Property]
+    public Property FixedPseudonymLength_matches_the_encoder_at_every_supported_length() =>
+        Prop.ForAll(
+            Arb.From(Gen.Choose(VoprfClientOptions.MinimumLength, VoprfSuite.OutputLength)),
+            Arb.From(Gen.Elements([PseudonymFormat.Base64Url, PseudonymFormat.Hex])),
+            (length, format) =>
+            {
+                var sut = Create(A.Fake<IVoprfPseudonymizer>(), format, length);
+
+                var encoded =
+                    format == PseudonymFormat.Base64Url
+                        ? Base64Url.EncodeToString(new byte[length])
+                        : Convert.ToHexStringLower(new byte[length]);
+
+                return sut.FixedPseudonymLength == (uint)encoded.Length;
+            }
+        );
+
     [Fact]
     public async Task GeneratePseudonymsAsync_ReturnsTheClientsValuesInOrder()
     {
@@ -67,10 +93,7 @@ public class VoprfPseudonymGeneratorTests
         A.CallTo(() =>
                 pseudonymizer.PseudonymizeAsync(A<IReadOnlyList<string>>._, A<CancellationToken>._)
             )
-            .Returns<IReadOnlyList<VoprfPseudonym>>([
-                new VoprfPseudonym("psn-alice", "v1"),
-                new VoprfPseudonym("psn-bob", "v1"),
-            ]);
+            .Returns([new VoprfPseudonym("psn-alice", "v1"), new VoprfPseudonym("psn-bob", "v1")]);
 
         var sut = Create(pseudonymizer);
 
@@ -91,9 +114,7 @@ public class VoprfPseudonymGeneratorTests
         A.CallTo(() =>
                 pseudonymizer.PseudonymizeAsync(A<IReadOnlyList<string>>._, A<CancellationToken>._)
             )
-            .Returns<IReadOnlyList<VoprfPseudonym>>([
-                .. Enumerable.Range(0, 3).Select(i => new VoprfPseudonym($"p{i}", "v1")),
-            ]);
+            .Returns([.. Enumerable.Range(0, 3).Select(i => new VoprfPseudonym($"p{i}", "v1"))]);
 
         var sut = Create(pseudonymizer);
 

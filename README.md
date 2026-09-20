@@ -2,9 +2,7 @@
 
 <p align="center"><img width="279" src="docs/img/text-logo.svg" alt="Vfps Logo"></p>
 
-![Latest Version](https://img.shields.io/github/v/release/miracum/vfps)
-![License](https://img.shields.io/github/license/miracum/vfps)
-[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/miracum/vfps/badge)](https://api.securityscorecards.dev/projects/github.com/miracum/vfps)
+[![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/miracum/vfps?label=openssf%20scorecard&style=flat)](https://scorecard.dev/viewer/?uri=github.com/miracum/vfps)
 [![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
 
 A [very fast](#e2e-load-testing) and [resource-efficient](#resource-efficiency) pseudonym service.
@@ -49,76 +47,6 @@ grpcurl \
   127.0.0.1:8081 \
   vfps.api.v1.PseudonymService/Create
 ```
-
-### Multiple pseudonyms per original value
-
-A namespace created with `"allowsMultiplePseudonyms": true` lets a single `Create` call store more
-than one distinct pseudonym for the same original value, via the request's optional `count` field
-(omitted or `1` preserves the default single-pseudonym behavior for every other namespace):
-
-```sh
-grpcurl \
-  -plaintext \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
-  -d '{"name": "multi-psn-example", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED", "pseudonymLength": 32, "allowsMultiplePseudonyms": true}' \
-  127.0.0.1:8081 \
-  vfps.api.v1.NamespaceService/Create
-
-grpcurl \
-  -plaintext \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/pseudonyms.proto \
-  -d '{"namespace": "multi-psn-example", "originalValue": "to be pseudonymized", "count": 3}' \
-  127.0.0.1:8081 \
-  vfps.api.v1.PseudonymService/Create
-```
-
-The response's `pseudonyms` array holds the full set (`pseudonym` is kept, populated with the
-first one, for callers that only read a single value). The stored set for a given original value
-only ever grows: calling `Create` again with a `count` at or below what's already stored returns
-the existing set unchanged, while a larger `count` adds exactly the missing pseudonyms. CSV
-pseudonymization jobs and the FHIR `$create-pseudonym` operation don't support requesting more
-than one pseudonym - both always operate on the first (`sequenceNumber: 0`) pseudonym for a
-multi-psn namespace.
-
-> **Note**
-> The `PSEUDONYM_GENERATION_METHOD_SHA256_HEX_ENCODED` generation method has been removed -
-> it was the only deterministic method, and determinism is incompatible with generating multiple
-> distinct pseudonyms for the same original value. Namespaces can no longer be created with it;
-> this is a breaking change for anything scripting namespace creation against that enum value.
-
-### Multi-level namespaces
-
-Namespaces can form a hierarchy: a namespace created with a `parentName` is a _child_ namespace,
-whose original values are pseudonym values produced by its parent. This is how multiple levels of
-pseudonymization are built - e.g. an MPI is pseudonymized in a root namespace, and that pseudonym
-is then re-pseudonymized in a per-study child namespace, so a study never sees a value that
-resolves directly to the MPI.
-
-Each namespace keeps its own generation configuration; nothing is inherited from the parent.
-Setting `parentValidationMode` to `PARENT_VALIDATION_MODE_ENSURE_EXISTS` additionally requires
-every original value to already exist as a pseudonym in the parent namespace, rejecting anything
-else with a `FAILED_PRECONDITION` error:
-
-```sh
-grpcurl \
-  -plaintext \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
-  -d '{"name": "study-a", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED", "pseudonymLength": 32, "parentName": "test", "parentValidationMode": "PARENT_VALIDATION_MODE_ENSURE_EXISTS"}' \
-  127.0.0.1:8081 \
-  vfps.api.v1.NamespaceService/Create
-```
-
-Chaining a pseudonym into the child namespace is an ordinary `Create` call whose `originalValue`
-is the parent's pseudonym value. A namespace's direct children can be listed with `ListChildren`
-(`GET /v1/namespaces/{name}/children`), which is deliberately non-recursive - call it once per
-level to walk a whole tree.
-
-The parent link is set at creation and can't be changed afterwards, like every other namespace
-field, which also makes hierarchy cycles impossible. A namespace that still has children can't be
-deleted; delete the children first. Deleting a pseudonym level doesn't cascade to any other level.
 
 ## Admin UI
 
@@ -782,6 +710,70 @@ using _Try it out_.
 CSV job input/output bytes never pass through the vfps process itself: the admin UI uploads directly to a presigned S3 PUT URL and downloads directly from a presigned S3 GET URL, and the Hangfire background job (running in-process, no separate worker deployment) streams the file S3-to-S3. See `compose.yaml`'s `s3` profile for a local SeaweedFS setup usable for manual testing.
 
 Each job runs in one of two directions: **Pseudonymize** (replace original values with their pseudonym - requires write access to every namespace used) or **De-pseudonymize** (replace pseudonym values with their original value - requires reverse-lookup access, since this reveals data). A pseudonym with no match in its namespace during de-pseudonymization is left unchanged in the output rather than failing the job.
+
+### Multiple pseudonyms per original value
+
+A namespace created with `"allowsMultiplePseudonyms": true` lets a single `Create` call store more
+than one distinct pseudonym for the same original value, via the request's optional `count` field
+(omitted or `1` preserves the default single-pseudonym behavior for every other namespace):
+
+```sh
+grpcurl \
+  -plaintext \
+  -import-path src/Vfps/ \
+  -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
+  -d '{"name": "multi-psn-example", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED", "pseudonymLength": 32, "allowsMultiplePseudonyms": true}' \
+  127.0.0.1:8081 \
+  vfps.api.v1.NamespaceService/Create
+
+grpcurl \
+  -plaintext \
+  -import-path src/Vfps/ \
+  -proto src/Vfps/Protos/vfps/api/v1/pseudonyms.proto \
+  -d '{"namespace": "multi-psn-example", "originalValue": "to be pseudonymized", "count": 3}' \
+  127.0.0.1:8081 \
+  vfps.api.v1.PseudonymService/Create
+```
+
+The response's `pseudonyms` array holds the full set (`pseudonym` is kept, populated with the
+first one, for callers that only read a single value). The stored set for a given original value
+only ever grows: calling `Create` again with a `count` at or below what's already stored returns
+the existing set unchanged, while a larger `count` adds exactly the missing pseudonyms. CSV
+pseudonymization jobs and the FHIR `$create-pseudonym` operation don't support requesting more
+than one pseudonym - both always operate on the first (`sequenceNumber: 0`) pseudonym for a
+multi-psn namespace.
+
+### Multi-level namespaces
+
+Namespaces can form a hierarchy: a namespace created with a `parentName` is a _child_ namespace,
+whose original values are pseudonym values produced by its parent. This is how multiple levels of
+pseudonymization are built - e.g. an MPI is pseudonymized in a root namespace, and that pseudonym
+is then re-pseudonymized in a per-study child namespace, so a study never sees a value that
+resolves directly to the MPI.
+
+Each namespace keeps its own generation configuration; nothing is inherited from the parent.
+Setting `parentValidationMode` to `PARENT_VALIDATION_MODE_ENSURE_EXISTS` additionally requires
+every original value to already exist as a pseudonym in the parent namespace, rejecting anything
+else with a `FAILED_PRECONDITION` error:
+
+```sh
+grpcurl \
+  -plaintext \
+  -import-path src/Vfps/ \
+  -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
+  -d '{"name": "study-a", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED", "pseudonymLength": 32, "parentName": "test", "parentValidationMode": "PARENT_VALIDATION_MODE_ENSURE_EXISTS"}' \
+  127.0.0.1:8081 \
+  vfps.api.v1.NamespaceService/Create
+```
+
+Chaining a pseudonym into the child namespace is an ordinary `Create` call whose `originalValue`
+is the parent's pseudonym value. A namespace's direct children can be listed with `ListChildren`
+(`GET /v1/namespaces/{name}/children`), which is deliberately non-recursive - call it once per
+level to walk a whole tree.
+
+The parent link is set at creation and can't be changed afterwards, like every other namespace
+field, which also makes hierarchy cycles impossible. A namespace that still has children can't be
+deleted; delete the children first. Deleting a pseudonym level doesn't cascade to any other level.
 
 ## Observability
 

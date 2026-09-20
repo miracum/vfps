@@ -1,12 +1,4 @@
-using System.Diagnostics.CodeAnalysis;
-using Grpc.Net.Client;
-using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
-using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Vfps.Voprf.Client;
-using Vfps.Voprf.Protos;
 
 namespace Vfps.Voprf.Server.Tests;
 
@@ -22,84 +14,11 @@ namespace Vfps.Voprf.Server.Tests;
 /// </remarks>
 public class VoprfPseudonymizerTests
 {
-    /// <summary>RFC 9497's skSm, so expected outputs can be computed locally.</summary>
-    private const string PrivateKeyBase64 = "5vc/NEt5s3nxoN034H/2LjjZ9xNFzmKuOpvGCwTM2Qk="; // gitleaks:allow - RFC 9497 test vector
-    private const string PublicKeyHex =
-        "c803e2cc6b05fc15064549b5920659ca4a77b2cca6f04f6b357009335476ad4e";
-
-    [ExcludeFromCodeCoverage]
-    private sealed class Factory : WebApplicationFactory<Program>
-    {
-        private readonly List<string> variables = [];
-
-        public Factory()
-        {
-            var settings = new Dictionary<string, string?>
-            {
-                ["VoprfServer:Key:Source"] = "Base64",
-                ["VoprfServer:Key:Base64"] = PrivateKeyBase64,
-                ["VoprfServer:Key:KeyId"] = "test-key",
-                ["VoprfServer:Hardening:IsEnabled"] = "false",
-            };
-
-            foreach (var (key, value) in settings)
-            {
-                var name = key.Replace(":", "__", StringComparison.Ordinal);
-                Environment.SetEnvironmentVariable(name, value);
-                variables.Add(name);
-            }
-        }
-
-        protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-            builder.UseEnvironment("Development");
-
-        protected override void Dispose(bool disposing)
-        {
-            base.Dispose(disposing);
-
-            foreach (var name in variables)
-            {
-                Environment.SetEnvironmentVariable(name, null);
-            }
-        }
-    }
-
-    private static IVoprfPseudonymizer Create(
-        Factory factory,
-        Action<VoprfClientOptions>? configure = null
-    )
-    {
-        var channel = GrpcChannel.ForAddress(
-            factory.Server.BaseAddress,
-            new GrpcChannelOptions { HttpHandler = factory.Server.CreateHandler() }
-        );
-
-        var options = new VoprfClientOptions
-        {
-            Address = factory.Server.BaseAddress.ToString(),
-            PublicKey = PublicKeyHex,
-        };
-        configure?.Invoke(options);
-
-        return new VoprfPseudonymizer(
-            new VoprfService.VoprfServiceClient(channel),
-            Options.Create(options),
-            NullLogger<VoprfPseudonymizer>.Instance
-        );
-    }
-
-    /// <summary>What the key holder would compute for the same value, for comparison.</summary>
-    private static byte[] Locally(string value)
-    {
-        using var keyPair = VoprfKeyPair.Import(Convert.FromBase64String(PrivateKeyBase64));
-        return VoprfServer.Evaluate(keyPair, System.Text.Encoding.UTF8.GetBytes(value));
-    }
-
     [Fact]
     public async Task A_value_becomes_the_pseudonym_the_key_holder_would_have_computed()
     {
-        using var factory = new Factory();
-        var pseudonymizer = Create(factory);
+        using var factory = new VoprfTestServer();
+        var pseudonymizer = factory.CreatePseudonymizer();
 
         var pseudonym = await pseudonymizer.PseudonymizeAsync(
             "alice@example.com",
@@ -112,14 +31,16 @@ public class VoprfPseudonymizerTests
         // key it belongs to - see VoprfClientOptions.IncludeKeyIdInPseudonym.
         pseudonym
             .Value.Should()
-            .Be("test-key." + Base64Url.EncodeToString(Locally("alice@example.com")));
+            .Be(
+                "test-key." + Base64Url.EncodeToString(VoprfTestServer.Locally("alice@example.com"))
+            );
     }
 
     [Fact]
     public async Task The_same_value_always_gives_the_same_pseudonym()
     {
-        using var factory = new Factory();
-        var pseudonymizer = Create(factory);
+        using var factory = new VoprfTestServer();
+        var pseudonymizer = factory.CreatePseudonymizer();
 
         var first = await pseudonymizer.PseudonymizeAsync(
             "alice@example.com",
@@ -137,8 +58,8 @@ public class VoprfPseudonymizerTests
     [Fact]
     public async Task Different_values_give_different_pseudonyms()
     {
-        using var factory = new Factory();
-        var pseudonymizer = Create(factory);
+        using var factory = new VoprfTestServer();
+        var pseudonymizer = factory.CreatePseudonymizer();
 
         var alice = await pseudonymizer.PseudonymizeAsync(
             "alice@example.com",
@@ -155,8 +76,8 @@ public class VoprfPseudonymizerTests
     [Fact]
     public async Task A_batch_agrees_with_the_same_values_sent_one_at_a_time()
     {
-        using var factory = new Factory();
-        var pseudonymizer = Create(factory);
+        using var factory = new VoprfTestServer();
+        var pseudonymizer = factory.CreatePseudonymizer();
 
         string[] values = ["alice@example.com", "bob@example.com", "carol@example.com"];
 
@@ -179,8 +100,8 @@ public class VoprfPseudonymizerTests
     [Fact]
     public async Task Composed_and_decomposed_unicode_agree_under_the_default_normalization()
     {
-        using var factory = new Factory();
-        var pseudonymizer = Create(factory);
+        using var factory = new VoprfTestServer();
+        var pseudonymizer = factory.CreatePseudonymizer();
 
         // "cafe" with a precomposed e-acute, and with e + a combining acute accent. They render identically,
         // arrive from different platforms, and are different byte strings.
@@ -205,8 +126,8 @@ public class VoprfPseudonymizerTests
     [Fact]
     public async Task Without_normalization_the_two_forms_file_the_same_person_twice()
     {
-        using var factory = new Factory();
-        var pseudonymizer = Create(factory, options => options.Normalization = null);
+        using var factory = new VoprfTestServer();
+        var pseudonymizer = factory.CreatePseudonymizer(options => options.Normalization = null);
 
         var composed = await pseudonymizer.PseudonymizeAsync(
             "caf\u00e9@example.com",
@@ -223,15 +144,12 @@ public class VoprfPseudonymizerTests
     [Fact]
     public async Task A_truncated_hex_pseudonym_is_a_prefix_of_the_full_output()
     {
-        using var factory = new Factory();
-        var pseudonymizer = Create(
-            factory,
-            options =>
-            {
-                options.Format = PseudonymFormat.Hex;
-                options.Length = 16;
-            }
-        );
+        using var factory = new VoprfTestServer();
+        var pseudonymizer = factory.CreatePseudonymizer(options =>
+        {
+            options.Format = PseudonymFormat.Hex;
+            options.Length = 16;
+        });
 
         var pseudonym = await pseudonymizer.PseudonymizeAsync(
             "alice@example.com",
@@ -244,7 +162,10 @@ public class VoprfPseudonymizerTests
 
         var truncated = pseudonym.Value[Qualifier.Length..];
         truncated.Should().HaveLength(32);
-        Convert.ToHexStringLower(Locally("alice@example.com")).Should().StartWith(truncated);
+        Convert
+            .ToHexStringLower(VoprfTestServer.Locally("alice@example.com"))
+            .Should()
+            .StartWith(truncated);
     }
 
     [Fact]
@@ -252,15 +173,19 @@ public class VoprfPseudonymizerTests
     {
         // For a deployment whose stored values have to match what another RFC 9497 implementation
         // computes from the same key, byte for byte.
-        using var factory = new Factory();
-        var pseudonymizer = Create(factory, options => options.IncludeKeyIdInPseudonym = false);
+        using var factory = new VoprfTestServer();
+        var pseudonymizer = factory.CreatePseudonymizer(options =>
+            options.IncludeKeyIdInPseudonym = false
+        );
 
         var pseudonym = await pseudonymizer.PseudonymizeAsync(
             "alice@example.com",
             TestContext.Current.CancellationToken
         );
 
-        pseudonym.Value.Should().Be(Base64Url.EncodeToString(Locally("alice@example.com")));
+        pseudonym
+            .Value.Should()
+            .Be(Base64Url.EncodeToString(VoprfTestServer.Locally("alice@example.com")));
         pseudonym.KeyId.Should().Be("test-key");
     }
 
@@ -269,8 +194,8 @@ public class VoprfPseudonymizerTests
     {
         // The property the prefix exists for: a stored value on its own says which key produced
         // it, which is what makes a rotation migratable row by row.
-        using var factory = new Factory();
-        var pseudonymizer = Create(factory);
+        using var factory = new VoprfTestServer();
+        var pseudonymizer = factory.CreatePseudonymizer();
 
         var pseudonym = await pseudonymizer.PseudonymizeAsync(
             "alice@example.com",
@@ -284,14 +209,14 @@ public class VoprfPseudonymizerTests
         pseudonym
             .Value[(separator + 1)..]
             .Should()
-            .Be(Base64Url.EncodeToString(Locally("alice@example.com")));
+            .Be(Base64Url.EncodeToString(VoprfTestServer.Locally("alice@example.com")));
     }
 
     [Fact]
     public async Task An_empty_value_is_rejected_rather_than_given_a_stable_pseudonym()
     {
-        using var factory = new Factory();
-        var pseudonymizer = Create(factory);
+        using var factory = new VoprfTestServer();
+        var pseudonymizer = factory.CreatePseudonymizer();
 
         var pseudonymize = async () =>
             await pseudonymizer.PseudonymizeAsync("", TestContext.Current.CancellationToken);
@@ -302,14 +227,13 @@ public class VoprfPseudonymizerTests
     [Fact]
     public async Task A_server_evaluating_under_a_different_key_than_the_pin_is_caught()
     {
-        using var factory = new Factory();
+        using var factory = new VoprfTestServer();
 
         // The attack the verifiable variant exists for, from the client's side: whatever the
         // server actually holds, an answer that does not match the pinned key is refused.
         using var other = VoprfKeyPair.Generate();
-        var pseudonymizer = Create(
-            factory,
-            options => options.PublicKey = Convert.ToHexStringLower(other.PublicKey)
+        var pseudonymizer = factory.CreatePseudonymizer(options =>
+            options.PublicKey = Convert.ToHexStringLower(other.PublicKey)
         );
 
         var pseudonymize = async () =>
@@ -324,8 +248,10 @@ public class VoprfPseudonymizerTests
     [Fact]
     public async Task An_answer_from_an_unexpected_generation_is_refused()
     {
-        using var factory = new Factory();
-        var pseudonymizer = Create(factory, options => options.ExpectedKeyId = "some-other-key");
+        using var factory = new VoprfTestServer();
+        var pseudonymizer = factory.CreatePseudonymizer(options =>
+            options.ExpectedKeyId = "some-other-key"
+        );
 
         var pseudonymize = async () =>
             await pseudonymizer.PseudonymizeAsync(
@@ -360,7 +286,7 @@ public class VoprfPseudonymizerTests
         var options = new VoprfClientOptions
         {
             Address = "https://voprf:8081",
-            PublicKey = PublicKeyHex,
+            PublicKey = VoprfTestServer.PublicKeyHex,
             Length = length,
         };
 

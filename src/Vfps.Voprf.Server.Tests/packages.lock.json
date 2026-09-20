@@ -8,6 +8,17 @@
         "resolved": "9.6.0",
         "contentHash": "8kdtgI+tZIgP46ncnk650/dU4JSrn+n2Dkic8FvjIFn72P6Nv1Afyr5F8F3PsokHg1GBSBVo1/Z+eZOrU5esSA=="
       },
+      "FsCheck.Xunit.v3": {
+        "type": "Direct",
+        "requested": "[3.4.0, )",
+        "resolved": "3.4.0",
+        "contentHash": "4iaFtN/qCmlf76VVDFH9cJrG3gLWbBQp7G/R7BBSqkxJmFPvm3sI1vkg+v9TupMN5V6K5/AZMgmKwEqgBeePFA==",
+        "dependencies": {
+          "FSharp.Core": "5.0.2",
+          "FsCheck": "[3.4.0]",
+          "xunit.v3.extensibility.core": "[4.0.0, 5.0.0)"
+        }
+      },
       "Grpc.Net.Client": {
         "type": "Direct",
         "requested": "[2.83.0, )",
@@ -60,6 +71,19 @@
           "xunit.v3.assert": "[4.0.1]",
           "xunit.v3.core.mtp-v2": "[4.0.1]"
         }
+      },
+      "FsCheck": {
+        "type": "Transitive",
+        "resolved": "3.4.0",
+        "contentHash": "wkWR1DORrKd46W6MEhmS4muo/0kgrtUV/AGW1ohMWemy7WukcRH8T3JjkDpn/daOHk0yVqf0CBvScU17Ab//PA==",
+        "dependencies": {
+          "FSharp.Core": "5.0.2"
+        }
+      },
+      "FSharp.Core": {
+        "type": "Transitive",
+        "resolved": "5.0.2",
+        "contentHash": "DpcajqENgb3VXaHw1FKfVS+TWwEzck1PCajqLwBAVrtd1lfxd7T8JISVZBdV1mX9+2g48+tIgpNaVJWObdMrBw=="
       },
       "Google.Protobuf": {
         "type": "Transitive",
@@ -708,8 +732,8 @@
         "type": "Project",
         "dependencies": {
           "Grpc.Net.ClientFactory": "[2.83.0, )",
-          "Vfps.Voprf": "[1.18.1, )",
-          "Vfps.Voprf.Contracts": "[1.18.1, )"
+          "Vfps.Voprf": "[1.19.0, )",
+          "Vfps.Voprf.Contracts": "[1.19.0, )"
         }
       },
       "vfps.voprf.contracts": {
@@ -727,8 +751,8 @@
           "Grpc.AspNetCore.Server.Reflection": "[2.83.0, )",
           "Microsoft.AspNetCore.Authentication.Certificate": "[10.0.12, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.12, )",
-          "Vfps.Voprf": "[1.18.1, )",
-          "Vfps.Voprf.Contracts": "[1.18.1, )"
+          "Vfps.Voprf": "[1.19.0, )",
+          "Vfps.Voprf.Contracts": "[1.19.0, )"
         }
       }
     }

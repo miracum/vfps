@@ -55,6 +55,17 @@ public class ResilienceTests
             RetryableStatusCodes = { StatusCode.Unavailable },
         };
 
+    /// <summary>
+    /// Deadline for one verification call, covering its whole retry sequence - same reasoning as
+    /// <see cref="ResilienceOptions.CallDeadline"/> on the load phase. Without this, a call whose
+    /// connection hangs rather than erroring (a stale subchannel to a backend chaos already killed,
+    /// say) never produces a status for <see cref="VerifyRetryPolicy"/> to react to, and blocks
+    /// <c>Parallel.ForEachAsync</c> - and with it the timeline this test only emits afterwards -
+    /// forever. Sized well above the retry policy's own worst case (10 attempts, backoff capped at
+    /// 10s: 1+2+4+8+10x5 = 65s) so it never fires before genuine retries have had their chance.
+    /// </summary>
+    private static readonly TimeSpan VerifyCallDeadline = TimeSpan.FromSeconds(90);
+
     // Explicit so a plain `dotnet test` - at the solution level or on this project - skips it. It
     // needs a live kind cluster with Chaos Mesh and CloudNativePG standing behind it, and takes the
     // better part of twenty minutes; without this it would be run by accident far more often than on
@@ -253,6 +264,7 @@ public class ResilienceTests
                             Namespace = options.NamespaceName,
                             OriginalValue = pair.OriginalValue,
                         },
+                        deadline: DateTime.UtcNow.Add(VerifyCallDeadline),
                         cancellationToken: itemCancellationToken
                     );
 
@@ -285,6 +297,7 @@ public class ResilienceTests
                             Namespace = options.NamespaceName,
                             PseudonymValue = pair.PseudonymValue,
                         },
+                        deadline: DateTime.UtcNow.Add(VerifyCallDeadline),
                         cancellationToken: itemCancellationToken
                     );
 

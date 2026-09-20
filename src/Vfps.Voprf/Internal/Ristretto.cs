@@ -273,6 +273,76 @@ internal static unsafe class Ristretto
         }
     }
 
+    /// <summary>
+    /// The ristretto255 group order L = 2^252 + 27742317777372353535851937790883648493,
+    /// little-endian, as serialised scalars are.
+    /// </summary>
+    private static ReadOnlySpan<byte> GroupOrder =>
+        [
+            0xed,
+            0xd3,
+            0xf5,
+            0x5c,
+            0x1a,
+            0x63,
+            0x12,
+            0x58,
+            0xd6,
+            0x9c,
+            0xf7,
+            0xa2,
+            0xde,
+            0xf9,
+            0xde,
+            0x14,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x10,
+        ];
+
+    /// <summary>
+    /// RFC 9497 <c>DeserializeScalar</c>: a canonical little-endian encoding of an integer
+    /// below the group order.
+    /// </summary>
+    /// <remarks>
+    /// This has to be checked wherever a scalar arrives from outside, because libsodium's
+    /// scalar multiplication does not check it: the multiplication reads 255 bits and ignores
+    /// the top one, so <c>x</c> and <c>x + 2^255</c> take any element to the same place.
+    /// Anything that treats a scalar's encoding as meaningful - a proof that must verify only
+    /// in the form it was sent, a key that must mean the same function in every
+    /// implementation - is wrong without it.
+    /// </remarks>
+    public static bool IsCanonicalScalar(ReadOnlySpan<byte> scalar)
+    {
+        if (scalar.Length != ScalarBytes)
+        {
+            return false;
+        }
+
+        for (var i = ScalarBytes - 1; i >= 0; i--)
+        {
+            if (scalar[i] != GroupOrder[i])
+            {
+                return scalar[i] < GroupOrder[i];
+            }
+        }
+
+        return false;
+    }
+
     private static void CheckLength(int actual, int expected, string name)
     {
         if (actual != expected)

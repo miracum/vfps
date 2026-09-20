@@ -112,6 +112,20 @@ internal static class Dleq
         VoprfProof proof
     )
     {
+        // RFC 9497's DeserializeScalar admits only canonical encodings, and here that is a
+        // soundness matter rather than a formality: libsodium's scalar multiplication ignores a
+        // scalar's top bit, so without this both s and s + 2^255 verify against the same proof.
+        // Nothing in this codebase stores or compares a proof, so a malleable one is presently
+        // harmless - but "the proof that verified is the proof the server sent" is the kind of
+        // thing a later caller will assume, and it costs two comparisons to make it true.
+        if (
+            !Ristretto.IsCanonicalScalar(proof.Challenge)
+            || !Ristretto.IsCanonicalScalar(proof.Response)
+        )
+        {
+            return false;
+        }
+
         if (
             !TryComputeComposites(
                 publicKey,

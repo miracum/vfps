@@ -53,7 +53,7 @@ public class NamespaceAppService(
         // is configured.
         if (!methodsLookup.IsSupported(namespaceToCreate.PseudonymGenerationMethod))
         {
-            throw new PseudonymGenerators.PseudonymGenerationMethodNotSupportedException(
+            throw new PseudonymGenerationMethodNotSupportedException(
                 namespaceToCreate.PseudonymGenerationMethod
             );
         }

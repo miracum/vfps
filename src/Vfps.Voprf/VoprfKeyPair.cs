@@ -171,7 +171,7 @@ public sealed class VoprfKeyPair : IDisposable
 
         // Scalars at or above the group order are reduced inconsistently across
         // implementations, so the same key would not mean the same function everywhere.
-        if (!IsLessThanGroupOrder(privateKey))
+        if (!Ristretto.IsCanonicalScalar(privateKey))
         {
             throw new ArgumentException(
                 "A private key must be a scalar reduced modulo the ristretto255 group order.",
@@ -215,58 +215,5 @@ public sealed class VoprfKeyPair : IDisposable
 
         CryptographicOperations.ZeroMemory(privateKey);
         disposed = true;
-    }
-
-    /// <summary>
-    /// The ristretto255 group order L = 2^252 + 27742317777372353535851937790883648493,
-    /// little-endian, as serialised scalars are.
-    /// </summary>
-    private static ReadOnlySpan<byte> GroupOrder =>
-        [
-            0xed,
-            0xd3,
-            0xf5,
-            0x5c,
-            0x1a,
-            0x63,
-            0x12,
-            0x58,
-            0xd6,
-            0x9c,
-            0xf7,
-            0xa2,
-            0xde,
-            0xf9,
-            0xde,
-            0x14,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x00,
-            0x10,
-        ];
-
-    private static bool IsLessThanGroupOrder(ReadOnlySpan<byte> scalar)
-    {
-        for (var i = PrivateKeyLength - 1; i >= 0; i--)
-        {
-            if (scalar[i] != GroupOrder[i])
-            {
-                return scalar[i] < GroupOrder[i];
-            }
-        }
-
-        return false;
     }
 }

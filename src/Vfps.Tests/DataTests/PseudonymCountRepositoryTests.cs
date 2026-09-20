@@ -14,7 +14,7 @@ public class PseudonymCountRepositoryTests : ServiceTests.ServiceTestBase
     {
         var name = $"count-repo-test-{Guid.NewGuid():N}";
         InMemoryPseudonymContext.Namespaces.Add(
-            new Vfps.Data.Models.Namespace
+            new Data.Models.Namespace
             {
                 Name = name,
                 PseudonymLength = 16,

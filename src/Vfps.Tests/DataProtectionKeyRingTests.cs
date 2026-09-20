@@ -113,14 +113,12 @@ public sealed class DataProtectionKeyRingTests : IDisposable
     {
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddDbContext<Vfps.Data.DataProtectionKeyContext>(options =>
-            options.UseSqlite(_connection)
-        );
+        services.AddDbContext<DataProtectionKeyContext>(options => options.UseSqlite(_connection));
 
         var dataProtection = services
             .AddDataProtection()
             .SetApplicationName("vfps")
-            .PersistKeysToDbContext<Vfps.Data.DataProtectionKeyContext>();
+            .PersistKeysToDbContext<DataProtectionKeyContext>();
 
         var usable = certificates.Where(certificate => certificate is not null).ToArray();
         if (usable.Length > 0)
@@ -145,12 +143,8 @@ public sealed class DataProtectionKeyRingTests : IDisposable
             .CreateProtector("vfps.tests")
             .Unprotect(payload);
 
-    private Vfps.Data.DataProtectionKeyContext CreateContext() =>
-        new(
-            new DbContextOptionsBuilder<Vfps.Data.DataProtectionKeyContext>()
-                .UseSqlite(_connection)
-                .Options
-        );
+    private DataProtectionKeyContext CreateContext() =>
+        new(new DbContextOptionsBuilder<DataProtectionKeyContext>().UseSqlite(_connection).Options);
 
     private string StoredKeyXml()
     {
