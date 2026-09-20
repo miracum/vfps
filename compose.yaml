@@ -77,7 +77,7 @@ services:
   # Credentials/identities are fixed via tests/seaweedfs/s3.json (mirrors the previous
   # MINIO_ROOT_USER/PASSWORD env vars, SeaweedFS has no equivalent env-based config).
   seaweedfs:
-    image: docker.io/chrislusf/seaweedfs:4.44@sha256:e67e8c385484120b78bff47ba5f4debbca47fbd27ed1a39f016f47e8baea615b
+    image: docker.io/chrislusf/seaweedfs:4.45@sha256:fc9f76fa993ad69966ffeb2f65d0318fcae39c6f8e20cf68ef7b3a5cb97769e5
     restart: unless-stopped
     command: server -dir=/data -s3 -s3.port=9000 -s3.config=/etc/seaweedfs/s3.json
     deploy:
