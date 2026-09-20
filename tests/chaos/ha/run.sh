@@ -416,6 +416,10 @@ summary() {
   if ((${#FAILURES[@]})); then
     log "FAILED with ${#FAILURES[@]} problem(s):"
     printf '  - %s\n' "${FAILURES[@]}"
+    # Written alongside the rest of ARTIFACT_DIR so CI can build an issue report from the
+    # structured reasons instead of re-parsing the driver's own log output.
+    mkdir -p "${ARTIFACT_DIR}"
+    printf '%s\n' "${FAILURES[@]}" >"${ARTIFACT_DIR}/failures.txt"
     exit 1
   fi
   log "PASSED - artifacts in ${ARTIFACT_DIR}"
