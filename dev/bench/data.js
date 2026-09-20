@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789864408538,
+  "lastUpdate": 1789914521278,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -10434,6 +10434,66 @@ window.BENCHMARK_DATA = {
             "value": 1357.4026763622578,
             "unit": "ns",
             "range": "± 1.537814826426521"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "d383b6c7c948a2a0d507370a028ea3e886d58599",
+          "message": "chore: added fuzz testing and updated docs (#342)\n\n* chore: added fuzz testing and updated docs\n\n* Potential fix for pull request finding 'CodeQL / Missed 'using' opportunity'\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>\n\n* ci\n\n* disable actionlint\n\n---------\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>",
+          "timestamp": "2026-09-20T16:25:25+02:00",
+          "tree_id": "14b868cb74336a44f218c750e8c15ac50adf5fda",
+          "url": "https://github.com/miracum/vfps/commit/d383b6c7c948a2a0d507370a028ea3e886d58599"
+        },
+        "date": 1789914520519,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 907.1760958891648,
+            "unit": "ns",
+            "range": "± 9.091259560296846"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 426.3386916796366,
+            "unit": "ns",
+            "range": "± 5.208157388176971"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 451.2185683647792,
+            "unit": "ns",
+            "range": "± 3.2901808984164926"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 909.7476170857748,
+            "unit": "ns",
+            "range": "± 6.792310593470159"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 958.7894919259207,
+            "unit": "ns",
+            "range": "± 10.997328758818432"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 936.9512161254883,
+            "unit": "ns",
+            "range": "± 5.761117402774878"
           }
         ]
       }
