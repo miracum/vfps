@@ -194,37 +194,28 @@ public sealed class VoprfProtocolPropertyTests : IDisposable
 
                 using var other = VoprfKeyPair.Generate();
                 var requests = new VoprfRequest[count];
+                for (var i = 0; i < count; i++)
+                {
+                    using var request = VoprfClient.Blind(
+                        System.Text.Encoding.UTF8.GetBytes($"subject-{i}")
+                    );
+                    requests[i] = request;
+                }
+
+                var blinded = Array.ConvertAll(requests, request => request.BlindedElement);
+                var (evaluated, proof) = VoprfServer.BlindEvaluate(keyPair, blinded);
+
+                var (substituted, _) = VoprfServer.BlindEvaluate(other, blinded[target]);
+                evaluated[target] = substituted;
+
                 try
                 {
-                    for (var i = 0; i < count; i++)
-                    {
-                        requests[i] = VoprfClient.Blind(
-                            System.Text.Encoding.UTF8.GetBytes($"subject-{i}")
-                        );
-                    }
-
-                    var blinded = Array.ConvertAll(requests, request => request.BlindedElement);
-                    var (evaluated, proof) = VoprfServer.BlindEvaluate(keyPair, blinded);
-
-                    var (substituted, _) = VoprfServer.BlindEvaluate(other, blinded[target]);
-                    evaluated[target] = substituted;
-
-                    try
-                    {
-                        VoprfClient.Finalize(requests, evaluated, proof, keyPair.PublicKey);
-                        return false;
-                    }
-                    catch (VoprfVerificationException)
-                    {
-                        return true;
-                    }
+                    VoprfClient.Finalize(requests, evaluated, proof, keyPair.PublicKey);
+                    return false;
                 }
-                finally
+                catch (VoprfVerificationException)
                 {
-                    foreach (var request in requests)
-                    {
-                        request?.Dispose();
-                    }
+                    return true;
                 }
             }
         );
