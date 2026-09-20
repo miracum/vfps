@@ -91,7 +91,7 @@ jobs:
     needs:
       - build
       - detect-app-changes
-    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@0f51c105337941201f1c16c611cf92567cccde8c # v1.28.1
+    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@95e8a21d00acae441823668eb380229aa2ec40ec # v1.29.0
     permissions:
       contents: read
       packages: write # to push the chart and its signature/attestation to ghcr.io
@@ -121,6 +121,8 @@ jobs:
       # standard-build.yaml), so kind wouldn't be able to pull it - falls back to the chart's
       # default tag there, same as before this was added.
       helm-extra-set-args: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) && format('--set=image.tag={0}', needs.build.outputs.image-version) || '' }}
+      image-digest: ${{ needs.build.outputs.image-digest }}
+      image-tag-path: .image.tag
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
@@ -199,7 +201,7 @@ jobs:
     needs:
       - build-voprf-server-image
       - detect-app-changes
-    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@0f51c105337941201f1c16c611cf92567cccde8c # v1.28.1
+    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@95e8a21d00acae441823668eb380229aa2ec40ec # v1.29.0
     permissions:
       contents: read
       packages: write # to push the chart and its signature/attestation to ghcr.io
@@ -218,6 +220,8 @@ jobs:
       # Same reasoning as the vfps chart above: test against the image this PR built, and fall
       # back to the chart's default tag for forked PRs, whose image is never pushed.
       helm-extra-set-args: ${{ (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) && format('--set=image.tag={0}', needs.build-voprf-server-image.outputs.image-version) || '' }}
+      image-digest: ${{ needs.build-voprf-server-image.outputs.image-digest }}
+      image-tag-path: .image.tag
     secrets:
       github-token: ${{ secrets.GITHUB_TOKEN }}
 
