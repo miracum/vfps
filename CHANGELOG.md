@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.19.0](https://github.com/miracum/vfps/compare/v1.18.1...v1.19.0) (2026-09-20)
+
+
+### Features
+
+* added voprf server and client ([#316](https://github.com/miracum/vfps/issues/316)) ([dd0f4af](https://github.com/miracum/vfps/commit/dd0f4af98ee014f22c4bf58cdcb9a142b1290715))
+
+
+### Bug Fixes
+
+* chart versioning for voprf chart ([#341](https://github.com/miracum/vfps/issues/341)) ([0a3090a](https://github.com/miracum/vfps/commit/0a3090acb62c5cde132ae9b17186568c41edc269))
+
 ## [1.18.1](https://github.com/miracum/vfps/compare/v1.18.0...v1.18.1) (2026-09-19)
 
 
