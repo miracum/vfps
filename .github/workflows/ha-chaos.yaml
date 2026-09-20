@@ -47,7 +47,7 @@ concurrency:
 jobs:
   ha-chaos:
     name: ha chaos testing
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-26.04
     timeout-minutes: 75
     # Every event except a pull request runs unconditionally; a pull request needs the label.
     if: >-
@@ -55,6 +55,7 @@ jobs:
       contains(github.event.pull_request.labels.*.name, 'ha-chaos')
     permissions:
       contents: read
+      issues: write # to open/update the failure report issue
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -62,7 +63,7 @@ jobs:
           persist-credentials: false
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
+        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
 
       - name: Install tooling
         env:
@@ -147,7 +148,54 @@ jobs:
             echo "pull request: running the trimmed scenario set (${SCENARIOS})"
           fi
 
-          ./tests/chaos/ha/run.sh all
+          # Teed rather than just left to the step log so the whole thing rides along in the
+          # artifact bundle and the failure-report step below can pull from a plain file instead of
+          # the GitHub Actions log API. pipefail (bash's default for `run:` steps) keeps run.sh's
+          # own exit code, not tee's.
+          mkdir -p "${ARTIFACT_DIR}"
+          ./tests/chaos/ha/run.sh all 2>&1 | tee "${ARTIFACT_DIR}/run.log"
+
+      - name: Build failure report
+        if: failure()
+        env:
+          ARTIFACT_DIR: ${{ github.workspace }}/ha-chaos-artifacts
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p "${ARTIFACT_DIR}"
+          REPORT="${ARTIFACT_DIR}/issue-report.md"
+          {
+            echo "[ha chaos testing](${RUN_URL}) failed on \`${GITHUB_REF_NAME}\` (${GITHUB_SHA}), triggered by \`${GITHUB_EVENT_NAME}\`."
+            echo
+
+            if [ -f "${ARTIFACT_DIR}/failures.txt" ]; then
+              echo "## Failures"
+              echo '```'
+              cat "${ARTIFACT_DIR}/failures.txt"
+              echo '```'
+              echo
+            fi
+
+            echo "## Last 200 lines of the driver log"
+            echo '```'
+            if [ -f "${ARTIFACT_DIR}/run.log" ]; then
+              tail -n 200 "${ARTIFACT_DIR}/run.log"
+            else
+              echo "run.sh produced no log - the job failed before it ran (tool setup or image build). See ${RUN_URL}."
+            fi
+            echo '```'
+
+            if [ -f "${ARTIFACT_DIR}/resilience.log" ]; then
+              echo
+              echo "## Last 60 lines of the resilience Job log"
+              echo '```'
+              tail -n 60 "${ARTIFACT_DIR}/resilience.log"
+              echo '```'
+            fi
+
+            echo
+            echo "Full logs and diagnostics (pod logs, cluster dump, per-second timelines) are attached to the workflow run as the \`ha-chaos-artifacts\` artifact for 14 days."
+          } >"${REPORT}"
+          cat "${REPORT}"
 
       - name: Upload artifacts
         if: always()
@@ -157,3 +205,24 @@ jobs:
           path: ha-chaos-artifacts/
           retention-days: 14
           if-no-files-found: warn
+
+      # Not on a pull request: the label-opted-in trimmed run already surfaces its failure through
+      # the PR's own check UI, and filing an issue on every push to a labelled PR would just be
+      # noise. This is for the weekly schedule and a manual workflow_dispatch, where a red run has
+      # no other place to be noticed.
+      - name: Look for an existing issue
+        if: failure() && github.event_name != 'pull_request'
+        id: last-issue
+        uses: micalevisk/last-issue-action@010dfff63530f63c7a9fd54211bde51cc38cff73 # v2.4.0
+        with:
+          state: open
+          labels: ha chaos testing
+
+      - name: Open or update an issue for the failed run
+        if: failure() && github.event_name != 'pull_request'
+        uses: peter-evans/create-issue-from-file@fca9117c27cdc29c6c4db3b86c48e4115a786710 # v6.0.0
+        with:
+          title: ha chaos testing failed
+          content-filepath: ha-chaos-artifacts/issue-report.md
+          issue-number: ${{ steps.last-issue.outputs.issue-number }}
+          labels: report, automated issue, ha chaos testing
