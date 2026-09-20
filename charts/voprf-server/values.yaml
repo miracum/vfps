@@ -2,12 +2,12 @@
 # horizontal and needs no coordination - every replica must be given the same key.
 replicaCount: 2
 
+# @ignored
 image:
   registry: ghcr.io
   repository: miracum/vfps/voprf-server
+  tag: v1.18.1 # x-release-please-version
   pullPolicy: IfNotPresent
-  # -- overrides the image tag, which defaults to the chart's appVersion
-  tag: ""
 
 imagePullSecrets: []
 nameOverride: ""

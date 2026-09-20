@@ -44,6 +44,14 @@
         {
           "type": "generic",
           "path": "charts/vfps/values.yaml"
+        },
+        {
+          "type": "generic",
+          "path": "charts/voprf-server/Chart.yaml"
+        },
+        {
+          "type": "generic",
+          "path": "charts/voprf-server/values.yaml"
         }
       ]
     }
