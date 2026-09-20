@@ -289,10 +289,25 @@ Always uploaded, whatever the outcome: `resilience.log`, `load-timeline.csv`, `c
 `pods.txt`, `events.txt`, `cnpg-cluster.yaml` (the live status, including replication state),
 `cnpg-instances.log`, `vfps-api.log`, and a full `cluster-dump/`. If the `cnpg` kubectl plugin
 happens to be installed, `cnpg-report.zip` too - its bundle is the first thing to open after a P2 or
-P3 violation.
+P3 violation. The workflow itself adds `run.log` (`run.sh`'s own output, teed rather than left to
+live only in the Actions log) and, on failure, `failures.txt` (the `FAILURES` array `summary()`
+collected - see §5) and `issue-report.md` (below).
 
 A chaos failure you cannot reconstruct after the cluster is gone is a chaos failure you will end up
 ignoring.
+
+### Filing an issue on failure
+
+A red **schedule** or **`workflow_dispatch`** run opens (or updates, via
+[`micalevisk/last-issue-action`](https://github.com/micalevisk/last-issue-action) plus
+[`peter-evans/create-issue-from-file`](https://github.com/peter-evans/create-issue-from-file) - the
+same pair `standard-schedule.yaml`'s link checker uses, see `.github/workflows/ha-chaos.yaml`) an
+issue labelled `report, automated issue, ha chaos testing`, built from `issue-report.md`: the
+`failures.txt` reasons if any, the last 200 lines of `run.log`, and the last 60 lines of
+`resilience.log` if the Job got that far, plus a link to the full `ha-chaos-artifacts` artifact.
+
+Not on a pull request: a labelled PR's failure is already visible on the PR itself, and filing an
+issue on every push to it would just be noise.
 
 ### Why the timeline comes out through stdout
 
