@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1789853604300,
+  "lastUpdate": 1789863169942,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -10254,6 +10254,66 @@ window.BENCHMARK_DATA = {
             "value": 1063.4964771270752,
             "unit": "ns",
             "range": "± 3.5568681444184453"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "dd0f4af98ee014f22c4bf58cdcb9a142b1290715",
+          "message": "feat: added voprf server and client (#316)\n\n* feat: added voprf server and client\n\nnot yet integrated into vfps itself\n\n* bumped\n\n* integrated voprf into vfps core\n\n* amend\n\n* feat: added voprf chart\n\n* lint\n\n* docs\n\n* shfmt\n\n* drop MARKDOWN_MARKDOWN_TABLE_FORMATTER\n\n* fix: voprf namespace ui\n\n* lint\n\n* fmt\n\n* fix\n\n* ci: bump standard-chart-publish to v1.28.1 to stop testing both charts twice\n\nstandard-chart-publish takes a single chart-path, but ct discovers charts via\n--chart-dirs, which the workflow could only set to dirname(chart-path). Both of\nthis repo's calls therefore linted and installed both charts: two lint runs and\n12 ct installs across the three kind versions, where six would do.\n\nThe wasted runner time was the lesser half. helm-extra-set-args is per-call - it\npins the chart to the image that call just built - but it reached every chart ct\npicked up, so the vfps call installed the voprf-server chart with\n--set image.tag=<vfps image version> and vice versa. It only ever passed because\ndocker/metadata-action happens to tag both images pr-<n>.\n\nv1.28.1 (miracum/.github#218) excludes the charts next to chart-path from ct, so\neach call now covers its own chart with its own image.\n\nCo-Authored-By: Claude Opus 5 <noreply@anthropic.com>\n\n---------\n\nCo-authored-by: Claude Opus 5 <noreply@anthropic.com>",
+          "timestamp": "2026-09-20T02:09:45+02:00",
+          "tree_id": "2e41bb8112729d0cf2ac42c9ac528c30964d078f",
+          "url": "https://github.com/miracum/vfps/commit/dd0f4af98ee014f22c4bf58cdcb9a142b1290715"
+        },
+        "date": 1789863169186,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 1204.4374479147104,
+            "unit": "ns",
+            "range": "± 5.191217489549403"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 684.6830297878811,
+            "unit": "ns",
+            "range": "± 1.9390527244238291"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 713.8411384423574,
+            "unit": "ns",
+            "range": "± 0.5142708482988557"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 1141.964492525373,
+            "unit": "ns",
+            "range": "± 2.687103511086416"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 1265.127538808187,
+            "unit": "ns",
+            "range": "± 12.611398180222059"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 1209.5282494471624,
+            "unit": "ns",
+            "range": "± 1.5500508361672098"
           }
         ]
       }
