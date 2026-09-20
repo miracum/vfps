@@ -27,7 +27,7 @@ public class VoprfEvaluationService(
     IVoprfKeyProvider keys,
     IOptions<VoprfServerConfig> options,
     ILogger<VoprfEvaluationService> logger
-) : Protos.VoprfService.VoprfServiceBase
+) : VoprfService.VoprfServiceBase
 {
     private readonly VoprfServerConfig config = options.Value;
 

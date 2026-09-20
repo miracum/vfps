@@ -89,8 +89,8 @@ public interface IPseudonymAppService
     /// The lookup-only counterpart to <see cref="CreateTrustedBatchAsync"/>, with the same trust
     /// boundary and the same batching rationale - one round trip per distinct namespace rather
     /// than one per value. Backs
-    /// <see cref="Data.Models.PseudonymizeMode.FailIfMissing"/> and
-    /// <see cref="Data.Models.PseudonymizeMode.BlankIfMissing"/> CSV jobs.
+    /// <see cref="PseudonymizeMode.FailIfMissing"/> and
+    /// <see cref="PseudonymizeMode.BlankIfMissing"/> CSV jobs.
     ///
     /// Returns the same shape as <see cref="ReverseLookupTrustedBatchAsync"/>, deliberately: a
     /// value with no stored pseudonym is simply absent from the dictionary rather than mapping to
@@ -212,7 +212,7 @@ public interface IPseudonymAppService
     /// <see cref="PseudonymImportOutcome.OriginalValueConflict"/>), unless the namespace allows
     /// multiple pseudonyms, in which case the imported value is appended at the next free sequence
     /// number - the same grow-only semantics
-    /// <see cref="CreateTrustedAsync(Data.Models.Namespace, string, long, CancellationToken)"/>
+    /// <see cref="CreateTrustedAsync(Namespace, string, long, CancellationToken)"/>
     /// has.
     ///
     /// Costs three round trips per call regardless of <paramref name="entries"/>'s size (plus one
@@ -225,7 +225,7 @@ public interface IPseudonymAppService
     /// </returns>
     /// <exception cref="ArgumentException">Any entry's original or pseudonym value is blank.</exception>
     Task<IReadOnlyList<PseudonymImportResult>> ImportTrustedBatchAsync(
-        Data.Models.Namespace @namespace,
+        Namespace @namespace,
         IReadOnlyList<PseudonymImportEntry> entries,
         CancellationToken cancellationToken
     );
@@ -350,13 +350,13 @@ public enum PseudonymImportOutcome
 
     /// <summary>
     /// The original value doesn't match the namespace's
-    /// <see cref="Data.Models.Namespace.OriginalValueValidationRegex"/>.
+    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
     /// </summary>
     InvalidOriginalValue,
 
     /// <summary>
     /// The namespace requires its original values to already exist as pseudonyms in its parent
-    /// (<see cref="Data.Models.Namespace.ParentValidationMode"/>) and this one doesn't.
+    /// (<see cref="Namespace.ParentValidationMode"/>) and this one doesn't.
     /// </summary>
     ParentValueMissing,
 }

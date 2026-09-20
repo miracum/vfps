@@ -33,6 +33,17 @@
         "resolved": "6.1.1",
         "contentHash": "zr1WKM8GIB9JcizPprziXZ5/kYStV4W+8G0B/cEc12AzQg2Wb2bpA9dzBoVGPmAOOGQEn4QLNkiPLhM/QWOz8A=="
       },
+      "FsCheck.Xunit.v3": {
+        "type": "Direct",
+        "requested": "[3.4.0, )",
+        "resolved": "3.4.0",
+        "contentHash": "4iaFtN/qCmlf76VVDFH9cJrG3gLWbBQp7G/R7BBSqkxJmFPvm3sI1vkg+v9TupMN5V6K5/AZMgmKwEqgBeePFA==",
+        "dependencies": {
+          "FSharp.Core": "5.0.2",
+          "FsCheck": "[3.4.0]",
+          "xunit.v3.extensibility.core": "[4.0.0, 5.0.0)"
+        }
+      },
       "Microsoft.AspNetCore.Mvc.Testing": {
         "type": "Direct",
         "requested": "[10.0.12, )",
@@ -234,6 +245,19 @@
         "type": "Transitive",
         "resolved": "1.4.0",
         "contentHash": "SxpoHR46khpzQG4rOX+rJduPeuH3h9rEpEoguraOft24E0tMnnDk8CuTMVF3fMudsdyo5addKBf+wGngWHwgOQ=="
+      },
+      "FsCheck": {
+        "type": "Transitive",
+        "resolved": "3.4.0",
+        "contentHash": "wkWR1DORrKd46W6MEhmS4muo/0kgrtUV/AGW1ohMWemy7WukcRH8T3JjkDpn/daOHk0yVqf0CBvScU17Ab//PA==",
+        "dependencies": {
+          "FSharp.Core": "5.0.2"
+        }
+      },
+      "FSharp.Core": {
+        "type": "Transitive",
+        "resolved": "5.0.2",
+        "contentHash": "DpcajqENgb3VXaHw1FKfVS+TWwEzck1PCajqLwBAVrtd1lfxd7T8JISVZBdV1mX9+2g48+tIgpNaVJWObdMrBw=="
       },
       "Google.Api.CommonProtos": {
         "type": "Transitive",
@@ -1421,7 +1445,7 @@
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.19.0, )",
           "OpenTelemetry.Instrumentation.Http": "[1.19.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.19.0, )",
-          "Vfps.Voprf.Client": "[1.18.1, )"
+          "Vfps.Voprf.Client": "[1.19.0, )"
         }
       },
       "vfps.voprf": {
@@ -1434,8 +1458,8 @@
         "type": "Project",
         "dependencies": {
           "Grpc.Net.ClientFactory": "[2.83.0, )",
-          "Vfps.Voprf": "[1.18.1, )",
-          "Vfps.Voprf.Contracts": "[1.18.1, )"
+          "Vfps.Voprf": "[1.19.0, )",
+          "Vfps.Voprf.Contracts": "[1.19.0, )"
         }
       },
       "vfps.voprf.contracts": {

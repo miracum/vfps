@@ -30,7 +30,7 @@ public class IntegrationTestFactory<TProgram, TDbContext> : WebApplicationFactor
             // DbContextOptions<TDbContext>'s lifetime. Not pooled: PseudonymContext's
             // OnConfiguring mutates options post-construction, which pooling disallows.
             services.AddDbContextFactory<TDbContext>(options => options.UseSqlite(inMemorySqlite));
-            services.AddScoped<TDbContext>(isp =>
+            services.AddScoped(isp =>
                 isp.GetRequiredService<IDbContextFactory<TDbContext>>().CreateDbContext()
             );
             services.EnsureDbCreated<TDbContext>();

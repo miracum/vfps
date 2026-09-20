@@ -59,7 +59,7 @@ internal static class CsvJobFormat
     /// bytes are already local. A job reading from a genuinely remote bucket waits on bandwidth
     /// rather than on read syscalls, and gains correspondingly less. The cost is one buffer of
     /// this size (plus its decoded char buffer) per concurrently running job, so a few hundred
-    /// KiB per <see cref="Config.CsvProcessingConfig.WorkerCount"/>.
+    /// KiB per <see cref="CsvProcessingConfig.WorkerCount"/>.
     /// </summary>
     private const int InputBufferSize = 64 * 1024;
 

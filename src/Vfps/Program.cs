@@ -240,7 +240,7 @@ var shouldRunDatabaseMigrations =
 // which DbContext pooling explicitly disallows ("'OnConfiguring' cannot be used to modify
 // DbContextOptions when DbContext pooling is enabled").
 builder.Services.AddDbContextFactory<PseudonymContext>(ConfigurePseudonymContext);
-builder.Services.AddScoped<PseudonymContext>(isp =>
+builder.Services.AddScoped(isp =>
     isp.GetRequiredService<IDbContextFactory<PseudonymContext>>().CreateDbContext()
 );
 

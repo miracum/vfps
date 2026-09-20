@@ -10,7 +10,7 @@ public interface IPseudonymRepository
     /// <summary>
     /// Store the given pseudonym iff one with the same namespace, original value, and sequence
     /// number doesn't already exist. Every caller other than the multi-psn create path (see
-    /// <see cref="AppServices.PseudonymAppService.CreateTrustedAsync(Models.Namespace, string, long, CancellationToken)"/>)
+    /// <see cref="AppServices.PseudonymAppService.CreateTrustedAsync(Namespace, string, long, CancellationToken)"/>)
     /// always passes <see cref="Pseudonym.SequenceNumber"/> 0.
     /// </summary>
     /// <param name="pseudonym">The pseudonym to store</param>
@@ -40,7 +40,7 @@ public interface IPseudonymRepository
     /// Fetches every pseudonym stored for a given (NamespaceName, OriginalValue), ordered by
     /// SequenceNumber ascending. At most one row for a namespace that never allows more than one
     /// pseudonym per original value; possibly several for a multi-psn namespace (see
-    /// <see cref="Models.Namespace.AllowsMultiplePseudonyms"/>).
+    /// <see cref="Namespace.AllowsMultiplePseudonyms"/>).
     /// </summary>
     Task<IReadOnlyList<Pseudonym>> FindAllByOriginalValueAsync(
         string namespaceName,
@@ -65,7 +65,7 @@ public interface IPseudonymRepository
 
     /// <summary>
     /// Inserts <paramref name="newSequenceCandidates"/> (the missing sequence numbers a multi-psn
-    /// Create call decided to add - see <see cref="AppServices.PseudonymAppService.CreateTrustedAsync(Models.Namespace, string, long, CancellationToken)"/>)
+    /// Create call decided to add - see <see cref="AppServices.PseudonymAppService.CreateTrustedAsync(Namespace, string, long, CancellationToken)"/>)
     /// iff they don't already exist, then returns the complete, up-to-date set of every
     /// pseudonym stored for that (NamespaceName, OriginalValue) - not just the candidates just
     /// inserted. That final fresh read is what makes this correct under a concurrent race: two
@@ -163,7 +163,7 @@ public interface IPseudonymRepository
     /// <summary>
     /// Returns the subset of <paramref name="pseudonymValues"/> that exist as pseudonym values
     /// in <paramref name="namespaceName"/>. Backs the parent-existence check a child namespace
-    /// performs on its original values (see <see cref="Models.Namespace.ParentValidationMode"/>),
+    /// performs on its original values (see <see cref="Namespace.ParentValidationMode"/>),
     /// batched so a CSV chunk costs one round trip per parent namespace rather than one per row.
     /// Uses the same (namespace_name, pseudonym_value) index as
     /// <see cref="FindByPseudonymValueAsync"/>, and projects just the value - existence is all
