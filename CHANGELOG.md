@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.19.1](https://github.com/miracum/vfps/compare/v1.19.0...v1.19.1) (2026-09-20)
+
+
+### Miscellaneous Chores
+
+* added fuzz testing and updated docs ([#342](https://github.com/miracum/vfps/issues/342)) ([d383b6c](https://github.com/miracum/vfps/commit/d383b6c7c948a2a0d507370a028ea3e886d58599))
+* **deps:** update all non-major dependencies ([#344](https://github.com/miracum/vfps/issues/344)) ([b5e35f0](https://github.com/miracum/vfps/commit/b5e35f08a120ae7e95a573379bb885379c83873b))
+* **deps:** update dependency ubuntu to v26 ([#346](https://github.com/miracum/vfps/issues/346)) ([c3cb254](https://github.com/miracum/vfps/commit/c3cb254a0f0c4ac1d751d6f50c06beea551933a1))
+* **deps:** update github-actions ([#345](https://github.com/miracum/vfps/issues/345)) ([f870fce](https://github.com/miracum/vfps/commit/f870fce99519ca0b03cc9b8b8e0dba70bfe66e8b))
+
+
+### CI/CD
+
+* create issue on ha chaos test failures ([#347](https://github.com/miracum/vfps/issues/347)) ([0dc66d3](https://github.com/miracum/vfps/commit/0dc66d3b77f990a7d5716dd4bf62441ec68b506c))
+
 ## [1.19.0](https://github.com/miracum/vfps/compare/v1.18.1...v1.19.0) (2026-09-20)
 
 
