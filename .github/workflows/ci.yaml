@@ -545,6 +545,7 @@ jobs:
       security-events: write
       actions: read
     with:
+      # renovate: datasource=dotnet-version depName=dotnet-sdk
       dotnet-version: "10.0.401"
       enable-verify-base-image-signature: false
       enable-validate-gradle-wrapper: false

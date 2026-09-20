@@ -1,4 +1,24 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["github>miracum/.github//renovate/default"]
+  "extends": ["github>miracum/.github//renovate/default"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^\\.github/workflows/.*\\.ya?ml$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+dotnet-version:\\s*[\"'](?<currentValue>[^\"']+)[\"']"
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "global.json's SDK version, the Dockerfiles' dotnet/sdk and dotnet/aspnet image tags, and the annotated dotnet-version CI inputs have to move together - a mismatch between global.json/CI and the Dockerfile's SDK image breaks 'dotnet restore --locked-mode' on src/Vfps/Vfps.csproj, whose packages.lock.json pins Microsoft.AspNetCore.App.Internal.Assets to whatever ASP.NET Core runtime the build-stage SDK bundles.",
+      "matchPackageNames": [
+        "dotnet-sdk",
+        "mcr.microsoft.com/dotnet/sdk",
+        "mcr.microsoft.com/dotnet/aspnet"
+      ],
+      "groupName": "dotnet sdk and runtime"
+    }
+  ]
 }
