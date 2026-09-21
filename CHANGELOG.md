@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.3](https://github.com/miracum/vfps/compare/v1.19.2...v1.19.3) (2026-09-21)
+
+
+### Bug Fixes
+
+* keep values without a pseudonym instead of blanking them ([#351](https://github.com/miracum/vfps/issues/351)) ([d9d9ae5](https://github.com/miracum/vfps/commit/d9d9ae5c05b0cfc411847b5dd0812ae42f3caf8c))
+
 ## [1.19.2](https://github.com/miracum/vfps/compare/v1.19.1...v1.19.2) (2026-09-21)
 
 
