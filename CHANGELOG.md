@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.19.2](https://github.com/miracum/vfps/compare/v1.19.1...v1.19.2) (2026-09-21)
+
+
+### Bug Fixes
+
+* drop unneeded metrics guard with dedicated httplistener ([#348](https://github.com/miracum/vfps/issues/348)) ([55c001c](https://github.com/miracum/vfps/commit/55c001c50b0778d83d7b58b34ea8cfbf0ae5106e))
+* stuck csv processing after js interop expired ([#350](https://github.com/miracum/vfps/issues/350)) ([5360768](https://github.com/miracum/vfps/commit/5360768280b7e1b2983581797d32e400b13690cf))
+
 ## [1.19.1](https://github.com/miracum/vfps/compare/v1.19.0...v1.19.1) (2026-09-20)
 
 
