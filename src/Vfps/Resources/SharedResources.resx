@@ -229,11 +229,11 @@
   <data name="App.CsvJobs.PseudonymizeMode" xml:space="preserve">
     <value>Unknown values</value>
   </data>
-  <data name="App.CsvJobs.PseudonymizeModeBlankIfMissingHint" xml:space="preserve">
-    <value>Unknown values are written out as an empty cell and counted - never as the original value, which would leave unpseudonymized data in the output.</value>
+  <data name="App.CsvJobs.PseudonymizeModeKeepIfMissingHint" xml:space="preserve">
+    <value>Unknown values are left as the original value and counted, instead of being replaced with a pseudonym.</value>
   </data>
-  <data name="App.CsvJobs.PseudonymizeModeBlankIfMissingOption" xml:space="preserve">
-    <value>Leave the cell empty if the namespace doesn't already know a value</value>
+  <data name="App.CsvJobs.PseudonymizeModeKeepIfMissingOption" xml:space="preserve">
+    <value>Keep the original value if the namespace doesn't already know it</value>
   </data>
   <data name="App.CsvJobs.PseudonymizeModeCreateIfMissingOption" xml:space="preserve">
     <value>Create a pseudonym for values the namespace doesn't know yet</value>

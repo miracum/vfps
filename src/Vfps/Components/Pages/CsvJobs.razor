@@ -129,15 +129,15 @@ else
                                     <option value="@nameof(PseudonymizeMode.FailIfMissing)">
                                         @Localizer["App.CsvJobs.PseudonymizeModeFailIfMissingOption"]
                                     </option>
-                                    <option value="@nameof(PseudonymizeMode.BlankIfMissing)">
-                                        @Localizer["App.CsvJobs.PseudonymizeModeBlankIfMissingOption"]
+                                    <option value="@nameof(PseudonymizeMode.KeepIfMissing)">
+                                        @Localizer["App.CsvJobs.PseudonymizeModeKeepIfMissingOption"]
                                     </option>
                                 </select>
                             </BbFieldContent>
-                            @if (SelectedPseudonymizeMode == PseudonymizeMode.BlankIfMissing)
+                            @if (SelectedPseudonymizeMode == PseudonymizeMode.KeepIfMissing)
                             {
                                 <p class="bb:text-sm bb:text-muted-foreground">
-                                    @Localizer["App.CsvJobs.PseudonymizeModeBlankIfMissingHint"]
+                                    @Localizer["App.CsvJobs.PseudonymizeModeKeepIfMissingHint"]
                                 </p>
                             }
                         </BbField>

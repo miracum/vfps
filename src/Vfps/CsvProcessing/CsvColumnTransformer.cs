@@ -271,10 +271,7 @@ internal sealed class CsvColumnTransformer(
     /// <see cref="PseudonymizeMode"/>s - because they only ever differed in three things: which
     /// batch call resolves a chunk, which half of the resolved <see cref="Pseudonym"/> is written
     /// back, and what becomes of a value nothing resolved to. Separate methods are what would let
-    /// the third of those drift, and it is the one that matters: leaving an unresolved value where
-    /// it was found is correct when de-pseudonymizing, where the field simply stays a pseudonym,
-    /// and a disclosure when pseudonymizing, where it stays the original value in the very column
-    /// the job was asked to replace.
+    /// the third of those drift.
     /// </summary>
     private async Task FlushChunkAsync(
         List<BufferedRow> chunk,
@@ -440,13 +437,11 @@ internal sealed class CsvColumnTransformer(
                 return raw;
             }
 
-            if (job.PseudonymizeMode == PseudonymizeMode.BlankIfMissing)
+            if (job.PseudonymizeMode == PseudonymizeMode.KeepIfMissing)
             {
-                // Empty, never `raw`. `raw` is the original value, and writing it into the column
-                // this job was asked to pseudonymize is the exact outcome the mode exists to
-                // prevent - the counter is what tells the caller it happened.
+                // `raw`, unchanged - the counter is what tells the caller it happened.
                 progress.UnresolvedValueCount++;
-                return string.Empty;
+                return raw;
             }
 
             // Unreachable by design: CreateIfMissing gets an entry back for every value it asked

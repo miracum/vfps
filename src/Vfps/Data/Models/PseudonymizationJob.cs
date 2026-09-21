@@ -72,11 +72,9 @@ public enum PseudonymizationJobDirection
 /// none" - and a single member per reachable behavior is what keeps that state unrepresentable
 /// rather than merely unreachable.
 ///
-/// Note what <see cref="BlankIfMissing"/> does *not* do: leave the field as it found it. That is
-/// what a de-pseudonymizing job does with a pseudonym it cannot resolve (harmless - the value
-/// stays a pseudonym), and doing the same here would write the raw original value into the very
-/// column the job was asked to pseudonymize. The failure mode of this feature has to be an empty
-/// field, never a leaked one.
+/// Note what <see cref="KeepIfMissing"/> does: leave the field as it found it, the same as what a
+/// de-pseudonymizing job does with a pseudonym it cannot resolve. Unlike that case, this one does
+/// count what it left behind - see <see cref="PseudonymizationJob.UnresolvedValueCount"/>.
 ///
 /// New members are appended, never inserted, so existing stored integer values keep their meaning.
 /// </summary>
@@ -99,11 +97,12 @@ public enum PseudonymizeMode
     FailIfMissing,
 
     /// <summary>
-    /// Never generate: write an empty field for each value with no pseudonym, count them into
-    /// <see cref="PseudonymizationJob.UnresolvedValueCount"/> and carry on. For a caller enriching
-    /// a file where some rows simply have no counterpart yet.
+    /// Never generate: leave the original value in place for each value with no pseudonym, count
+    /// them into <see cref="PseudonymizationJob.UnresolvedValueCount"/> and carry on. For a caller
+    /// enriching a file where some rows simply have no counterpart yet, and who would rather keep
+    /// the original value than lose it to a blank cell.
     /// </summary>
-    BlankIfMissing,
+    KeepIfMissing,
 }
 
 /// <summary>
@@ -224,9 +223,9 @@ public class PseudonymizationJob : TracksCreationAndUpdates
     public int MissingValueCount { get; set; }
 
     /// <summary>
-    /// <see cref="PseudonymizeMode.BlankIfMissing"/> only: fields written out empty because the
-    /// namespace held no pseudonym for their original value and the job was told not to create
-    /// one. Always 0 for every other mode - <see cref="PseudonymizeMode.CreateIfMissing"/> cannot
+    /// <see cref="PseudonymizeMode.KeepIfMissing"/> only: fields left as their original value
+    /// because the namespace held no pseudonym for it and the job was told not to create one.
+    /// Always 0 for every other mode - <see cref="PseudonymizeMode.CreateIfMissing"/> cannot
     /// leave a value unresolved, and <see cref="PseudonymizeMode.FailIfMissing"/> fails the job
     /// instead of counting.
     ///

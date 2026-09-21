@@ -409,7 +409,7 @@ public class CsvPseudonymizationJobRunnerTests
 
     [Theory]
     [InlineData(PseudonymizeMode.FailIfMissing)]
-    [InlineData(PseudonymizeMode.BlankIfMissing)]
+    [InlineData(PseudonymizeMode.KeepIfMissing)]
     public async Task RunAsync_WithALookupOnlyMode_ShouldResolveWithoutEverCreating(
         PseudonymizeMode mode
     )
@@ -516,11 +516,11 @@ public class CsvPseudonymizationJobRunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_WithBlankIfMissing_ShouldCountUnknownValuesAndComplete()
+    public async Task RunAsync_WithKeepIfMissing_ShouldCountUnknownValuesAndComplete()
     {
         var job = CreateJob(
             PseudonymizationJobDirection.Pseudonymize,
-            PseudonymizeMode.BlankIfMissing,
+            PseudonymizeMode.KeepIfMissing,
             new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
         );
         FakeFindJob(job);
@@ -532,8 +532,9 @@ public class CsvPseudonymizationJobRunnerTests
         var sut = CreateSut();
         await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
-        // Three rows written, two of them with an emptied cell - counted as unresolved (the sixth
-        // argument) rather than as missing input values (the fifth), which they are not.
+        // Three rows written, two of them with their original value kept as-is - counted as
+        // unresolved (the sixth argument) rather than as missing input values (the fifth), which
+        // they are not.
         A.CallTo(() =>
                 jobRepository.UpdateProgressAsync(
                     job.Id,
@@ -551,11 +552,11 @@ public class CsvPseudonymizationJobRunnerTests
     }
 
     [Fact]
-    public async Task RunAsync_WithBlankIfMissing_ShouldCountABlankInputCellAsMissingNotUnresolved()
+    public async Task RunAsync_WithKeepIfMissing_ShouldCountABlankInputCellAsMissingNotUnresolved()
     {
         var job = CreateJob(
             PseudonymizationJobDirection.Pseudonymize,
-            PseudonymizeMode.BlankIfMissing,
+            PseudonymizeMode.KeepIfMissing,
             new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
         );
         FakeFindJob(job);
