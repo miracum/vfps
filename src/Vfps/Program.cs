@@ -102,15 +102,18 @@ builder.Services.Configure<HostOptions>(hostOptions =>
 });
 
 // A dedicated metrics port (separate from the app's public HTTP/gRPC listeners) keeps /metrics
-// off the internet-facing endpoints - only an in-cluster scraper needs to reach it. Kept as a
-// second, code-configured Kestrel listener alongside the appsettings.json-configured Http/
-// HttpGrpc endpoints, rather than folding it into those. The separation is enforced in both
-// directions by the "metrics port" guard middleware below - /metrics answers only on this port,
-// and this port answers nothing but /metrics. Port 0 (used by
-// appsettings.Test.json) makes Kestrel bind an ephemeral OS-assigned port, matching the prior
-// prometheus-net MetricServer's own Port=0 behavior for parallel test runs.
+// off the internet-facing endpoints - only an in-cluster scraper needs to reach it. Served from
+// its own standalone HttpListener (see MetricsConfigurationExtensions) rather than as a second
+// Kestrel listener alongside the appsettings.json-configured Http/HttpGrpc endpoints: Kestrel
+// drops ASPNETCORE_URLS/ASPNETCORE_HTTP_PORTS support entirely as soon as any endpoint is
+// configured in code, on top of which this app already commits to Kestrel:Endpoints - and the
+// HttpListener has no shared routing table for anything else to be reachable through, so unlike
+// a second Kestrel listener it needs no separate guard to keep /metrics off the main ports and
+// everything else off this one. Port 0 (used by appsettings.Test.json) means "not exported at
+// all" - HttpListener has no ephemeral-port trick equivalent to Kestrel's, so AddMetrics simply
+// skips starting the listener when this is 0, matching the previous behavior of the metrics
+// port answering nothing during tests.
 var metricsPort = builder.Configuration.GetValue<ushort>("MetricsPort", 8082);
-builder.WebHost.ConfigureKestrel(kestrelOptions => kestrelOptions.ListenAnyIP(metricsPort));
 
 builder.Services.AddSwaggerGen(c =>
 {
@@ -815,7 +818,7 @@ builder.Services.AddControllers(options =>
 // Metrics are always exported (a pull-based /metrics endpoint costs nothing when nobody scrapes
 // it), matching this codebase's other unconditional infrastructure. Tracing stays opt-in below:
 // pushing spans to a collector nobody deployed would be per-request overhead for nothing.
-builder.AddMetrics();
+builder.AddMetrics(metricsPort);
 
 // Tracing
 var isTracingEnabled = builder.Configuration.GetValue("Tracing:IsEnabled", false);
@@ -845,34 +848,6 @@ var forwardedHeadersOptions = new ForwardedHeadersOptions
 forwardedHeadersOptions.KnownIPNetworks.Clear();
 forwardedHeadersOptions.KnownProxies.Clear();
 app.UseForwardedHeaders(forwardedHeadersOptions);
-
-// Keeps /metrics off the app's public-facing ports, and everything else off the metrics port.
-// The second half is the one with teeth: ASP.NET Core routing is indifferent to which Kestrel
-// listener accepted a connection, so without this the admin UI, the Hangfire dashboard, the
-// REST/FHIR API and the gRPC services are all served on the metrics port too - and a deployment
-// that scopes that port more loosely than the API ports (the bundled chart's NetworkPolicy does)
-// would be publishing the whole pseudonymization API through it. See MetricsPortGuard for the
-// decision itself, kept there as a pure function so it can be unit-tested.
-//
-// Placed ahead of UsePathBase/routing so a rejected request never reaches an endpoint at all.
-app.Use(
-    async (context, next) =>
-    {
-        if (
-            MetricsPortGuard.ShouldReject(
-                context.Request.Path,
-                context.Connection.LocalPort,
-                metricsPort
-            )
-        )
-        {
-            context.Response.StatusCode = StatusCodes.Status404NotFound;
-            return;
-        }
-
-        await next(context);
-    }
-);
 
 app.UseRequestLocalization();
 
@@ -1025,8 +1000,6 @@ app.MapHealthChecks(
 );
 
 app.MapHealthChecks("/livez", new HealthCheckOptions { Predicate = _ => false });
-
-app.MapPrometheusScrapingEndpoint(MetricsPortGuard.MetricsPath);
 
 if (app.Environment.IsDevelopment())
 {

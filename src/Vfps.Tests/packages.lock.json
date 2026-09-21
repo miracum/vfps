@@ -1202,11 +1202,12 @@
           "OpenTelemetry": "1.19.0"
         }
       },
-      "OpenTelemetry.Exporter.Prometheus.AspNetCore": {
+      "OpenTelemetry.Exporter.Prometheus.HttpListener": {
         "type": "Transitive",
         "resolved": "1.19.0-beta.1",
-        "contentHash": "6PkvnrVIJzwzPMp2WQbmlQLjwhw8VJh7QXpM98ygD04+Nwq8pezMJ7594WuCeCCH9z7qheMwlxxQ666sfwwlsw==",
+        "contentHash": "3OHfCVdrRc+Gvv2/TFNofrJQzDdK0L6BRLA2A/2VDEEt0FYVtNin52iuKe/uvmVa6o5DrhQW4yvoQzJ9Gii8wA==",
         "dependencies": {
+          "Microsoft.Extensions.Configuration.EnvironmentVariables": "10.0.0",
           "OpenTelemetry": "[1.19.0, 2.0.0)"
         }
       },
@@ -1440,12 +1441,12 @@
           "Npgsql.EntityFrameworkCore.PostgreSQL": "[10.0.3, )",
           "Npgsql.OpenTelemetry": "[10.0.3, )",
           "OpenTelemetry.Exporter.OpenTelemetryProtocol": "[1.19.0, )",
-          "OpenTelemetry.Exporter.Prometheus.AspNetCore": "[1.19.0-beta.1, )",
+          "OpenTelemetry.Exporter.Prometheus.HttpListener": "[1.19.0-beta.1, )",
           "OpenTelemetry.Extensions.Hosting": "[1.19.0, )",
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.19.0, )",
           "OpenTelemetry.Instrumentation.Http": "[1.19.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.19.0, )",
-          "Vfps.Voprf.Client": "[1.19.0, )"
+          "Vfps.Voprf.Client": "[1.19.1, )"
         }
       },
       "vfps.voprf": {
@@ -1458,8 +1459,8 @@
         "type": "Project",
         "dependencies": {
           "Grpc.Net.ClientFactory": "[2.83.0, )",
-          "Vfps.Voprf": "[1.19.0, )",
-          "Vfps.Voprf.Contracts": "[1.19.0, )"
+          "Vfps.Voprf": "[1.19.1, )",
+          "Vfps.Voprf.Contracts": "[1.19.1, )"
         }
       },
       "vfps.voprf.contracts": {
