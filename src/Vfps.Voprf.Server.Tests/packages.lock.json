@@ -732,8 +732,8 @@
         "type": "Project",
         "dependencies": {
           "Grpc.Net.ClientFactory": "[2.83.0, )",
-          "Vfps.Voprf": "[1.19.0, )",
-          "Vfps.Voprf.Contracts": "[1.19.0, )"
+          "Vfps.Voprf": "[1.19.1, )",
+          "Vfps.Voprf.Contracts": "[1.19.1, )"
         }
       },
       "vfps.voprf.contracts": {
@@ -751,8 +751,8 @@
           "Grpc.AspNetCore.Server.Reflection": "[2.83.0, )",
           "Microsoft.AspNetCore.Authentication.Certificate": "[10.0.12, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.12, )",
-          "Vfps.Voprf": "[1.19.0, )",
-          "Vfps.Voprf.Contracts": "[1.19.0, )"
+          "Vfps.Voprf": "[1.19.1, )",
+          "Vfps.Voprf.Contracts": "[1.19.1, )"
         }
       }
     }
