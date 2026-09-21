@@ -554,6 +554,34 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         enqueuedJob!.Args[1].Should().Be("Pseudonymize");
     }
 
+    // Now reachable directly over HTTP from the browser (the /csv-jobs/{id}/upload-complete
+    // endpoint) rather than only from one awaited call in CsvJobs.razor, so a retried request
+    // (a flaky network between browser and server, a duplicate fetch) is a real possibility -
+    // without this guard, it would enqueue the same input for processing a second time.
+    [Fact]
+    public async Task MarkUploadCompleteAsync_CalledTwice_ShouldEnqueueOnlyOnce()
+    {
+        var (sut, _, _, backgroundJobClient) = CreateSut();
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
+        );
+        var (job, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+
+        await sut.MarkUploadCompleteAsync(job.Id, UserWithSubject("alice"), CancellationToken.None);
+        await sut.MarkUploadCompleteAsync(job.Id, UserWithSubject("alice"), CancellationToken.None);
+
+        A.CallTo(() => backgroundJobClient.Create(A<Job>._, A<IState>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
     [Fact]
     public async Task GetDownloadUrlAsync_WithPseudonymizeDirection_ShouldNameFileAfterInputPlusSuffix()
     {

@@ -1044,8 +1044,9 @@ else
         }
     }
 
-    // Everything but an export: create the job, PUT the file straight to S3 from the browser, and
-    // only then tell the server the upload landed.
+    // Everything but an export: create the job, then PUT the file straight to S3 from the browser
+    // and tell the server the upload landed - both done by vfpsCsvUpload.uploadFile itself, see
+    // its own call below for why.
     private async Task StartUploadJobAsync(ClaimsPrincipal user)
     {
         var mappings = BuildColumnMappings();
@@ -1070,14 +1071,38 @@ else
         );
 
         _uploadProgressPercent = 0;
+
+        // Resolved against NavigationManager.BaseUri (which already carries the "/ui" PathBase),
+        // not hardcoded - see Program.cs's own comment on why every server-side route in this app
+        // is written without that prefix and added back at the middleware level.
+        var completeUrl = NavigationManager
+            .ToAbsoluteUri($"csv-jobs/{job.Id}/upload-complete")
+            .ToString();
+
         using (var dotNetRef = DotNetObjectReference.Create(this))
         {
             try
             {
+                // The CancellationToken overload, not the plain one: it bypasses Blazor Server's
+                // default one-minute JS-interop timeout (CircuitOptions.JSInteropDefaultCallTimeout),
+                // which otherwise applies to *any* awaited .NET-to-JS call regardless of how long
+                // the underlying operation legitimately takes. Without this, a multi-hundred-MB
+                // upload on anything slower than ~8 MB/s would have the .NET side give up and throw
+                // here while the browser's PUT keeps running in the background and succeeds anyway -
+                // what actually bounds how long this may run is the presigned URL's own expiry
+                // (S3Config.PresignedUrlExpiry), not this call.
+                //
+                // vfpsCsvUpload.uploadFile itself now also calls the /csv-jobs/{id}/upload-complete
+                // endpoint directly (a plain HTTP request, not routed through this interop call)
+                // right after its PUT succeeds - see that JS function and endpoint for why: the
+                // job must still get queued even if the circuit dies mid-upload, which this await
+                // alone can't guarantee no matter how its timeout is configured.
                 await JS.InvokeVoidAsync(
                     "vfpsCsvUpload.uploadFile",
+                    CancellationToken.None,
                     "csvFileInput",
                     uploadUrl,
+                    completeUrl,
                     dotNetRef
                 );
             }
@@ -1088,8 +1113,6 @@ else
                 _uploadProgressPercent = null;
             }
         }
-
-        await _jobAppService.MarkUploadCompleteAsync(job.Id, user, CancellationToken.None);
 
         Toast.Success(
             job.OriginalFileName is null

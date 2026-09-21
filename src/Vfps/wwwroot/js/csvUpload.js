@@ -64,7 +64,7 @@ window.vfpsCsvUpload = {
     return parseCsvLine(firstLine, delimiter || ",");
   },
 
-  uploadFile: function (inputElementId, presignedUrl, dotNetHelper) {
+  uploadFile: function (inputElementId, presignedUrl, completeUrl, dotNetHelper) {
     const input = document.getElementById(inputElementId);
     if (!input || !input.files || input.files.length === 0) {
       return Promise.reject(new Error("No file selected."));
@@ -99,12 +99,31 @@ window.vfpsCsvUpload = {
       };
 
       xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          input.value = "";
-          resolve();
-        } else {
+        if (xhr.status < 200 || xhr.status >= 300) {
           reject(new Error(`Upload failed with status ${xhr.status}`));
+          return;
         }
+
+        input.value = "";
+
+        // Reported directly over a plain HTTP request rather than by returning control back to
+        // the .NET side of this same call: this has to keep working even if the Blazor circuit
+        // itself has dropped during the transfer (a proxy's idle timeout, a backgrounded tab, a
+        // laptop that slept) - see the /csv-jobs/{id}/upload-complete endpoint this calls.
+        fetch(completeUrl, { method: "POST" })
+          .then((response) => {
+            if (response.ok) {
+              resolve();
+              return;
+            }
+            return response.text().then((text) => {
+              throw new Error(
+                `The upload reached storage, but the server could not be notified ` +
+                  `(HTTP ${response.status})${text ? `: ${text}` : ""}.`
+              );
+            });
+          })
+          .catch(reject);
       };
 
       xhr.onerror = () => reject(new Error("Upload failed due to a network error."));

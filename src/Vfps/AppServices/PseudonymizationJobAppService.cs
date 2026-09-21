@@ -174,6 +174,17 @@ public class PseudonymizationJobAppService(
         // the caller's upload was in flight, which for a large file is a long time.
         await EnsureCurrentNamespaceAccessAsync(job, user, cancellationToken);
 
+        // Idempotent no-op past this point, not just on trust: this is now reachable directly
+        // over HTTP from the browser (see the /csv-jobs/{id}/upload-complete endpoint) rather
+        // than only from one awaited call in CsvJobs.razor, so a retried request (a flaky network
+        // between browser and server, a duplicate fetch) is a real possibility, not a hypothetical
+        // one. EnqueueAsync below has no such guard of its own - it would otherwise enqueue a
+        // second Hangfire job that reprocesses the same input from scratch.
+        if (job.Status != PseudonymizationJobStatus.AwaitingUpload)
+        {
+            return;
+        }
+
         long totalBytes;
         try
         {
