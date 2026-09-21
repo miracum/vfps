@@ -387,6 +387,20 @@ else
                         ? Localizer["App.CsvJobs.UploadAndProcess"].Value
                         : Localizer["App.CsvJobs.StartExport"].Value)
                 </BbButton>
+
+                @* Only while the browser-to-S3 PUT itself is in flight - the job already exists
+                   server-side by this point (see StartUploadJobAsync), so this is purely local,
+                   client-side upload progress, distinct from the per-job processing progress the
+                   jobs grid below shows once the runner picks the job up. *@
+                @if (_uploadProgressPercent is { } uploadProgressPercent)
+                {
+                    <div class="bb:max-w-sm bb:space-y-1" id="uploadProgress">
+                        <p class="bb:text-sm bb:text-muted-foreground">
+                            @Localizer["App.CsvJobs.Uploading"]
+                        </p>
+                        <BbProgress Value="@uploadProgressPercent" ShowLabel="true" />
+                    </div>
+                }
             </BbCardContent>
         </BbCard>
 
@@ -642,6 +656,11 @@ else
     private string? _fileName;
     private IReadOnlyList<string> _detectedColumns = [];
     private bool _isCreating;
+
+    // Set only while StartUploadJobAsync's browser-to-S3 PUT is in flight - see
+    // OnUploadProgress. Null the rest of the time, including once the upload finishes, so the
+    // progress bar in the markup disappears again rather than getting stuck at 100%.
+    private double? _uploadProgressPercent;
     private string? _createError;
     private IReadOnlyList<PseudonymizationJob> _jobs = [];
     private bool _isAdmin;
@@ -925,6 +944,15 @@ else
         await DetectColumnsAsync();
     }
 
+    // Invoked from JS (vfpsCsvUpload.uploadFile's xhr.upload.onprogress) via the
+    // DotNetObjectReference passed into that call - see StartUploadJobAsync.
+    [JSInvokable]
+    public void OnUploadProgress(double loadedBytes, double totalBytes)
+    {
+        _uploadProgressPercent = totalBytes > 0 ? loadedBytes / totalBytes * 100.0 : 0;
+        StateHasChanged();
+    }
+
     private async Task DetectColumnsAsync()
     {
         if (!_hasHeaderRow)
@@ -1041,7 +1069,26 @@ else
             CancellationToken.None
         );
 
-        await JS.InvokeVoidAsync("vfpsCsvUpload.uploadFile", "csvFileInput", uploadUrl);
+        _uploadProgressPercent = 0;
+        using (var dotNetRef = DotNetObjectReference.Create(this))
+        {
+            try
+            {
+                await JS.InvokeVoidAsync(
+                    "vfpsCsvUpload.uploadFile",
+                    "csvFileInput",
+                    uploadUrl,
+                    dotNetRef
+                );
+            }
+            finally
+            {
+                // Cleared on both success and failure - a failed upload's error is shown via
+                // _createError (see CreateJobAsync's catch block), not a stalled progress bar.
+                _uploadProgressPercent = null;
+            }
+        }
+
         await _jobAppService.MarkUploadCompleteAsync(job.Id, user, CancellationToken.None);
 
         Toast.Success(

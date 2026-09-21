@@ -547,6 +547,9 @@
   <data name="App.CsvJobs.UploadAndProcess" xml:space="preserve">
     <value>Upload and process</value>
   </data>
+  <data name="App.CsvJobs.Uploading" xml:space="preserve">
+    <value>Uploading…</value>
+  </data>
   <data name="App.CsvJobs.UploadFailed" xml:space="preserve">
     <value>Upload failed: {0}</value>
   </data>

@@ -64,26 +64,53 @@ window.vfpsCsvUpload = {
     return parseCsvLine(firstLine, delimiter || ",");
   },
 
-  uploadFile: async function (inputElementId, presignedUrl) {
+  uploadFile: function (inputElementId, presignedUrl, dotNetHelper) {
     const input = document.getElementById(inputElementId);
     if (!input || !input.files || input.files.length === 0) {
-      throw new Error("No file selected.");
+      return Promise.reject(new Error("No file selected."));
     }
 
     const file = input.files[0];
 
     // Bytes go straight from the browser to S3 via this presigned URL - never through the
     // Blazor circuit or Kestrel, so multi-GB files aren't bounded by SignalR message size.
-    const response = await fetch(presignedUrl, {
-      method: "PUT",
-      body: file,
-      headers: { "Content-Type": "text/csv" },
+    // XMLHttpRequest rather than fetch: fetch has no event for outgoing request-body progress,
+    // only xhr.upload.onprogress does.
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", presignedUrl);
+      xhr.setRequestHeader("Content-Type", "text/csv");
+
+      // Throttled rather than forwarding every event: progress fires many times per second for
+      // a large file, and each forward is a round trip over the Blazor circuit. The final event
+      // (loaded reaches total) always goes through, so the caller's last update is 100%.
+      let lastReportedAt = 0;
+      xhr.upload.onprogress = (event) => {
+        if (!event.lengthComputable || !dotNetHelper) {
+          return;
+        }
+        const now = Date.now();
+        const isDone = event.loaded >= event.total;
+        if (!isDone && now - lastReportedAt < 200) {
+          return;
+        }
+        lastReportedAt = now;
+        dotNetHelper.invokeMethodAsync("OnUploadProgress", event.loaded, event.total);
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          input.value = "";
+          resolve();
+        } else {
+          reject(new Error(`Upload failed with status ${xhr.status}`));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error("Upload failed due to a network error."));
+      xhr.onabort = () => reject(new Error("Upload was aborted."));
+
+      xhr.send(file);
     });
-
-    if (!response.ok) {
-      throw new Error(`Upload failed with status ${response.status}`);
-    }
-
-    input.value = "";
   },
 };
