@@ -984,6 +984,44 @@ app.MapGet(
     }
 );
 
+// Confirms a browser-to-S3 CSV upload landed and queues the job - called directly by
+// csvUpload.js (vfpsCsvUpload.uploadFile) right after its own PUT to the presigned URL succeeds,
+// not routed back through the Blazor circuit. CsvJobs.razor used to make this same
+// MarkUploadCompleteAsync call itself once its own awaited JS interop call for the upload
+// returned, but that ties every large upload's fate to the circuit surviving for the whole
+// transfer: a multi-hundred-MB file over a slow connection routinely takes minutes, and if the
+// circuit drops in the meantime (a proxy's WebSocket idle timeout, a backgrounded tab, a laptop
+// that slept), the job was left stuck showing AwaitingUpload forever even though the file was
+// already sitting in S3. A plain HTTP endpoint the browser calls directly has no such dependency.
+app.MapPost(
+    "/csv-jobs/{jobId:guid}/upload-complete",
+    async (
+        Guid jobId,
+        HttpContext httpContext,
+        IPseudonymizationJobAppService jobAppService,
+        CancellationToken cancellationToken
+    ) =>
+    {
+        try
+        {
+            await jobAppService.MarkUploadCompleteAsync(jobId, httpContext.User, cancellationToken);
+            return Results.Ok();
+        }
+        catch (PseudonymizationJobNotFoundException ex)
+        {
+            return Results.Text(ex.Message, statusCode: StatusCodes.Status404NotFound);
+        }
+        catch (ForbiddenException ex)
+        {
+            return Results.Text(ex.Message, statusCode: StatusCodes.Status403Forbidden);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.Text(ex.Message, statusCode: StatusCodes.Status409Conflict);
+        }
+    }
+);
+
 app.MapStaticAssets();
 app.MapRazorComponents<App>().AddInteractiveServerRenderMode();
 

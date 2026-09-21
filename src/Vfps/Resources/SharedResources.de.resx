@@ -547,6 +547,9 @@
   <data name="App.CsvJobs.UploadAndProcess" xml:space="preserve">
     <value>Hochladen und verarbeiten</value>
   </data>
+  <data name="App.CsvJobs.Uploading" xml:space="preserve">
+    <value>Wird hochgeladen…</value>
+  </data>
   <data name="App.CsvJobs.UploadFailed" xml:space="preserve">
     <value>Upload fehlgeschlagen: {0}</value>
   </data>
