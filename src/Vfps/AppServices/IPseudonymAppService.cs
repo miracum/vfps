@@ -90,7 +90,7 @@ public interface IPseudonymAppService
     /// boundary and the same batching rationale - one round trip per distinct namespace rather
     /// than one per value. Backs
     /// <see cref="PseudonymizeMode.FailIfMissing"/> and
-    /// <see cref="PseudonymizeMode.BlankIfMissing"/> CSV jobs.
+    /// <see cref="PseudonymizeMode.KeepIfMissing"/> CSV jobs.
     ///
     /// Returns the same shape as <see cref="ReverseLookupTrustedBatchAsync"/>, deliberately: a
     /// value with no stored pseudonym is simply absent from the dictionary rather than mapping to

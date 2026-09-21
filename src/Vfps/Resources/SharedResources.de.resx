@@ -229,11 +229,11 @@
   <data name="App.CsvJobs.PseudonymizeMode" xml:space="preserve">
     <value>Unbekannte Werte</value>
   </data>
-  <data name="App.CsvJobs.PseudonymizeModeBlankIfMissingHint" xml:space="preserve">
-    <value>Unbekannte Werte werden als leere Zelle ausgegeben und gezählt - niemals als Originalwert, der sonst unpseudonymisiert in der Ausgabe stehen bliebe.</value>
+  <data name="App.CsvJobs.PseudonymizeModeKeepIfMissingHint" xml:space="preserve">
+    <value>Unbekannte Werte bleiben als Originalwert erhalten und werden gezählt, anstatt durch ein Pseudonym ersetzt zu werden.</value>
   </data>
-  <data name="App.CsvJobs.PseudonymizeModeBlankIfMissingOption" xml:space="preserve">
-    <value>Zelle leer lassen, wenn der Namespace einen Wert noch nicht kennt</value>
+  <data name="App.CsvJobs.PseudonymizeModeKeepIfMissingOption" xml:space="preserve">
+    <value>Originalwert beibehalten, wenn der Namespace ihn noch nicht kennt</value>
   </data>
   <data name="App.CsvJobs.PseudonymizeModeCreateIfMissingOption" xml:space="preserve">
     <value>Pseudonym erzeugen, wenn der Namespace den Wert noch nicht kennt</value>
@@ -426,6 +426,9 @@
   </data>
   <data name="App.CsvJobs.Issue" xml:space="preserve">
     <value>Problem</value>
+  </data>
+  <data name="App.CsvJobs.JobActionFailedTitle" xml:space="preserve">
+    <value>Aktion fehlgeschlagen</value>
   </data>
   <data name="App.CsvJobs.JobCreated" xml:space="preserve">
     <value>Job erstellt</value>

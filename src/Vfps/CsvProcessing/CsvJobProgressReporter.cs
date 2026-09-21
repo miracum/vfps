@@ -89,10 +89,10 @@ internal sealed class CsvJobProgressReporter(
     public int MissingValueCount { get; set; }
 
     /// <summary>
-    /// Fields blanked because the namespace held no pseudonym for them and the job was told not to
-    /// create one - <see cref="PseudonymizeMode.BlankIfMissing"/> only. Lives here for the same
-    /// reason as the two counters above: it is incremented deep inside the per-chunk flush path
-    /// and observed by the reporting code below.
+    /// Fields left as their original value because the namespace held no pseudonym for them and
+    /// the job was told not to create one - <see cref="PseudonymizeMode.KeepIfMissing"/> only.
+    /// Lives here for the same reason as the two counters above: it is incremented deep inside the
+    /// per-chunk flush path and observed by the reporting code below.
     /// </summary>
     public int UnresolvedValueCount { get; set; }
 
