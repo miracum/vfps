@@ -8,8 +8,7 @@ namespace Vfps;
 /// Loads the X.509 certificates that encrypt the Data Protection key ring at rest - see
 /// <see cref="DataProtectionConfig"/> for why it needs encrypting at all.
 ///
-/// Kept out of Program.cs as a pure function over the configuration so it can be unit-tested,
-/// same reasoning as <see cref="MetricsPortGuard"/>.
+/// Kept out of Program.cs as a pure function over the configuration so it can be unit-tested.
 ///
 /// Every failure here throws rather than degrading to an unencrypted key ring. A typo in a path
 /// that silently fell back to plaintext would be the worst outcome available: the deployment
