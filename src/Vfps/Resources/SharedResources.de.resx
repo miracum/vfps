@@ -427,6 +427,9 @@
   <data name="App.CsvJobs.Issue" xml:space="preserve">
     <value>Problem</value>
   </data>
+  <data name="App.CsvJobs.JobActionFailedTitle" xml:space="preserve">
+    <value>Aktion fehlgeschlagen</value>
+  </data>
   <data name="App.CsvJobs.JobCreated" xml:space="preserve">
     <value>Job erstellt</value>
   </data>

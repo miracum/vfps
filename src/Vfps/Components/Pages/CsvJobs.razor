@@ -1221,29 +1221,60 @@ else
         return mappings;
     }
 
-    private async Task CancelJobAsync(Guid jobId)
+    /// <summary>
+    /// Runs a job-row action (cancel, download, clear-finished) and turns a known app-service
+    /// failure into a toast instead of an unhandled exception. Unlike CreateJobAsync's own
+    /// (inline, form-shaped) error handling, these have no form to show an error in, but the ones
+    /// that act on a single job (cancel, download) share the same real failure modes it guards
+    /// against: a job another tab already cancelled/cleared, or one that no longer exists
+    /// (PseudonymizationJobNotFoundException), the caller no longer owning it
+    /// (ForbiddenException), or a download requested before the job finished
+    /// (InvalidOperationException). Left uncaught, any of those propagates out of a Blazor
+    /// @onclick handler as an unhandled exception, which is fatal to the whole circuit - not just
+    /// this one action - exactly the failure mode StartUploadJobAsync's own JS interop call had
+    /// to be fixed for.
+    /// </summary>
+    private async Task RunJobActionAsync(Func<Task> action)
     {
         if (_jobAppService is null)
         {
             return;
         }
 
-        var user = await GetUserAsync();
-        await _jobAppService.CancelAsync(jobId, user, CancellationToken.None);
-        await ReloadJobsAsync();
-    }
-
-    private async Task DownloadAsync(Guid jobId)
-    {
-        if (_jobAppService is null)
+        try
         {
-            return;
+            await action();
         }
-
-        var user = await GetUserAsync();
-        var url = await _jobAppService.GetDownloadUrlAsync(jobId, user, CancellationToken.None);
-        await JS.InvokeVoidAsync("open", url, "_blank");
+        catch (Exception ex)
+            when (ex
+                is ForbiddenException
+                    or PseudonymizationJobNotFoundException
+                    or InvalidOperationException
+            )
+        {
+            Toast.Error(ex.Message, Localizer["App.CsvJobs.JobActionFailedTitle"].Value);
+        }
     }
+
+    private Task CancelJobAsync(Guid jobId) =>
+        RunJobActionAsync(async () =>
+        {
+            var user = await GetUserAsync();
+            await _jobAppService!.CancelAsync(jobId, user, CancellationToken.None);
+            await ReloadJobsAsync();
+        });
+
+    private Task DownloadAsync(Guid jobId) =>
+        RunJobActionAsync(async () =>
+        {
+            var user = await GetUserAsync();
+            var url = await _jobAppService!.GetDownloadUrlAsync(
+                jobId,
+                user,
+                CancellationToken.None
+            );
+            await JS.InvokeVoidAsync("open", url, "_blank");
+        });
 
     private static bool IsFinished(PseudonymizationJobStatus status) =>
         status
@@ -1256,7 +1287,7 @@ else
     {
         // Guards against re-entrant invocation - see the identical comment on
         // Namespaces.razor's CreateNamespaceAsync for why this matters under Blazor Server.
-        if (_jobAppService is null || _isClearingFinished)
+        if (_isClearingFinished)
         {
             return;
         }
@@ -1264,10 +1295,13 @@ else
         _isClearingFinished = true;
         try
         {
-            var user = await GetUserAsync();
-            await _jobAppService.ClearFinishedAsync(user, CancellationToken.None);
-            _showClearFinishedConfirm = false;
-            await ReloadJobsAsync();
+            await RunJobActionAsync(async () =>
+            {
+                var user = await GetUserAsync();
+                await _jobAppService!.ClearFinishedAsync(user, CancellationToken.None);
+                _showClearFinishedConfirm = false;
+                await ReloadJobsAsync();
+            });
         }
         finally
         {
