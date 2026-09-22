@@ -148,65 +148,17 @@ internal sealed class CsvColumnTransformer(
         // Clamped rather than trusted as-is: a misconfigured 0 or negative value would otherwise
         // throw out of the List<BufferedRow> capacity below or flush on every single row.
         var chunkSize = Math.Max(1, csvProcessingConfig.Value.PseudonymizeBatchSize);
-
-        // rows: actually flushed/written so far - what's reported as progress and eventually
-        // RowsProcessed. totalRowsRead: consumed from the reader so far, flushed or not - this
-        // drives when MaybeReportAndCheckCancelledAsync actually checks in, decoupled
-        // from the (now potentially much larger, for Pseudonymize) flush boundary so a big
-        // batch size can't blunt cancellation/progress responsiveness. If a cancellation is
-        // noticed while a batch is only partially buffered, that partial buffer is simply
-        // dropped rather than flushed - same "discard whatever hasn't been written yet"
-        // behavior as always, just checked more often than the flush boundary now allows for.
-        var rows = 0L;
-        var totalRowsRead = 0L;
-        var chunk = new List<BufferedRow>(chunkSize);
         var phases = context.Phases;
 
-        // Rewritten from `while (await csvReader.ReadAsync())` purely so the read can be timed:
-        // parsing is where this job waits on the input object's bytes, and lumping it in with the
-        // work done per row afterwards would hide whether a slow job is slow because S3 is not
-        // delivering. Same structure in CsvNamespaceImporter, for the same reason.
-        while (true)
-        {
-            string?[] rawFields;
-            // Brackets fetching and parsing together; the fetch half is deducted at flush from
-            // what ResumingS3ObjectStream measured inside these same reads - see
-            // CsvJobPhase.ParseInput.
-            using (phases.Measure(CsvJobPhase.ParseInput))
-            {
-                if (!await csvReader.ReadAsync())
-                {
-                    break;
-                }
-
-                // ShutdownToken, not the Hangfire token itself: IJobCancellationToken's own
-                // ThrowIfCancellationRequested() takes a lock and issues a `GetStateData` query
-                // against Hangfire's storage on every call (Hangfire 1.8's
-                // ServerJobCancellationToken), so calling it per row costs one database round trip
-                // per row - which measured as ~84% of a 1M-row job's wall clock, billed to
-                // ParseInput because it sits inside that scope. The abort check it performs is
-                // made once per chunk instead (see the flush below), and a user-initiated cancel
-                // is already noticed by CsvJobProgressReporter.MaybeReportAndCheckCancelledAsync.
-                // ShutdownToken is a plain CancellationToken, so this stays a free flag read.
-                cancellationToken.ShutdownToken.ThrowIfCancellationRequested();
-
-                var fieldCount = csvReader.Parser.Count;
-                rawFields = new string?[fieldCount];
-                for (var i = 0; i < fieldCount; i++)
-                {
-                    rawFields[i] = csvReader.GetField(i);
-                }
-            }
-
-            totalRowsRead++;
-            chunk.Add(new BufferedRow(rawFields, totalRowsRead));
-
-            if (chunk.Count >= chunkSize)
-            {
-                // The Hangfire abort check, at chunk granularity rather than per row - see the
-                // note on ShutdownToken above for why it cannot go in the row loop.
-                cancellationToken.ThrowIfCancellationRequested();
-                await FlushChunkAsync(
+        // The read/chunk/flush/cancellation/progress loop itself is shared with
+        // CsvNamespaceImporter - see CsvJobRowReader for why, and for everything that's
+        // deliberate about its shape.
+        return await CsvJobRowReader.ReadInChunksAsync(
+            csvReader,
+            chunkSize,
+            (rawFields, rowNumber) => new BufferedRow(rawFields, rowNumber),
+            chunk =>
+                FlushChunkAsync(
                     chunk,
                     job,
                     inPlaceBySourceIndex,
@@ -214,53 +166,11 @@ internal sealed class CsvColumnTransformer(
                     csvWriter,
                     progress,
                     phases
-                );
-                rows += chunk.Count;
-                chunk.Clear();
-            }
-
-            if (await progress.MaybeReportAndCheckCancelledAsync(totalRowsRead, rows))
-            {
-                return rows;
-            }
-        }
-
-        if (chunk.Count > 0)
-        {
-            // Also here, not just at the full-chunk flushes above: a file shorter than one chunk
-            // would otherwise never reach a Hangfire abort check at all, and a job whose fetch has
-            // been reassigned to another worker must not go on to write output.
-            cancellationToken.ThrowIfCancellationRequested();
-            await FlushChunkAsync(
-                chunk,
-                job,
-                inPlaceBySourceIndex,
-                appended,
-                csvWriter,
-                progress,
-                phases
-            );
-            rows += chunk.Count;
-        }
-
-        // Every row consumed from the input must end up written to the output - a
-        // (de-)pseudonymized file with a different row count than its input would mean rows
-        // were silently dropped or duplicated somewhere in the chunking/flush logic above.
-        // That's a correctness bug serious enough to fail the job over rather than complete
-        // it and let a caller unknowingly rely on a truncated/corrupted file. Only reached on
-        // a natural end-of-input - the early `return rows` above on cancellation is
-        // intentionally exempt, since fewer output rows than input rows is expected there.
-        if (rows != totalRowsRead)
-        {
-            throw new InvalidOperationException(
-                $"Row count mismatch: read {totalRowsRead} row(s) from the input but wrote "
-                    + $"{rows} row(s) to the output."
-            );
-        }
-
-        await progress.ReportAsync(rows);
-
-        return rows;
+                ),
+            progress,
+            phases,
+            cancellationToken
+        );
     }
 
     /// <summary>
