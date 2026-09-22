@@ -3,6 +3,8 @@
     <RootNamespace>Vfps.Voprf.Server</RootNamespace>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <RuntimeIdentifiers>linux-x64</RuntimeIdentifiers>
+    <PublishAot>true</PublishAot>
+    <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Grpc.AspNetCore" Version="2.83.0" />
