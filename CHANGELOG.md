@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.19.4](https://github.com/miracum/vfps/compare/v1.19.3...v1.19.4) (2026-09-22)
+
+
+### Build
+
+* switch Voprf server to a native image ([#354](https://github.com/miracum/vfps/issues/354)) ([4dde006](https://github.com/miracum/vfps/commit/4dde006adbd17adb2ba72b7f7c7b7f2f90ed102a))
+
 ## [1.19.3](https://github.com/miracum/vfps/compare/v1.19.2...v1.19.3) (2026-09-21)
 
 
