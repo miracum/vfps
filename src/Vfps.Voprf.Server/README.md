@@ -251,8 +251,11 @@ operator can confirm the two match.
 
 ## Container
 
-[`voprf-server.Dockerfile`](../../voprf-server.Dockerfile) builds a chiseled, non-root image.
-libsodium arrives as a NuGet native asset, so nothing has to be installed into it.
+[`voprf-server.Dockerfile`](../../voprf-server.Dockerfile) publishes this server ahead-of-time
+(`PublishAot`, see the csproj) into a single native executable, and runs it non-root on
+`runtime-deps`, the chiseled image that is just the OS and libc/libssl - no CLR, no ASP.NET Core
+runtime, none of the managed dependencies a framework-dependent deployment would need, because
+none of them exist at runtime here.
 
 ## What is deliberately absent
 

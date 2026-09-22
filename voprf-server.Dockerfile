@@ -1,4 +1,8 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.401-resolute@sha256:4bd809877fc795924d30c686774a3c2136710f0e923f15224c5fbb70a09cfb2f AS build
+# The -aot variant is the same SDK image with the PublishAot=true prerequisites (clang,
+# zlib1g-dev - see https://aka.ms/nativeaot-prerequisites) already installed, so nothing has
+# to be added here. The plain (non-aot) tag is what the sibling Dockerfile uses, since that
+# target has no PublishAot and doesn't need a native linker.
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.401-resolute-aot@sha256:c3d043bc8720363072224429968f167a664180718faee03c47285c78e4a7db45 AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     ASPNETCORE_ENVIRONMENT="Production" \
@@ -20,14 +24,17 @@ RUN <<EOT
 dotnet build src/Vfps.Voprf.Server/Vfps.Voprf.Server.csproj \
     --no-restore \
     --runtime=linux-x64 \
-    --no-self-contained \
+    --self-contained \
     --configuration=Release
 
+# --self-contained: PublishAot=true (see the csproj) always produces a self-contained native
+# executable, so --no-self-contained (still used by the sibling Dockerfile, whose target has
+# no PublishAot) fails here with NETSDK1102.
 dotnet publish src/Vfps.Voprf.Server/Vfps.Voprf.Server.csproj \
     --no-restore \
     --no-build \
     --runtime=linux-x64 \
-    --no-self-contained \
+    --self-contained \
     --configuration=Release \
     -o /build/publish
 EOT
@@ -46,9 +53,13 @@ WORKDIR /build/src/Vfps.Voprf.Server.Tests/coverage
 COPY --from=build-test /build/src/Vfps.Voprf.Server.Tests/coverage .
 ENTRYPOINT [ "true" ]
 
-# libsodium ships as a NuGet native asset and links only against libc, so the chiseled runtime
-# image needs nothing added to it - see src/Vfps.Voprf/README.md.
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.12-resolute-chiseled-extra@sha256:5b5936af84ee5564e5b2e3868f9c1830a3c5529c4bd70baeffb67343ccc0bb82 AS runtime
+# Native AOT compiles the managed side straight to machine code, so nothing here needs the
+# CLR or the ASP.NET Core runtime libraries - runtime-deps is just the OS plus libc/libssl,
+# the same base a plain native binary would need. libsodium ships as a NuGet native asset and
+# links only against libc, so it needs nothing added either - see src/Vfps.Voprf/README.md.
+# ICU is skipped too: InvariantGlobalization is set in the csproj, and nothing here does
+# culture-sensitive text handling.
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.12-resolute-chiseled@sha256:93f4087fb76adb7446fd6c9d29be8b974f558bf4553b5ca09d59ad9c65164804 AS runtime
 WORKDIR /opt/vfps-voprf
 EXPOSE 8081/tcp
 # non-root, and nothing here ever writes to disk: the image runs fine with a read-only root
@@ -57,7 +68,16 @@ USER 65534:65534
 ENV DOTNET_ENVIRONMENT="Production" \
     ASPNETCORE_ENVIRONMENT="Production" \
     DOTNET_CLI_TELEMETRY_OPTOUT=1 \
-    ASPNETCORE_URLS="" \
-    DOTNET_BUNDLE_EXTRACT_BASE_DIR=/tmp
-COPY --from=build /build/publish .
-CMD ["/opt/vfps-voprf/Vfps.Voprf.Server.dll"]
+    ASPNETCORE_URLS=""
+# Named explicitly rather than `COPY --from=build /build/publish .`: PublishAot's default
+# Release behaviour strips debug info out of the executable into a companion .dbg with the
+# whole BCL's symbols, tens of megabytes and useless without a debugger attached to the
+# container - unlike the executable, it buys nothing at runtime. It's still in
+# /build/publish for anyone who targets the build stage and wants it for crash triage.
+COPY --from=build \
+    /build/publish/Vfps.Voprf.Server \
+    /build/publish/libsodium.so \
+    /build/publish/appsettings.json \
+    /build/publish/appsettings.Development.json \
+    ./
+CMD ["/opt/vfps-voprf/Vfps.Voprf.Server"]
