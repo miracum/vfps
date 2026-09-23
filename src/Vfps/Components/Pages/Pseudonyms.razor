@@ -167,7 +167,24 @@
                     ShowSearch="true"
                     SearchPlaceholder="@(_hasReverseLookupAccess ? Localizer["App.Pseudonyms.SearchWithOriginalValuePlaceholder"] : Localizer["App.Pseudonyms.SearchPlaceholder"])"
                     InitialPageSize="PageSize"
+                    IsLoading="_isLoading"
                 >
+                    <LoadingTemplate>
+                        @* Mimics the grid's own row layout instead of the default "Loading..."
+                           text, so the initial fetch doesn't read as an empty table. Only shown
+                           for the first load (see _isLoading), not on every search/page fetch. *@
+                        <div class="bb:space-y-3 bb:py-2">
+                            @for (var i = 0; i < 6; i++)
+                            {
+                                <div class="bb:flex bb:items-center bb:gap-4">
+                                    <BbSkeleton Height="16px" Width="25%" />
+                                    <BbSkeleton Height="16px" Width="25%" />
+                                    <BbSkeleton Height="16px" Width="20%" />
+                                    <BbSkeleton Height="16px" Width="20%" />
+                                </div>
+                            }
+                        </div>
+                    </LoadingTemplate>
                     <Columns>
                         @* A property column with a cell template rather than a template column:
                            the pseudonym stays sortable and filterable like any other property,
@@ -235,6 +252,12 @@
 
     private BlazorBlueprint.Components.BbDataGrid<PseudonymSearchItemDto>? _grid;
     private string? _errorMessage;
+
+    // Starts true so the grid shows LoadingTemplate instead of an empty table while
+    // ProvideItemsAsync's first fetch is in flight, then stays false for every later
+    // search/page fetch - those already have rows on screen, so a full-grid loading
+    // takeover would just flicker instead of helping.
+    private bool _isLoading = true;
 
     // Only used to pick the search placeholder text below - ProvideItemsAsync re-derives this
     // server-side on every request via PseudonymAppService.SearchAsync, so this flag being stale
@@ -381,6 +404,16 @@
                 Items = [],
                 TotalItemCount = 0,
             };
+        }
+        finally
+        {
+            // BbDataGrid invokes this delegate itself and re-renders on its own afterwards, but
+            // that only refreshes the grid's own subtree - it doesn't make its *parent* (this
+            // component) re-evaluate the RenderTree that passed IsLoading="_isLoading" as a
+            // parameter. Without this call the grid keeps whatever IsLoading value it was handed
+            // on the last render this component did, i.e. true forever after the first fetch.
+            _isLoading = false;
+            StateHasChanged();
         }
     }
 
