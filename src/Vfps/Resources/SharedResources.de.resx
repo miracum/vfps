@@ -644,10 +644,13 @@
     <value>Kein Namespace passt zu Ihrer Suche.</value>
   </data>
   <data name="App.Namespaces.HierarchyDescription" xml:space="preserve">
-    <value>Alle Namespaces, die Sie lesen dürfen, nach übergeordnetem Namespace gegliedert. Für eine Kurzübersicht mit der Maus darüberfahren, für alle Details auswählen.</value>
+    <value>Alle Namespaces, die Sie lesen dürfen, nach übergeordnetem Namespace gegliedert. Für alle Details auswählen.</value>
   </data>
   <data name="App.Namespaces.AllowsMultiplePseudonymsColumn" xml:space="preserve">
     <value>Mehrere Pseudonyme</value>
+  </data>
+  <data name="App.Namespaces.PseudonymCountColumn" xml:space="preserve">
+    <value>Pseudonyme</value>
   </data>
   <data name="App.Namespaces.CreateDescription" xml:space="preserve">
     <value>Namespaces sind nach dem Erstellen unveränderlich - löschen und neu erstellen statt bearbeiten.</value>
@@ -750,6 +753,9 @@
   </data>
   <data name="App.Pseudonyms.CreateTitle" xml:space="preserve">
     <value>Pseudonym erstellen</value>
+  </data>
+  <data name="App.Pseudonyms.CreateCount" xml:space="preserve">
+    <value>Anzahl</value>
   </data>
   <data name="App.Pseudonyms.ChainAction" xml:space="preserve">
     <value>Pseudonymisieren in…</value>
