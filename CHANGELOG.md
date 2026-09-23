@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.0](https://github.com/miracum/vfps/compare/v1.19.4...v1.20.0) (2026-09-23)
+
+
+### Features
+
+* **ui:** show table loading, display pseudonym count, removed hover tooltip, added input for the count for multi-psn namespaces ([#360](https://github.com/miracum/vfps/issues/360)) ([a5c6b18](https://github.com/miracum/vfps/commit/a5c6b181fcfb5cca182135d69d1fb63e0fdc8267))
+
 ## [1.19.4](https://github.com/miracum/vfps/compare/v1.19.3...v1.19.4) (2026-09-22)
 
 
