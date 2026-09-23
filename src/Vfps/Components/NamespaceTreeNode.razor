@@ -5,9 +5,7 @@
 
     This is BbTreeView's declarative mode: the node itself is a BbTreeItem, so expand/collapse,
     selection, roving-tabindex keyboard navigation and the ARIA tree wiring all come from the
-    component library. Declarative mode rather than the data-driven one (Items + ParentField)
-    because only BbTreeItem exposes a LabelTemplate, which is what lets a node reveal its
-    details on hover.
+    component library.
 
     The data is the flat namespace list the page already loaded: a namespace carries its
     ParentName, and namespace cardinality is low by design (see INamespaceRepository.GetAllAsync),
@@ -16,29 +14,15 @@
 
 <BbTreeItem Value="@Node.Name" Icon="@Icon" IsLeaf="@(Children.Count == 0)">
     <LabelTemplate>
-        @* AsChild="false" wraps the name in a div carrying the hover handlers, which matters
-           twice over here: plain markup can't consume the trigger context by itself, and the
-           tree's click handler deliberately ignores clicks originating from a button, link or
-           input - so a button-based trigger would stop the node from being selectable. *@
-        <BbHoverCard OpenDelay="250">
-            <BbHoverCardTrigger AsChild="false">
-                <span data-namespace-label class="bb:truncate">@Node.Name</span>
-            </BbHoverCardTrigger>
-            <BbHoverCardContent>
-                <NamespaceDetails Namespace="Node" TimeZone="TimeZone" />
-            </BbHoverCardContent>
-        </BbHoverCard>
+        <span data-namespace-label class="bb:truncate">@Node.Name</span>
     </LabelTemplate>
     <ChildContent>
         @foreach (var child in Children)
         {
-            @* TimeZone needs no @ prefix (it's not a string), but SelectedName-style string
-               parameters would - a bare attribute value binds the literal text. *@
             <NamespaceTreeNode
                 Node="child"
                 ChildrenByParent="ChildrenByParent"
                 VisibleNames="VisibleNames"
-                TimeZone="TimeZone"
                 Depth="Depth + 1"
                 Ancestry="NodeAncestry"
             />
@@ -61,10 +45,6 @@
     /// </summary>
     [Parameter]
     public IReadOnlySet<string>? VisibleNames { get; set; }
-
-    /// <summary>The zone this node's hover card renders timestamps in.</summary>
-    [Parameter]
-    public TimeZoneInfo TimeZone { get; set; } = TimeZoneInfo.Utc;
 
     [Parameter]
     public int Depth { get; set; }

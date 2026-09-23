@@ -1,12 +1,10 @@
 @using Vfps.Data.Models
 
 @*
-    Everything worth knowing about a single namespace, as a compact label/value list. Shared by
-    the hierarchy tree's hover card and its details panel so the two can't drift apart - they
-    differ only in where they're rendered, not in what they show.
+    Everything worth knowing about a single namespace, as a compact label/value list.
 
     Rows whose value is empty (prefix, suffix, validation regex) are left out entirely rather
-    than rendered as blanks, which keeps the hover card short for the common case.
+    than rendered as blanks.
 *@
 
 <div class="bb:space-y-2">
@@ -72,6 +70,17 @@
             </span>
         </div>
         <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
+            <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.PseudonymCountColumn"]</span>
+            @if (IsPseudonymCountLoading)
+            {
+                <BbSkeleton Height="12px" Width="2.5rem" />
+            }
+            else
+            {
+                <span class="text-right">@(PseudonymCount is { } count ? count.ToString("N0") : NotSet)</span>
+            }
+        </div>
+        <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
             <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.ParentColumn"]</span>
             <span class="text-right">
                 @if (string.IsNullOrEmpty(Namespace.ParentName))
@@ -109,6 +118,18 @@
     /// </summary>
     [Parameter]
     public TimeZoneInfo TimeZone { get; set; } = TimeZoneInfo.Utc;
+
+    /// <summary>
+    /// The namespace's total pseudonym count, or null while it hasn't been fetched (counting can
+    /// take a while, so the caller fetches it separately from the namespace itself and passes it
+    /// in once it resolves, rather than this component fetching it - see IsPseudonymCountLoading).
+    /// </summary>
+    [Parameter]
+    public long? PseudonymCount { get; set; }
+
+    /// <summary>Whether the caller is still fetching PseudonymCount - shows a skeleton in its place.</summary>
+    [Parameter]
+    public bool IsPseudonymCountLoading { get; set; }
 
     private string FormatTimestamp(DateTimeOffset timestamp) =>
         TimeZoneInfo.ConvertTime(timestamp, TimeZone).ToString("yyyy-MM-dd HH:mm:ss");

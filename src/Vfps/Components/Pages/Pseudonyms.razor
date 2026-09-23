@@ -35,6 +35,15 @@
                             <BbInput @bind-Value="_createValue" Id="originalValue" Required="true" />
                         </BbFieldContent>
                     </BbField>
+                    @if (_allowsMultiplePseudonyms)
+                    {
+                        <BbField Class="bb:w-24">
+                            <BbFieldLabel For="createCount">@Localizer["App.Pseudonyms.CreateCount"]</BbFieldLabel>
+                            <BbFieldContent>
+                                <BbNumericInput TValue="int" @bind-Value="_createCount" Id="createCount" Min="1" />
+                            </BbFieldContent>
+                        </BbField>
+                    }
                     <BbButton OnClick="CreatePseudonymAsync" Loading="_isCreating">@Localizer["App.Common.Create"]</BbButton>
                 </div>
                 @if (_createError is not null)
@@ -43,11 +52,15 @@
                         <BbAlertDescription>@_createError</BbAlertDescription>
                     </BbAlert>
                 }
-                @if (_createResult is not null)
+                @if (_createResults.Count > 0)
                 {
-                    <p class="bb:text-sm">
-                        @Localizer["App.Pseudonyms.PseudonymLabel"]: <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5">@_createResult.PseudonymValue</code>
-                    </p>
+                    <div class="bb:flex bb:flex-wrap bb:items-center bb:gap-2 bb:text-sm">
+                        <span>@Localizer["App.Pseudonyms.PseudonymLabel"]:</span>
+                        @foreach (var p in _createResults)
+                        {
+                            <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5">@p.PseudonymValue</code>
+                        }
+                    </div>
                 }
             </BbCardContent>
         </BbCard>
@@ -271,9 +284,15 @@
     private Vfps.Data.Models.Pseudonym? _lookupResult;
 
     private string _createValue = string.Empty;
+    private int _createCount = 1;
     private bool _isCreating;
     private string? _createError;
-    private Vfps.Data.Models.Pseudonym? _createResult;
+    private IReadOnlyList<Vfps.Data.Models.Pseudonym> _createResults = [];
+
+    // Whether this namespace allows more than one pseudonym per original value - gates the count
+    // input above the create form; a non-multi namespace never needs it, since CreateAsync always
+    // rejects a count above 1 for one anyway.
+    private bool _allowsMultiplePseudonyms;
 
     // The child namespaces this one can chain into - drives the per-row "pseudonymize into"
     // action, which is hidden entirely when this namespace has no children.
@@ -307,6 +326,21 @@
             // Left empty rather than surfaced: the grid below reports the same condition through
             // ProvideItemsAsync, and a missing chaining action is not worth a second error banner.
             _children = [];
+        }
+
+        try
+        {
+            var @namespace = await NamespaceAppService.GetAsync(
+                NamespaceName,
+                user,
+                CancellationToken.None
+            );
+            _allowsMultiplePseudonyms = @namespace.AllowsMultiplePseudonyms;
+        }
+        catch (Exception ex) when (ex is NamespaceNotFoundException or ForbiddenException)
+        {
+            // Same reasoning as _children above: left false rather than surfaced here.
+            _allowsMultiplePseudonyms = false;
         }
     }
 
@@ -428,21 +462,24 @@
 
         _isCreating = true;
         _createError = null;
-        _createResult = null;
+        _createResults = [];
         try
         {
             var user = await GetUserAsync();
-            // count: 1 - this manual "create a test pseudonym" form always creates/shows exactly
-            // one. For a multi-psn namespace that already has more than one pseudonym stored for
-            // this original value, this is always the first one (sequence number 0).
+            // The count input only appears (and only means anything) for a multi-psn namespace -
+            // force 1 otherwise regardless of stray field state, since CreateAsync would reject
+            // anything above that anyway. CreateAsync returns every pseudonym now stored for this
+            // original value, not just newly-created ones, so a count that was already satisfied
+            // by existing pseudonyms still shows the full set here.
+            var count = _allowsMultiplePseudonyms ? Math.Max(1, _createCount) : 1;
             var created = await PseudonymAppService.CreateAsync(
                 NamespaceName,
                 _createValue,
-                1,
+                count,
                 user,
                 CancellationToken.None
             );
-            _createResult = created[0];
+            _createResults = created;
             _createValue = string.Empty;
 
             if (_grid is not null)
@@ -460,6 +497,14 @@
         }
         catch (PseudonymUpsertFailedException ex)
         {
+            _createError = ex.Message;
+        }
+        catch (MultiplePseudonymsNotAllowedException ex)
+        {
+            // Shouldn't happen in practice - namespaces are immutable once created, so
+            // _allowsMultiplePseudonyms (fetched once in OnInitializedAsync) can't have gone
+            // stale relative to this namespace's actual setting - but the count input is the
+            // only thing gating this, so it's still handled rather than left to crash the page.
             _createError = ex.Message;
         }
         catch (ForbiddenException ex)

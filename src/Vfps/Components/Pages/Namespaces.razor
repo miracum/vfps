@@ -7,6 +7,7 @@
 @using Vfps.Data.Models
 @using Vfps.PseudonymGenerators
 @inject INamespaceAppService NamespaceAppService
+@inject IPseudonymAppService PseudonymAppService
 @inject NavigationManager NavigationManager
 @inject PseudonymizationMethodsLookup MethodsLookup
 @inject INamespacePermissionChecker PermissionChecker
@@ -439,7 +440,6 @@
                                     Node="root"
                                     ChildrenByParent="ChildrenByParent"
                                     VisibleNames="VisibleNamespaceNames"
-                                    TimeZone="_browserTimeZone"
                                 />
                             }
                         </BbTreeView>
@@ -454,7 +454,12 @@
                     <div id="namespaceDetails" class="bb:rounded-md bb:border bb:border-border bb:p-4">
                         @if (SelectedNamespace is { } selected)
                         {
-                            <NamespaceDetails Namespace="selected" TimeZone="_browserTimeZone" />
+                            <NamespaceDetails
+                                Namespace="selected"
+                                TimeZone="_browserTimeZone"
+                                PseudonymCount="_selectedNamespacePseudonymCount"
+                                IsPseudonymCountLoading="_isLoadingSelectedNamespacePseudonymCount"
+                            />
                             <div class="bb:mt-4 bb:flex bb:flex-wrap bb:gap-2">
                                 <BbButton
                                     Variant="ButtonVariant.Outline"
@@ -563,6 +568,13 @@
     // than an entity because that is what BbTreeView binds to, and because it stays meaningful
     // across the reload that follows a create or a delete.
     private string? _selectedNamespaceName;
+
+    // The selected namespace's total pseudonym count, fetched separately from the namespace list
+    // itself (counting isn't free - see OnHierarchySelectionChanged) and shown as a skeleton in
+    // NamespaceDetails until it resolves. Null both before anything is selected and while a count
+    // is in flight; _isLoadingSelectedNamespacePseudonymCount tells the two apart.
+    private long? _selectedNamespacePseudonymCount;
+    private bool _isLoadingSelectedNamespacePseudonymCount;
 
     // Resolved from the browser on first render, exactly as the CSV jobs page does it; UTC until
     // then, and permanently so if the browser's zone can't be resolved.
@@ -806,8 +818,55 @@
         }
     }
 
-    private void OnHierarchySelectionChanged(string? selectedName) =>
+    private async Task OnHierarchySelectionChanged(string? selectedName)
+    {
         _selectedNamespaceName = selectedName;
+        _selectedNamespacePseudonymCount = null;
+        _isLoadingSelectedNamespacePseudonymCount = selectedName is not null;
+
+        if (selectedName is null)
+        {
+            return;
+        }
+
+        // BbTreeView's own selection highlight updates immediately (it's client-rendered), but
+        // nothing guarantees this component re-renders before the count fetch below actually
+        // suspends - same reasoning as ProvideItemsAsync's IsLoading fix on the pseudonyms page.
+        // Without this, the details panel would keep showing "Select a namespace..." throughout
+        // the fetch instead of the new namespace's details with a loading skeleton.
+        StateHasChanged();
+
+        var user = await GetUserAsync();
+        long? count = null;
+        try
+        {
+            // pageSize: 1 - the cheapest way to get a total count through the app-service layer;
+            // ListAsync always fetches a page alongside it, so this keeps that page as small as
+            // possible. TotalCount only comes back when includeTotalSize is true.
+            var page = await PseudonymAppService.ListAsync(
+                selectedName,
+                1,
+                null,
+                true,
+                user,
+                CancellationToken.None
+            );
+            count = page.TotalSize;
+        }
+        catch (Exception ex) when (ex is NamespaceNotFoundException or ForbiddenException)
+        {
+            // Left null: the same condition would surface loudly enough on the Browse button.
+            count = null;
+        }
+
+        // The selection may have moved on to a different namespace (or been cleared) while this
+        // was in flight - a stale count for namespace A must not overwrite namespace B's.
+        if (string.Equals(_selectedNamespaceName, selectedName, StringComparison.Ordinal))
+        {
+            _selectedNamespacePseudonymCount = count;
+            _isLoadingSelectedNamespacePseudonymCount = false;
+        }
+    }
 
     private void OpenAccessDialog(Namespace forNamespace)
     {
@@ -864,6 +923,8 @@
         if (SelectedNamespace is null)
         {
             _selectedNamespaceName = null;
+            _selectedNamespacePseudonymCount = null;
+            _isLoadingSelectedNamespacePseudonymCount = false;
         }
     }
 
