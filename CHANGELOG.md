@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.1](https://github.com/miracum/vfps/compare/v1.20.0...v1.20.1) (2026-09-24)
+
+
+### Bug Fixes
+
+* namespace search bug due to concurrent searches, re-enabled pseudonym-level caching ([#364](https://github.com/miracum/vfps/issues/364)) ([b5f1ce1](https://github.com/miracum/vfps/commit/b5f1ce129baf94b6d07fc2f8b0eee12b51649ec3))
+
 ## [1.20.0](https://github.com/miracum/vfps/compare/v1.19.4...v1.20.0) (2026-09-23)
 
 
