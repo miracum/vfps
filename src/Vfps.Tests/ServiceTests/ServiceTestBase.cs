@@ -147,6 +147,12 @@ public class ServiceTestBase : IDisposable
         params NamespaceAccessGrant[] grants
     ) => CreateNamespaceAppService(namespaceRepository, null, config, grants);
 
+    /// <param name="namespaceRepository">
+    /// Unused by NamespaceAppService itself - every method there builds its own repository over a
+    /// fresh, pooled DbContext (see the "circuit-scoped PseudonymContext" comments in that class).
+    /// Kept as a parameter purely so callers can seed/assert through the same connection the
+    /// service will see, via TestPseudonymContextFactory below.
+    /// </param>
     /// <param name="methodsLookup">
     /// The generation methods available to this service, for tests that care whether a
     /// value-dependent method (VOPRF) is configured. Null means none is - the default.
@@ -158,7 +164,6 @@ public class ServiceTestBase : IDisposable
         params NamespaceAccessGrant[] grants
     ) =>
         new(
-            namespaceRepository,
             CreatePermissionChecker(config, grants),
             methodsLookup ?? new PseudonymizationMethodsLookup(),
             new TestPseudonymContextFactory(BuildContextOptions)

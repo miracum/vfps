@@ -37,8 +37,14 @@ public class PseudonymAppService(
             );
         }
 
+        // A fresh, pooled DbContext rather than the scoped namespaceRepository field - this is
+        // reachable from the Blazor pseudonym page, whose circuit-scoped PseudonymContext is
+        // shared with whatever else that circuit is doing concurrently (e.g. the data grid's
+        // ItemsProvider calling SearchAsync below). See SearchAsync's own comment for the full
+        // reasoning.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         var @namespace =
-            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            await new NamespaceRepository(context).FindAsync(namespaceName, cancellationToken)
             ?? throw new NamespaceNotFoundException(namespaceName);
 
         return await CreateTrustedAsync(@namespace, originalValue, count, cancellationToken);
@@ -691,8 +697,16 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
+        // A fresh, pooled DbContext rather than the scoped namespaceRepository/pseudonymRepository
+        // fields - this is reachable from the Blazor namespaces page, whose circuit-scoped
+        // PseudonymContext is shared with whatever else that circuit is doing concurrently. See
+        // SearchAsync's own comment for the full reasoning.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var namespaceRepo = new NamespaceRepository(context);
+        var pseudonymRepo = new PseudonymRepository(context);
+
         var _ =
-            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            await namespaceRepo.FindAsync(namespaceName, cancellationToken)
             ?? throw new NamespaceNotFoundException(namespaceName);
         if (!await permissionChecker.HasReadAccessAsync(user, namespaceName, cancellationToken))
         {
@@ -704,7 +718,7 @@ public class PseudonymAppService(
         var effectivePageSize = pageSize <= 0 ? DefaultPageSize : pageSize;
         var cursor = DecodeCursor(pageToken);
 
-        var pseudonyms = await pseudonymRepository.ListByNamespaceAsync(
+        var pseudonyms = await pseudonymRepo.ListByNamespaceAsync(
             namespaceName,
             cursor,
             effectivePageSize,
@@ -725,7 +739,7 @@ public class PseudonymAppService(
         }
 
         long? totalSize = includeTotalSize
-            ? await pseudonymRepository.CountByNamespaceAsync(namespaceName, cancellationToken)
+            ? await pseudonymRepo.CountByNamespaceAsync(namespaceName, cancellationToken)
             : null;
 
         var items = pseudonyms
@@ -750,8 +764,22 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
+        // A fresh, pooled DbContext rather than the scoped namespaceRepository/pseudonymRepository
+        // fields. This is the Blazor pseudonym page's data grid ItemsProvider, and Blazor Server
+        // keeps a single scoped PseudonymContext alive for the whole circuit rather than one per
+        // request - so a second search fired while the previous one is still running (e.g. two
+        // debounced keystrokes overlapping a slow query), or any other DB-touching action on the
+        // same page (create, reverse-lookup, the page's own OnInitializedAsync) racing this one,
+        // would otherwise share that single instance. DbContext isn't safe for concurrent use, and
+        // that's exactly the "A second operation was started on this context instance before a
+        // previous operation completed" crash this avoids - same reasoning as
+        // NamespaceAppService.ListChildrenAsync.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var namespaceRepo = new NamespaceRepository(context);
+        var pseudonymRepo = new PseudonymRepository(context);
+
         var _ =
-            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            await namespaceRepo.FindAsync(namespaceName, cancellationToken)
             ?? throw new NamespaceNotFoundException(namespaceName);
         // Both checks come from one resolve: read gates the search at all, reverse-lookup
         // decides whether the original values are included in what comes back.
@@ -766,7 +794,7 @@ public class PseudonymAppService(
         var canRevealOriginalValues = permissions.HasReverseLookupAccess(namespaceName);
         var effectiveTake = take <= 0 ? DefaultPageSize : take;
 
-        var (pseudonyms, totalCount) = await pseudonymRepository.SearchByNamespaceAsync(
+        var (pseudonyms, totalCount) = await pseudonymRepo.SearchByNamespaceAsync(
             namespaceName,
             searchText,
             canRevealOriginalValues,
@@ -809,7 +837,12 @@ public class PseudonymAppService(
             );
         }
 
-        return await pseudonymRepository.FindByPseudonymValueAsync(
+        // A fresh, pooled DbContext rather than the scoped pseudonymRepository field - reachable
+        // from the Blazor pseudonym page's "reverse lookup" form, which can run concurrently with
+        // the data grid's ItemsProvider on the same circuit-scoped PseudonymContext. See
+        // SearchAsync's own comment for the full reasoning.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await new PseudonymRepository(context).FindByPseudonymValueAsync(
             namespaceName,
             pseudonymValue,
             cancellationToken
