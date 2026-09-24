@@ -22,8 +22,8 @@ public class FhirControllerTests : ServiceTestBase
 
     private FhirController CreateSut(AuthorizationConfig? config = null)
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
-        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
+        var pseudonymRepository = new PseudonymRepository(ContextFactory);
         var controller = new FhirController(
             A.Fake<ILogger<FhirController>>(),
             CreatePseudonymAppService(namespaceRepository, pseudonymRepository, config)

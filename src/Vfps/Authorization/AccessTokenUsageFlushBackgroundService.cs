@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Vfps.Config;
 using Vfps.Data;
@@ -16,7 +15,7 @@ namespace Vfps.Authorization;
 /// </summary>
 public class AccessTokenUsageFlushBackgroundService(
     IAccessTokenUsageTracker usageTracker,
-    IDbContextFactory<PseudonymContext> contextFactory,
+    IAccessTokenRepository tokenRepository,
     IOptions<AuthorizationConfig> options,
     ILogger<AccessTokenUsageFlushBackgroundService> logger
 ) : BackgroundService
@@ -61,11 +60,7 @@ public class AccessTokenUsageFlushBackgroundService(
 
         try
         {
-            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-            await new AccessTokenRepository(context).UpdateLastUsedAsync(
-                pending,
-                cancellationToken
-            );
+            await tokenRepository.UpdateLastUsedAsync(pending, cancellationToken);
         }
         catch (Exception exception)
         {

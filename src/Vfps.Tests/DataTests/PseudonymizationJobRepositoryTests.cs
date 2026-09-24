@@ -35,7 +35,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
         await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         InMemoryPseudonymContext.ChangeTracker.Clear();
 
-        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymizationJobRepository(ContextFactory);
 
         var stillActive = await sut.UpdateProgressUnlessCancelledAsync(
             job.Id,
@@ -71,7 +71,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
         await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         InMemoryPseudonymContext.ChangeTracker.Clear();
 
-        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymizationJobRepository(ContextFactory);
 
         var stillActive = await sut.UpdateProgressUnlessCancelledAsync(
             job.Id,
@@ -108,7 +108,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
         await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         InMemoryPseudonymContext.ChangeTracker.Clear();
 
-        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymizationJobRepository(ContextFactory);
 
         var stillActive = await sut.UpdateProgressUnlessCancelledAsync(
             job.Id,
@@ -126,7 +126,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
     [Fact]
     public async Task UpdateProgressUnlessCancelledAsync_WithUnknownJob_ShouldReportInactive()
     {
-        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymizationJobRepository(ContextFactory);
 
         var stillActive = await sut.UpdateProgressUnlessCancelledAsync(
             Guid.NewGuid(),
@@ -161,7 +161,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
         await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         InMemoryPseudonymContext.ChangeTracker.Clear();
 
-        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymizationJobRepository(ContextFactory);
 
         var stalledIds = await sut.FindStalledRunningJobIdsAsync(
             TimeSpan.FromMinutes(10),
@@ -181,7 +181,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
         await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         InMemoryPseudonymContext.ChangeTracker.Clear();
 
-        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymizationJobRepository(ContextFactory);
 
         var stalledIds = await sut.FindStalledRunningJobIdsAsync(
             TimeSpan.FromMinutes(10),
@@ -215,7 +215,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
         await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         InMemoryPseudonymContext.ChangeTracker.Clear();
 
-        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymizationJobRepository(ContextFactory);
 
         var deletedCount = await sut.DeleteFinishedAsync(
             null,
@@ -240,7 +240,7 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
         await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
         InMemoryPseudonymContext.ChangeTracker.Clear();
 
-        var sut = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymizationJobRepository(ContextFactory);
 
         var deletedCount = await sut.DeleteFinishedAsync(
             "alice",

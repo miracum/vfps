@@ -4,7 +4,7 @@ namespace Vfps.Tests.DataTests;
 
 public class PseudonymCountRepositoryTests : ServiceTests.ServiceTestBase
 {
-    private PseudonymCountRepository CreateSut() => new(InMemoryPseudonymContext);
+    private PseudonymCountRepository CreateSut() => new(ContextFactory);
 
     /// <summary>
     /// Counts carry a foreign key to the namespace they belong to, so a row can only exist for a

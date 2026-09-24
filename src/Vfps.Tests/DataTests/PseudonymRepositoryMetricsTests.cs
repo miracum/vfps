@@ -32,31 +32,30 @@ public class PseudonymRepositoryMetricsTests : ServiceTests.ServiceTestBase
     {
         var namespaceA = await CreateTestNamespaceAsync();
         var namespaceB = await CreateTestNamespaceAsync();
-        var sut = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymRepository(ContextFactory);
 
-        await sut.CreateIfNotExist(
-            new Data.Models.Pseudonym
-            {
-                NamespaceName = namespaceA,
-                OriginalValue = "a1",
-                PseudonymValue = "pa1",
-            }
-        );
-        await sut.CreateIfNotExist(
-            new Data.Models.Pseudonym
-            {
-                NamespaceName = namespaceA,
-                OriginalValue = "a2",
-                PseudonymValue = "pa2",
-            }
-        );
-        await sut.CreateIfNotExist(
-            new Data.Models.Pseudonym
-            {
-                NamespaceName = namespaceB,
-                OriginalValue = "b1",
-                PseudonymValue = "pb1",
-            }
+        await sut.CreateIfNotExistBatchAsync(
+            [
+                new Data.Models.Pseudonym
+                {
+                    NamespaceName = namespaceA,
+                    OriginalValue = "a1",
+                    PseudonymValue = "pa1",
+                },
+                new Data.Models.Pseudonym
+                {
+                    NamespaceName = namespaceA,
+                    OriginalValue = "a2",
+                    PseudonymValue = "pa2",
+                },
+                new Data.Models.Pseudonym
+                {
+                    NamespaceName = namespaceB,
+                    OriginalValue = "b1",
+                    PseudonymValue = "pb1",
+                },
+            ],
+            CancellationToken.None
         );
 
         var counts = await sut.CountAllGroupedByNamespaceAsync(CancellationToken.None);
@@ -68,11 +67,12 @@ public class PseudonymRepositoryMetricsTests : ServiceTests.ServiceTestBase
     [Fact]
     public async Task CountAllGroupedByNamespaceAsync_CalledTwiceForTheSameValue_ShouldNotDoubleCount()
     {
-        // CreateIfNotExist upserts - a repeat call for the same (namespace, original_value)
-        // returns the already-existing row rather than inserting a new one, so the true row
-        // count (and thus this query's result) must not increase on the second call.
+        // CreateIfNotExistBatchAsync upserts - a repeat call for the same
+        // (namespace, original_value) returns the already-existing row rather than inserting a
+        // new one, so the true row count (and thus this query's result) must not increase on the
+        // second call.
         var namespaceName = await CreateTestNamespaceAsync();
-        var sut = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymRepository(ContextFactory);
         var pseudonym = new Data.Models.Pseudonym
         {
             NamespaceName = namespaceName,
@@ -80,8 +80,8 @@ public class PseudonymRepositoryMetricsTests : ServiceTests.ServiceTestBase
             PseudonymValue = "some-pseudonym",
         };
 
-        await sut.CreateIfNotExist(pseudonym);
-        await sut.CreateIfNotExist(pseudonym);
+        await sut.CreateIfNotExistBatchAsync([pseudonym], CancellationToken.None);
+        await sut.CreateIfNotExistBatchAsync([pseudonym], CancellationToken.None);
 
         var counts = await sut.CountAllGroupedByNamespaceAsync(CancellationToken.None);
 
@@ -95,7 +95,7 @@ public class PseudonymRepositoryMetricsTests : ServiceTests.ServiceTestBase
         // zero is filled in from the namespace list. Asserted directly because it's the whole
         // reason that second query exists.
         var emptyNamespace = await CreateTestNamespaceAsync();
-        var sut = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymRepository(ContextFactory);
 
         var counts = await sut.CountAllGroupedByNamespaceAsync(
             TestContext.Current.CancellationToken

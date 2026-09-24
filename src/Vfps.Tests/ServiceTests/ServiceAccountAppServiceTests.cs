@@ -35,8 +35,8 @@ public class ServiceAccountAppServiceTests : ServiceTestBase
         var grantCache = new StaticNamespaceAccessGrantCache();
         var tokenCache = new StaticAccessTokenCache();
         var sut = new ServiceAccountAppService(
-            new ServiceAccountRepository(InMemoryPseudonymContext),
-            new NamespaceAccessGrantRepository(InMemoryPseudonymContext),
+            new ServiceAccountRepository(ContextFactory),
+            new NamespaceAccessGrantRepository(ContextFactory),
             CreatePermissionChecker(EnabledConfig),
             grantCache,
             tokenCache,
@@ -166,8 +166,8 @@ public class ServiceAccountAppServiceTests : ServiceTestBase
         await sut.CreateAsync("etl-pipeline", null, Admin, CancellationToken.None);
 
         var tokenAppService = new AccessTokenAppService(
-            new AccessTokenRepository(InMemoryPseudonymContext),
-            new ServiceAccountRepository(InMemoryPseudonymContext),
+            new AccessTokenRepository(ContextFactory),
+            new ServiceAccountRepository(ContextFactory),
             CreatePermissionChecker(EnabledConfig),
             tokenCache,
             Options.Create(EnabledConfig),

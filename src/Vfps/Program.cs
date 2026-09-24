@@ -231,21 +231,16 @@ var shouldRunDatabaseMigrations =
     builder.Environment.IsDevelopment()
     || builder.Configuration.GetValue<bool>("ForceRunDatabaseMigrations");
 
-// A factory, not a plain AddDbContext - PseudonymAppService's "trusted" methods
-// (CreateTrustedAsync/ReverseLookupTrustedAsync) use IDbContextFactory<PseudonymContext>
-// directly to get their own independent context per call, since the CSV job runner calls them
-// many times concurrently within a single Hangfire job's DI scope, and DbContext instances
-// aren't safe for concurrent use. Everything else in the app still injects a plain, scoped
-// PseudonymContext as before - the AddScoped registration below just sources that one instance
-// per scope from the same factory, rather than registering AddDbContext separately (which would
-// conflict on DbContextOptions<PseudonymContext>'s lifetime). Not pooled: PseudonymContext's
-// OnConfiguring (snake_case naming, exception processing) mutates options post-construction,
-// which DbContext pooling explicitly disallows ("'OnConfiguring' cannot be used to modify
-// DbContextOptions when DbContext pooling is enabled").
+// A factory rather than a scoped AddDbContext, because a DI scope is not a unit of work here: a
+// Blazor Server circuit is one scope for as long as the browser tab stays open, and its event
+// handlers, grid data providers and polling loops interleave on it. A DbContext isn't safe for
+// concurrent use, so every repository instead opens a short-lived context from this factory per
+// call - see https://learn.microsoft.com/ef/core/dbcontext-configuration/#use-a-dbcontext-factory.
+// AddDbContextFactory also registers PseudonymContext itself as scoped, which only the health
+// check and the startup migration below resolve. Not pooled: PseudonymContext's OnConfiguring
+// (snake_case naming, exception processing) mutates options post-construction, which DbContext
+// pooling explicitly disallows.
 builder.Services.AddDbContextFactory<PseudonymContext>(ConfigurePseudonymContext);
-builder.Services.AddScoped(isp =>
-    isp.GetRequiredService<IDbContextFactory<PseudonymContext>>().CreateDbContext()
-);
 
 // The VOPRF pseudonym generator, when a key-holding server is configured for this deployment.
 // Off by default, matching this codebase's optional-feature idiom: with no Voprf:Address the
@@ -291,11 +286,11 @@ if (isNamespaceCachingEnabled)
         new MemoryCacheOptions { TrackStatistics = true, SizeLimit = cacheConfig.SizeLimit }
     ));
     builder.Services.AddSingleton(_ => cacheConfig);
-    builder.Services.AddScoped<INamespaceRepository, CachingNamespaceRepository>();
+    builder.Services.AddSingleton<INamespaceRepository, CachingNamespaceRepository>();
 }
 else
 {
-    builder.Services.AddScoped<INamespaceRepository, NamespaceRepository>();
+    builder.Services.AddSingleton<INamespaceRepository, NamespaceRepository>();
 }
 
 var isPseudonymCachingEnabled = builder.Configuration.GetValue(
@@ -308,11 +303,11 @@ if (isPseudonymCachingEnabled)
         new MemoryCacheOptions { TrackStatistics = true, SizeLimit = cacheConfig.SizeLimit }
     ));
     builder.Services.TryAddSingleton(_ => cacheConfig);
-    builder.Services.AddScoped<IPseudonymRepository, CachingPseudonymRepository>();
+    builder.Services.AddSingleton<IPseudonymRepository, CachingPseudonymRepository>();
 }
 else
 {
-    builder.Services.AddScoped<IPseudonymRepository, PseudonymRepository>();
+    builder.Services.AddSingleton<IPseudonymRepository, PseudonymRepository>();
 }
 
 // add a service to regularly query the cache statistics
@@ -330,7 +325,7 @@ builder.Services.AddHostedService<InitNamespacesBackgroundService>();
 // replica computes it and the rest read the result out of the pseudonym_counts table - see
 // PseudonymCountMetrics. The background service that reads runs everywhere and unconditionally;
 // which replica pays for the recompute is settled by Hangfire's recurring job scheduler below.
-builder.Services.AddScoped<IPseudonymCountRepository, PseudonymCountRepository>();
+builder.Services.AddSingleton<IPseudonymCountRepository, PseudonymCountRepository>();
 builder.Services.AddScoped<PseudonymCountMetrics>();
 builder.Services.AddHostedService<PseudonymCountMetricsBackgroundService>();
 
@@ -345,7 +340,7 @@ builder.Services.Configure<AuthorizationConfig>(builder.Configuration.GetSection
 // pseudonym-create hot path.
 builder.Services.AddSingleton<INamespaceAccessGrantCache, NamespaceAccessGrantCache>();
 builder.Services.AddSingleton<INamespacePermissionChecker, NamespacePermissionChecker>();
-builder.Services.AddScoped<INamespaceAccessGrantRepository, NamespaceAccessGrantRepository>();
+builder.Services.AddSingleton<INamespaceAccessGrantRepository, NamespaceAccessGrantRepository>();
 builder.Services.AddScoped<INamespaceAccessGrantAppService, NamespaceAccessGrantAppService>();
 
 // vfps-issued access tokens - personal ones, which act as the user who created them, and
@@ -357,8 +352,8 @@ builder.Services.AddScoped<INamespaceAccessGrantAppService, NamespaceAccessGrant
 builder.Services.AddSingleton<IAccessTokenCache, AccessTokenCache>();
 builder.Services.AddSingleton<IAccessTokenUsageTracker, AccessTokenUsageTracker>();
 builder.Services.AddHostedService<AccessTokenUsageFlushBackgroundService>();
-builder.Services.AddScoped<IAccessTokenRepository, AccessTokenRepository>();
-builder.Services.AddScoped<IServiceAccountRepository, ServiceAccountRepository>();
+builder.Services.AddSingleton<IAccessTokenRepository, AccessTokenRepository>();
+builder.Services.AddSingleton<IServiceAccountRepository, ServiceAccountRepository>();
 builder.Services.AddScoped<IAccessTokenAppService, AccessTokenAppService>();
 builder.Services.AddScoped<IServiceAccountAppService, ServiceAccountAppService>();
 
@@ -674,7 +669,7 @@ if (s3Config.IsEnabled)
         }
     ));
 
-    builder.Services.AddScoped<IPseudonymizationJobRepository, PseudonymizationJobRepository>();
+    builder.Services.AddSingleton<IPseudonymizationJobRepository, PseudonymizationJobRepository>();
     builder.Services.AddScoped<IPseudonymizationJobAppService, PseudonymizationJobAppService>();
     builder.Services.AddScoped<ICsvPseudonymizationJobRunner, CsvPseudonymizationJobRunner>();
 

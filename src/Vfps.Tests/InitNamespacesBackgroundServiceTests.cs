@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Vfps.Tests.ServiceTests;
 
@@ -26,15 +25,9 @@ public class InitNamespacesBackgroundServiceTests : ServiceTestBase
         // Regression test: the loop used to `return` (not `continue`) upon finding an
         // already-existing namespace, silently aborting initialization of every namespace
         // configured after it - "existingNamespace" here is seeded by ServiceTestBase itself.
-        var services = new ServiceCollection();
-        services.AddSingleton<INamespaceRepository>(
-            new NamespaceRepository(InMemoryPseudonymContext)
-        );
-        var serviceProvider = services.BuildServiceProvider();
-
         var configuration = BuildConfiguration("existingNamespace", "newlyConfiguredNamespace");
         var sut = new InitNamespacesBackgroundService(
-            serviceProvider,
+            new NamespaceRepository(ContextFactory),
             configuration,
             NullLogger<InitNamespacesBackgroundService>.Instance
         );

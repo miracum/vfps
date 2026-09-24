@@ -5,7 +5,7 @@ namespace Vfps.Tests.DataTests;
 
 public class NamespaceAccessGrantRepositoryTests : ServiceTests.ServiceTestBase
 {
-    private NamespaceAccessGrantRepository CreateSut() => new(InMemoryPseudonymContext);
+    private NamespaceAccessGrantRepository CreateSut() => new(ContextFactory);
 
     private static NamespaceAccessGrant Grant(string? namespaceName, string grantee)
     {
@@ -29,7 +29,7 @@ public class NamespaceAccessGrantRepositoryTests : ServiceTests.ServiceTestBase
         await sut.CreateAsync(Grant("existingNamespace", "scoped"), CancellationToken.None);
         await sut.CreateAsync(Grant(null, "global"), CancellationToken.None);
 
-        await new NamespaceRepository(InMemoryPseudonymContext).DeleteAsync(
+        await new NamespaceRepository(ContextFactory).DeleteAsync(
             "existingNamespace",
             CancellationToken.None
         );

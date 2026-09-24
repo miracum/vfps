@@ -7,7 +7,8 @@ using Vfps.Data.Models;
 namespace Vfps.Data;
 
 /// <inheritdoc/>
-public class PseudonymRepository : IPseudonymRepository
+public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFactory)
+    : IPseudonymRepository
 {
     // The trailing ".seconds" (rather than relying on the exporter's unit-based suffixing) keeps
     // the exported Prometheus name identical to what this repository exposed under
@@ -56,31 +57,12 @@ public class PseudonymRepository : IPseudonymRepository
         RETURNING *;
     ";
 
-    private readonly string UpsertCommand;
-
-    /// <summary>
-    /// Create a new instance of this pseudonym repository
-    /// </summary>
-    /// <param name="context">The database context</param>
-    public PseudonymRepository(PseudonymContext context)
+    private async Task<Pseudonym?> UpsertAsync(PseudonymContext context, Pseudonym pseudonym)
     {
-        Context = context;
+        var upsertCommand = context.Database.IsNpgsql()
+            ? PostgreSQLInsertCommand
+            : SqliteInsertCommand;
 
-        if (Context.Database.IsNpgsql())
-        {
-            UpsertCommand = PostgreSQLInsertCommand;
-        }
-        else
-        {
-            UpsertCommand = SqliteInsertCommand;
-        }
-    }
-
-    private PseudonymContext Context { get; }
-
-    /// <inheritdoc/>
-    public async Task<Pseudonym?> CreateIfNotExist(Pseudonym pseudonym)
-    {
         Pseudonym? upsertedPseudonym = null;
         var retryCount = 3;
         while (upsertedPseudonym is null && retryCount > 0)
@@ -88,9 +70,9 @@ public class PseudonymRepository : IPseudonymRepository
             var stopwatch = Stopwatch.StartNew();
             try
             {
-                var pseudonyms = await Context
+                var pseudonyms = await context
                     .Pseudonyms.FromSqlRaw(
-                        UpsertCommand,
+                        upsertCommand,
                         pseudonym.NamespaceName,
                         pseudonym.OriginalValue,
                         pseudonym.PseudonymValue,
@@ -122,14 +104,16 @@ public class PseudonymRepository : IPseudonymRepository
             return [];
         }
 
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+
         List<Pseudonym> upserted;
         var stopwatch = Stopwatch.StartNew();
         try
         {
-            if (Context.Database.IsNpgsql())
+            if (context.Database.IsNpgsql())
             {
                 var sql = BuildBatchUpsertSql(pseudonyms, out var parameters);
-                upserted = await Context
+                upserted = await context
                     .Pseudonyms.FromSqlRaw(sql, parameters)
                     .AsNoTracking()
                     .ToListAsync(cancellationToken);
@@ -139,7 +123,7 @@ public class PseudonymRepository : IPseudonymRepository
                 // SQLite is test-only (never production scale - see ListByNamespaceAsync above),
                 // so a plain loop over the already-proven single-row upsert is simpler than
                 // maintaining a second batched SQL dialect purely for test scaffolding.
-                upserted = await SequentialFallbackAsync(pseudonyms);
+                upserted = await SequentialFallbackAsync(context, pseudonyms);
             }
         }
         finally
@@ -150,7 +134,7 @@ public class PseudonymRepository : IPseudonymRepository
         // The batched round trip is expected to cover every requested key. It can fall short only
         // if a concurrent writer (a different Hangfire job, or another connection entirely)
         // inserts the exact same key between this statement's INSERT and its own fallback SELECT
-        // - the same rare race CreateIfNotExist's retry loop above exists to handle. Reuse that
+        // - the same rare race UpsertAsync's retry loop above exists to handle. Reuse that
         // proven, single-row retry logic here instead of duplicating it for the batch case.
         if (upserted.Count < pseudonyms.Count)
         {
@@ -163,7 +147,7 @@ public class PseudonymRepository : IPseudonymRepository
                 )
             )
             {
-                var single = await CreateIfNotExist(missing);
+                var single = await UpsertAsync(context, missing);
                 if (single is not null)
                 {
                     upserted.Add(single);
@@ -174,12 +158,15 @@ public class PseudonymRepository : IPseudonymRepository
         return upserted;
     }
 
-    private async Task<List<Pseudonym>> SequentialFallbackAsync(IReadOnlyList<Pseudonym> pseudonyms)
+    private async Task<List<Pseudonym>> SequentialFallbackAsync(
+        PseudonymContext context,
+        IReadOnlyList<Pseudonym> pseudonyms
+    )
     {
         var results = new List<Pseudonym>(pseudonyms.Count);
         foreach (var pseudonym in pseudonyms)
         {
-            var single = await CreateIfNotExist(pseudonym);
+            var single = await UpsertAsync(context, pseudonym);
             if (single is not null)
             {
                 results.Add(single);
@@ -274,14 +261,15 @@ public class PseudonymRepository : IPseudonymRepository
         CancellationToken cancellationToken
     )
     {
-        if (Context.Database.IsNpgsql())
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        if (context.Database.IsNpgsql())
         {
-            // Raw SQL, matching the existing precedent in CreateIfNotExist above: a row-value
+            // Raw SQL, matching the existing precedent in UpsertAsync above: a row-value
             // comparison maps directly onto the (namespace_name, created_at, original_value)
             // index as a range scan, which a LINQ-translated equivalent isn't guaranteed to do.
             if (cursor is null)
             {
-                return await Context
+                return await context
                     .Pseudonyms.FromSqlInterpolated(
                         $"""
                         SELECT * FROM pseudonyms
@@ -294,7 +282,7 @@ public class PseudonymRepository : IPseudonymRepository
                     .ToListAsync(cancellationToken);
             }
 
-            return await Context
+            return await context
                 .Pseudonyms.FromSqlInterpolated(
                     $"""
                     SELECT * FROM pseudonyms
@@ -311,7 +299,7 @@ public class PseudonymRepository : IPseudonymRepository
 
         // SQLite (unit tests only, never production scale): page in memory to sidestep any
         // uncertainty about how this provider translates a composite keyset comparison.
-        var all = await Context
+        var all = await context
             .Pseudonyms.AsNoTracking()
             .Where(p => p.NamespaceName == namespaceName)
             .ToListAsync(cancellationToken);
@@ -347,7 +335,8 @@ public class PseudonymRepository : IPseudonymRepository
         CancellationToken cancellationToken
     )
     {
-        return await Context
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context
             .Pseudonyms.AsNoTracking()
             .Where(p => p.NamespaceName == namespaceName)
             .LongCountAsync(cancellationToken);
@@ -358,7 +347,8 @@ public class PseudonymRepository : IPseudonymRepository
         CancellationToken cancellationToken
     )
     {
-        var counted = await Context
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var counted = await context
             .Pseudonyms.AsNoTracking()
             .GroupBy(p => p.NamespaceName)
             .Select(g => new { Namespace = g.Key, Count = g.LongCount() })
@@ -370,7 +360,7 @@ public class PseudonymRepository : IPseudonymRepository
         // through a hash join before aggregating, which costs the parallel partial aggregate that
         // makes the count above bearable at all (measured on 5M rows: 346ms for these two queries
         // against 1493ms for the join). This one reads a table with a row per namespace.
-        var allNamespaces = await Context
+        var allNamespaces = await context
             .Namespaces.AsNoTracking()
             .Select(n => n.Name)
             .ToListAsync(cancellationToken);
@@ -391,12 +381,13 @@ public class PseudonymRepository : IPseudonymRepository
         CancellationToken cancellationToken
     )
     {
-        var query = Context.Pseudonyms.AsNoTracking().Where(p => p.NamespaceName == namespaceName);
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var query = context.Pseudonyms.AsNoTracking().Where(p => p.NamespaceName == namespaceName);
 
         var trimmedSearch = string.IsNullOrWhiteSpace(searchText) ? null : searchText.Trim();
         if (trimmedSearch is not null)
         {
-            if (Context.Database.IsNpgsql())
+            if (context.Database.IsNpgsql())
             {
                 var pattern = $"%{EscapeLikePattern(trimmedSearch)}%";
                 query = includeOriginalValueInSearch
@@ -446,7 +437,8 @@ public class PseudonymRepository : IPseudonymRepository
         CancellationToken cancellationToken
     )
     {
-        return await Context
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context
             .Pseudonyms.AsNoTracking()
             .Where(p => p.NamespaceName == namespaceName && p.PseudonymValue == pseudonymValue)
             .FirstOrDefaultAsync(cancellationToken);
@@ -464,10 +456,11 @@ public class PseudonymRepository : IPseudonymRepository
             return [];
         }
 
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         // Contains() over a collection is translated by the Npgsql provider to `= ANY(@p)` - one
         // array parameter, so the SQL text is identical whatever the chunk size and stays
         // plan-cacheable, rather than an IN list whose parameter count changes per call.
-        return await Context
+        return await context
             .Pseudonyms.AsNoTracking()
             .Where(p =>
                 p.NamespaceName == namespaceName && pseudonymValues.Contains(p.PseudonymValue)
@@ -487,7 +480,8 @@ public class PseudonymRepository : IPseudonymRepository
             return new HashSet<string>(StringComparer.Ordinal);
         }
 
-        var found = await Context
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var found = await context
             .Pseudonyms.AsNoTracking()
             .Where(p =>
                 p.NamespaceName == namespaceName && pseudonymValues.Contains(p.PseudonymValue)
@@ -506,11 +500,31 @@ public class PseudonymRepository : IPseudonymRepository
         CancellationToken cancellationToken
     )
     {
-        return await Context
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context
             .Pseudonyms.AsNoTracking()
             .Where(p => p.NamespaceName == namespaceName && p.OriginalValue == originalValue)
             .OrderBy(p => p.SequenceNumber)
             .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Pseudonym?> FindFirstByOriginalValueAsync(
+        Namespace @namespace,
+        string originalValue,
+        CancellationToken cancellationToken
+    )
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context
+            .Pseudonyms.AsNoTracking()
+            .FirstOrDefaultAsync(
+                p =>
+                    p.NamespaceName == @namespace.Name
+                    && p.OriginalValue == originalValue
+                    && p.SequenceNumber == 0,
+                cancellationToken
+            );
     }
 
     /// <inheritdoc/>
@@ -525,7 +539,8 @@ public class PseudonymRepository : IPseudonymRepository
             return [];
         }
 
-        return await Context
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context
             .Pseudonyms.AsNoTracking()
             .Where(p =>
                 p.NamespaceName == namespaceName && originalValues.Contains(p.OriginalValue)

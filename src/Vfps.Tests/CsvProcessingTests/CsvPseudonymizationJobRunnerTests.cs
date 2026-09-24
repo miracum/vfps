@@ -250,7 +250,7 @@ public class CsvPseudonymizationJobRunnerTests
 
     // Same shape as FakePseudonymize above, and for the same reason: the Depseudonymize path now
     // resolves a whole chunk through one ReverseLookupTrustedBatchAsync call rather than one
-    // ReverseLookupTrustedAsync per value. A value registered with a null originalValue stands for
+    // lookup per value. A value registered with a null originalValue stands for
     // an unknown pseudonym and is simply left out of the returned dictionary, which is how the
     // batch contract expresses a miss.
     private readonly Dictionary<

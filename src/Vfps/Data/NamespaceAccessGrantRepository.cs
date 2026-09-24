@@ -4,7 +4,7 @@ using Vfps.Data.Models;
 namespace Vfps.Data;
 
 /// <inheritdoc/>
-public class NamespaceAccessGrantRepository(PseudonymContext context)
+public class NamespaceAccessGrantRepository(IDbContextFactory<PseudonymContext> contextFactory)
     : INamespaceAccessGrantRepository
 {
     /// <inheritdoc/>
@@ -12,6 +12,7 @@ public class NamespaceAccessGrantRepository(PseudonymContext context)
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         return await context
             .NamespaceAccessGrants.AsNoTracking()
             .OrderBy(g => g.NamespaceName)
@@ -23,8 +24,7 @@ public class NamespaceAccessGrantRepository(PseudonymContext context)
     /// <inheritdoc/>
     public async Task<NamespaceAccessGrant?> FindAsync(Guid id, CancellationToken cancellationToken)
     {
-        // Explicit no-tracking query rather than DbSet.FindAsync, for the same reason
-        // NamespaceRepository.FindAsync uses one - see the comment there.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         return await context
             .NamespaceAccessGrants.AsNoTracking()
             .FirstOrDefaultAsync(g => g.Id == id, cancellationToken);
@@ -38,6 +38,7 @@ public class NamespaceAccessGrantRepository(PseudonymContext context)
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         return await context
             .NamespaceAccessGrants.AsNoTracking()
             .FirstOrDefaultAsync(
@@ -55,18 +56,9 @@ public class NamespaceAccessGrantRepository(PseudonymContext context)
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         context.Add(grant);
-        try
-        {
-            await context.SaveChangesAsync(cancellationToken);
-        }
-        finally
-        {
-            // See NamespaceRepository.CreateAsync for why this must run on the failure path too
-            // (hence `finally`), not just after a successful save.
-            context.ChangeTracker.Clear();
-        }
-
+        await context.SaveChangesAsync(cancellationToken);
         return grant;
     }
 
@@ -77,6 +69,7 @@ public class NamespaceAccessGrantRepository(PseudonymContext context)
         // came back from a no-tracking read, and only the three permission flags are editable
         // once a grant exists (the namespace and grantee identify it - change either and it's a
         // different grant).
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         await context
             .NamespaceAccessGrants.Where(g => g.Id == grant.Id)
             .ExecuteUpdateAsync(
@@ -93,6 +86,7 @@ public class NamespaceAccessGrantRepository(PseudonymContext context)
     /// <inheritdoc/>
     public async Task DeleteAsync(Guid id, CancellationToken cancellationToken)
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         await context
             .NamespaceAccessGrants.Where(g => g.Id == id)
             .ExecuteDeleteAsync(cancellationToken);
@@ -105,6 +99,7 @@ public class NamespaceAccessGrantRepository(PseudonymContext context)
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         return await context
             .NamespaceAccessGrants.Where(g => g.GranteeType == granteeType && g.Grantee == grantee)
             .ExecuteDeleteAsync(cancellationToken);

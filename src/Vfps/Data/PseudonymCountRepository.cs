@@ -4,7 +4,8 @@ using Vfps.Data.Models;
 namespace Vfps.Data;
 
 /// <inheritdoc/>
-public class PseudonymCountRepository(PseudonymContext context) : IPseudonymCountRepository
+public class PseudonymCountRepository(IDbContextFactory<PseudonymContext> contextFactory)
+    : IPseudonymCountRepository
 {
     /// <inheritdoc/>
     public async Task ReplaceAllAsync(
@@ -13,6 +14,8 @@ public class PseudonymCountRepository(PseudonymContext context) : IPseudonymCoun
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+
         // Merged in memory rather than pushed down as an INSERT ... ON CONFLICT, even though that
         // is exactly what this is. Raw SQL bypasses EF's value converters, and DateTimeOffset is
         // stored as a *string* on SQLite (see PseudonymContext) - a hand-written statement would
@@ -60,21 +63,16 @@ public class PseudonymCountRepository(PseudonymContext context) : IPseudonymCoun
         // One SaveChanges, so the whole replacement is a single transaction and a replica reading
         // concurrently never observes a half-written set.
         await context.SaveChangesAsync(cancellationToken);
-
-        // The stubs above stay tracked as Unchanged once saved, which would collide with the next
-        // call's stubs for the same keys. Detaching just this entity type leaves anything else the
-        // caller has pending alone - unlike ChangeTracker.Clear().
-        foreach (var entry in context.ChangeTracker.Entries<PseudonymCount>().ToList())
-        {
-            entry.State = EntityState.Detached;
-        }
     }
 
     /// <inheritdoc/>
     public async Task<IReadOnlyDictionary<string, long>> GetAllAsync(
         CancellationToken cancellationToken
-    ) =>
-        await context
+    )
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context
             .PseudonymCounts.AsNoTracking()
             .ToDictionaryAsync(row => row.NamespaceName, row => row.Count, cancellationToken);
+    }
 }

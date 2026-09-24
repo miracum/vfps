@@ -19,6 +19,7 @@ public class ServiceTestBase : IDisposable
         _connection.Open();
 
         InMemoryPseudonymContext = new PseudonymContext(BuildContextOptions());
+        ContextFactory = new TestPseudonymContextFactory(BuildContextOptions);
 
         var existingNamespace = new Data.Models.Namespace
         {
@@ -111,24 +112,21 @@ public class ServiceTestBase : IDisposable
             namespaceRepository,
             pseudonymRepository,
             CreatePermissionChecker(config, grants),
-            new PseudonymizationMethodsLookup(),
-            new TestPseudonymContextFactory(BuildContextOptions)
+            new PseudonymizationMethodsLookup()
         );
 
     /// <summary>
-    /// The same factory the app services get in production - handed out so a test can exercise a
-    /// component that reads the database through one directly (e.g. NamespaceAccessGrantCache).
+    /// What every repository is constructed with - the test stand-in for the
+    /// <see cref="IDbContextFactory{PseudonymContext}"/> they open a context from per call in
+    /// production.
     /// </summary>
-    protected IDbContextFactory<PseudonymContext> ContextFactory =>
-        new TestPseudonymContextFactory(BuildContextOptions);
+    protected IDbContextFactory<PseudonymContext> ContextFactory { get; }
 
     /// <summary>
     /// Every "new" DbContext this factory produces shares the same open SQLite connection as
     /// <see cref="InMemoryPseudonymContext"/> (a private, connection-scoped in-memory database
     /// otherwise wouldn't be visible across separate connections/contexts), so it sees the same
-    /// test data. Mirrors <see cref="IDbContextFactory{PseudonymContext}"/>, which
-    /// PseudonymAppService's trusted methods use in production to get a fresh context per
-    /// concurrent call instead of reusing one shared, non-thread-safe instance.
+    /// test data.
     /// </summary>
     private sealed class TestPseudonymContextFactory(
         Func<DbContextOptions<PseudonymContext>> optionsFactory
@@ -160,8 +158,7 @@ public class ServiceTestBase : IDisposable
         new(
             namespaceRepository,
             CreatePermissionChecker(config, grants),
-            methodsLookup ?? new PseudonymizationMethodsLookup(),
-            new TestPseudonymContextFactory(BuildContextOptions)
+            methodsLookup ?? new PseudonymizationMethodsLookup()
         );
 
     protected virtual void Dispose(bool disposing)

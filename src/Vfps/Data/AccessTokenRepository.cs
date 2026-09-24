@@ -4,53 +4,67 @@ using Vfps.Data.Models;
 namespace Vfps.Data;
 
 /// <inheritdoc/>
-public class AccessTokenRepository(PseudonymContext context) : IAccessTokenRepository
+public class AccessTokenRepository(IDbContextFactory<PseudonymContext> contextFactory)
+    : IAccessTokenRepository
 {
     /// <inheritdoc/>
     public async Task<IReadOnlyList<AccessToken>> GetAllUnrevokedAsync(
         CancellationToken cancellationToken
-    ) =>
-        await context
+    )
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context
             .AccessTokens.AsNoTracking()
             .Where(t => t.RevokedAt == null)
             .ToListAsync(cancellationToken);
+    }
 
     /// <inheritdoc/>
-    public async Task<IReadOnlyList<AccessToken>> GetAllAsync(
-        CancellationToken cancellationToken
-    ) =>
-        await context
+    public async Task<IReadOnlyList<AccessToken>> GetAllAsync(CancellationToken cancellationToken)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context
             .AccessTokens.AsNoTracking()
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync(cancellationToken);
+    }
 
     /// <inheritdoc/>
     public async Task<IReadOnlyList<AccessToken>> GetBySubjectAsync(
         string subject,
         CancellationToken cancellationToken
-    ) =>
-        await context
+    )
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context
             .AccessTokens.AsNoTracking()
             .Where(t => t.Subject == subject)
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync(cancellationToken);
+    }
 
     /// <inheritdoc/>
     public async Task<IReadOnlyList<AccessToken>> GetByServiceAccountAsync(
         string serviceAccountName,
         CancellationToken cancellationToken
-    ) =>
-        await context
+    )
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context
             .AccessTokens.AsNoTracking()
             .Where(t => t.ServiceAccountName == serviceAccountName)
             .OrderByDescending(t => t.CreatedAt)
             .ToListAsync(cancellationToken);
+    }
 
     /// <inheritdoc/>
-    public async Task<AccessToken?> FindAsync(Guid id, CancellationToken cancellationToken) =>
-        await context
+    public async Task<AccessToken?> FindAsync(Guid id, CancellationToken cancellationToken)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context
             .AccessTokens.AsNoTracking()
             .FirstOrDefaultAsync(t => t.Id == id, cancellationToken);
+    }
 
     /// <inheritdoc/>
     public async Task<AccessToken> CreateAsync(
@@ -58,17 +72,9 @@ public class AccessTokenRepository(PseudonymContext context) : IAccessTokenRepos
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         context.Add(token);
-        try
-        {
-            await context.SaveChangesAsync(cancellationToken);
-        }
-        finally
-        {
-            // See NamespaceRepository.CreateAsync for why this runs on the failure path too.
-            context.ChangeTracker.Clear();
-        }
-
+        await context.SaveChangesAsync(cancellationToken);
         return token;
     }
 
@@ -81,6 +87,7 @@ public class AccessTokenRepository(PseudonymContext context) : IAccessTokenRepos
     {
         // Filtered on RevokedAt == null so re-revoking doesn't move the timestamp: when a token
         // stopped working is an audit fact, and the second click shouldn't rewrite it.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         await context
             .AccessTokens.Where(t => t.Id == id && t.RevokedAt == null)
             .ExecuteUpdateAsync(
@@ -93,8 +100,11 @@ public class AccessTokenRepository(PseudonymContext context) : IAccessTokenRepos
     }
 
     /// <inheritdoc/>
-    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken) =>
+    public async Task DeleteAsync(Guid id, CancellationToken cancellationToken)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         await context.AccessTokens.Where(t => t.Id == id).ExecuteDeleteAsync(cancellationToken);
+    }
 
     /// <inheritdoc/>
     public async Task UpdateLastUsedAsync(
@@ -106,6 +116,7 @@ public class AccessTokenRepository(PseudonymContext context) : IAccessTokenRepos
         // carries at most one entry per token actually used in the interval, which in every
         // realistic deployment is a handful. LastUpdatedAt is deliberately left alone - this
         // column says nothing about the token's configuration.
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         foreach (var (id, lastUsedAt) in lastUsedByTokenId)
         {
             await context

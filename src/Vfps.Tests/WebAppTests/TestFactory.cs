@@ -24,15 +24,8 @@ public class IntegrationTestFactory<TProgram, TDbContext> : WebApplicationFactor
             inMemorySqlite.Open();
 
             services.RemoveDbContext<TDbContext>();
-            // Mirrors Program.cs's registration for PseudonymContext: a factory as the sole
-            // source of configuration, with a scoped registration deriving one instance per
-            // scope from it - not a separate AddDbContext call, which would conflict on
-            // DbContextOptions<TDbContext>'s lifetime. Not pooled: PseudonymContext's
-            // OnConfiguring mutates options post-construction, which pooling disallows.
+            // Mirrors Program.cs's registration for PseudonymContext - see the comment there.
             services.AddDbContextFactory<TDbContext>(options => options.UseSqlite(inMemorySqlite));
-            services.AddScoped(isp =>
-                isp.GetRequiredService<IDbContextFactory<TDbContext>>().CreateDbContext()
-            );
             services.EnsureDbCreated<TDbContext>();
             services.RemovePseudonymCountMetricsPublisher();
         });

@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Vfps.Config;
 using Vfps.Data;
@@ -8,7 +7,7 @@ namespace Vfps.Authorization;
 
 /// <inheritdoc/>
 public sealed class NamespaceAccessGrantCache(
-    IDbContextFactory<PseudonymContext> contextFactory,
+    INamespaceAccessGrantRepository grantRepository,
     IOptions<AuthorizationConfig> options
 ) : INamespaceAccessGrantCache, IDisposable
 {
@@ -44,13 +43,7 @@ public sealed class NamespaceAccessGrantCache(
                 return cached;
             }
 
-            // Its own context rather than the scoped PseudonymContext: this is a singleton, and
-            // it's called from gRPC requests and Blazor circuits concurrently - a shared
-            // DbContext isn't safe for that.
-            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-            var grants = await new NamespaceAccessGrantRepository(context).GetAllAsync(
-                cancellationToken
-            );
+            var grants = await grantRepository.GetAllAsync(cancellationToken);
 
             Volatile.Write(ref _snapshot, new Snapshot(grants, DateTimeOffset.UtcNow));
             return grants;

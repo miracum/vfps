@@ -1,4 +1,3 @@
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Vfps.Config;
 using Vfps.Data;
@@ -8,7 +7,7 @@ namespace Vfps.Authorization;
 
 /// <inheritdoc/>
 public sealed class AccessTokenCache(
-    IDbContextFactory<PseudonymContext> contextFactory,
+    IAccessTokenRepository tokenRepository,
     IOptions<AuthorizationConfig> options
 ) : IAccessTokenCache, IDisposable
 {
@@ -49,10 +48,7 @@ public sealed class AccessTokenCache(
                 return cached;
             }
 
-            await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-            var tokens = await new AccessTokenRepository(context).GetAllUnrevokedAsync(
-                cancellationToken
-            );
+            var tokens = await tokenRepository.GetAllUnrevokedAsync(cancellationToken);
 
             // Ordinal: a token id is base64url, and case is significant in it.
             var byTokenId = tokens.ToDictionary(t => t.TokenId, StringComparer.Ordinal);

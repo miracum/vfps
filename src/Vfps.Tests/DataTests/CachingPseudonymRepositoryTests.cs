@@ -8,43 +8,108 @@ public class CachingPseudonymRepositoryTests : ServiceTests.ServiceTestBase
 {
     private CachingPseudonymRepository CreateSut() =>
         new(
-            InMemoryPseudonymContext,
+            ContextFactory,
             new MemoryCache(new MemoryCacheOptions { SizeLimit = 2048 }),
             new CacheConfig()
         );
 
-    [Fact]
-    public async Task CreateIfNotExist_CalledTwiceWithSameOriginalValue_ShouldCacheTheResult()
-    {
-        var sut = CreateSut();
-        var pseudonym = new Data.Models.Pseudonym
-        {
-            NamespaceName = "existingNamespace",
-            OriginalValue = nameof(
-                CreateIfNotExist_CalledTwiceWithSameOriginalValue_ShouldCacheTheResult
-            ),
-            PseudonymValue = "cachedPseudonymValue",
-        };
-
-        var first = await sut.CreateIfNotExist(pseudonym);
-        first.Should().NotBeNull();
-
-        // Delete it directly from the underlying context, bypassing the repository, so a second
-        // CreateIfNotExist call can only return the same result by having actually served the
-        // cached hit - if it re-queried instead, it would re-insert the now-missing row.
-        InMemoryPseudonymContext.Pseudonyms.Remove(
-            InMemoryPseudonymContext.Pseudonyms.Single(p =>
-                p.PseudonymValue == "cachedPseudonymValue"
+    private async Task<Data.Models.Namespace> ExistingNamespaceAsync() =>
+        (
+            await new NamespaceRepository(ContextFactory).FindAsync(
+                "existingNamespace",
+                CancellationToken.None
             )
+        )!;
+
+    // Deletes the row behind the repository's back, so a later lookup can only still see it by
+    // having been served from the cache.
+    private async Task DeleteStoredPseudonymAsync(string originalValue)
+    {
+        InMemoryPseudonymContext.Pseudonyms.Remove(
+            InMemoryPseudonymContext.Pseudonyms.Single(p => p.OriginalValue == originalValue)
         );
         await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+    }
 
-        var second = await sut.CreateIfNotExist(pseudonym);
+    [Fact]
+    public async Task FindFirstByOriginalValueAsync_WithAStoredValue_ShouldServeRepeatsFromTheCache()
+    {
+        var sut = CreateSut();
+        var @namespace = await ExistingNamespaceAsync();
 
-        second.Should().NotBeNull();
-        second!.PseudonymValue.Should().Be(first!.PseudonymValue);
-        InMemoryPseudonymContext
-            .Pseudonyms.Should()
-            .NotContain(p => p.PseudonymValue == "cachedPseudonymValue");
+        var first = await sut.FindFirstByOriginalValueAsync(
+            @namespace,
+            "an original value",
+            CancellationToken.None
+        );
+        await DeleteStoredPseudonymAsync("an original value");
+        var second = await sut.FindFirstByOriginalValueAsync(
+            @namespace,
+            "an original value",
+            CancellationToken.None
+        );
+
+        first!.PseudonymValue.Should().Be("existingPseudonym");
+        second!.PseudonymValue.Should().Be("existingPseudonym");
+    }
+
+    [Fact]
+    public async Task FindFirstByOriginalValueAsync_AfterAMiss_ShouldFindTheValueOnceItIsStored()
+    {
+        var sut = CreateSut();
+        var @namespace = await ExistingNamespaceAsync();
+
+        var beforeCreate = await sut.FindFirstByOriginalValueAsync(
+            @namespace,
+            "created later",
+            CancellationToken.None
+        );
+        await sut.CreateIfNotExistBatchAsync(
+            [
+                new Data.Models.Pseudonym
+                {
+                    NamespaceName = @namespace.Name,
+                    OriginalValue = "created later",
+                    PseudonymValue = "created-later-pseudonym",
+                },
+            ],
+            CancellationToken.None
+        );
+        var afterCreate = await sut.FindFirstByOriginalValueAsync(
+            @namespace,
+            "created later",
+            CancellationToken.None
+        );
+
+        beforeCreate.Should().BeNull();
+        afterCreate!.PseudonymValue.Should().Be("created-later-pseudonym");
+    }
+
+    [Fact]
+    public async Task FindFirstByOriginalValueAsync_ForANamespaceRecreatedUnderTheSameName_ShouldNotServeTheOldEntry()
+    {
+        var sut = CreateSut();
+        var original = await ExistingNamespaceAsync();
+        await sut.FindFirstByOriginalValueAsync(
+            original,
+            "an original value",
+            CancellationToken.None
+        );
+        await DeleteStoredPseudonymAsync("an original value");
+        var recreated = new Data.Models.Namespace
+        {
+            Name = original.Name,
+            PseudonymLength = original.PseudonymLength,
+            CreatedAt = original.CreatedAt.AddMinutes(1),
+        };
+
+        var found = await sut.FindFirstByOriginalValueAsync(
+            recreated,
+            "an original value",
+            CancellationToken.None
+        );
+
+        found.Should().BeNull();
     }
 }

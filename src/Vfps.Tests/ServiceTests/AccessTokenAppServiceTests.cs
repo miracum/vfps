@@ -49,8 +49,8 @@ public class AccessTokenAppServiceTests : ServiceTestBase
         config ??= EnabledConfig;
         var cache = new StaticAccessTokenCache();
         var sut = new AccessTokenAppService(
-            new AccessTokenRepository(InMemoryPseudonymContext),
-            new ServiceAccountRepository(InMemoryPseudonymContext),
+            new AccessTokenRepository(ContextFactory),
+            new ServiceAccountRepository(ContextFactory),
             CreatePermissionChecker(config),
             cache,
             Options.Create(config),

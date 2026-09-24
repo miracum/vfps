@@ -23,11 +23,11 @@ public class NamespaceAccessGrantAppServiceTests : ServiceTestBase
         StaticNamespaceAccessGrantCache Cache
     ) CreateSut()
     {
-        var grantRepository = new NamespaceAccessGrantRepository(InMemoryPseudonymContext);
+        var grantRepository = new NamespaceAccessGrantRepository(ContextFactory);
         var cache = new StaticNamespaceAccessGrantCache();
         var sut = new NamespaceAccessGrantAppService(
             grantRepository,
-            new NamespaceRepository(InMemoryPseudonymContext),
+            new NamespaceRepository(ContextFactory),
             CreatePermissionChecker(EnabledConfig),
             cache
         );
