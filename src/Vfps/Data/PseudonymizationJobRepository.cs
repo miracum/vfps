@@ -4,7 +4,7 @@ using Vfps.Data.Models;
 namespace Vfps.Data;
 
 /// <inheritdoc/>
-public class PseudonymizationJobRepository(PseudonymContext context)
+public class PseudonymizationJobRepository(IDbContextFactory<PseudonymContext> contextFactory)
     : IPseudonymizationJobRepository
 {
     /// <inheritdoc/>
@@ -13,24 +13,16 @@ public class PseudonymizationJobRepository(PseudonymContext context)
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         context.Add(job);
-        try
-        {
-            await context.SaveChangesAsync(cancellationToken);
-        }
-        finally
-        {
-            // See NamespaceRepository.CreateAsync for why this must run on the failure path
-            // too (hence `finally`), not just after a successful save.
-            context.ChangeTracker.Clear();
-        }
-
+        await context.SaveChangesAsync(cancellationToken);
         return job;
     }
 
     /// <inheritdoc/>
     public async Task<PseudonymizationJob?> FindAsync(Guid id, CancellationToken cancellationToken)
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         return await context
             .PseudonymizationJobs.AsNoTracking()
             .FirstOrDefaultAsync(j => j.Id == id, cancellationToken);
@@ -42,6 +34,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         var query = context.PseudonymizationJobs.AsNoTracking();
         if (createdBy is not null)
         {
@@ -57,6 +50,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         var threshold = DateTimeOffset.UtcNow - staleAfter;
 
         return await context
@@ -79,6 +73,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         await context
             .PseudonymizationJobs.Where(j => j.Id == id)
             .ExecuteUpdateAsync(
@@ -104,6 +99,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         var rowsAffected = await context
             .PseudonymizationJobs.Where(j =>
                 j.Id == id && j.Status != PseudonymizationJobStatus.Cancelled
@@ -140,6 +136,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         await context
             .PseudonymizationJobs.Where(j => j.Id == id)
             .ExecuteUpdateAsync(
@@ -154,6 +151,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
     /// <inheritdoc/>
     public async Task MarkQueuedAsync(Guid id, long totalBytes, CancellationToken cancellationToken)
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         await context
             .PseudonymizationJobs.Where(j => j.Id == id)
             .ExecuteUpdateAsync(
@@ -172,6 +170,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         await context
             .PseudonymizationJobs.Where(j => j.Id == id)
             .ExecuteUpdateAsync(
@@ -190,6 +189,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         await context
             .PseudonymizationJobs.Where(j => j.Id == id)
             .ExecuteUpdateAsync(
@@ -208,6 +208,7 @@ public class PseudonymizationJobRepository(PseudonymContext context)
         CancellationToken cancellationToken
     )
     {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         var query = context.PseudonymizationJobs.Where(j =>
             j.Status == PseudonymizationJobStatus.Completed
             || j.Status == PseudonymizationJobStatus.Failed

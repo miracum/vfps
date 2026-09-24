@@ -18,8 +18,8 @@ public class PseudonymResolveTests : ServiceTestBase
         params Data.Models.NamespaceAccessGrant[] grants
     ) =>
         CreatePseudonymAppService(
-            new NamespaceRepository(InMemoryPseudonymContext),
-            new PseudonymRepository(InMemoryPseudonymContext),
+            new NamespaceRepository(ContextFactory),
+            new PseudonymRepository(ContextFactory),
             config,
             grants
         );

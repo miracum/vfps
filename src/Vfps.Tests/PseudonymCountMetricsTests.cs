@@ -56,8 +56,8 @@ public class PseudonymCountMetricsTests : ServiceTestBase
 
     private PseudonymCountMetrics CreateSut(IPseudonymRepository? pseudonymRepository = null) =>
         new(
-            pseudonymRepository ?? new PseudonymRepository(InMemoryPseudonymContext),
-            new PseudonymCountRepository(InMemoryPseudonymContext),
+            pseudonymRepository ?? new PseudonymRepository(ContextFactory),
+            new PseudonymCountRepository(ContextFactory),
             NullLogger<PseudonymCountMetrics>.Instance
         );
 
@@ -201,11 +201,9 @@ public class PseudonymCountMetricsTests : ServiceTestBase
         await CreateSut().RecomputeAsync(TestContext.Current.CancellationToken);
 
         var services = new ServiceCollection();
-        services.AddSingleton<IPseudonymRepository>(
-            new PseudonymRepository(InMemoryPseudonymContext)
-        );
+        services.AddSingleton<IPseudonymRepository>(new PseudonymRepository(ContextFactory));
         services.AddSingleton<IPseudonymCountRepository>(
-            new PseudonymCountRepository(InMemoryPseudonymContext)
+            new PseudonymCountRepository(ContextFactory)
         );
         services.AddLogging();
         services.AddScoped<PseudonymCountMetrics>();
@@ -230,7 +228,7 @@ public class PseudonymCountMetricsTests : ServiceTestBase
             .Throws(new InvalidOperationException("database is down"));
 
         var sut = new PseudonymCountMetrics(
-            new PseudonymRepository(InMemoryPseudonymContext),
+            new PseudonymRepository(ContextFactory),
             countRepository,
             NullLogger<PseudonymCountMetrics>.Instance
         );
@@ -258,7 +256,7 @@ public class PseudonymCountMetricsTests : ServiceTestBase
             .Throws(new InvalidOperationException("database is down"));
 
         var sut = new PseudonymCountMetrics(
-            new PseudonymRepository(InMemoryPseudonymContext),
+            new PseudonymRepository(ContextFactory),
             countRepository,
             NullLogger<PseudonymCountMetrics>.Instance
         );

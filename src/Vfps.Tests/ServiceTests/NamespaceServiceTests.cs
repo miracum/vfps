@@ -10,7 +10,7 @@ public class NamespaceServiceTests : ServiceTestBase
 
     public NamespaceServiceTests()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         sut = new Services.NamespaceService(CreateNamespaceAppService(namespaceRepository));
     }
 
@@ -172,7 +172,7 @@ public class NamespaceServiceTests : ServiceTestBase
         // null for a field nobody typed into, which is stored verbatim. Every namespace created
         // that way then broke the API's read side.
         var name = $"uiCreated-{Guid.NewGuid():N}";
-        await CreateNamespaceAppService(new NamespaceRepository(InMemoryPseudonymContext))
+        await CreateNamespaceAppService(new NamespaceRepository(ContextFactory))
             .CreateAsync(
                 new Data.Models.Namespace
                 {
@@ -277,7 +277,7 @@ public class NamespaceServiceTests : ServiceTestBase
         // gRPC-layer half of NamespaceAppServiceTests' GetAsync coverage; TestServerCallContext
         // has no HttpContext, so ServerCallContextExtensions.GetUser() always resolves to an
         // anonymous principal here, which is sufficient to exercise the denied path.
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var restrictedSut = new Services.NamespaceService(
             CreateNamespaceAppService(
                 namespaceRepository,
@@ -412,10 +412,8 @@ public class NamespaceServiceTests : ServiceTestBase
             TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
         );
 
-        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
-        var namespaceRepositoryForPseudonymService = new NamespaceRepository(
-            InMemoryPseudonymContext
-        );
+        var pseudonymRepository = new PseudonymRepository(ContextFactory);
+        var namespaceRepositoryForPseudonymService = new NamespaceRepository(ContextFactory);
         var pseudonymService = new Services.PseudonymService(
             CreatePseudonymAppService(namespaceRepositoryForPseudonymService, pseudonymRepository)
         );

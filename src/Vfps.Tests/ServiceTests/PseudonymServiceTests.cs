@@ -8,8 +8,8 @@ public class PseudonymServiceTests : ServiceTestBase
 
     public PseudonymServiceTests()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
-        var pseudonymRepository = new PseudonymRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
+        var pseudonymRepository = new PseudonymRepository(ContextFactory);
         sut = new Services.PseudonymService(
             CreatePseudonymAppService(namespaceRepository, pseudonymRepository)
         );

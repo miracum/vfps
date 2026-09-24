@@ -36,7 +36,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         IBackgroundJobClient BackgroundJobClient
     ) CreateSut(AuthorizationConfig? config = null, params NamespaceAccessGrant[] grants)
     {
-        var repository = new PseudonymizationJobRepository(InMemoryPseudonymContext);
+        var repository = new PseudonymizationJobRepository(ContextFactory);
         var s3 = A.Fake<IAmazonS3>();
         A.CallTo(() => s3.GetPreSignedURLAsync(A<GetPreSignedUrlRequest>._))
             .Returns("https://example.invalid/presigned");

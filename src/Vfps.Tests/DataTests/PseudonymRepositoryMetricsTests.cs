@@ -32,7 +32,7 @@ public class PseudonymRepositoryMetricsTests : ServiceTests.ServiceTestBase
     {
         var namespaceA = await CreateTestNamespaceAsync();
         var namespaceB = await CreateTestNamespaceAsync();
-        var sut = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymRepository(ContextFactory);
 
         await sut.CreateIfNotExist(
             new Data.Models.Pseudonym
@@ -72,7 +72,7 @@ public class PseudonymRepositoryMetricsTests : ServiceTests.ServiceTestBase
         // returns the already-existing row rather than inserting a new one, so the true row
         // count (and thus this query's result) must not increase on the second call.
         var namespaceName = await CreateTestNamespaceAsync();
-        var sut = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymRepository(ContextFactory);
         var pseudonym = new Data.Models.Pseudonym
         {
             NamespaceName = namespaceName,
@@ -95,7 +95,7 @@ public class PseudonymRepositoryMetricsTests : ServiceTests.ServiceTestBase
         // zero is filled in from the namespace list. Asserted directly because it's the whole
         // reason that second query exists.
         var emptyNamespace = await CreateTestNamespaceAsync();
-        var sut = new PseudonymRepository(InMemoryPseudonymContext);
+        var sut = new PseudonymRepository(ContextFactory);
 
         var counts = await sut.CountAllGroupedByNamespaceAsync(
             TestContext.Current.CancellationToken

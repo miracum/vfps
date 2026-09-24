@@ -23,7 +23,7 @@ namespace Vfps.CsvProcessing;
 /// reprocessed from scratch and can reach Completed normally.
 /// </summary>
 public class StalledPseudonymizationJobWatchdogService(
-    IServiceProvider serviceProvider,
+    IPseudonymizationJobRepository jobRepository,
     IOptions<CsvProcessingConfig> csvProcessingConfig,
     ILogger<StalledPseudonymizationJobWatchdogService> logger,
     TimeSpan? checkInterval = null
@@ -61,10 +61,6 @@ public class StalledPseudonymizationJobWatchdogService(
     {
         try
         {
-            using var scope = serviceProvider.CreateScope();
-            var jobRepository =
-                scope.ServiceProvider.GetRequiredService<IPseudonymizationJobRepository>();
-
             var stalledJobIds = await jobRepository.FindStalledRunningJobIdsAsync(
                 csvProcessingConfig.Value.StalledJobThreshold,
                 cancellationToken

@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using FakeItEasy;
+using Microsoft.Extensions.Caching.Memory;
 using Vfps.Config;
 using Vfps.Data.Models;
 using Vfps.PseudonymGenerators;
@@ -14,7 +15,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task CreateAsync_WithAuthorizationEnabledAndNonAdminUser_ShouldThrowForbidden()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(
             namespaceRepository,
             new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
@@ -33,7 +34,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task CreateAsync_WithAuthorizationEnabledAndAdminUser_ShouldSucceed()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(
             namespaceRepository,
             new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
@@ -53,7 +54,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     {
         // Uuid4 always produces a 36-character value - a namespace can't be created asking for
         // anything else, rather than only failing later at first pseudonym-creation time.
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
 
         var act = () =>
@@ -92,7 +93,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     {
         // Nothing could mint a pseudonym in such a namespace, and the failure belongs to whoever
         // creates it rather than to whoever first tries to use it.
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
 
         var act = () =>
@@ -117,7 +118,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
         // function of the original value, so there is no second distinct one to hand out. Allowing
         // it would mean either a later failure or the same value stored twice under different
         // sequence numbers.
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository, LookupWithVoprf());
 
         var act = () =>
@@ -141,7 +142,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     {
         // The VOPRF output length is a deployment-wide contract, not a per-namespace choice -
         // enforced through the same IHasFixedPseudonymLength path UUIDs use.
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository, LookupWithVoprf(fixedLength: 86));
 
         var act = () =>
@@ -162,7 +163,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task CreateAsync_WithVoprfConfiguredCorrectly_ShouldSucceed()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository, LookupWithVoprf());
 
         var created = await sut.CreateAsync(
@@ -189,7 +190,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
         // access grant, so it's rejected here rather than left in the database. The Blazor form's
         // Required attribute isn't enough on its own: a submit racing the form's post-create model
         // reset arrives with the name already cleared, and the gRPC API doesn't validate it at all.
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
 
         var act = () =>
@@ -208,7 +209,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task CreateAsync_WithInvalidOriginalValueValidationRegex_ShouldThrowArgumentException()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
 
         var act = () =>
@@ -229,7 +230,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task CreateAsync_WithValidOriginalValueValidationRegex_ShouldSucceed()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
 
         var created = await sut.CreateAsync(
@@ -249,7 +250,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task CreateAsync_WithFixedLengthMethodAndCorrectLength_ShouldSucceed()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
 
         var created = await sut.CreateAsync(
@@ -269,7 +270,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task GetAllAsync_WithAuthorizationEnabled_ShouldOnlyReturnNamespacesUserCanRead()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(
             namespaceRepository,
             new AuthorizationConfig { IsEnabled = true },
@@ -288,7 +289,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task GetAsync_WithAuthorizationEnabledAndNoReadAccess_ShouldThrowForbidden()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(
             namespaceRepository,
             new AuthorizationConfig { IsEnabled = true },
@@ -308,7 +309,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task GetAsync_WithAuthorizationEnabledAndReadAccess_ShouldReturnNamespace()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(
             namespaceRepository,
             new AuthorizationConfig { IsEnabled = true },
@@ -327,7 +328,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task GetAsync_WithNonExistingNamespace_ShouldThrowNamespaceNotFoundException()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
 
         var act = () => sut.GetAsync("notExisting", new ClaimsPrincipal(), CancellationToken.None);
@@ -338,7 +339,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task DeleteAsync_WithAuthorizationEnabledAndNonAdminUser_ShouldThrowForbidden()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(
             namespaceRepository,
             new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
@@ -360,7 +361,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task DeleteAsync_WithAuthorizationEnabledAndAdminUser_ShouldDeleteNamespace()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(
             namespaceRepository,
             new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
@@ -374,9 +375,31 @@ public class NamespaceAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task DeleteAsync_WithNamespaceCaching_ShouldEvictTheCachedNamespace()
+    {
+        // The eviction lives in CachingNamespaceRepository.DeleteAsync, so it only happens if the
+        // app service deletes through the repository it was given rather than one of its own.
+        var namespaceRepository = new CachingNamespaceRepository(
+            ContextFactory,
+            new MemoryCache(new MemoryCacheOptions { SizeLimit = 2048 }),
+            new CacheConfig()
+        );
+        var sut = CreateNamespaceAppService(namespaceRepository);
+        (await namespaceRepository.FindAsync("existingNamespace", CancellationToken.None))
+            .Should()
+            .NotBeNull();
+
+        await sut.DeleteAsync("existingNamespace", new ClaimsPrincipal(), CancellationToken.None);
+
+        (await namespaceRepository.FindAsync("existingNamespace", CancellationToken.None))
+            .Should()
+            .BeNull();
+    }
+
+    [Fact]
     public async Task DeleteAsync_WithNonExistingNamespace_ShouldThrowNamespaceNotFoundException()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
 
         var act = () =>
@@ -388,7 +411,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task CreateAsync_WithExistingParent_ShouldCreateChildNamespace()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
 
         var created = await sut.CreateAsync(
@@ -410,7 +433,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task CreateAsync_WithNonExistingParent_ShouldThrowNamespaceNotFoundException()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
 
         var act = () =>
@@ -431,7 +454,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task CreateAsync_WithSelfAsParent_ShouldThrowArgumentException()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
 
         var act = () =>
@@ -452,7 +475,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task CreateAsync_WithValidationModeButNoParent_ShouldThrowArgumentException()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
 
         var act = () =>
@@ -473,7 +496,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task DeleteAsync_WithChildNamespaces_ShouldThrowNamespaceHasChildrenException()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
         await sut.CreateAsync(
             new Data.Models.Namespace
@@ -498,7 +521,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task DeleteAsync_AfterChildrenAreDeleted_ShouldDeleteParent()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
         await sut.CreateAsync(
             new Data.Models.Namespace
@@ -522,7 +545,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task ListChildrenAsync_ShouldReturnOnlyDirectChildren()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
         foreach (
             var (name, parent) in new[]
@@ -558,7 +581,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task ListChildrenAsync_ShouldOmitChildrenTheCallerCannotRead()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var config = new AuthorizationConfig { IsEnabled = true };
         NamespaceAccessGrant[] grants =
         [
@@ -596,7 +619,7 @@ public class NamespaceAppServiceTests : ServiceTestBase
     [Fact]
     public async Task ListChildrenAsync_WithNonExistingNamespace_ShouldThrowNamespaceNotFoundException()
     {
-        var namespaceRepository = new NamespaceRepository(InMemoryPseudonymContext);
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
         var sut = CreateNamespaceAppService(namespaceRepository);
 
         var act = () =>

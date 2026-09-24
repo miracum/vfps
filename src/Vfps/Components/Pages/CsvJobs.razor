@@ -793,26 +793,13 @@ else
 
     private async Task ReloadJobsAsync()
     {
-        if (!S3ConfigOptions.Value.IsEnabled)
+        if (_jobAppService is null)
         {
             return;
         }
 
-        // A fresh scope (and thus a fresh PseudonymContext) per call, rather than reusing
-        // _jobAppService's long-lived one - this method is called from a background
-        // PeriodicTimer loop that runs for as long as the component is alive, concurrently with
-        // whatever DB calls the interactive handlers below (CreateJobAsync, CancelJobAsync, ...)
-        // make through the shared _jobAppService/its underlying scoped DbContext. Two concurrent
-        // operations against the same DbContext instance throw "A second operation was started
-        // on this context before a previous operation completed" - which used to surface here
-        // (e.g. while a user-triggered upload was still in flight when a poll tick landed) and,
-        // uncaught, permanently stopped this loop from ever updating the grid again.
-        using var scope = ServiceProvider.CreateScope();
-        var jobAppService =
-            scope.ServiceProvider.GetRequiredService<IPseudonymizationJobAppService>();
-
         var user = await GetUserAsync();
-        _jobs = await jobAppService.ListAsync(user, CancellationToken.None);
+        _jobs = await _jobAppService.ListAsync(user, CancellationToken.None);
         UpdateThroughput(_jobs);
     }
 

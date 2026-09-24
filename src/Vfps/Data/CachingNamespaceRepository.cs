@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Vfps.Config;
 using Vfps.Data.Models;
@@ -5,13 +6,13 @@ using Vfps.Data.Models;
 namespace Vfps.Data;
 
 public class CachingNamespaceRepository(
-    PseudonymContext context,
+    IDbContextFactory<PseudonymContext> contextFactory,
     IMemoryCache memoryCache,
     CacheConfig cacheConfig
 ) : INamespaceRepository
 {
     private CacheConfig CacheConfig { get; } = cacheConfig;
-    private NamespaceRepository NamespaceRepository { get; } = new NamespaceRepository(context);
+    private NamespaceRepository NamespaceRepository { get; } = new(contextFactory);
 
     /// <inheritdoc/>
     public async Task<Namespace> CreateAsync(

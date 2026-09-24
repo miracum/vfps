@@ -2,7 +2,6 @@ using System.Security.Claims;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.EntityFrameworkCore;
 using Vfps.Authorization;
 using Vfps.Data;
 using Vfps.Protos;
@@ -15,8 +14,7 @@ public class PseudonymAppService(
     INamespaceRepository namespaceRepository,
     IPseudonymRepository pseudonymRepository,
     INamespacePermissionChecker permissionChecker,
-    PseudonymizationMethodsLookup methodsLookup,
-    IDbContextFactory<PseudonymContext> contextFactory
+    PseudonymizationMethodsLookup methodsLookup
 ) : IPseudonymAppService
 {
     private const int DefaultPageSize = 25;
@@ -37,14 +35,8 @@ public class PseudonymAppService(
             );
         }
 
-        // A fresh, pooled DbContext rather than the scoped namespaceRepository field - this is
-        // reachable from the Blazor pseudonym page, whose circuit-scoped PseudonymContext is
-        // shared with whatever else that circuit is doing concurrently (e.g. the data grid's
-        // ItemsProvider calling SearchAsync below). See SearchAsync's own comment for the full
-        // reasoning.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         var @namespace =
-            await new NamespaceRepository(context).FindAsync(namespaceName, cancellationToken)
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
             ?? throw new NamespaceNotFoundException(namespaceName);
 
         return await CreateTrustedAsync(@namespace, originalValue, count, cancellationToken);
@@ -144,20 +136,13 @@ public class PseudonymAppService(
 
         ValidateOriginalValue(@namespace, originalValue);
 
-        // A fresh, pooled DbContext per call rather than the scoped pseudonymRepository field -
-        // this method is what the CSV job runner calls, many times concurrently, within a
-        // single Hangfire job's DI scope. DbContext instances aren't safe for concurrent use, so
-        // the scoped one shared across that whole job would throw if used this way.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var repository = new PseudonymRepository(context);
-
         // Checked before the grow-to-N short circuit below, so an invalid original value is
         // rejected the same way whether or not a pseudonym for it happens to exist already.
-        await ValidateParentAsync(@namespace, [originalValue], repository, cancellationToken);
+        await ValidateParentAsync(@namespace, [originalValue], cancellationToken);
 
         // Grow-to-N idempotency: a count at or below what's already stored is always a no-op -
         // existing pseudonyms are never regenerated or truncated, only ever added to.
-        var existing = await repository.FindAllByOriginalValueAsync(
+        var existing = await pseudonymRepository.FindAllByOriginalValueAsync(
             @namespace.Name,
             originalValue,
             cancellationToken
@@ -220,7 +205,10 @@ public class PseudonymAppService(
             }
         }
 
-        return await repository.CreateSetIfNotExistAsync(newSequenceCandidates, cancellationToken);
+        return await pseudonymRepository.CreateSetIfNotExistAsync(
+            newSequenceCandidates,
+            cancellationToken
+        );
     }
 
     /// <summary>
@@ -349,16 +337,12 @@ public class PseudonymAppService(
             return new Dictionary<(string, string), Data.Models.Pseudonym>();
         }
 
-        // Same fresh, pooled DbContext reasoning as CreateTrustedAsync(Namespace, ...) above.
-        // Opened before the generation loop rather than after it, since the parent-existence
-        // check below has to run - and reject - before any pseudonym is generated.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var repository = new PseudonymRepository(context);
-
-        // One round trip per distinct validating parent namespace, rather than one per row: a
-        // CSV chunk is typically thousands of rows against a handful of namespaces. Blank values
-        // are excluded so they still fail with the blank-value ArgumentException below rather
-        // than being reported as missing from the parent.
+        // Before the generation loop rather than after it: the parent-existence check has to
+        // run - and reject - before any pseudonym is generated. One round trip per distinct
+        // validating parent namespace rather than one per row: a CSV chunk is typically thousands
+        // of rows against a handful of namespaces. Blank values are excluded so they still fail
+        // with the blank-value ArgumentException below rather than being reported as missing
+        // from the parent.
         foreach (var group in requests.GroupBy(r => r.Namespace.Name, StringComparer.Ordinal))
         {
             await ValidateParentAsync(
@@ -369,7 +353,6 @@ public class PseudonymAppService(
                         .Where(v => !string.IsNullOrWhiteSpace(v))
                         .Distinct(StringComparer.Ordinal),
                 ],
-                repository,
                 cancellationToken
             );
         }
@@ -461,7 +444,7 @@ public class PseudonymAppService(
             await GenerateDeferredAsync(deferred, distinctByKey, cancellationToken);
         }
 
-        var upserted = await repository.CreateIfNotExistBatchAsync(
+        var upserted = await pseudonymRepository.CreateIfNotExistBatchAsync(
             [.. distinctByKey.Values],
             cancellationToken
         );
@@ -510,10 +493,6 @@ public class PseudonymAppService(
             }
         }
 
-        // Same fresh, pooled DbContext reasoning as CreateTrustedBatchAsync above.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var repository = new PseudonymRepository(context);
-
         var distinctOriginalValues = entries
             .Select(e => e.OriginalValue)
             .Distinct(StringComparer.Ordinal)
@@ -528,7 +507,7 @@ public class PseudonymAppService(
         );
         var nextSequenceByOriginal = new Dictionary<string, long>(StringComparer.Ordinal);
         foreach (
-            var stored in await repository.FindAllByOriginalValuesAsync(
+            var stored in await pseudonymRepository.FindAllByOriginalValuesAsync(
                 @namespace.Name,
                 distinctOriginalValues,
                 cancellationToken
@@ -552,7 +531,7 @@ public class PseudonymAppService(
         // Which of the pseudonym values being imported are already in use in this namespace.
         // Deliberately only asks *whether* they exist rather than what they map to: knowing which
         // original value holds one is a reverse lookup, and this path is gated on write access.
-        var takenPseudonymValues = await repository.FilterExistingPseudonymValuesAsync(
+        var takenPseudonymValues = await pseudonymRepository.FilterExistingPseudonymValuesAsync(
             @namespace.Name,
             [.. entries.Select(e => e.PseudonymValue).Distinct(StringComparer.Ordinal)],
             cancellationToken
@@ -561,7 +540,6 @@ public class PseudonymAppService(
         var missingFromParent = await FindValuesMissingFromParentAsync(
             @namespace,
             distinctOriginalValues,
-            repository,
             cancellationToken
         );
 
@@ -636,7 +614,7 @@ public class PseudonymAppService(
 
         if (candidates.Count > 0)
         {
-            var upserted = await repository.CreateIfNotExistBatchAsync(
+            var upserted = await pseudonymRepository.CreateIfNotExistBatchAsync(
                 candidates,
                 cancellationToken
             );
@@ -697,16 +675,8 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
-        // A fresh, pooled DbContext rather than the scoped namespaceRepository/pseudonymRepository
-        // fields - this is reachable from the Blazor namespaces page, whose circuit-scoped
-        // PseudonymContext is shared with whatever else that circuit is doing concurrently. See
-        // SearchAsync's own comment for the full reasoning.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var namespaceRepo = new NamespaceRepository(context);
-        var pseudonymRepo = new PseudonymRepository(context);
-
         var _ =
-            await namespaceRepo.FindAsync(namespaceName, cancellationToken)
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
             ?? throw new NamespaceNotFoundException(namespaceName);
         if (!await permissionChecker.HasReadAccessAsync(user, namespaceName, cancellationToken))
         {
@@ -718,7 +688,7 @@ public class PseudonymAppService(
         var effectivePageSize = pageSize <= 0 ? DefaultPageSize : pageSize;
         var cursor = DecodeCursor(pageToken);
 
-        var pseudonyms = await pseudonymRepo.ListByNamespaceAsync(
+        var pseudonyms = await pseudonymRepository.ListByNamespaceAsync(
             namespaceName,
             cursor,
             effectivePageSize,
@@ -739,7 +709,7 @@ public class PseudonymAppService(
         }
 
         long? totalSize = includeTotalSize
-            ? await pseudonymRepo.CountByNamespaceAsync(namespaceName, cancellationToken)
+            ? await pseudonymRepository.CountByNamespaceAsync(namespaceName, cancellationToken)
             : null;
 
         var items = pseudonyms
@@ -764,22 +734,8 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
-        // A fresh, pooled DbContext rather than the scoped namespaceRepository/pseudonymRepository
-        // fields. This is the Blazor pseudonym page's data grid ItemsProvider, and Blazor Server
-        // keeps a single scoped PseudonymContext alive for the whole circuit rather than one per
-        // request - so a second search fired while the previous one is still running (e.g. two
-        // debounced keystrokes overlapping a slow query), or any other DB-touching action on the
-        // same page (create, reverse-lookup, the page's own OnInitializedAsync) racing this one,
-        // would otherwise share that single instance. DbContext isn't safe for concurrent use, and
-        // that's exactly the "A second operation was started on this context instance before a
-        // previous operation completed" crash this avoids - same reasoning as
-        // NamespaceAppService.ListChildrenAsync.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var namespaceRepo = new NamespaceRepository(context);
-        var pseudonymRepo = new PseudonymRepository(context);
-
         var _ =
-            await namespaceRepo.FindAsync(namespaceName, cancellationToken)
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
             ?? throw new NamespaceNotFoundException(namespaceName);
         // Both checks come from one resolve: read gates the search at all, reverse-lookup
         // decides whether the original values are included in what comes back.
@@ -794,7 +750,7 @@ public class PseudonymAppService(
         var canRevealOriginalValues = permissions.HasReverseLookupAccess(namespaceName);
         var effectiveTake = take <= 0 ? DefaultPageSize : take;
 
-        var (pseudonyms, totalCount) = await pseudonymRepo.SearchByNamespaceAsync(
+        var (pseudonyms, totalCount) = await pseudonymRepository.SearchByNamespaceAsync(
             namespaceName,
             searchText,
             canRevealOriginalValues,
@@ -837,12 +793,7 @@ public class PseudonymAppService(
             );
         }
 
-        // A fresh, pooled DbContext rather than the scoped pseudonymRepository field - reachable
-        // from the Blazor pseudonym page's "reverse lookup" form, which can run concurrently with
-        // the data grid's ItemsProvider on the same circuit-scoped PseudonymContext. See
-        // SearchAsync's own comment for the full reasoning.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        return await new PseudonymRepository(context).FindByPseudonymValueAsync(
+        return await pseudonymRepository.FindByPseudonymValueAsync(
             namespaceName,
             pseudonymValue,
             cancellationToken
@@ -856,11 +807,7 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
-        // Same reasoning as CreateTrustedAsync(Namespace, ...) above - called many times
-        // concurrently by the CSV job runner within a single Hangfire job's DI scope, so this
-        // needs its own fresh, pooled DbContext rather than the shared scoped one.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        return await new PseudonymRepository(context).FindByPseudonymValueAsync(
+        return await pseudonymRepository.FindByPseudonymValueAsync(
             namespaceName,
             pseudonymValue,
             cancellationToken
@@ -883,10 +830,6 @@ public class PseudonymAppService(
             return resolved;
         }
 
-        // Same fresh, pooled DbContext reasoning as ReverseLookupTrustedAsync above.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var repository = new PseudonymRepository(context);
-
         // One round trip per distinct namespace rather than per value: the lookup is
         // namespace-scoped (it rides the (namespace_name, pseudonym_value) index), so a chunk
         // touching a single namespace - the overwhelmingly common case - costs exactly one.
@@ -899,7 +842,7 @@ public class PseudonymAppService(
                 .ToList();
 
             foreach (
-                var pseudonym in await repository.FindAllByPseudonymValuesAsync(
+                var pseudonym in await pseudonymRepository.FindAllByPseudonymValuesAsync(
                     group.Key,
                     values,
                     cancellationToken
@@ -933,12 +876,9 @@ public class PseudonymAppService(
             return resolved;
         }
 
-        // Structurally identical to ReverseLookupTrustedBatchAsync below, down to the grouping and
+        // Structurally identical to ReverseLookupTrustedBatchAsync above, down to the grouping and
         // the absent-means-not-found contract - only the index it rides and the column it matches
-        // on differ. Same fresh, pooled DbContext reasoning as the other trusted batch methods.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var repository = new PseudonymRepository(context);
-
+        // on differ.
         foreach (var group in requests.GroupBy(r => r.Namespace.Name, StringComparer.Ordinal))
         {
             var values = group
@@ -949,7 +889,7 @@ public class PseudonymAppService(
 
             foreach (
                 var pseudonym in (
-                    await repository.FindAllByOriginalValuesAsync(
+                    await pseudonymRepository.FindAllByOriginalValuesAsync(
                         group.Key,
                         values,
                         cancellationToken
@@ -1005,17 +945,15 @@ public class PseudonymAppService(
     /// a root namespace, or one that doesn't opt in - so the extra round trip is only paid by the
     /// namespaces that asked for it.
     /// </summary>
-    private static async Task ValidateParentAsync(
+    private async Task ValidateParentAsync(
         Data.Models.Namespace @namespace,
         IReadOnlyCollection<string> originalValues,
-        IPseudonymRepository repository,
         CancellationToken cancellationToken
     )
     {
         var missing = await FindValuesMissingFromParentAsync(
             @namespace,
             originalValues,
-            repository,
             cancellationToken
         );
 
@@ -1032,10 +970,9 @@ public class PseudonymAppService(
     /// <see cref="ImportTrustedBatchAsync"/>, which reports a missing parent value as one row's
     /// outcome instead of failing every row in the batch alongside it.
     /// </summary>
-    private static async Task<IReadOnlySet<string>> FindValuesMissingFromParentAsync(
+    private async Task<IReadOnlySet<string>> FindValuesMissingFromParentAsync(
         Data.Models.Namespace @namespace,
         IReadOnlyCollection<string> originalValues,
-        IPseudonymRepository repository,
         CancellationToken cancellationToken
     )
     {
@@ -1048,7 +985,7 @@ public class PseudonymAppService(
             return new HashSet<string>(StringComparer.Ordinal);
         }
 
-        var existing = await repository.FilterExistingPseudonymValuesAsync(
+        var existing = await pseudonymRepository.FilterExistingPseudonymValuesAsync(
             @namespace.ParentName,
             originalValues,
             cancellationToken

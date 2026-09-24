@@ -9,7 +9,7 @@ public class NamespaceAccessGrantCacheTests : ServiceTests.ServiceTestBase
 {
     private NamespaceAccessGrantCache CreateSut(TimeSpan cacheDuration) =>
         new(
-            ContextFactory,
+            new NamespaceAccessGrantRepository(ContextFactory),
             Options.Create(
                 new AuthorizationConfig { IsEnabled = true, GrantCacheDuration = cacheDuration }
             )
@@ -18,7 +18,7 @@ public class NamespaceAccessGrantCacheTests : ServiceTests.ServiceTestBase
     private async Task<NamespaceAccessGrant> AddGrantAsync(string grantee)
     {
         var now = DateTimeOffset.UtcNow;
-        return await new NamespaceAccessGrantRepository(InMemoryPseudonymContext).CreateAsync(
+        return await new NamespaceAccessGrantRepository(ContextFactory).CreateAsync(
             new NamespaceAccessGrant
             {
                 Id = Guid.NewGuid(),

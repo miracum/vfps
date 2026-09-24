@@ -1,6 +1,5 @@
 using System.Security.Claims;
 using EntityFramework.Exceptions.Common;
-using Microsoft.EntityFrameworkCore;
 using Vfps.Authorization;
 using Vfps.Data;
 using Vfps.Data.Models;
@@ -10,9 +9,9 @@ namespace Vfps.AppServices;
 
 /// <inheritdoc cref="INamespaceAppService"/>
 public class NamespaceAppService(
+    INamespaceRepository namespaceRepository,
     INamespacePermissionChecker permissionChecker,
-    PseudonymizationMethodsLookup methodsLookup,
-    IDbContextFactory<PseudonymContext> contextFactory
+    PseudonymizationMethodsLookup methodsLookup
 ) : INamespaceAppService
 {
     /// <inheritdoc/>
@@ -124,14 +123,6 @@ public class NamespaceAppService(
             );
         }
 
-        // A fresh, pooled DbContext rather than a NamespaceRepository over the shared,
-        // circuit-scoped PseudonymContext - this is reachable from the Blazor namespaces page,
-        // which can run concurrently with other DB-touching actions on the same circuit-scoped
-        // PseudonymContext. See PseudonymAppService.SearchAsync's own comment for the full
-        // reasoning.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var repository = new NamespaceRepository(context);
-
         if (!string.IsNullOrEmpty(namespaceToCreate.ParentName))
         {
             // Can't happen today - the parent has to exist already, and this namespace doesn't
@@ -145,7 +136,10 @@ public class NamespaceAppService(
                 );
             }
 
-            if (await repository.FindAsync(namespaceToCreate.ParentName, cancellationToken) is null)
+            if (
+                await namespaceRepository.FindAsync(namespaceToCreate.ParentName, cancellationToken)
+                is null
+            )
             {
                 throw new NamespaceNotFoundException(namespaceToCreate.ParentName);
             }
@@ -157,7 +151,7 @@ public class NamespaceAppService(
 
         try
         {
-            await repository.CreateAsync(namespaceToCreate, cancellationToken);
+            await namespaceRepository.CreateAsync(namespaceToCreate, cancellationToken);
         }
         catch (UniqueConstraintException)
         {
@@ -173,11 +167,7 @@ public class NamespaceAppService(
         CancellationToken cancellationToken
     )
     {
-        // A fresh, pooled DbContext rather than a NamespaceRepository over the shared,
-        // circuit-scoped PseudonymContext - see PseudonymAppService.SearchAsync's own comment for
-        // why this Blazor-reachable method can't share the circuit-scoped one.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var namespaces = await new NamespaceRepository(context).GetAllAsync(cancellationToken);
+        var namespaces = await namespaceRepository.GetAllAsync(cancellationToken);
 
         // No single target namespace to gate GetAll on - filter the result set per-row against
         // the caller's resolved grants instead. Resolved once up front rather than per row: every
@@ -193,14 +183,8 @@ public class NamespaceAppService(
         CancellationToken cancellationToken
     )
     {
-        // A fresh, pooled DbContext rather than a NamespaceRepository over the shared,
-        // circuit-scoped PseudonymContext - the Blazor pseudonym page calls this from
-        // OnInitializedAsync while its data grid's ItemsProvider is concurrently calling
-        // PseudonymAppService.SearchAsync (same reasoning as ListChildrenAsync below, which this
-        // method sits right next to in that same OnInitializedAsync).
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         var @namespace =
-            await new NamespaceRepository(context).FindAsync(namespaceName, cancellationToken)
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
             ?? throw new NamespaceNotFoundException(namespaceName);
 
         if (!await permissionChecker.HasReadAccessAsync(user, namespaceName, cancellationToken))
@@ -227,13 +211,7 @@ public class NamespaceAppService(
             throw new ForbiddenException("Deleting a namespace requires admin access.");
         }
 
-        // A fresh, pooled DbContext rather than a NamespaceRepository over the shared,
-        // circuit-scoped PseudonymContext - see PseudonymAppService.SearchAsync's own comment for
-        // why this Blazor-reachable method can't share the circuit-scoped one.
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var repository = new NamespaceRepository(context);
-
-        if (await repository.FindAsync(namespaceName, cancellationToken) is null)
+        if (await namespaceRepository.FindAsync(namespaceName, cancellationToken) is null)
         {
             throw new NamespaceNotFoundException(namespaceName);
         }
@@ -242,12 +220,12 @@ public class NamespaceAppService(
         // pseudonymization level built on top of it. The self-referencing foreign key is
         // ON DELETE RESTRICT too, so this check is about returning a clear error rather than a
         // raw constraint violation - the database is what actually holds the line under a race.
-        if (await repository.HasChildrenAsync(namespaceName, cancellationToken))
+        if (await namespaceRepository.HasChildrenAsync(namespaceName, cancellationToken))
         {
             throw new NamespaceHasChildrenException(namespaceName);
         }
 
-        await repository.DeleteAsync(namespaceName, cancellationToken);
+        await namespaceRepository.DeleteAsync(namespaceName, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -257,17 +235,7 @@ public class NamespaceAppService(
         CancellationToken cancellationToken
     )
     {
-        // A fresh, pooled DbContext rather than a NamespaceRepository over the shared,
-        // circuit-scoped PseudonymContext, for the same reason PseudonymAppService's trusted
-        // methods use one: the Blazor pseudonym page calls this from OnInitializedAsync while its
-        // data grid's ItemsProvider is concurrently calling PseudonymAppService.SearchAsync, and
-        // both would otherwise share the one circuit-scoped PseudonymContext - which isn't safe
-        // for concurrent use and throws "A second operation was started on this context
-        // instance".
-        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var repository = new NamespaceRepository(context);
-
-        if (await repository.FindAsync(namespaceName, cancellationToken) is null)
+        if (await namespaceRepository.FindAsync(namespaceName, cancellationToken) is null)
         {
             throw new NamespaceNotFoundException(namespaceName);
         }
@@ -280,7 +248,10 @@ public class NamespaceAppService(
             );
         }
 
-        var children = await repository.ListChildrenAsync(namespaceName, cancellationToken);
+        var children = await namespaceRepository.ListChildrenAsync(
+            namespaceName,
+            cancellationToken
+        );
 
         // Filtered per-row, exactly as GetAllAsync does - a caller who can read the parent but
         // not a given child simply doesn't see that child.

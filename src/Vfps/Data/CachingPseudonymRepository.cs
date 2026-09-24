@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using Vfps.Config;
 using Vfps.Data.Models;
@@ -5,14 +6,14 @@ using Vfps.Data.Models;
 namespace Vfps.Data;
 
 public class CachingPseudonymRepository(
-    PseudonymContext context,
+    IDbContextFactory<PseudonymContext> contextFactory,
     IMemoryCache memoryCache,
     CacheConfig cacheConfig
 ) : IPseudonymRepository
 {
     private IMemoryCache MemoryCache { get; } = memoryCache;
     private CacheConfig CacheConfig { get; } = cacheConfig;
-    private PseudonymRepository Repository { get; } = new PseudonymRepository(context);
+    private PseudonymRepository Repository { get; } = new(contextFactory);
 
     public async Task<Pseudonym?> CreateIfNotExist(Pseudonym pseudonym)
     {
@@ -37,9 +38,7 @@ public class CachingPseudonymRepository(
     {
         // Not cached: this per-key MemoryCache is designed around single-key lookups from
         // CreateIfNotExist above, and it costs the batch's whole point (one round trip) to split
-        // it back into a per-key cache check. CsvPseudonymizationJobRunner (the only caller of
-        // the batched path) already bypasses this cache entirely for the same reason CreateAsync
-        // does - see PseudonymAppService.CreateTrustedBatchAsync's own fresh, pooled DbContext.
+        // it back into a per-key cache check.
         return await Repository.CreateIfNotExistBatchAsync(pseudonyms, cancellationToken);
     }
 
@@ -143,9 +142,7 @@ public class CachingPseudonymRepository(
     {
         // Not cached: this cache is designed around the single-pseudonym-per-key shape of
         // CreateIfNotExist above; a multi-psn namespace's set of pseudonyms for one original
-        // value doesn't fit that single-key model, and multi-psn creation already bypasses this
-        // decorator entirely (see PseudonymAppService.CreateTrustedAsync's own fresh, pooled
-        // DbContext), so this path is never actually hot for it in practice.
+        // value doesn't fit that single-key model.
         return await Repository.FindAllByOriginalValueAsync(
             namespaceName,
             originalValue,

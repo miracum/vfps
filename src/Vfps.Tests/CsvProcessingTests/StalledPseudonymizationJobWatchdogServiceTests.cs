@@ -1,5 +1,4 @@
 using FakeItEasy;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Vfps.Config;
@@ -16,25 +15,12 @@ public class StalledPseudonymizationJobWatchdogServiceTests
     // every test here needs at least one real PeriodicTimer tick to elapse.
     private static readonly TimeSpan TestCheckInterval = TimeSpan.FromMilliseconds(20);
 
-    // A real (minimal) DI container, not a FakeItEasy fake of IServiceProvider - the service
-    // resolves its repository via serviceProvider.CreateScope(), which needs a real
-    // IServiceScopeFactory behind it to work at all, same reasoning as CsvJobs.razor's
-    // ReloadJobsAsync (see its own comment on why a shared scope isn't used here either).
-    private static IServiceProvider CreateServiceProvider(
-        IPseudonymizationJobRepository jobRepository
-    )
-    {
-        var services = new ServiceCollection();
-        services.AddSingleton(jobRepository);
-        return services.BuildServiceProvider();
-    }
-
     private static StalledPseudonymizationJobWatchdogService CreateSut(
         IPseudonymizationJobRepository jobRepository,
         TimeSpan? staleThreshold = null
     ) =>
         new(
-            CreateServiceProvider(jobRepository),
+            jobRepository,
             Options.Create(
                 new CsvProcessingConfig
                 {
@@ -94,7 +80,7 @@ public class StalledPseudonymizationJobWatchdogServiceTests
             )
             .Returns([Guid.NewGuid()]);
         var sut = new StalledPseudonymizationJobWatchdogService(
-            CreateServiceProvider(jobRepository),
+            jobRepository,
             Options.Create(new CsvProcessingConfig()),
             NullLogger<StalledPseudonymizationJobWatchdogService>.Instance,
             TimeSpan.FromMinutes(10)

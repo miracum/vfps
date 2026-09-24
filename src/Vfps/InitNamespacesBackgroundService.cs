@@ -4,7 +4,7 @@ using Vfps.Data;
 namespace Vfps;
 
 public class InitNamespacesBackgroundService(
-    IServiceProvider serviceProvider,
+    INamespaceRepository namespaceRepository,
     IConfiguration configuration,
     ILogger<InitNamespacesBackgroundService> logger
 ) : BackgroundService
@@ -19,9 +19,6 @@ public class InitNamespacesBackgroundService(
             logger.LogInformation("No namespaces configured to create during startup.");
             return;
         }
-
-        using var scope = serviceProvider.CreateScope();
-        var namespaceRepository = scope.ServiceProvider.GetRequiredService<INamespaceRepository>();
 
         foreach (var @namespace in OrderParentsFirst(namespaces))
         {

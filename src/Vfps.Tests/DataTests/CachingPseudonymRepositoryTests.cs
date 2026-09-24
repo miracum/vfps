@@ -8,7 +8,7 @@ public class CachingPseudonymRepositoryTests : ServiceTests.ServiceTestBase
 {
     private CachingPseudonymRepository CreateSut() =>
         new(
-            InMemoryPseudonymContext,
+            ContextFactory,
             new MemoryCache(new MemoryCacheOptions { SizeLimit = 2048 }),
             new CacheConfig()
         );
