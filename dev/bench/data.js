@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790181936956,
+  "lastUpdate": 1790257831823,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -11514,6 +11514,66 @@ window.BENCHMARK_DATA = {
             "value": 897.8150005340576,
             "unit": "ns",
             "range": "± 1.0076737837613117"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "b5f1ce129baf94b6d07fc2f8b0eee12b51649ec3",
+          "message": "fix: namespace search bug due to concurrent searches, re-enabled pseudonym-level caching (#364)\n\n* fix: namespace search bug due to concurrent searches\n\n* fix: all potential DbContext concurrency issues\n\nhttps://learn.microsoft.com/en-us/ef/core/dbcontext-configuration/#using-a-dbcontext-factory-eg-for-blazor.\n\n* fix: re-enabled pseudonym-level caching and rm unused methods",
+          "timestamp": "2026-09-24T15:47:36+02:00",
+          "tree_id": "7223920ff0d3173627763aa8796986560becbf86",
+          "url": "https://github.com/miracum/vfps/commit/b5f1ce129baf94b6d07fc2f8b0eee12b51649ec3"
+        },
+        "date": 1790257830982,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 581.925359249115,
+            "unit": "ns",
+            "range": "± 4.572615695862166"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 405.7239555631365,
+            "unit": "ns",
+            "range": "± 4.382694692652297"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 431.77700694402057,
+            "unit": "ns",
+            "range": "± 1.5782010112199936"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 527.8476255280631,
+            "unit": "ns",
+            "range": "± 1.407073397794455"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 620.7378683823806,
+            "unit": "ns",
+            "range": "± 2.4343354280893843"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 610.5704956054688,
+            "unit": "ns",
+            "range": "± 10.053433446432164"
           }
         ]
       }
