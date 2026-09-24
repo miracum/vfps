@@ -76,36 +76,7 @@ public class PseudonymAppService(
         // as the validation in CreateTrustedAsync.
         ValidateOriginalValue(@namespace, originalValue);
 
-        return await pseudonymRepository.FindAllByOriginalValueAsync(
-            namespaceName,
-            originalValue,
-            cancellationToken
-        );
-    }
-
-    /// <inheritdoc/>
-    public async Task<Data.Models.Pseudonym> CreateTrustedAsync(
-        string namespaceName,
-        string originalValue,
-        CancellationToken cancellationToken
-    )
-    {
-        var @namespace =
-            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
-            ?? throw new NamespaceNotFoundException(namespaceName);
-
-        return await CreateTrustedAsync(@namespace, originalValue, cancellationToken);
-    }
-
-    /// <inheritdoc/>
-    public async Task<Data.Models.Pseudonym> CreateTrustedAsync(
-        Data.Models.Namespace @namespace,
-        string originalValue,
-        CancellationToken cancellationToken
-    )
-    {
-        var created = await CreateTrustedAsync(@namespace, originalValue, 1, cancellationToken);
-        return created[0];
+        return await FindStoredAsync(@namespace, originalValue, cancellationToken);
     }
 
     /// <inheritdoc/>
@@ -142,11 +113,7 @@ public class PseudonymAppService(
 
         // Grow-to-N idempotency: a count at or below what's already stored is always a no-op -
         // existing pseudonyms are never regenerated or truncated, only ever added to.
-        var existing = await pseudonymRepository.FindAllByOriginalValueAsync(
-            @namespace.Name,
-            originalValue,
-            cancellationToken
-        );
+        var existing = await FindStoredAsync(@namespace, originalValue, cancellationToken);
         if (existing.Count >= count)
         {
             return existing;
@@ -801,20 +768,6 @@ public class PseudonymAppService(
     }
 
     /// <inheritdoc/>
-    public async Task<Data.Models.Pseudonym?> ReverseLookupTrustedAsync(
-        string namespaceName,
-        string pseudonymValue,
-        CancellationToken cancellationToken
-    )
-    {
-        return await pseudonymRepository.FindByPseudonymValueAsync(
-            namespaceName,
-            pseudonymValue,
-            cancellationToken
-        );
-    }
-
-    /// <inheritdoc/>
     public async Task<
         IReadOnlyDictionary<(string Namespace, string PseudonymValue), Data.Models.Pseudonym>
     > ReverseLookupTrustedBatchAsync(
@@ -907,6 +860,35 @@ public class PseudonymAppService(
         }
 
         return resolved;
+    }
+
+    /// <summary>
+    /// Every pseudonym stored for <paramref name="originalValue"/>, ordered by sequence number. A
+    /// namespace that allows only one pseudonym per value can hold nothing but the sequence-0 row,
+    /// and that row never changes once stored - so for such a namespace this goes through the one
+    /// lookup the pseudonym cache (Pseudonymization:Caching:Pseudonyms) can safely serve.
+    /// </summary>
+    private async Task<IReadOnlyList<Data.Models.Pseudonym>> FindStoredAsync(
+        Data.Models.Namespace @namespace,
+        string originalValue,
+        CancellationToken cancellationToken
+    )
+    {
+        if (@namespace.AllowsMultiplePseudonyms)
+        {
+            return await pseudonymRepository.FindAllByOriginalValueAsync(
+                @namespace.Name,
+                originalValue,
+                cancellationToken
+            );
+        }
+
+        var first = await pseudonymRepository.FindFirstByOriginalValueAsync(
+            @namespace,
+            originalValue,
+            cancellationToken
+        );
+        return first is null ? [] : [first];
     }
 
     private static void ValidateOriginalValue(

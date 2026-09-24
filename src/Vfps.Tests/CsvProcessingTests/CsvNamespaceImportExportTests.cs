@@ -263,6 +263,7 @@ public class CsvNamespaceImportExportTests
                 pseudonymAppService.CreateTrustedAsync(
                     A<Data.Models.Namespace>._,
                     A<string>._,
+                    A<long>._,
                     A<CancellationToken>._
                 )
             )

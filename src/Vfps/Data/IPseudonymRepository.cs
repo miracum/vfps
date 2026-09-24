@@ -8,28 +8,17 @@ namespace Vfps.Data;
 public interface IPseudonymRepository
 {
     /// <summary>
-    /// Store the given pseudonym iff one with the same namespace, original value, and sequence
-    /// number doesn't already exist. Every caller other than the multi-psn create path (see
-    /// <see cref="AppServices.PseudonymAppService.CreateTrustedAsync(Namespace, string, long, CancellationToken)"/>)
-    /// always passes <see cref="Pseudonym.SequenceNumber"/> 0.
-    /// </summary>
-    /// <param name="pseudonym">The pseudonym to store</param>
-    /// <returns>The newly stored pseudonym or the one fetched from the store if it already existed or null in case of an error.</returns>
-    Task<Pseudonym?> CreateIfNotExist(Pseudonym pseudonym);
-
-    /// <summary>
-    /// Same as <see cref="CreateIfNotExist"/>, batched into a single round trip for many
-    /// pseudonyms at once - CsvPseudonymizationJobRunner's dominant cost was one upsert round
-    /// trip per field per row, which this collapses to one round trip per chunk. Callers must
+    /// Stores each of <paramref name="pseudonyms"/> iff one with the same namespace, original
+    /// value and sequence number doesn't already exist, in a single round trip. Callers must
     /// dedupe <paramref name="pseudonyms"/> by (NamespaceName, OriginalValue, SequenceNumber)
     /// first - passing the same key twice wastes a row rather than causing incorrect results.
     /// </summary>
     /// <returns>
     /// One entry per distinct (NamespaceName, OriginalValue, SequenceNumber) in
-    /// <paramref name="pseudonyms"/>. Always fully covers the input - falls back to
-    /// <see cref="CreateIfNotExist"/> one at a time for any key the batched round trip didn't
-    /// return a row for (expected to be rare: only a concurrent writer racing the same key at
-    /// the same instant).
+    /// <paramref name="pseudonyms"/> - the newly stored row, or the one already there. Always
+    /// fully covers the input - falls back to a single-row upsert for any key the batched round
+    /// trip didn't return a row for (expected to be rare: only a concurrent writer racing the same
+    /// key at the same instant).
     /// </returns>
     Task<IReadOnlyList<Pseudonym>> CreateIfNotExistBatchAsync(
         IReadOnlyList<Pseudonym> pseudonyms,
@@ -44,6 +33,19 @@ public interface IPseudonymRepository
     /// </summary>
     Task<IReadOnlyList<Pseudonym>> FindAllByOriginalValueAsync(
         string namespaceName,
+        string originalValue,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// The first (sequence number 0) pseudonym stored for <paramref name="originalValue"/>, or
+    /// null if there is none. Unlike the full set <see cref="FindAllByOriginalValueAsync"/>
+    /// returns, this row never changes once stored - a multi-psn namespace only ever adds later
+    /// sequence numbers - which is what makes it safe to cache. Takes the whole namespace rather
+    /// than its name so a cache can tell it apart from a namespace re-created under the same name.
+    /// </summary>
+    Task<Pseudonym?> FindFirstByOriginalValueAsync(
+        Namespace @namespace,
         string originalValue,
         CancellationToken cancellationToken
     );

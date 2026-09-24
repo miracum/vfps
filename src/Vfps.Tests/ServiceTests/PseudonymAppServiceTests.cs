@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Microsoft.Extensions.Caching.Memory;
 using Vfps.Config;
 
 namespace Vfps.Tests.ServiceTests;
@@ -8,30 +9,11 @@ public class PseudonymAppServiceTests : ServiceTestBase
     private static ClaimsPrincipal UserWithRoles(params string[] roles) =>
         new(new ClaimsIdentity(roles.Select(r => new Claim("roles", r))));
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task CreateTrustedAsync_WithBlankOriginalValue_ShouldThrowArgumentException(
-        string blankValue
-    )
-    {
-        var namespaceRepository = new NamespaceRepository(ContextFactory);
-        var pseudonymRepository = new PseudonymRepository(ContextFactory);
-        var sut = CreatePseudonymAppService(namespaceRepository, pseudonymRepository);
-
-        var act = () =>
-            sut.CreateTrustedAsync("existingNamespace", blankValue, CancellationToken.None);
-
-        await act.Should().ThrowAsync<ArgumentException>();
-    }
-
     [Fact]
     public async Task CreateTrustedAsync_WithResolvedNamespace_ShouldCreateWithoutLookingItUp()
     {
-        // The CSV job runner resolves each namespace once up front and passes the object
-        // directly - this overload must not need to look it up again (or even need it to exist
-        // in the "Namespaces" table under that exact instance), which is what makes the
-        // once-per-job resolution actually save the redundant per-row lookups.
+        // The trusted create takes an already-resolved namespace and must not look it up again
+        // (or even need it to exist in the "Namespaces" table under that exact instance).
         var pseudonymRepository = new PseudonymRepository(ContextFactory);
         var sut = CreatePseudonymAppService(
             new NamespaceRepository(ContextFactory),
@@ -44,11 +26,14 @@ public class PseudonymAppServiceTests : ServiceTestBase
             PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
         };
 
-        var created = await sut.CreateTrustedAsync(
-            @namespace,
-            "resolved-namespace-value",
-            CancellationToken.None
-        );
+        var created = (
+            await sut.CreateTrustedAsync(
+                @namespace,
+                "resolved-namespace-value",
+                1,
+                CancellationToken.None
+            )
+        ).Single();
 
         created.OriginalValue.Should().Be("resolved-namespace-value");
         created.PseudonymValue.Should().HaveLength(16);
@@ -70,7 +55,8 @@ public class PseudonymAppServiceTests : ServiceTestBase
             OriginalValueValidationRegex = "^[0-9]+$",
         };
 
-        var act = () => sut.CreateTrustedAsync(@namespace, "not-a-number", CancellationToken.None);
+        var act = () =>
+            sut.CreateTrustedAsync(@namespace, "not-a-number", 1, CancellationToken.None);
 
         await act.Should().ThrowAsync<OriginalValueValidationException>();
     }
@@ -91,7 +77,9 @@ public class PseudonymAppServiceTests : ServiceTestBase
             OriginalValueValidationRegex = "^[0-9]+$",
         };
 
-        var created = await sut.CreateTrustedAsync(@namespace, "12345", CancellationToken.None);
+        var created = (
+            await sut.CreateTrustedAsync(@namespace, "12345", 1, CancellationToken.None)
+        ).Single();
 
         created.OriginalValue.Should().Be("12345");
     }
@@ -152,11 +140,14 @@ public class PseudonymAppServiceTests : ServiceTestBase
             new PseudonymRepository(ContextFactory)
         );
 
-        var created = await sut.CreateTrustedAsync(
-            await CreateChildNamespaceAsync(),
-            "existingPseudonym",
-            CancellationToken.None
-        );
+        var created = (
+            await sut.CreateTrustedAsync(
+                await CreateChildNamespaceAsync(),
+                "existingPseudonym",
+                1,
+                CancellationToken.None
+            )
+        ).Single();
 
         created.OriginalValue.Should().Be("existingPseudonym");
         created.PseudonymValue.Should().HaveLength(16);
@@ -172,7 +163,12 @@ public class PseudonymAppServiceTests : ServiceTestBase
         var child = await CreateChildNamespaceAsync();
 
         var act = () =>
-            sut.CreateTrustedAsync(child, "never-pseudonymized-upstream", CancellationToken.None);
+            sut.CreateTrustedAsync(
+                child,
+                "never-pseudonymized-upstream",
+                1,
+                CancellationToken.None
+            );
 
         await act.Should().ThrowAsync<ParentPseudonymNotFoundException>();
     }
@@ -187,11 +183,14 @@ public class PseudonymAppServiceTests : ServiceTestBase
             new PseudonymRepository(ContextFactory)
         );
 
-        var created = await sut.CreateTrustedAsync(
-            await CreateChildNamespaceAsync(ParentValidationMode.Unspecified),
-            "never-pseudonymized-upstream",
-            CancellationToken.None
-        );
+        var created = (
+            await sut.CreateTrustedAsync(
+                await CreateChildNamespaceAsync(ParentValidationMode.Unspecified),
+                "never-pseudonymized-upstream",
+                1,
+                CancellationToken.None
+            )
+        ).Single();
 
         created.OriginalValue.Should().Be("never-pseudonymized-upstream");
     }
@@ -224,11 +223,14 @@ public class PseudonymAppServiceTests : ServiceTestBase
 
         foreach (var parentPseudonym in parentPseudonyms)
         {
-            var created = await sut.CreateTrustedAsync(
-                child,
-                parentPseudonym.PseudonymValue,
-                CancellationToken.None
-            );
+            var created = (
+                await sut.CreateTrustedAsync(
+                    child,
+                    parentPseudonym.PseudonymValue,
+                    1,
+                    CancellationToken.None
+                )
+            ).Single();
 
             created.OriginalValue.Should().Be(parentPseudonym.PseudonymValue);
         }
@@ -302,11 +304,14 @@ public class PseudonymAppServiceTests : ServiceTestBase
             "existingNamespace",
             CancellationToken.None
         );
-        var second = await sut.CreateTrustedAsync(
-            parent!,
-            "another-original-value",
-            CancellationToken.None
-        );
+        var second = (
+            await sut.CreateTrustedAsync(
+                parent!,
+                "another-original-value",
+                1,
+                CancellationToken.None
+            )
+        ).Single();
         var child = await CreateChildNamespaceAsync();
 
         var created = await sut.CreateTrustedBatchAsync(
@@ -364,16 +369,18 @@ public class PseudonymAppServiceTests : ServiceTestBase
                     sut.CreateTrustedAsync(
                         @namespace,
                         $"concurrent-value-{i}",
+                        1,
                         CancellationToken.None
                     )
                 )
         );
 
-        results
+        var created = results.Select(r => r.Single()).ToList();
+        created
             .Select(r => r.OriginalValue)
             .Should()
             .BeEquivalentTo(Enumerable.Range(0, 20).Select(i => $"concurrent-value-{i}"));
-        results.Select(r => r.PseudonymValue).Distinct().Should().HaveCount(20);
+        created.Select(r => r.PseudonymValue).Distinct().Should().HaveCount(20);
     }
 
     [Fact]
@@ -486,9 +493,46 @@ public class PseudonymAppServiceTests : ServiceTestBase
             PseudonymLength = 16,
         };
 
-        var act = () => sut.CreateTrustedAsync(@namespace, blankValue, CancellationToken.None);
+        var act = () => sut.CreateTrustedAsync(@namespace, blankValue, 1, CancellationToken.None);
 
         await act.Should().ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithPseudonymCaching_ShouldServeARepeatFromTheCache()
+    {
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(ContextFactory),
+            new CachingPseudonymRepository(
+                ContextFactory,
+                new MemoryCache(new MemoryCacheOptions { SizeLimit = 2048 }),
+                new CacheConfig()
+            )
+        );
+        var first = await sut.CreateAsync(
+            "existingNamespace",
+            "an original value",
+            1,
+            UserWithRoles(),
+            CancellationToken.None
+        );
+
+        // Gone from the database, so only a cache hit can still return it.
+        InMemoryPseudonymContext.Pseudonyms.Remove(
+            InMemoryPseudonymContext.Pseudonyms.Single(p => p.OriginalValue == "an original value")
+        );
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        var second = await sut.CreateAsync(
+            "existingNamespace",
+            "an original value",
+            1,
+            UserWithRoles(),
+            CancellationToken.None
+        );
+
+        first.Single().PseudonymValue.Should().Be("existingPseudonym");
+        second.Single().PseudonymValue.Should().Be("existingPseudonym");
     }
 
     [Fact]
@@ -661,38 +705,6 @@ public class PseudonymAppServiceTests : ServiceTestBase
             .Select(p => p.PseudonymValue)
             .Should()
             .BeEquivalentTo(first.Select(p => p.PseudonymValue));
-    }
-
-    [Fact]
-    public async Task CreateTrustedAsync_SingleValueOverload_ShouldReturnFirstSequenceOnly()
-    {
-        var pseudonymRepository = new PseudonymRepository(ContextFactory);
-        var sut = CreatePseudonymAppService(
-            new NamespaceRepository(ContextFactory),
-            pseudonymRepository
-        );
-        var @namespace = new Data.Models.Namespace
-        {
-            Name = "multiPsnNamespace",
-            PseudonymLength = 16,
-            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
-            AllowsMultiplePseudonyms = true,
-        };
-        var full = await sut.CreateTrustedAsync(
-            @namespace,
-            "shared value",
-            3,
-            CancellationToken.None
-        );
-
-        var single = await sut.CreateTrustedAsync(
-            @namespace,
-            "shared value",
-            CancellationToken.None
-        );
-
-        single.SequenceNumber.Should().Be(0);
-        single.PseudonymValue.Should().Be(full.Single(p => p.SequenceNumber == 0).PseudonymValue);
     }
 
     [Fact]
@@ -989,43 +1001,51 @@ public class PseudonymAppServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async Task ReverseLookupTrustedAsync_WithNoPermissionCheckerAccess_ShouldStillRevealOriginalValue()
+    public async Task ReverseLookupTrustedBatchAsync_WithNoPermissionCheckerAccess_ShouldStillRevealOriginalValue()
     {
-        // ReverseLookupTrustedAsync deliberately skips the permission check - it's only called by
-        // the CSV job runner, which already verified reverse-lookup access to every namespace a
-        // de-pseudonymization job's mappings reference, up front at job creation time.
+        // Deliberately skips the permission check - it's only called by the CSV job runner, which
+        // already verified reverse-lookup access to every namespace a de-pseudonymization job's
+        // mappings reference, up front at job creation time.
         var namespaceRepository = new NamespaceRepository(ContextFactory);
-        var pseudonymRepository = new PseudonymRepository(ContextFactory);
         var sut = CreatePseudonymAppService(
             namespaceRepository,
-            pseudonymRepository,
+            new PseudonymRepository(ContextFactory),
             new AuthorizationConfig { IsEnabled = true }
         );
-
-        var result = await sut.ReverseLookupTrustedAsync(
+        var @namespace = await namespaceRepository.FindAsync(
             "existingNamespace",
-            "existingPseudonym",
             CancellationToken.None
         );
 
-        result.Should().NotBeNull();
-        result!.OriginalValue.Should().Be("an original value");
+        var result = await sut.ReverseLookupTrustedBatchAsync(
+            [(@namespace!, "existingPseudonym")],
+            CancellationToken.None
+        );
+
+        result[("existingNamespace", "existingPseudonym")]
+            .OriginalValue.Should()
+            .Be("an original value");
     }
 
     [Fact]
-    public async Task ReverseLookupTrustedAsync_WithUnknownPseudonym_ShouldReturnNull()
+    public async Task ReverseLookupTrustedBatchAsync_WithUnknownPseudonym_ShouldLeaveItOut()
     {
         var namespaceRepository = new NamespaceRepository(ContextFactory);
-        var pseudonymRepository = new PseudonymRepository(ContextFactory);
-        var sut = CreatePseudonymAppService(namespaceRepository, pseudonymRepository);
-
-        var result = await sut.ReverseLookupTrustedAsync(
+        var sut = CreatePseudonymAppService(
+            namespaceRepository,
+            new PseudonymRepository(ContextFactory)
+        );
+        var @namespace = await namespaceRepository.FindAsync(
             "existingNamespace",
-            "no-such-pseudonym",
             CancellationToken.None
         );
 
-        result.Should().BeNull();
+        var result = await sut.ReverseLookupTrustedBatchAsync(
+            [(@namespace!, "no-such-pseudonym")],
+            CancellationToken.None
+        );
+
+        result.Should().BeEmpty();
     }
 
     // --- ImportTrustedBatchAsync -------------------------------------------------------------

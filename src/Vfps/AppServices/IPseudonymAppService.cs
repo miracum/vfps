@@ -97,7 +97,7 @@ public interface IPseudonymAppService
     /// null, so the two lookup-only paths and the create path are interchangeable behind one
     /// resolver signature in <see cref="CsvProcessing.CsvColumnTransformer"/>. In a multi-psn
     /// namespace the entry is the first (sequence number 0) pseudonym, matching what
-    /// <see cref="CreateTrustedAsync(Namespace, string, CancellationToken)"/> returns.
+    /// <see cref="CreateTrustedBatchAsync"/> creates.
     ///
     /// No original-value validation here, unlike <see cref="ResolveAsync"/>: nothing is written, a
     /// value that could never have been stored simply has nothing to find, and running a regex per
@@ -111,51 +111,9 @@ public interface IPseudonymAppService
     );
 
     /// <summary>
-    /// Same as <see cref="CreateAsync"/> but skips the per-call permission check - only for the
-    /// CSV job runner, which already verified write access to every namespace a job's column
-    /// mappings reference up front, at job creation time (see
-    /// <see cref="IPseudonymizationJobAppService.CreateJobAsync"/>), before any row processing
-    /// began. The runner has no caller <see cref="ClaimsPrincipal"/> to re-check against - it
-    /// runs later, in a Hangfire background thread, well after the request that created the job.
-    /// </summary>
-    /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
-    /// <exception cref="OriginalValueValidationException">
-    /// <paramref name="originalValue"/> does not match the namespace's
-    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
-    /// </exception>
-    Task<Pseudonym> CreateTrustedAsync(
-        string namespaceName,
-        string originalValue,
-        CancellationToken cancellationToken
-    );
-
-    /// <summary>
-    /// Same as <see cref="CreateTrustedAsync(string, string, CancellationToken)"/>, but skips the
-    /// namespace lookup too - only for the CSV job runner, which resolves each distinct namespace
-    /// its column mappings reference exactly once before processing any rows, rather than
-    /// re-fetching the same namespace on every field of every row (the dominant per-row cost
-    /// otherwise, since a CSV job calls this far more often than any other caller ever would).
-    /// Single-value convenience wrapper around
-    /// <see cref="CreateTrustedAsync(Namespace, string, long, CancellationToken)"/> with
-    /// <c>count: 1</c> - always returns the first (sequence number 0) pseudonym, ignoring any
-    /// others a multi-psn namespace might already have stored for this original value.
-    /// </summary>
-    /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
-    /// <exception cref="OriginalValueValidationException">
-    /// <paramref name="originalValue"/> does not match the namespace's
-    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
-    /// </exception>
-    Task<Pseudonym> CreateTrustedAsync(
-        Namespace @namespace,
-        string originalValue,
-        CancellationToken cancellationToken
-    );
-
-    /// <summary>
-    /// Same trust boundary as <see cref="CreateTrustedAsync(Namespace, string, CancellationToken)"/>,
-    /// generalized to a <paramref name="count"/> of pseudonyms - the core multi-psn create/grow
-    /// logic. See <see cref="CreateAsync"/> for the grow-to-N semantics; this is that same logic
-    /// without the permission check.
+    /// <see cref="CreateAsync"/> once its permission check and namespace lookup are done - the
+    /// core create/grow logic, for a caller that has already done both itself. See
+    /// <see cref="CreateAsync"/> for the grow-to-N semantics.
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is less than 1.</exception>
@@ -174,9 +132,12 @@ public interface IPseudonymAppService
     );
 
     /// <summary>
-    /// Same trust boundary as <see cref="CreateTrustedAsync(Namespace, string, CancellationToken)"/>,
-    /// batched into a single database round trip for many values at once - only for the CSV job
-    /// runner, whose dominant cost was one upsert round trip per field per row. Not exposed via
+    /// Creates (or returns the existing) first pseudonym for many values at once, in a single
+    /// database round trip, without a per-call permission check - only for the CSV job runner,
+    /// which already verified write access to every namespace a job's column mappings reference
+    /// up front, at job creation time (see <see cref="IPseudonymizationJobAppService.CreateJobAsync"/>).
+    /// The runner has no caller <see cref="ClaimsPrincipal"/> to re-check against - it runs later,
+    /// in a Hangfire background thread, well after the request that created the job. Not exposed via
     /// gRPC/REST; <paramref name="requests"/> may span multiple namespaces (a chunk's column
     /// mappings can reference different namespaces), all resolved in one round trip regardless.
     /// </summary>
@@ -284,20 +245,9 @@ public interface IPseudonymAppService
     /// Same as <see cref="ReverseLookupAsync"/> but skips the per-call permission check - only
     /// for the CSV job runner, which already verified reverse-lookup access to every namespace a
     /// de-pseudonymization job's column mappings reference up front, at job creation time (see
-    /// <see cref="IPseudonymizationJobAppService.CreateJobAsync"/>). Same reasoning as
-    /// <see cref="CreateTrustedAsync(string, string, CancellationToken)"/> - the runner has no
-    /// caller <see cref="ClaimsPrincipal"/> to re-check against.
-    /// </summary>
-    Task<Pseudonym?> ReverseLookupTrustedAsync(
-        string namespaceName,
-        string pseudonymValue,
-        CancellationToken cancellationToken
-    );
-
-    /// <summary>
-    /// Same as <see cref="ReverseLookupTrustedAsync"/> - including its trust boundary - but
-    /// resolves a whole chunk's worth of values in one round trip per distinct namespace instead
-    /// of one per value. The reverse-lookup counterpart to
+    /// <see cref="IPseudonymizationJobAppService.CreateJobAsync"/>) - and resolves a whole chunk's
+    /// worth of values in one round trip per distinct namespace instead of one per value. The
+    /// reverse-lookup counterpart to
     /// <see cref="CreateTrustedBatchAsync"/>, and the reason a de-pseudonymizing CSV job no
     /// longer costs a database call per row.
     ///
@@ -401,7 +351,10 @@ public class NamespaceNotFoundException(string namespaceName)
     public string NamespaceName { get; } = namespaceName;
 }
 
-/// <summary>Thrown when the upsert retry loop in <see cref="Data.IPseudonymRepository.CreateIfNotExist"/> is exhausted.</summary>
+/// <summary>
+/// Thrown when no pseudonym could be produced for a value: every attempt at a unique one collided,
+/// or a value-dependent generator returned fewer pseudonyms than it was asked for.
+/// </summary>
 public class PseudonymUpsertFailedException(string namespaceName)
     : Exception(
         $"Failed to upsert the pseudonym for namespace '{namespaceName}' after several retries."

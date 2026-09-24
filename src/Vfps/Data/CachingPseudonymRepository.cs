@@ -15,19 +15,42 @@ public class CachingPseudonymRepository(
     private CacheConfig CacheConfig { get; } = cacheConfig;
     private PseudonymRepository Repository { get; } = new(contextFactory);
 
-    public async Task<Pseudonym?> CreateIfNotExist(Pseudonym pseudonym)
+    /// <inheritdoc/>
+    public async Task<Pseudonym?> FindFirstByOriginalValueAsync(
+        Namespace @namespace,
+        string originalValue,
+        CancellationToken cancellationToken
+    )
     {
-        var cacheKey = $"pseudonyms.{pseudonym.OriginalValue}@{pseudonym.NamespaceName}";
+        // CreatedAt is part of the key because deleting a namespace takes its pseudonyms with it:
+        // one re-created under the same name must not be served the old one's entries.
+        var cacheKey = new FirstPseudonymKey(@namespace.Name, @namespace.CreatedAt, originalValue);
 
-        return await MemoryCache.GetOrCreateAsync(
-            cacheKey,
-            async entry =>
-            {
-                entry.SetSize(1).SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration);
+        if (MemoryCache.TryGetValue(cacheKey, out Pseudonym? cached))
+        {
+            return cached;
+        }
 
-                return await Repository.CreateIfNotExist(pseudonym);
-            }
+        var found = await Repository.FindFirstByOriginalValueAsync(
+            @namespace,
+            originalValue,
+            cancellationToken
         );
+
+        // Only a hit is cached, never a miss: a value looked up on the create path is usually
+        // about to be stored, and a cached miss would hide it until the entry expired.
+        if (found is not null)
+        {
+            MemoryCache.Set(
+                cacheKey,
+                found,
+                new MemoryCacheEntryOptions()
+                    .SetSize(1)
+                    .SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration)
+            );
+        }
+
+        return found;
     }
 
     /// <inheritdoc/>
@@ -36,9 +59,9 @@ public class CachingPseudonymRepository(
         CancellationToken cancellationToken
     )
     {
-        // Not cached: this per-key MemoryCache is designed around single-key lookups from
-        // CreateIfNotExist above, and it costs the batch's whole point (one round trip) to split
-        // it back into a per-key cache check.
+        // Not cached: this per-key MemoryCache is designed around the single-key lookup above,
+        // and it costs the batch's whole point (one round trip) to split it back into a per-key
+        // cache check.
         return await Repository.CreateIfNotExistBatchAsync(pseudonyms, cancellationToken);
     }
 
@@ -108,7 +131,7 @@ public class CachingPseudonymRepository(
         CancellationToken cancellationToken
     )
     {
-        // Not cached: this cache is keyed by original_value (the Create path), not by
+        // Not cached: this cache is keyed by original_value (the create path), not by
         // pseudonym_value, and reverse lookup is meant to be an infrequent, audited action
         // rather than a hot path worth adding a second cache key scheme for.
         return await Repository.FindByPseudonymValueAsync(
@@ -140,9 +163,9 @@ public class CachingPseudonymRepository(
         CancellationToken cancellationToken
     )
     {
-        // Not cached: this cache is designed around the single-pseudonym-per-key shape of
-        // CreateIfNotExist above; a multi-psn namespace's set of pseudonyms for one original
-        // value doesn't fit that single-key model.
+        // Not cached: unlike the sequence-0 row FindFirstByOriginalValueAsync returns, a
+        // multi-psn namespace's set of pseudonyms for one original value grows, and a cached copy
+        // would go on returning the smaller set.
         return await Repository.FindAllByOriginalValueAsync(
             namespaceName,
             originalValue,
@@ -196,4 +219,10 @@ public class CachingPseudonymRepository(
             cancellationToken
         );
     }
+
+    private readonly record struct FirstPseudonymKey(
+        string Namespace,
+        DateTimeOffset NamespaceCreatedAt,
+        string OriginalValue
+    );
 }

@@ -57,13 +57,6 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
         RETURNING *;
     ";
 
-    /// <inheritdoc/>
-    public async Task<Pseudonym?> CreateIfNotExist(Pseudonym pseudonym)
-    {
-        await using var context = await contextFactory.CreateDbContextAsync();
-        return await UpsertAsync(context, pseudonym);
-    }
-
     private async Task<Pseudonym?> UpsertAsync(PseudonymContext context, Pseudonym pseudonym)
     {
         var upsertCommand = context.Database.IsNpgsql()
@@ -141,7 +134,7 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
         // The batched round trip is expected to cover every requested key. It can fall short only
         // if a concurrent writer (a different Hangfire job, or another connection entirely)
         // inserts the exact same key between this statement's INSERT and its own fallback SELECT
-        // - the same rare race CreateIfNotExist's retry loop above exists to handle. Reuse that
+        // - the same rare race UpsertAsync's retry loop above exists to handle. Reuse that
         // proven, single-row retry logic here instead of duplicating it for the batch case.
         if (upserted.Count < pseudonyms.Count)
         {
@@ -271,7 +264,7 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         if (context.Database.IsNpgsql())
         {
-            // Raw SQL, matching the existing precedent in CreateIfNotExist above: a row-value
+            // Raw SQL, matching the existing precedent in UpsertAsync above: a row-value
             // comparison maps directly onto the (namespace_name, created_at, original_value)
             // index as a range scan, which a LINQ-translated equivalent isn't guaranteed to do.
             if (cursor is null)
@@ -513,6 +506,25 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
             .Where(p => p.NamespaceName == namespaceName && p.OriginalValue == originalValue)
             .OrderBy(p => p.SequenceNumber)
             .ToListAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<Pseudonym?> FindFirstByOriginalValueAsync(
+        Namespace @namespace,
+        string originalValue,
+        CancellationToken cancellationToken
+    )
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context
+            .Pseudonyms.AsNoTracking()
+            .FirstOrDefaultAsync(
+                p =>
+                    p.NamespaceName == @namespace.Name
+                    && p.OriginalValue == originalValue
+                    && p.SequenceNumber == 0,
+                cancellationToken
+            );
     }
 
     /// <inheritdoc/>

@@ -1,7 +1,7 @@
 namespace Vfps.Tests.DataTests;
 
 // Unit tests for the pieces of PseudonymRepository that don't need a real database connection.
-// The rest of this repository (CreateIfNotExist, ListByNamespaceAsync, CountByNamespaceAsync,
+// The rest of this repository (the upserts, ListByNamespaceAsync, CountByNamespaceAsync,
 // FindByPseudonymValueAsync) is already exercised indirectly - against SQLite, via
 // PseudonymAppServiceTests/PseudonymServiceTests/CsvPseudonymizationJobRunnerTests - but
 // BuildBatchUpsertSql is Postgres-only (see CreateIfNotExistBatchAsync's own comment on why the
