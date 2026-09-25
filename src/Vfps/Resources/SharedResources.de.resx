@@ -652,6 +652,9 @@
   <data name="App.Namespaces.PseudonymCountColumn" xml:space="preserve">
     <value>Pseudonyme</value>
   </data>
+  <data name="App.Namespaces.PseudonymCountLoading" xml:space="preserve">
+    <value>Pseudonyme werden gezählt…</value>
+  </data>
   <data name="App.Namespaces.CreateDescription" xml:space="preserve">
     <value>Namespaces sind nach dem Erstellen unveränderlich - löschen und neu erstellen statt bearbeiten.</value>
   </data>

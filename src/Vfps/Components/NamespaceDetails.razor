@@ -73,7 +73,13 @@
             <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.PseudonymCountColumn"]</span>
             @if (IsPseudonymCountLoading)
             {
-                <BbSkeleton Height="12px" Width="2.5rem" />
+                @* A spinner rather than a BbSkeleton: the skeleton's pulse only fades bg-muted to half
+                   opacity, which on a bar this small against the card is barely distinguishable
+                   from a static grey box. *@
+                <BbSpinner
+                    Size="SpinnerSize.Small"
+                    AriaLabel="@Localizer["App.Namespaces.PseudonymCountLoading"]"
+                />
             }
             else
             {
@@ -127,7 +133,7 @@
     [Parameter]
     public long? PseudonymCount { get; set; }
 
-    /// <summary>Whether the caller is still fetching PseudonymCount - shows a skeleton in its place.</summary>
+    /// <summary>Whether the caller is still fetching PseudonymCount - shows a spinner in its place.</summary>
     [Parameter]
     public bool IsPseudonymCountLoading { get; set; }
 

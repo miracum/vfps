@@ -570,7 +570,7 @@
     private string? _selectedNamespaceName;
 
     // The selected namespace's total pseudonym count, fetched separately from the namespace list
-    // itself (counting isn't free - see OnHierarchySelectionChanged) and shown as a skeleton in
+    // itself (counting isn't free - see OnHierarchySelectionChanged) and shown as a spinner in
     // NamespaceDetails until it resolves. Null both before anything is selected and while a count
     // is in flight; _isLoadingSelectedNamespacePseudonymCount tells the two apart.
     private long? _selectedNamespacePseudonymCount;
@@ -833,7 +833,7 @@
         // nothing guarantees this component re-renders before the count fetch below actually
         // suspends - same reasoning as ProvideItemsAsync's IsLoading fix on the pseudonyms page.
         // Without this, the details panel would keep showing "Select a namespace..." throughout
-        // the fetch instead of the new namespace's details with a loading skeleton.
+        // the fetch instead of the new namespace's details with a loading spinner.
         StateHasChanged();
 
         var user = await GetUserAsync();
