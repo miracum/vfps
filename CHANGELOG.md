@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.2](https://github.com/miracum/vfps/compare/v1.20.1...v1.20.2) (2026-09-25)
+
+
+### Bug Fixes
+
+* **ui:** replace skeleton with loading spinner ([#366](https://github.com/miracum/vfps/issues/366)) ([706ae7f](https://github.com/miracum/vfps/commit/706ae7f807acd9196defe5c49b8306ed6d008ac0))
+
 ## [1.20.1](https://github.com/miracum/vfps/compare/v1.20.0...v1.20.1) (2026-09-24)
 
 
