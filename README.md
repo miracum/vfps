@@ -1104,39 +1104,39 @@ Status code distribution:
 ### Resource efficiency
 
 The sample deployment described in [compose.yaml](compose.yaml) sets strict resource
-limits for both the CPU (1 CPU) and memory (max 128MiB). Even under these constraints ~750 RPS are
+limits for both the CPU (1 CPU) and memory (max 128MiB). Even under these constraints > 1k RPS are
 possible, although with significantly increased P99 latencies:
 
 ```console
 Summary:
   Count:        100000
-  Total:        131.93 s
-  Slowest:      391.65 ms
-  Fastest:      4.80 ms
-  Average:      65.53 ms
-  Requests/sec: 757.98
+  Total:        84.47 s
+  Slowest:      294.45 ms
+  Fastest:      4.42 ms
+  Average:      41.86 ms
+  Requests/sec: 1183.82
 
 Response time histogram:
-  4.804   [1]     |
-  43.489  [42280] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
-  82.174  [24611] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
-  120.859 [23744] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
-  159.544 [4369]  |∎∎∎∎
-  198.229 [4045]  |∎∎∎∎
-  236.914 [587]   |∎
-  275.599 [169]   |
-  314.284 [147]   |
-  352.970 [1]     |
-  391.655 [46]    |
+  4.421   [1]     |
+  33.423  [52909] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  62.426  [19533] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  91.428  [21193] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  120.431 [5760]  |∎∎∎∎
+  149.433 [404]   |
+  178.436 [107]   |
+  207.438 [43]    |
+  236.440 [0]     |
+  265.443 [8]     |
+  294.445 [42]    |
 
 Latency distribution:
-  10 % in 17.39 ms
-  25 % in 25.43 ms
-  50 % in 63.41 ms
-  75 % in 89.99 ms
-  90 % in 118.41 ms
-  95 % in 158.81 ms
-  99 % in 197.32 ms
+  10 % in 11.62 ms
+  25 % in 16.34 ms
+  50 % in 29.68 ms
+  75 % in 64.81 ms
+  90 % in 84.79 ms
+  95 % in 94.53 ms
+  99 % in 112.61 ms
 
 Status code distribution:
   [OK]   100000 responses
