@@ -19,6 +19,14 @@ public class PseudonymAppService(
 {
     private const int DefaultPageSize = 25;
 
+    /// <summary>
+    /// The most pseudonyms a single Create may ask to store for one original value. Every
+    /// sequence number up to the requested count becomes a four-parameter row of one upsert
+    /// statement (see <see cref="PseudonymRepository.BuildSetUpsertSql"/>), and Postgres accepts
+    /// at most 65,535 bind parameters per statement, which puts the hard ceiling at 16,383.
+    /// </summary>
+    public const long MaxCount = 10_000;
+
     /// <inheritdoc/>
     public async Task<IReadOnlyList<Data.Models.Pseudonym>> CreateAsync(
         string namespaceName,
@@ -95,9 +103,12 @@ public class PseudonymAppService(
             );
         }
 
-        if (count < 1)
+        if (count is < 1 or > MaxCount)
         {
-            throw new ArgumentOutOfRangeException(nameof(count), "count must be at least 1.");
+            throw new ArgumentOutOfRangeException(
+                nameof(count),
+                $"count must be between 1 and {MaxCount}."
+            );
         }
 
         if (count > 1 && !@namespace.AllowsMultiplePseudonyms)
@@ -158,12 +169,13 @@ public class PseudonymAppService(
             // stored set in the same round trip, so there's no need to read what's there first.
             // That also keeps grow-to-N idempotent - a count at or below what's already stored
             // inserts nothing, and existing pseudonyms are never regenerated or truncated.
-            // Candidates are only kept unique among themselves, not against values already
-            // stored for this original value; a random collision with those is exactly as
-            // unlikely as one with any other value in the namespace, which nothing checks either.
+            // Candidates are kept unique among themselves here; CreateSetIfNotExistAsync skips any
+            // whose value is already stored for this original value, which the completeness check
+            // below then reports as a failed upsert.
             var knownPseudonymValues = new HashSet<string>(StringComparer.Ordinal);
+            // The cast is safe: count is at most MaxCount.
             candidates = new List<Data.Models.Pseudonym>((int)count);
-            for (var sequenceNumber = 0; sequenceNumber < count; sequenceNumber++)
+            for (long sequenceNumber = 0; sequenceNumber < count; sequenceNumber++)
             {
                 candidates.Add(
                     new Data.Models.Pseudonym
@@ -186,7 +198,11 @@ public class PseudonymAppService(
             cancellationToken
         );
 
-        if (stored.Count < count)
+        // Every sequence number below count must be stored, not merely count rows: a skipped
+        // candidate leaves a gap, and the set can also hold sequence numbers at or above count
+        // (from an earlier, larger Create, or an import). Sequence numbers are unique per
+        // original value, so counting the ones below count is enough.
+        if (stored.LongCount(p => p.SequenceNumber < count) < count)
         {
             throw new PseudonymUpsertFailedException(@namespace.Name);
         }
@@ -483,8 +499,8 @@ public class PseudonymAppService(
 
         // Everything already stored for the original values this batch touches, so each row can
         // be classified against it without a round trip of its own. Also seeds the next free
-        // sequence number per original value for a multi-psn namespace, exactly the way
-        // CreateTrustedAsync derives it from existing.Count.
+        // sequence number per original value for a multi-psn namespace: one past the highest one
+        // stored.
         var storedPseudonymValuesByOriginal = new Dictionary<string, HashSet<string>>(
             StringComparer.Ordinal
         );

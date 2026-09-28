@@ -39,6 +39,9 @@ public class PseudonymRepositoryTests
         // original_value - otherwise a multi-psn namespace with several rows sharing
         // (namespace_name, original_value) would return every one of them for a single input row.
         sql.Should().Contain("AND p.sequence_number = i.sequence_number");
+        // Only the set upsert skips pseudonym values that are already taken; the batch path's
+        // callers check that themselves where it matters (see ImportTrustedBatchAsync).
+        sql.Should().NotContain("NOT EXISTS");
         parameters
             .Should()
             .BeEquivalentTo(
@@ -123,6 +126,10 @@ public class PseudonymRepositoryTests
         sql.Should().Contain("VALUES ({0}, {1}, {2}, {3}), ({4}, {5}, {6}, {7})");
         sql.Should()
             .Contain("ON CONFLICT (namespace_name, original_value, sequence_number) DO NOTHING");
+        // A candidate whose pseudonym value is already stored for the value, under any sequence
+        // number, must not be inserted - that's what keeps the value's pseudonyms distinct.
+        sql.Should().Contain("WHERE NOT EXISTS");
+        sql.Should().Contain("AND p.pseudonym_value = input.pseudonym_value");
         // Unlike BuildBatchUpsertSql, the final SELECT must not be limited to the candidates'
         // sequence numbers: a Create asking for fewer pseudonyms than are already stored still
         // gets every one of them back, which is what keeps grow-to-N from truncating.

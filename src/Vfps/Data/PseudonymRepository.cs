@@ -217,11 +217,13 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
     /// <summary>
     /// The part <see cref="BuildBatchUpsertSql"/> and <see cref="BuildSetUpsertSql"/> share: an
     /// <c>input</c> CTE with one row per pseudonym, and an <c>inserted</c> CTE that stores
-    /// whichever of them aren't already there. Callers append the final SELECT.
+    /// whichever of them aren't already there - narrowed further by <paramref name="inputFilter"/>,
+    /// a WHERE clause over the <c>input</c> rows, if given. Callers append the final SELECT.
     /// </summary>
     private static string BuildUpsertCte(
         IReadOnlyList<Pseudonym> pseudonyms,
-        out object[] parameters
+        out object[] parameters,
+        string inputFilter = ""
     )
     {
         var values = new StringBuilder();
@@ -262,6 +264,7 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
                         pseudonyms (namespace_name, original_value, pseudonym_value, sequence_number, created_at, last_updated_at)
                     SELECT namespace_name, original_value, pseudonym_value, sequence_number, NOW(), NOW()
                     FROM input
+                    {inputFilter}
                     ON CONFLICT (namespace_name, original_value, sequence_number) DO NOTHING
                     RETURNING *
                 )
@@ -585,9 +588,22 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         if (!context.Database.IsNpgsql())
         {
-            // SQLite is test-only (see CreateIfNotExistBatchAsync above), so the extra round trip
-            // of a separate read after the insert costs nothing that matters there.
-            await CreateIfNotExistBatchAsync(candidates, cancellationToken);
+            // SQLite is test-only (see CreateIfNotExistBatchAsync above), so the extra round trips
+            // of separate reads around the insert cost nothing that matters there. The read
+            // before it stands in for BuildSetUpsertSql's NOT EXISTS.
+            var storedValues = (
+                await FindAllByOriginalValueAsync(
+                    first.NamespaceName,
+                    first.OriginalValue,
+                    cancellationToken
+                )
+            )
+                .Select(p => p.PseudonymValue)
+                .ToHashSet(StringComparer.Ordinal);
+            await CreateIfNotExistBatchAsync(
+                [.. candidates.Where(c => !storedValues.Contains(c.PseudonymValue))],
+                cancellationToken
+            );
             return await FindAllByOriginalValueAsync(
                 first.NamespaceName,
                 first.OriginalValue,
@@ -596,7 +612,6 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
         }
 
         var sql = BuildSetUpsertSql(candidates, out var parameters);
-        var wanted = candidates.Select(c => c.SequenceNumber).ToHashSet();
 
         List<Pseudonym> stored = [];
         for (var attempt = 0; attempt < MaxSetUpsertAttempts; attempt++)
@@ -614,11 +629,23 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
                 BatchUpsertDuration.Record(stopwatch.Elapsed.TotalSeconds);
             }
 
-            // A candidate can only go missing if a concurrent writer committed the same key after
-            // this statement took its snapshot: the ON CONFLICT then skips the candidate, but the
-            // snapshot can't see the winning row either. Re-running the statement takes a fresh
-            // snapshot that does.
-            if (wanted.IsSubsetOf(stored.Select(p => p.SequenceNumber)))
+            // A candidate goes missing for one of two reasons. A concurrent writer may have
+            // committed the same key after this statement took its snapshot: the ON CONFLICT then
+            // skips the candidate, but the snapshot can't see the winning row either. Re-running
+            // the statement takes a fresh snapshot that does. Or its pseudonym value is already
+            // stored for this original value, so the NOT EXISTS skipped it - that row is in
+            // `stored`, and re-running would only skip it again, so the caller gets the set as it
+            // is and fails the Create on the missing sequence number.
+            var storedSequenceNumbers = stored.Select(p => p.SequenceNumber).ToHashSet();
+            var storedValues = stored
+                .Select(p => p.PseudonymValue)
+                .ToHashSet(StringComparer.Ordinal);
+            if (
+                !candidates.Any(c =>
+                    !storedSequenceNumbers.Contains(c.SequenceNumber)
+                    && !storedValues.Contains(c.PseudonymValue)
+                )
+            )
             {
                 break;
             }
@@ -634,6 +661,14 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
     /// ones that were already there. The two halves of the UNION can't overlap: a data-modifying
     /// CTE's rows aren't visible to the rest of the statement's snapshot.
     /// </summary>
+    /// <remarks>
+    /// A candidate whose pseudonym value is already stored for the original value, under any
+    /// sequence number, isn't inserted, so the value's pseudonyms stay distinct; its sequence
+    /// number is simply missing from the result. The candidates themselves are expected to be
+    /// distinct already. Two concurrent writers for the same value can't see each other's rows,
+    /// so a collision between them isn't caught - only a unique index could, and the odds are
+    /// the same as a collision with any other value in the namespace, which nothing prevents.
+    /// </remarks>
     // Internal for the same reason as BuildBatchUpsertSql: Postgres-only, so unit tests can only
     // verify it as a pure function.
     internal static string BuildSetUpsertSql(
@@ -642,9 +677,20 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
     )
     {
         // Every candidate shares (namespace_name, original_value), so the first candidate's
-        // placeholders ({0} and {1}) stand for all of them in the final SELECT.
+        // placeholders ({0} and {1}) stand for all of them, in the NOT EXISTS as well as in the
+        // final SELECT.
+        const string skipValuesAlreadyStored = """
+            WHERE NOT EXISTS (
+                SELECT 1
+                FROM pseudonyms p
+                WHERE p.namespace_name = {0}
+                    AND p.original_value = {1}
+                    AND p.pseudonym_value = input.pseudonym_value
+            )
+            """;
+
         return $$"""
-            {{BuildUpsertCte(candidates, out parameters)}}
+            {{BuildUpsertCte(candidates, out parameters, skipValuesAlreadyStored)}}
             SELECT *
             FROM inserted
             UNION

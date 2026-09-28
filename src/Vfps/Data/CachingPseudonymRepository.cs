@@ -22,9 +22,7 @@ public class CachingPseudonymRepository(
         CancellationToken cancellationToken
     )
     {
-        // CreatedAt is part of the key because deleting a namespace takes its pseudonyms with it:
-        // one re-created under the same name must not be served the old one's entries.
-        var cacheKey = new FirstPseudonymKey(@namespace.Name, @namespace.CreatedAt, originalValue);
+        var cacheKey = FirstPseudonymKeyFor(@namespace, originalValue);
 
         if (MemoryCache.TryGetValue(cacheKey, out Pseudonym? cached))
         {
@@ -41,13 +39,7 @@ public class CachingPseudonymRepository(
         // about to be stored, and a cached miss would hide it until the entry expired.
         if (found is not null)
         {
-            MemoryCache.Set(
-                cacheKey,
-                found,
-                new MemoryCacheEntryOptions()
-                    .SetSize(1)
-                    .SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration)
-            );
+            CacheFirstPseudonym(cacheKey, found);
         }
 
         return found;
@@ -211,11 +203,7 @@ public class CachingPseudonymRepository(
         // Otherwise the whole set is the one sequence-0 row, so this shares
         // FindFirstByOriginalValueAsync's cache entry: a value already created (or looked up)
         // skips the database, and one created here is cached for the next Create or Resolve.
-        var cacheKey = new FirstPseudonymKey(
-            @namespace.Name,
-            @namespace.CreatedAt,
-            candidates[0].OriginalValue
-        );
+        var cacheKey = FirstPseudonymKeyFor(@namespace, candidates[0].OriginalValue);
 
         if (MemoryCache.TryGetValue(cacheKey, out Pseudonym? cached) && cached is not null)
         {
@@ -230,13 +218,7 @@ public class CachingPseudonymRepository(
 
         if (stored is [{ SequenceNumber: 0 } first])
         {
-            MemoryCache.Set(
-                cacheKey,
-                first,
-                new MemoryCacheEntryOptions()
-                    .SetSize(1)
-                    .SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration)
-            );
+            CacheFirstPseudonym(cacheKey, first);
         }
 
         return stored;
@@ -261,6 +243,24 @@ public class CachingPseudonymRepository(
             cancellationToken
         );
     }
+
+    // CreatedAt is part of the key because deleting a namespace takes its pseudonyms with it: one
+    // re-created under the same name must not be served the old one's entries.
+    private static FirstPseudonymKey FirstPseudonymKeyFor(
+        Namespace @namespace,
+        string originalValue
+    ) => new(@namespace.Name, @namespace.CreatedAt, originalValue);
+
+    // Shared by FindFirstByOriginalValueAsync and CreateSetIfNotExistAsync, so an entry lives
+    // equally long whichever of them populated it.
+    private void CacheFirstPseudonym(FirstPseudonymKey key, Pseudonym pseudonym) =>
+        MemoryCache.Set(
+            key,
+            pseudonym,
+            new MemoryCacheEntryOptions()
+                .SetSize(1)
+                .SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration)
+        );
 
     private readonly record struct FirstPseudonymKey(
         string Namespace,

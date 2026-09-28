@@ -75,13 +75,16 @@ public interface IPseudonymRepository
     /// stored first. Candidates that lose to an already-stored row are discarded in favor of the
     /// stored one, which is what makes this correct under a concurrent race: callers inserting
     /// overlapping sequence numbers at the same time all end up seeing whatever actually got
-    /// persisted. Takes the whole namespace rather than its name so a cache can tell it apart
-    /// from a namespace re-created under the same name.
+    /// persisted. A candidate whose pseudonym value is already stored for the value, under any
+    /// sequence number, isn't inserted, which keeps the value's pseudonyms distinct. Takes the
+    /// whole namespace rather than its name so a cache can tell it apart from a namespace
+    /// re-created under the same name.
     /// </summary>
     /// <returns>
     /// Every stored pseudonym for the value. Covers every candidate's sequence number unless a
-    /// concurrent writer racing the same key defeats every retry, which callers treat as a
-    /// failed upsert.
+    /// candidate's pseudonym value was already stored for the value, or a concurrent writer
+    /// racing the same key defeated every retry - either of which callers treat as a failed
+    /// upsert.
     /// </returns>
     Task<IReadOnlyList<Pseudonym>> CreateSetIfNotExistAsync(
         Namespace @namespace,

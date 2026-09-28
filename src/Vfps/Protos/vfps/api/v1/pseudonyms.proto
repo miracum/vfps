@@ -113,7 +113,8 @@ message PseudonymServiceCreateRequest {
   // when the target namespace has allows_multiple_pseudonyms set - unset (or 1) preserves
   // today's single-pseudonym behavior for every other namespace. If fewer than this many
   // pseudonyms already exist for the original value, exactly the missing ones are generated and
-  // added; if this many or more already exist, the existing set is returned unchanged.
+  // added; if this many or more already exist, the existing set is returned unchanged. At most
+  // 10000.
   optional int64 count = 3;
 }
 
