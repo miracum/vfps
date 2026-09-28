@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.4](https://github.com/miracum/vfps/compare/v1.20.3...v1.20.4) (2026-09-28)
+
+
+### Bug Fixes
+
+* cap max pseudonyms and check for collisions ([#370](https://github.com/miracum/vfps/issues/370)) ([7269e28](https://github.com/miracum/vfps/commit/7269e2888ab62220bf054112bc851d87a54fab12))
+
 ## [1.20.3](https://github.com/miracum/vfps/compare/v1.20.2...v1.20.3) (2026-09-28)
 
 
