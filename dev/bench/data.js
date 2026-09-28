@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790367578203,
+  "lastUpdate": 1790608562527,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -11874,6 +11874,66 @@ window.BENCHMARK_DATA = {
             "value": 889.0854759216309,
             "unit": "ns",
             "range": "± 3.040896100763095"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "4e8cae4f9f8307b4c4ddac789cb2aaa1110470c1",
+          "message": "fix: improve throughput be reducing the db RTT (#368)\n\n* perf: improve throughput be reducing the db RTT\n\n* docs\n\n---------\n\nCo-authored-by: chgl <5307555+chgl@users.noreply.github.com>",
+          "timestamp": "2026-09-28T17:12:32+02:00",
+          "tree_id": "2fb924a9896c786b1a9d8ea813baef2f28d8a0f2",
+          "url": "https://github.com/miracum/vfps/commit/4e8cae4f9f8307b4c4ddac789cb2aaa1110470c1"
+        },
+        "date": 1790608561942,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 873.192615032196,
+            "unit": "ns",
+            "range": "± 2.1817271795827233"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 760.2868516921997,
+            "unit": "ns",
+            "range": "± 3.8442257998497844"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 783.0478967939105,
+            "unit": "ns",
+            "range": "± 1.9762377888907778"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 823.2231595175607,
+            "unit": "ns",
+            "range": "± 2.3507613440288737"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 997.508303451538,
+            "unit": "ns",
+            "range": "± 2.6058032316168855"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 896.9430873870849,
+            "unit": "ns",
+            "range": "± 2.3181562893262333"
           }
         ]
       }
