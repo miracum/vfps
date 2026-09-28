@@ -1001,53 +1001,55 @@ ghz -n 100000 \
 Sample output running on
 
 ```console
-OS=Windows 11 (10.0.22000.978/21H2)
+OS=Windows 11 (10.0.26200.9457/25H2), Ubuntu 24.04.4 LTS in WSL2 (6.18.40.1-microsoft-standard-WSL2)
 12th Gen Intel Core i9-12900K, 1 CPU, 24 logical and 16 physical cores
-32GiB of DDR4 4800MHz RAM
+32GiB of DDR5 4800MHz RAM
 Samsung SSD 980 Pro 1TiB
-PostgreSQL running in WSL2 VM on the same machine.
-.NET SDK=7.0.100-rc.1.22431.12
+vfps and PostgreSQL 18.4 (via compose.yaml) running in WSL2 on the same machine.
+.NET SDK=10.0.401, ASP.NET Core Runtime=10.0.12
+vfps Release build (v1.20.2 + single round trip pseudonym creation), ASPNETCORE_ENVIRONMENT=Production, Authorization__IsEnabled=false
+ghz v0.121.0
 ```
 
 ```console
 Summary:
   Count:        100000
-  Total:        16.68 s
-  Slowest:      187.81 ms
-  Fastest:      2.52 ms
-  Average:      8.00 ms
-  Requests/sec: 5993.51
+  Total:        15.18 s
+  Slowest:      154.58 ms
+  Fastest:      3.31 ms
+  Average:      7.25 ms
+  Requests/sec: 6585.97
 
 Response time histogram:
-  2.522   [1]     |
-  21.051  [99748] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
-  39.580  [201]   |
-  58.109  [0]     |
-  76.639  [0]     |
-  95.168  [0]     |
-  113.697 [0]     |
-  132.226 [0]     |
-  150.755 [0]     |
-  169.285 [0]     |
-  187.814 [50]    |
+  3.310   [1]     |
+  18.436  [99387] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  33.563  [467]   |
+  48.690  [46]    |
+  63.817  [49]    |
+  78.944  [0]     |
+  94.071  [16]    |
+  109.198 [0]     |
+  124.325 [0]     |
+  139.452 [0]     |
+  154.579 [34]    |
 
 Latency distribution:
-  10 % in 6.26 ms
-  25 % in 6.91 ms
-  50 % in 7.72 ms
-  75 % in 8.93 ms
-  90 % in 9.57 ms
-  95 % in 10.01 ms
-  99 % in 11.86 ms
+  10 % in 5.60 ms
+  25 % in 6.04 ms
+  50 % in 6.69 ms
+  75 % in 7.96 ms
+  90 % in 9.07 ms
+  95 % in 10.03 ms
+  99 % in 13.37 ms
 
 Status code distribution:
   [OK]   100000 responses
 ```
 
-### Sub-10ms P99-latency
+### Namespace caching
 
-By default, each pseudonym creation requests executes two database queries: one to fetch the namespace configuration
-and a second one to persist the pseudonym if it doesn't already exist. There is an opt-in way to avoid the first
+By default, each pseudonym creation request first queries the database for the namespace configuration
+before persisting the pseudonym if it doesn't already exist. There is an opt-in way to avoid the namespace
 query by caching the namespaces in a non-distributed in-memory cache. It can be enabled and configured using the following
 environment variables:
 
@@ -1067,33 +1069,33 @@ Using the same setup as above but with namespace caching enabled, we can lower t
 ```console
 Summary:
   Count:        100000
-  Total:        11.70 s
-  Slowest:      27.23 ms
-  Fastest:      1.55 ms
-  Average:      5.47 ms
-  Requests/sec: 8549.22
+  Total:        12.57 s
+  Slowest:      156.56 ms
+  Fastest:      2.93 ms
+  Average:      5.95 ms
+  Requests/sec: 7955.10
 
 Response time histogram:
-  1.546  [1]     |
-  4.114  [17418] |∎∎∎∎∎∎∎∎∎∎
-  6.682  [72827] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
-  9.251  [9382]  |∎∎∎∎∎
-  11.819 [122]   |
-  14.387 [0]     |
-  16.956 [0]     |
-  19.524 [0]     |
-  22.092 [0]     |
-  24.661 [49]    |
-  27.229 [201]   |
+  2.930   [1]     |
+  18.293  [99510] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  33.657  [439]   |
+  49.020  [0]     |
+  64.384  [0]     |
+  79.747  [0]     |
+  95.111  [0]     |
+  110.474 [21]    |
+  125.838 [17]    |
+  141.201 [0]     |
+  156.565 [12]    |
 
 Latency distribution:
-  10 % in 4.00 ms
-  25 % in 4.34 ms
-  50 % in 5.81 ms
-  75 % in 6.00 ms
-  90 % in 6.66 ms
-  95 % in 7.00 ms
-  99 % in 8.00 ms
+  10 % in 4.05 ms
+  25 % in 5.04 ms
+  50 % in 5.82 ms
+  75 % in 6.39 ms
+  90 % in 7.40 ms
+  95 % in 8.21 ms
+  99 % in 10.80 ms
 
 Status code distribution:
   [OK]   100000 responses
@@ -1108,33 +1110,33 @@ possible, although with significantly increased P99 latencies:
 ```console
 Summary:
   Count:        100000
-  Total:        73.99 s
-  Slowest:      268.06 ms
-  Fastest:      5.26 ms
-  Average:      36.69 ms
-  Requests/sec: 1351.51
+  Total:        84.47 s
+  Slowest:      294.45 ms
+  Fastest:      4.42 ms
+  Average:      41.86 ms
+  Requests/sec: 1183.82
 
 Response time histogram:
-  5.257   [1]     |
-  31.537  [57298] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
-  57.817  [21327] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
-  84.097  [17685] |∎∎∎∎∎∎∎∎∎∎∎∎
-  110.377 [3395]  |∎∎
-  136.656 [243]   |
-  162.936 [0]     |
-  189.216 [1]     |
-  215.496 [0]     |
-  241.776 [0]     |
-  268.055 [50]    |
+  4.421   [1]     |
+  33.423  [52909] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  62.426  [19533] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  91.428  [21193] |∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎∎
+  120.431 [5760]  |∎∎∎∎
+  149.433 [404]   |
+  178.436 [107]   |
+  207.438 [43]    |
+  236.440 [0]     |
+  265.443 [8]     |
+  294.445 [42]    |
 
 Latency distribution:
-  10 % in 14.62 ms
-  25 % in 18.47 ms
-  50 % in 29.46 ms
-  75 % in 47.53 ms
-  90 % in 71.96 ms
-  95 % in 79.95 ms
-  99 % in 97.22 ms
+  10 % in 11.62 ms
+  25 % in 16.34 ms
+  50 % in 29.68 ms
+  75 % in 64.81 ms
+  90 % in 84.79 ms
+  95 % in 94.53 ms
+  99 % in 112.61 ms
 
 Status code distribution:
   [OK]   100000 responses

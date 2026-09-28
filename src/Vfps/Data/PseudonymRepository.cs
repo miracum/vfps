@@ -196,6 +196,34 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
         out object[] parameters
     )
     {
+        // The join on sequence_number too (not just namespace_name/original_value) matters for a
+        // multi-psn namespace (Namespace.AllowsMultiplePseudonyms): several rows can share
+        // (namespace_name, original_value) there, and without it this would return every one of
+        // them for a single input row instead of exactly the one sequence number that row asked
+        // for.
+        return $"""
+            {BuildUpsertCte(pseudonyms, out parameters)}
+            SELECT *
+            FROM inserted
+            UNION
+            SELECT p.*
+            FROM pseudonyms p
+            JOIN input i ON p.namespace_name = i.namespace_name
+                AND p.original_value = i.original_value
+                AND p.sequence_number = i.sequence_number
+            """;
+    }
+
+    /// <summary>
+    /// The part <see cref="BuildBatchUpsertSql"/> and <see cref="BuildSetUpsertSql"/> share: an
+    /// <c>input</c> CTE with one row per pseudonym, and an <c>inserted</c> CTE that stores
+    /// whichever of them aren't already there. Callers append the final SELECT.
+    /// </summary>
+    private static string BuildUpsertCte(
+        IReadOnlyList<Pseudonym> pseudonyms,
+        out object[] parameters
+    )
+    {
         var values = new StringBuilder();
         parameters = new object[pseudonyms.Count * 4];
         for (var i = 0; i < pseudonyms.Count; i++)
@@ -224,11 +252,6 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
             parameters[baseIndex + 3] = pseudonyms[i].SequenceNumber;
         }
 
-        // The join on sequence_number too (not just namespace_name/original_value) matters for a
-        // multi-psn namespace (Namespace.AllowsMultiplePseudonyms): several rows can share
-        // (namespace_name, original_value) there, and without it this would return every one of
-        // them for a single input row instead of exactly the one sequence number that row asked
-        // for.
         return $"""
             WITH
                 input (namespace_name, original_value, pseudonym_value, sequence_number) AS (
@@ -242,14 +265,6 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
                     ON CONFLICT (namespace_name, original_value, sequence_number) DO NOTHING
                     RETURNING *
                 )
-            SELECT *
-            FROM inserted
-            UNION
-            SELECT p.*
-            FROM pseudonyms p
-            JOIN input i ON p.namespace_name = i.namespace_name
-                AND p.original_value = i.original_value
-                AND p.sequence_number = i.sequence_number
             """;
     }
 
@@ -550,30 +565,93 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
             .ToListAsync(cancellationToken);
     }
 
+    // Same bound as UpsertAsync's retry loop above, for the same rare race.
+    private const int MaxSetUpsertAttempts = 3;
+
     /// <inheritdoc/>
     public async Task<IReadOnlyList<Pseudonym>> CreateSetIfNotExistAsync(
-        IReadOnlyList<Pseudonym> newSequenceCandidates,
+        Namespace @namespace,
+        IReadOnlyList<Pseudonym> candidates,
         CancellationToken cancellationToken
     )
     {
-        if (newSequenceCandidates.Count == 0)
+        if (candidates.Count == 0)
         {
             return [];
         }
 
-        // Insert whatever's missing - same upsert reasoning as CreateIfNotExistBatchAsync above,
-        // including its handling of a concurrent writer racing the same sequence number. The
-        // freshly-inserted rows it returns aren't used directly: the fresh read below is what
-        // makes this correct if a concurrent caller raced with a *different* (e.g. larger) set of
-        // missing sequence numbers for the same original value - every caller ends up seeing
-        // whatever actually got persisted, not just their own candidates.
-        await CreateIfNotExistBatchAsync(newSequenceCandidates, cancellationToken);
+        var first = candidates[0];
 
-        var first = newSequenceCandidates[0];
-        return await FindAllByOriginalValueAsync(
-            first.NamespaceName,
-            first.OriginalValue,
-            cancellationToken
-        );
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        if (!context.Database.IsNpgsql())
+        {
+            // SQLite is test-only (see CreateIfNotExistBatchAsync above), so the extra round trip
+            // of a separate read after the insert costs nothing that matters there.
+            await CreateIfNotExistBatchAsync(candidates, cancellationToken);
+            return await FindAllByOriginalValueAsync(
+                first.NamespaceName,
+                first.OriginalValue,
+                cancellationToken
+            );
+        }
+
+        var sql = BuildSetUpsertSql(candidates, out var parameters);
+        var wanted = candidates.Select(c => c.SequenceNumber).ToHashSet();
+
+        List<Pseudonym> stored = [];
+        for (var attempt = 0; attempt < MaxSetUpsertAttempts; attempt++)
+        {
+            var stopwatch = Stopwatch.StartNew();
+            try
+            {
+                stored = await context
+                    .Pseudonyms.FromSqlRaw(sql, parameters)
+                    .AsNoTracking()
+                    .ToListAsync(cancellationToken);
+            }
+            finally
+            {
+                BatchUpsertDuration.Record(stopwatch.Elapsed.TotalSeconds);
+            }
+
+            // A candidate can only go missing if a concurrent writer committed the same key after
+            // this statement took its snapshot: the ON CONFLICT then skips the candidate, but the
+            // snapshot can't see the winning row either. Re-running the statement takes a fresh
+            // snapshot that does.
+            if (wanted.IsSubsetOf(stored.Select(p => p.SequenceNumber)))
+            {
+                break;
+            }
+        }
+
+        return stored;
+    }
+
+    /// <summary>
+    /// Builds the single round trip behind <see cref="CreateSetIfNotExistAsync"/>: insert
+    /// whichever of the candidates' sequence numbers aren't stored yet, and return every row
+    /// stored for their (namespace_name, original_value) - both the ones just inserted and the
+    /// ones that were already there. The two halves of the UNION can't overlap: a data-modifying
+    /// CTE's rows aren't visible to the rest of the statement's snapshot.
+    /// </summary>
+    // Internal for the same reason as BuildBatchUpsertSql: Postgres-only, so unit tests can only
+    // verify it as a pure function.
+    internal static string BuildSetUpsertSql(
+        IReadOnlyList<Pseudonym> candidates,
+        out object[] parameters
+    )
+    {
+        // Every candidate shares (namespace_name, original_value), so the first candidate's
+        // placeholders ({0} and {1}) stand for all of them in the final SELECT.
+        return $$"""
+            {{BuildUpsertCte(candidates, out parameters)}}
+            SELECT *
+            FROM inserted
+            UNION
+            SELECT *
+            FROM pseudonyms
+            WHERE namespace_name = {0} AND original_value = {1}
+            ORDER BY sequence_number
+            """;
     }
 }

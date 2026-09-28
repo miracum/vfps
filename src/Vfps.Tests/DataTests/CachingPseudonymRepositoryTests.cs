@@ -86,6 +86,66 @@ public class CachingPseudonymRepositoryTests : ServiceTests.ServiceTestBase
         afterCreate!.PseudonymValue.Should().Be("created-later-pseudonym");
     }
 
+    private static Data.Models.Pseudonym Candidate(
+        Data.Models.Namespace @namespace,
+        string originalValue,
+        string pseudonymValue
+    ) =>
+        new()
+        {
+            NamespaceName = @namespace.Name,
+            OriginalValue = originalValue,
+            PseudonymValue = pseudonymValue,
+        };
+
+    [Fact]
+    public async Task CreateSetIfNotExistAsync_ForASinglePseudonymNamespace_ShouldServeRepeatsFromTheCache()
+    {
+        var sut = CreateSut();
+        var @namespace = await ExistingNamespaceAsync();
+
+        var created = await sut.CreateSetIfNotExistAsync(
+            @namespace,
+            [Candidate(@namespace, "created here", "first-candidate")],
+            CancellationToken.None
+        );
+        await DeleteStoredPseudonymAsync("created here");
+        var repeated = await sut.CreateSetIfNotExistAsync(
+            @namespace,
+            [Candidate(@namespace, "created here", "second-candidate")],
+            CancellationToken.None
+        );
+
+        created.Should().ContainSingle().Which.PseudonymValue.Should().Be("first-candidate");
+        repeated.Should().ContainSingle().Which.PseudonymValue.Should().Be("first-candidate");
+    }
+
+    [Fact]
+    public async Task CreateSetIfNotExistAsync_ForAMultiPseudonymNamespace_ShouldNotCache()
+    {
+        var sut = CreateSut();
+        var @namespace = (
+            await new NamespaceRepository(ContextFactory).FindAsync(
+                "multiPsnNamespace",
+                CancellationToken.None
+            )
+        )!;
+
+        await sut.CreateSetIfNotExistAsync(
+            @namespace,
+            [Candidate(@namespace, "created here", "first-candidate")],
+            CancellationToken.None
+        );
+        await DeleteStoredPseudonymAsync("created here");
+        var repeated = await sut.CreateSetIfNotExistAsync(
+            @namespace,
+            [Candidate(@namespace, "created here", "second-candidate")],
+            CancellationToken.None
+        );
+
+        repeated.Should().ContainSingle().Which.PseudonymValue.Should().Be("second-candidate");
+    }
+
     [Fact]
     public async Task FindFirstByOriginalValueAsync_ForANamespaceRecreatedUnderTheSameName_ShouldNotServeTheOldEntry()
     {

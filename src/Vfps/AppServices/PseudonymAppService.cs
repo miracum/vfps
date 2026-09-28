@@ -107,23 +107,11 @@ public class PseudonymAppService(
 
         ValidateOriginalValue(@namespace, originalValue);
 
-        // Checked before the grow-to-N short circuit below, so an invalid original value is
+        // Checked before anything is looked up or stored, so an invalid original value is
         // rejected the same way whether or not a pseudonym for it happens to exist already.
         await ValidateParentAsync(@namespace, [originalValue], cancellationToken);
 
-        // Grow-to-N idempotency: a count at or below what's already stored is always a no-op -
-        // existing pseudonyms are never regenerated or truncated, only ever added to.
-        var existing = await FindStoredAsync(@namespace, originalValue, cancellationToken);
-        if (existing.Count >= count)
-        {
-            return existing;
-        }
-
-        var knownPseudonymValues = new HashSet<string>(
-            existing.Select(p => p.PseudonymValue),
-            StringComparer.Ordinal
-        );
-        var newSequenceCandidates = new List<Data.Models.Pseudonym>((int)(count - existing.Count));
+        List<Data.Models.Pseudonym> candidates;
 
         if (PseudonymizationMethodsLookup.IsValueDependent(@namespace.PseudonymGenerationMethod))
         {
@@ -139,7 +127,17 @@ public class PseudonymAppService(
                 throw new MultiplePseudonymsNotAllowedException(@namespace.Name);
             }
 
-            newSequenceCandidates.Add(
+            // Looked up before generating, unlike the random methods below: evaluating a
+            // value-dependent method is a round trip to the VOPRF server, which a value that's
+            // already stored shouldn't pay for.
+            var existing = await FindStoredAsync(@namespace, originalValue, cancellationToken);
+            if (existing.Count > 0)
+            {
+                return existing;
+            }
+
+            candidates =
+            [
                 new Data.Models.Pseudonym
                 {
                     NamespaceName = @namespace.Name,
@@ -149,15 +147,25 @@ public class PseudonymAppService(
                         originalValue,
                         cancellationToken
                     ),
-                    SequenceNumber = existing.Count,
-                }
-            );
+                    SequenceNumber = 0,
+                },
+            ];
         }
         else
         {
-            for (var sequenceNumber = existing.Count; sequenceNumber < count; sequenceNumber++)
+            // A candidate for every sequence number up to count, not just the missing ones:
+            // CreateSetIfNotExistAsync keeps whichever are already stored and returns the whole
+            // stored set in the same round trip, so there's no need to read what's there first.
+            // That also keeps grow-to-N idempotent - a count at or below what's already stored
+            // inserts nothing, and existing pseudonyms are never regenerated or truncated.
+            // Candidates are only kept unique among themselves, not against values already
+            // stored for this original value; a random collision with those is exactly as
+            // unlikely as one with any other value in the namespace, which nothing checks either.
+            var knownPseudonymValues = new HashSet<string>(StringComparer.Ordinal);
+            candidates = new List<Data.Models.Pseudonym>((int)count);
+            for (var sequenceNumber = 0; sequenceNumber < count; sequenceNumber++)
             {
-                newSequenceCandidates.Add(
+                candidates.Add(
                     new Data.Models.Pseudonym
                     {
                         NamespaceName = @namespace.Name,
@@ -172,10 +180,18 @@ public class PseudonymAppService(
             }
         }
 
-        return await pseudonymRepository.CreateSetIfNotExistAsync(
-            newSequenceCandidates,
+        var stored = await pseudonymRepository.CreateSetIfNotExistAsync(
+            @namespace,
+            candidates,
             cancellationToken
         );
+
+        if (stored.Count < count)
+        {
+            throw new PseudonymUpsertFailedException(@namespace.Name);
+        }
+
+        return stored;
     }
 
     /// <summary>
