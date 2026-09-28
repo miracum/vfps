@@ -568,9 +568,11 @@ public class PseudonymAppServiceTests : ServiceTestBase
     }
 
     [Theory]
-    [InlineData(0)]
-    [InlineData(-1)]
-    public async Task CreateTrustedAsync_WithCountLessThanOne_ShouldThrowArgumentOutOfRangeException(
+    [InlineData(0L)]
+    [InlineData(-1L)]
+    [InlineData(PseudonymAppService.MaxCount + 1)]
+    [InlineData(long.MaxValue)]
+    public async Task CreateTrustedAsync_WithCountOutOfRange_ShouldThrowArgumentOutOfRangeException(
         long count
     )
     {
@@ -705,6 +707,55 @@ public class PseudonymAppServiceTests : ServiceTestBase
             .Select(p => p.PseudonymValue)
             .Should()
             .BeEquivalentTo(first.Select(p => p.PseudonymValue));
+    }
+
+    [Fact]
+    public async Task CreateTrustedAsync_WithNewPseudonymAlreadyStoredForTheValue_ShouldThrowPseudonymUpsertFailedExceptionWithoutStoringIt()
+    {
+        var pseudonymRepository = new PseudonymRepository(ContextFactory);
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(ContextFactory),
+            pseudonymRepository
+        );
+        // A single hex digit leaves 16 possible pseudonyms. With all 16 already stored for the
+        // value at sequence numbers 1 to 16, whatever sequence 0's candidate turns out to be, it
+        // duplicates one of them.
+        var @namespace = new Data.Models.Namespace
+        {
+            Name = "multiPsnNamespace",
+            PseudonymLength = 1,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.FullRandomHexEncoded,
+            AllowsMultiplePseudonyms = true,
+        };
+        await pseudonymRepository.CreateIfNotExistBatchAsync(
+            [
+                .. "0123456789abcdef".Select(
+                    (digit, i) =>
+                        new Data.Models.Pseudonym
+                        {
+                            NamespaceName = @namespace.Name,
+                            OriginalValue = "shared value",
+                            PseudonymValue = digit.ToString(),
+                            SequenceNumber = i + 1L,
+                        }
+                ),
+            ],
+            CancellationToken.None
+        );
+
+        // 16 rows are already stored - more than count - so this only fails if the missing
+        // sequence 0 is noticed, rather than just the number of rows.
+        var act = () =>
+            sut.CreateTrustedAsync(@namespace, "shared value", 1, CancellationToken.None);
+
+        await act.Should().ThrowAsync<PseudonymUpsertFailedException>();
+        var stored = await pseudonymRepository.FindAllByOriginalValueAsync(
+            @namespace.Name,
+            "shared value",
+            CancellationToken.None
+        );
+        stored.Should().HaveCount(16);
+        stored.Should().NotContain(p => p.SequenceNumber == 0);
     }
 
     [Fact]

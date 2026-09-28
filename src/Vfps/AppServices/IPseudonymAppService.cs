@@ -20,8 +20,8 @@ public interface IPseudonymAppService
     /// <param name="originalValue">The value to pseudonymize.</param>
     /// <param name="count">
     /// How many distinct pseudonyms the caller wants stored for <paramref name="originalValue"/>.
-    /// Must be at least 1; anything above 1 requires the namespace's
-    /// <see cref="Namespace.AllowsMultiplePseudonyms"/> to be set. If fewer than <paramref name="count"/>
+    /// Must be between 1 and <see cref="PseudonymAppService.MaxCount"/>; anything above 1 requires
+    /// the namespace's <see cref="Namespace.AllowsMultiplePseudonyms"/> to be set. If fewer than <paramref name="count"/>
     /// already exist, exactly the missing ones are generated and added (existing ones are never
     /// regenerated); if this many or more already exist, the existing set is returned unchanged -
     /// a given original value's stored set only ever grows, so a repeat call with the same or a
@@ -31,7 +31,9 @@ public interface IPseudonymAppService
     /// <param name="cancellationToken">Cancellation token.</param>
     /// <returns>Every pseudonym stored for <paramref name="originalValue"/> after this call, ordered by sequence number.</returns>
     /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is less than 1.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="count"/> is less than 1 or greater than <see cref="PseudonymAppService.MaxCount"/>.
+    /// </exception>
     /// <exception cref="MultiplePseudonymsNotAllowedException">
     /// <paramref name="count"/> is greater than 1 but the namespace doesn't allow multiple pseudonyms.
     /// </exception>
@@ -116,7 +118,9 @@ public interface IPseudonymAppService
     /// <see cref="CreateAsync"/> for the grow-to-N semantics.
     /// </summary>
     /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
-    /// <exception cref="ArgumentOutOfRangeException"><paramref name="count"/> is less than 1.</exception>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// <paramref name="count"/> is less than 1 or greater than <see cref="PseudonymAppService.MaxCount"/>.
+    /// </exception>
     /// <exception cref="MultiplePseudonymsNotAllowedException">
     /// <paramref name="count"/> is greater than 1 but the namespace doesn't allow multiple pseudonyms.
     /// </exception>
@@ -352,8 +356,10 @@ public class NamespaceNotFoundException(string namespaceName)
 }
 
 /// <summary>
-/// Thrown when no pseudonym could be produced for a value: every attempt at a unique one collided,
-/// or a value-dependent generator returned fewer pseudonyms than it was asked for.
+/// Thrown when no pseudonym could be produced for a value: every attempt at a unique one collided
+/// (including with one already stored for the same original value), a concurrent writer racing
+/// the same key defeated every retry, or a value-dependent generator returned fewer pseudonyms
+/// than it was asked for.
 /// </summary>
 public class PseudonymUpsertFailedException(string namespaceName)
     : Exception(
