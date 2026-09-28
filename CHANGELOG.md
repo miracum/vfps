@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.3](https://github.com/miracum/vfps/compare/v1.20.2...v1.20.3) (2026-09-28)
+
+
+### Bug Fixes
+
+* improve throughput be reducing the db RTT ([#368](https://github.com/miracum/vfps/issues/368)) ([4e8cae4](https://github.com/miracum/vfps/commit/4e8cae4f9f8307b4c4ddac789cb2aaa1110470c1))
+
 ## [1.20.2](https://github.com/miracum/vfps/compare/v1.20.1...v1.20.2) (2026-09-25)
 
 
