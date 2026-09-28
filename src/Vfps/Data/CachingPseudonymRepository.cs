@@ -192,12 +192,54 @@ public class CachingPseudonymRepository(
 
     /// <inheritdoc/>
     public async Task<IReadOnlyList<Pseudonym>> CreateSetIfNotExistAsync(
-        IReadOnlyList<Pseudonym> newSequenceCandidates,
+        Namespace @namespace,
+        IReadOnlyList<Pseudonym> candidates,
         CancellationToken cancellationToken
     )
     {
-        // Not cached - same reasoning as FindAllByOriginalValueAsync above.
-        return await Repository.CreateSetIfNotExistAsync(newSequenceCandidates, cancellationToken);
+        // A multi-psn namespace's set isn't cached - same reasoning as FindAllByOriginalValueAsync
+        // above.
+        if (@namespace.AllowsMultiplePseudonyms || candidates.Count == 0)
+        {
+            return await Repository.CreateSetIfNotExistAsync(
+                @namespace,
+                candidates,
+                cancellationToken
+            );
+        }
+
+        // Otherwise the whole set is the one sequence-0 row, so this shares
+        // FindFirstByOriginalValueAsync's cache entry: a value already created (or looked up)
+        // skips the database, and one created here is cached for the next Create or Resolve.
+        var cacheKey = new FirstPseudonymKey(
+            @namespace.Name,
+            @namespace.CreatedAt,
+            candidates[0].OriginalValue
+        );
+
+        if (MemoryCache.TryGetValue(cacheKey, out Pseudonym? cached) && cached is not null)
+        {
+            return [cached];
+        }
+
+        var stored = await Repository.CreateSetIfNotExistAsync(
+            @namespace,
+            candidates,
+            cancellationToken
+        );
+
+        if (stored is [{ SequenceNumber: 0 } first])
+        {
+            MemoryCache.Set(
+                cacheKey,
+                first,
+                new MemoryCacheEntryOptions()
+                    .SetSize(1)
+                    .SetAbsoluteExpiration(CacheConfig.AbsoluteExpiration)
+            );
+        }
+
+        return stored;
     }
 
     /// <inheritdoc/>

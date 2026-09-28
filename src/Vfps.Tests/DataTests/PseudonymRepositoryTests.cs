@@ -96,4 +96,44 @@ public class PseudonymRepositoryTests
         sql.Should().Contain("\nUNION\n");
         sql.Should().NotContain("UNION ALL");
     }
+
+    [Fact]
+    public void BuildSetUpsertSql_ShouldInsertEveryCandidateAndReturnTheWholeStoredSetForTheValue()
+    {
+        var candidates = new[]
+        {
+            new Data.Models.Pseudonym
+            {
+                NamespaceName = "ns",
+                OriginalValue = "value1",
+                PseudonymValue = "first",
+                SequenceNumber = 0,
+            },
+            new Data.Models.Pseudonym
+            {
+                NamespaceName = "ns",
+                OriginalValue = "value1",
+                PseudonymValue = "second",
+                SequenceNumber = 1,
+            },
+        };
+
+        var sql = PseudonymRepository.BuildSetUpsertSql(candidates, out var parameters);
+
+        sql.Should().Contain("VALUES ({0}, {1}, {2}, {3}), ({4}, {5}, {6}, {7})");
+        sql.Should()
+            .Contain("ON CONFLICT (namespace_name, original_value, sequence_number) DO NOTHING");
+        // Unlike BuildBatchUpsertSql, the final SELECT must not be limited to the candidates'
+        // sequence numbers: a Create asking for fewer pseudonyms than are already stored still
+        // gets every one of them back, which is what keeps grow-to-N from truncating.
+        sql.Should().Contain("WHERE namespace_name = {0} AND original_value = {1}");
+        sql.Should().NotContain("JOIN input");
+        sql.Should().Contain("ORDER BY sequence_number");
+        parameters
+            .Should()
+            .BeEquivalentTo(
+                new object[] { "ns", "value1", "first", 0, "ns", "value1", "second", 1 },
+                o => o.WithStrictOrdering()
+            );
+    }
 }

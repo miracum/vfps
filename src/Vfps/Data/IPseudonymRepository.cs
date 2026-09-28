@@ -66,17 +66,26 @@ public interface IPseudonymRepository
     );
 
     /// <summary>
-    /// Inserts <paramref name="newSequenceCandidates"/> (the missing sequence numbers a multi-psn
-    /// Create call decided to add - see <see cref="AppServices.PseudonymAppService.CreateTrustedAsync(Namespace, string, long, CancellationToken)"/>)
-    /// iff they don't already exist, then returns the complete, up-to-date set of every
-    /// pseudonym stored for that (NamespaceName, OriginalValue) - not just the candidates just
-    /// inserted. That final fresh read is what makes this correct under a concurrent race: two
-    /// callers computing overlapping "missing" sets from a stale read and inserting at the same
-    /// time both end up seeing whatever actually got persisted, rather than each returning its
-    /// own possibly-incomplete candidate list.
+    /// Inserts each of <paramref name="candidates"/> - one per sequence number a Create call
+    /// wants to exist for a single original value in <paramref name="namespace"/> (see
+    /// <see cref="AppServices.PseudonymAppService.CreateTrustedAsync(Namespace, string, long, CancellationToken)"/>)
+    /// - iff that sequence number isn't stored yet, and returns every pseudonym stored for the
+    /// value, ordered by SequenceNumber - not just the candidates. On Postgres that is a single
+    /// round trip: the existence check is the ON CONFLICT itself, so callers don't read what's
+    /// stored first. Candidates that lose to an already-stored row are discarded in favor of the
+    /// stored one, which is what makes this correct under a concurrent race: callers inserting
+    /// overlapping sequence numbers at the same time all end up seeing whatever actually got
+    /// persisted. Takes the whole namespace rather than its name so a cache can tell it apart
+    /// from a namespace re-created under the same name.
     /// </summary>
+    /// <returns>
+    /// Every stored pseudonym for the value. Covers every candidate's sequence number unless a
+    /// concurrent writer racing the same key defeats every retry, which callers treat as a
+    /// failed upsert.
+    /// </returns>
     Task<IReadOnlyList<Pseudonym>> CreateSetIfNotExistAsync(
-        IReadOnlyList<Pseudonym> newSequenceCandidates,
+        Namespace @namespace,
+        IReadOnlyList<Pseudonym> candidates,
         CancellationToken cancellationToken
     );
 
