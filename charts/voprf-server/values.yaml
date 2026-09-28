@@ -6,7 +6,7 @@ replicaCount: 2
 image:
   registry: ghcr.io
   repository: miracum/vfps/voprf-server
-  tag: v1.20.3 # x-release-please-version
+  tag: v1.20.4 # x-release-please-version
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
