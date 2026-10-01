@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.20.5](https://github.com/miracum/vfps/compare/v1.20.4...v1.20.5) (2026-10-01)
+
+
+### Bug Fixes
+
+* minor translation improvements ([#372](https://github.com/miracum/vfps/issues/372)) ([e4206c4](https://github.com/miracum/vfps/commit/e4206c4fab43c8d23a96249e6bffd34313409a26))
+
 ## [1.20.4](https://github.com/miracum/vfps/compare/v1.20.3...v1.20.4) (2026-09-28)
 
 
