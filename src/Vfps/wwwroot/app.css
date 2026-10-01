@@ -118,3 +118,12 @@ body {
 .text-right {
   text-align: right;
 }
+
+/*
+ * The created/expires/last-used line under each token on the Access Tokens and Service Accounts
+ * pages. Wider between items than between wrapped lines, which no single bb:gap-* can say and the
+ * shipped bundle carries no gap-x/gap-y utilities for - see the note at the top of this file.
+ */
+.token-meta {
+  gap: 0.25rem 1rem; /* row, column */
+}

@@ -1,0 +1,41 @@
+@using Microsoft.Extensions.Options
+@using Vfps.Config
+@using Vfps.Data.Models
+@inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
+@inject IStringLocalizer<SharedResources> Localizer
+
+@*
+    A token's state as a single badge. Shared by the Access Tokens and Service Accounts pages,
+    which list the same rows for different owners and must never disagree about what they mean.
+
+    "Expiring soon" uses the same amber look as the CSV Jobs page's warnings rather than
+    BadgeVariant.Warning, whose colors aren't in the pre-built stylesheet - see wwwroot/app.css.
+*@
+
+@{
+    var now = DateTimeOffset.UtcNow;
+}
+
+@if (Token.RevokedAt is not null)
+{
+    <BbBadge Variant="BadgeVariant.Destructive">@Localizer["App.AccessTokens.StatusRevoked"]</BbBadge>
+}
+else if (!Token.IsActiveAt(now))
+{
+    <BbBadge Variant="BadgeVariant.Secondary">@Localizer["App.AccessTokens.StatusExpired"]</BbBadge>
+}
+else if (Token.IsExpiringSoonAt(now, AuthorizationConfigOptions.Value.AccessTokens.ExpiryWarningPeriod))
+{
+    <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
+        @Localizer["App.AccessTokens.StatusExpiringSoon"]
+    </BbBadge>
+}
+else
+{
+    <BbBadge Variant="BadgeVariant.Default">@Localizer["App.AccessTokens.StatusActive"]</BbBadge>
+}
+
+@code {
+    [Parameter, EditorRequired]
+    public required AccessToken Token { get; set; }
+}

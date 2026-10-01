@@ -31,6 +31,15 @@ public class AccessTokenConfig
     public TimeSpan MaximumLifetime { get; set; } = TimeSpan.FromDays(365);
 
     /// <summary>
+    /// How long before its expiry a token is flagged as expiring soon in the UI, so whoever owns
+    /// it has time to issue a replacement and roll it out. Capped per token at a quarter of its
+    /// own lifetime - see <see cref="Data.Models.AccessToken.IsExpiringSoonAt"/>. Set to zero to
+    /// never flag a token. Alerting on service-account tokens is the metrics backend's job, with
+    /// its own threshold: see <see cref="Metrics.ServiceAccountTokenExpiryMetricsBackgroundService"/>.
+    /// </summary>
+    public TimeSpan ExpiryWarningPeriod { get; set; } = TimeSpan.FromDays(14);
+
+    /// <summary>
     /// How often each replica writes back the "last used" timestamps it has accumulated. The
     /// authentication path itself only records them in memory (see
     /// <see cref="Authorization.IAccessTokenUsageTracker"/>), so this decides how stale the

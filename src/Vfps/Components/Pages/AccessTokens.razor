@@ -351,18 +351,6 @@
             ? Localizer["App.AccessTokens.Never"].Value
             : TimeZoneInfo.ConvertTime(timestamp.Value, _browserTimeZone).ToString("g");
 
-    private (string Label, BadgeVariant Variant) Status(AccessToken token)
-    {
-        if (token.RevokedAt is not null)
-        {
-            return (Localizer["App.AccessTokens.StatusRevoked"].Value, BadgeVariant.Destructive);
-        }
-
-        return token.ExpiresAt <= DateTimeOffset.UtcNow
-            ? (Localizer["App.AccessTokens.StatusExpired"].Value, BadgeVariant.Secondary)
-            : (Localizer["App.AccessTokens.StatusActive"].Value, BadgeVariant.Default);
-    }
-
     private string Owner(AccessToken token) =>
         token.TokenType == AccessTokenType.ServiceAccount
             ? token.ServiceAccountName ?? string.Empty
@@ -379,11 +367,10 @@
                 <div class="bb:space-y-2">
                     @foreach (var token in tokens)
                     {
-                        var status = Status(token);
                         <div class="bb:rounded-md bb:border bb:border-border bb:p-3">
                             <div class="bb:flex bb:flex-wrap bb:items-center bb:justify-between bb:gap-2">
                                 <div class="bb:flex bb:flex-wrap bb:items-center bb:gap-2">
-                                    <BbBadge Variant="@status.Variant">@status.Label</BbBadge>
+                                    <AccessTokenStatusBadge Token="token" />
                                     <span class="bb:text-sm bb:font-medium">@token.Name</span>
                                     @if (showOwner)
                                     {
@@ -418,7 +405,7 @@
                                     </BbButton>
                                 </div>
                             </div>
-                            <div class="bb:mt-2 bb:flex bb:flex-wrap bb:text-xs bb:text-muted-foreground">
+                            <div class="token-meta bb:mt-2 bb:flex bb:flex-wrap bb:text-xs bb:text-muted-foreground">
                                 <span>@Localizer["App.AccessTokens.ColumnCreated"]: @Format(token.CreatedAt)</span>
                                 <span>@Localizer["App.AccessTokens.ColumnExpires"]: @Format(token.ExpiresAt)</span>
                                 <span>@Localizer["App.AccessTokens.ColumnLastUsed"]: @Format(token.LastUsedAt)</span>

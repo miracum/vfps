@@ -1,0 +1,46 @@
+{{- if .Values.prometheusRule.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "vfps.fullname" . }}
+  {{- if .Values.prometheusRule.namespace }}
+  namespace: {{ .Values.prometheusRule.namespace }}
+  {{- end }}
+  labels:
+    {{- include "vfps.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+    {{- if .Values.prometheusRule.additionalLabels }}
+    {{- toYaml .Values.prometheusRule.additionalLabels | nindent 4 }}
+    {{- end }}
+spec:
+  groups:
+    - name: vfps-access-tokens
+      rules:
+        # The metric holds each token's expiry instant, so both alerts work out the days left
+        # themselves. max() because every replica reports the same values. Scoped to the release
+        # namespace so two installs in one cluster don't each alert on the other's tokens.
+        - alert: VfpsServiceAccountTokenExpiringSoon
+          expr: |
+            (
+              max by (namespace, service_account, token_id, token_name) (
+                vfps_service_account_token_expiration_timestamp_seconds{namespace="{{ .Release.Namespace }}"}
+              )
+              - time()
+            ) / 86400 < {{ .Values.prometheusRule.serviceAccountTokenExpiry.warningDays }} > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: {{`Service account {{ $labels.service_account }}'s token "{{ $labels.token_name }}" expires in {{ printf "%.0f" $value }} day(s).`}}
+            description: {{`Issue a new token for {{ $labels.service_account }} on the vfps Service accounts page, roll it out, then revoke {{ $labels.token_id }} - revoking it is what clears this alert.`}}
+        - alert: VfpsServiceAccountTokenExpired
+          expr: |
+            max by (namespace, service_account, token_id, token_name) (
+              vfps_service_account_token_expiration_timestamp_seconds{namespace="{{ .Release.Namespace }}"}
+            )
+            <= time()
+          labels:
+            severity: critical
+          annotations:
+            summary: {{`Service account {{ $labels.service_account }}'s token "{{ $labels.token_name }}" has expired.`}}
+            description: {{`vfps rejects {{ $labels.token_id }} now, so whatever uses it is failing to authenticate. Issue a new token for {{ $labels.service_account }} and roll it out, then revoke the expired one - revoking it is what clears this alert.`}}
+{{- end }}

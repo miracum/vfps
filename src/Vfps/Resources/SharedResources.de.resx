@@ -211,6 +211,9 @@
   <data name="App.AccessTokens.StatusExpired" xml:space="preserve">
     <value>Abgelaufen</value>
   </data>
+  <data name="App.AccessTokens.StatusExpiringSoon" xml:space="preserve">
+    <value>Läuft bald ab</value>
+  </data>
   <data name="App.AccessTokens.StatusRevoked" xml:space="preserve">
     <value>Widerrufen</value>
   </data>

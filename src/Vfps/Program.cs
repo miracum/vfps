@@ -357,6 +357,12 @@ builder.Services.AddSingleton<IServiceAccountRepository, ServiceAccountRepositor
 builder.Services.AddScoped<IAccessTokenAppService, AccessTokenAppService>();
 builder.Services.AddScoped<IServiceAccountAppService, ServiceAccountAppService>();
 
+// Only once tokens can actually be issued - with the feature off there is nothing to alert on.
+if (authConfig.IsEnabled && authConfig.AccessTokens.IsEnabled)
+{
+    builder.Services.AddHostedService<ServiceAccountTokenExpiryMetricsBackgroundService>();
+}
+
 if (authConfig.IsEnabled)
 {
     // Which of the two bearer handlers a request belongs to. Both credentials travel in the same
