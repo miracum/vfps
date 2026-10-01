@@ -1155,7 +1155,7 @@ All released container images are signed using [cosign](https://github.com/sigst
 <!-- x-release-please-start-version -->
 
 ```sh
-IMAGE=ghcr.io/miracum/vfps:v1.20.4
+IMAGE=ghcr.io/miracum/vfps:v1.20.5
 DIGEST=$(crane digest "${IMAGE}")
 IMAGE_DIGEST_PINNED="ghcr.io/miracum/vfps@${DIGEST}"
 IMAGE_TAG="${IMAGE#*:}"
