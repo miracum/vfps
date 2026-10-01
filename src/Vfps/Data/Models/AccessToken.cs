@@ -116,4 +116,23 @@ public class AccessToken : TracksCreationAndUpdates
 
     /// <summary>Whether the token is neither revoked nor expired at <paramref name="asOf"/>.</summary>
     public bool IsActiveAt(DateTimeOffset asOf) => RevokedAt is null && ExpiresAt > asOf;
+
+    /// <summary>
+    /// Whether the token is still active at <paramref name="asOf"/> but stops being so within
+    /// <paramref name="warningPeriod"/>, or within a quarter of its own lifetime if that is
+    /// shorter - otherwise a token issued for a week would be flagged from the moment it exists.
+    /// A zero or negative <paramref name="warningPeriod"/> never flags anything.
+    /// </summary>
+    public bool IsExpiringSoonAt(DateTimeOffset asOf, TimeSpan warningPeriod)
+    {
+        if (!IsActiveAt(asOf) || warningPeriod <= TimeSpan.Zero)
+        {
+            return false;
+        }
+
+        var quarterOfLifetime = (ExpiresAt - CreatedAt) / 4;
+        var threshold = warningPeriod < quarterOfLifetime ? warningPeriod : quarterOfLifetime;
+
+        return ExpiresAt - asOf <= threshold;
+    }
 }

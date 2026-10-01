@@ -187,6 +187,28 @@ Things worth knowing before switching this on:
 Deleting a service account deletes its tokens _and_ its access grants, so that an account later
 re-created under the same name doesn't silently inherit them.
 
+#### Noticing a token before it expires
+
+A token close to its expiry is marked **Expires soon** on the Access tokens and Service accounts
+pages, `Authorization__AccessTokens__ExpiryWarningPeriod` (14 days by default) ahead. That's enough
+for a personal token, since its owner is the one using it. A service-account token usually sits in
+a pipeline that nobody watches, so it is also exported as a metric to alert on:
+
+- **`vfps_service_account_token_expiration_timestamp_seconds`**, a gauge holding each unrevoked
+  service-account token's expiry as a Unix timestamp, labelled `service_account`, `token_id` and
+  `token_name`. An expired token stays reported until it is revoked or deleted, so an alert keeps
+  firing past the expiry instead of resolving the moment the token stops working. Revoking the old
+  token once its replacement is rolled out is what clears it. Every replica reports the same
+  values, so aggregate with `max()`.
+
+```promql
+# days left on each service-account token
+(max by (service_account, token_id, token_name) (vfps_service_account_token_expiration_timestamp_seconds) - time()) / 86400
+```
+
+The Helm chart ships this as two alerts, `VfpsServiceAccountTokenExpiringSoon` and
+`VfpsServiceAccountTokenExpired`, behind `prometheusRule.enabled`.
+
 ### CSV Processing
 
 Upload a CSV file to pseudonymize or de-pseudonymize one or more columns as a background job. Files are streamed directly to and from S3-compatible object storage.
@@ -650,6 +672,7 @@ Available configuration options which can be set as environment variables:
 | `Authorization__AccessTokens__IsEnabled`           | `bool`       | `false`             | Let vfps issue its own bearer credentials - self-service personal access tokens, and admin-managed service accounts - for clients that can't get a token from the identity provider. See [Access Tokens](#access-tokens). **Off by default**: a long-lived static credential is strictly more exposed than a short-lived IdP-issued one, so a deployment that requires every caller to come through the identity provider leaves this unset and the whole feature, UI included, stays invisible. Requires `Authorization__IsEnabled`.                                                                                                                                                               |
 | `Authorization__AccessTokens__DefaultLifetime`     | `TimeSpan`   | `"90.00:00:00"`     | Lifetime pre-filled when creating a token.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `Authorization__AccessTokens__MaximumLifetime`     | `TimeSpan`   | `"365.00:00:00"`    | The longest lifetime a token may be created with. Set to `"0"` to lift the cap - tokens still always expire, the creator just picks any date.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `Authorization__AccessTokens__ExpiryWarningPeriod` | `TimeSpan`   | `"14.00:00:00"`     | How long before its expiry a token is marked _Expires soon_ in the admin UI. Capped per token at a quarter of its lifetime, so a short-lived token isn't flagged from the moment it's created. Set to `"0"` to turn the marker off. Alerting on service-account tokens is configured separately - see [Access Tokens](#access-tokens).                                                                                                                                                                                                                                                                                                                                                              |
 | `Authorization__AccessTokens__UsageFlushInterval`  | `TimeSpan`   | `"0.00:01:00"`      | How often each replica writes back the "last used" timestamps it has accumulated. Authentication only records them in memory, so this decides how stale that column can be, not how much work a request does. Purely informational - nothing about authentication or authorization reads it.                                                                                                                                                                                                                                                                                                                                                                                                        |
 
 Per-namespace access is **not** configuration: it lives in the database and is managed from the

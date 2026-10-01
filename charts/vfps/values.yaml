@@ -101,6 +101,20 @@ serviceMonitor:
   # interval: 30s
   # scrapeTimeout: 10s
 
+prometheusRule:
+  # -- if enabled, creates a PrometheusRule with alerts for service-account access tokens that are
+  # about to expire or already have. Needs the metrics scraped, e.g. via `serviceMonitor.enabled`,
+  # and only ever fires once `Authorization__AccessTokens__IsEnabled` is on.
+  enabled: false
+  # -- additional labels to apply to the PrometheusRule object, e.g. `release: prometheus`
+  additionalLabels: {}
+  # namespace: monitoring
+  serviceAccountTokenExpiry:
+    # -- how many days before a service-account token expires `VfpsServiceAccountTokenExpiringSoon`
+    # starts firing. Once the token has expired, `VfpsServiceAccountTokenExpired` takes over. Both
+    # stay firing until the token is revoked or deleted, which is how a rotation clears them.
+    warningDays: 14
+
 # -- image pull secrets used by the main deployment container
 imagePullSecrets: []
 
