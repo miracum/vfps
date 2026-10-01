@@ -83,7 +83,7 @@
     <value>Autorisierung ist deaktiviert</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessDescription" xml:space="preserve">
-    <value>Wer in welchem vorhandenen Namespace was darf - die Vereinigung der auf ihn bezogenen Berechtigungen und derjenigen für alle Namespaces, genau so aufgelöst wie bei den Zugriffsprüfungen selbst. Administratoren haben immer Vollzugriff und werden hier nicht aufgeführt. Diese Seite ist schreibgeschützt: Berechtigungen werden je Namespace über "Zugriff konfigurieren" auf der Namespaces-Seite verwaltet.</value>
+    <value>Wer in welchem vorhandenen Namespace was darf - die Vereinigung der auf ihn bezogenen Berechtigungen und derjenigen für alle Namespaces, genau so aufgelöst wie bei den Zugriffsprüfungen selbst. Berechtigungen werden je Namespace über "Zugriff konfigurieren" auf der Namespaces-Seite verwaltet.</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessTitle" xml:space="preserve">
     <value>Effektiver Zugriff pro Namespace</value>
@@ -107,7 +107,7 @@
     <value>vfps-ns-example-read</value>
   </data>
   <data name="App.AccessControl.GranteeServiceAccountHelp" xml:space="preserve">
-    <value>Wird mit dem Dienstkonto abgeglichen, als das sich ein Zugriffstoken authentifiziert. Ein Dienstkonto ist niemals Administrator - es besitzt genau den hier erteilten Zugriff.</value>
+    <value>Wird mit dem Service Account abgeglichen, als der sich ein Zugriffstoken authentifiziert.</value>
   </data>
   <data name="App.AccessControl.GranteeType" xml:space="preserve">
     <value>Art</value>
@@ -119,16 +119,16 @@
     <value>Rolle</value>
   </data>
   <data name="App.AccessControl.GranteeTypeServiceAccount" xml:space="preserve">
-    <value>Dienstkonto</value>
+    <value>Service Account</value>
   </data>
   <data name="App.AccessControl.NoNamespacesExist" xml:space="preserve">
     <value>Es sind noch keine Namespaces vorhanden.</value>
   </data>
   <data name="App.AccessControl.NoServiceAccounts" xml:space="preserve">
-    <value>Es existieren noch keine Dienstkonten. Legen Sie zuerst eines auf der Seite Dienstkonten an.</value>
+    <value>Es existieren noch keine Service Accounts. Legen Sie zuerst einen auf der Seite Service Accounts an.</value>
   </data>
   <data name="App.AccessTokens.AllDescription" xml:space="preserve">
-    <value>Alle Token dieser Installation, persönliche wie Dienstkonto-Token. Für Administratoren sichtbar, damit ein kompromittiertes Token gefunden und widerrufen werden kann.</value>
+    <value>Alle Token dieser Installation, persönliche wie Service Account-Token.</value>
   </data>
   <data name="App.AccessTokens.AllTitle" xml:space="preserve">
     <value>Alle Token</value>
@@ -161,7 +161,7 @@
     <value>Fehler beim Zugriffstoken</value>
   </data>
   <data name="App.AccessTokens.FeatureDisabledDescription" xml:space="preserve">
-    <value>Setzen Sie {0} auf true, damit Benutzer persönliche Zugriffstoken und Administratoren Dienstkonten anlegen können. Bis dahin benötigt jeder API-Aufrufer ein Token vom Identity Provider.</value>
+    <value>Setzen Sie {0} auf true, damit Benutzer persönliche Zugriffstoken und Administratoren Service Accounts anlegen können. Bis dahin benötigt jeder API-Aufrufer ein Token vom Identity Provider.</value>
   </data>
   <data name="App.AccessTokens.FeatureDisabledTitle" xml:space="preserve">
     <value>Zugriffstoken sind deaktiviert</value>
@@ -218,7 +218,7 @@
     <value>Persönlich</value>
   </data>
   <data name="App.AccessTokens.TypeServiceAccount" xml:space="preserve">
-    <value>Dienstkonto</value>
+    <value>Service Account</value>
   </data>
   <data name="App.AccessTokens.UsageHint" xml:space="preserve">
     <value>Senden Sie es als {0} an die API, genau wie ein Token vom Identity Provider.</value>
@@ -575,7 +575,7 @@
     <value>Namespaces erstellen und Pseudonyme anzeigen.</value>
   </data>
   <data name="App.Home.Subtitle" xml:space="preserve">
-    <value>Ein sehr schneller und ressourceneffizienter Pseudonymisierungsdienst.</value>
+    <value>A very fast pseudonymization service.</value>
   </data>
   <data name="App.MainLayout.Email" xml:space="preserve">
     <value>E-Mail</value>
@@ -743,7 +743,7 @@
     <value>Pseudonyme</value>
   </data>
   <data name="App.Nav.ServiceAccounts" xml:space="preserve">
-    <value>Dienstkonten</value>
+    <value>Service Accounts</value>
   </data>
   <data name="App.NotFound.Description" xml:space="preserve">
     <value>Leider gibt es unter dieser Adresse nichts.</value>
@@ -824,13 +824,13 @@
     <value>Nach Pseudonym- oder Originalwert suchen</value>
   </data>
   <data name="App.ServiceAccounts.CreateAction" xml:space="preserve">
-    <value>Dienstkonto erstellen</value>
+    <value>Service Account erstellen</value>
   </data>
   <data name="App.ServiceAccounts.CreateDescription" xml:space="preserve">
-    <value>Ein Dienstkonto ist ein eigenständiges Prinzipal für Clients, die zu keiner Person gehören. Erteilen Sie ihm auf der Seite Namespaces Zugriff pro Namespace und stellen Sie ihm anschließend unten ein Token aus.</value>
+    <value>Ein Service Account ist ein eigenständiger Client, der zu keiner Person gehören. Erteilen Sie ihm auf der Seite Namespaces Zugriff pro Namespace und stellen Sie ihm anschließend unten ein Token aus.</value>
   </data>
   <data name="App.ServiceAccounts.CreateTitle" xml:space="preserve">
-    <value>Dienstkonto erstellen</value>
+    <value>Service Account erstellen</value>
   </data>
   <data name="App.ServiceAccounts.DeleteAction" xml:space="preserve">
     <value>Konto löschen</value>
@@ -845,7 +845,7 @@
     <value>Wofür dieses Konto gedacht ist</value>
   </data>
   <data name="App.ServiceAccounts.ErrorTitle" xml:space="preserve">
-    <value>Fehler beim Dienstkonto</value>
+    <value>Fehler beim Service Account</value>
   </data>
   <data name="App.ServiceAccounts.GrantsTitle" xml:space="preserve">
     <value>Zugriff</value>
@@ -860,7 +860,7 @@
     <value>Name</value>
   </data>
   <data name="App.ServiceAccounts.NoAccounts" xml:space="preserve">
-    <value>Noch keine Dienstkonten vorhanden.</value>
+    <value>Noch keine Service Accounts vorhanden.</value>
   </data>
   <data name="App.ServiceAccounts.NoDescription" xml:space="preserve">
     <value>Keine Beschreibung.</value>
