@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.21.0](https://github.com/miracum/vfps/compare/v1.20.5...v1.21.0) (2026-10-01)
+
+
+### Features
+
+* added token expiration metrics ([#374](https://github.com/miracum/vfps/issues/374)) ([ee86060](https://github.com/miracum/vfps/commit/ee86060773417858dd650844dccb37cf8fc58221))
+
 ## [1.20.5](https://github.com/miracum/vfps/compare/v1.20.4...v1.20.5) (2026-10-01)
 
 
