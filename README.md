@@ -1124,6 +1124,110 @@ Status code distribution:
   [OK]   100000 responses
 ```
 
+### Native PostgreSQL on Windows
+
+Running both vfps and PostgreSQL natively on Windows instead of in WSL2 and Docker increases the throughput on the same
+machine by 1.5x (durable WAL flushes) to 2.3x (PostgreSQL's Windows default), with P99 latencies below 10 ms in every configuration:
+
+```console
+OS=Windows 11 (10.0.26300.9457/26H2)
+12th Gen Intel Core i9-12900K, 1 CPU, 24 logical and 16 physical cores
+32GiB of DDR5 4800MHz RAM
+Samsung SSD 980 Pro 1TiB
+vfps and PostgreSQL 18.6 (Windows x64 binaries) running natively on the same machine.
+.NET SDK=10.0.401, ASP.NET Core Runtime=10.0.12
+vfps Release build (v1.21.0), ASPNETCORE_ENVIRONMENT=Production, Authorization__IsEnabled=false, MetricsPort=0
+ghz v0.121.0
+```
+
+| Setup                     | Namespace caching | Requests/sec  | P50          | P99          |
+| ------------------------- | ----------------- | ------------- | ------------ | ------------ |
+| WSL2 + Docker (see above) | off               | 6,586         | 6.69 ms      | 13.37 ms     |
+| WSL2 + Docker (see above) | on                | 7,955         | 5.82 ms      | 10.80 ms     |
+| Native, `fdatasync`       | on                | 11,787–11,986 | 3.81–3.85 ms | 8.80–9.03 ms |
+| Native, `open_datasync`   | off               | 15,396–15,431 | 2.35–2.36 ms | 5.17–5.18 ms |
+| Native, `open_datasync`   | on                | 17,389–18,284 | 1.88–2.02 ms | 4.58–4.72 ms |
+
+The native results are the range over two to three consecutive runs of the `ghz` command above, each after at least one
+warm-up run. The first run after starting vfps is noticeably slower (10,961 req/s and a P99 of 7.62 ms without namespace
+caching) while the .NET JIT is still optimizing the hot paths.
+
+> **Warning**
+> PostgreSQL on Windows defaults to `wal_sync_method = open_datasync`. On an SSD without power-loss protection, like the
+> Samsung 980 Pro used here, this only writes the WAL into the drive's volatile write cache: `pg_test_fsync` measures 24 µs
+> per 8 kB write with `open_datasync` versus 2.1 ms with `fdatasync`. A power failure can then lose pseudonyms that vfps
+> already returned to its clients. Set `wal_sync_method = fdatasync`, as in the configuration below, unless the drive has
+> power-loss protection or its write cache is disabled.
+
+Batching more commits per WAL flush with `commit_delay` does not help on Windows: the delay is rounded up to the Windows
+timer resolution (about 15.6 ms by default), and a `commit_delay` of 200 µs lowered the throughput to about 4,100 req/s
+with a median latency of 14 ms.
+
+#### PostgreSQL setup
+
+Initialize and start a cluster using the [PostgreSQL Windows x64 binaries](https://www.enterprisedb.com/download-postgresql-binaries)
+with their `bin` directory on the `PATH`, where `pwfile.txt` contains the superuser password (`postgres`):
+
+```powershell
+initdb -D pgdata -U postgres --pwfile=pwfile.txt --auth=scram-sha-256 -E UTF8 --locale=C
+Add-Content -Path pgdata/postgresql.conf -Value "include 'vfps-bench.conf'"
+pg_ctl -D pgdata -l pgdata/server.log start
+psql -h 127.0.0.1 -p 35432 -U postgres -c "CREATE DATABASE vfps;"
+```
+
+`pgdata/vfps-bench.conf` is tuned for the machine above:
+
+```ini
+listen_addresses = '127.0.0.1'
+port = 35432
+max_connections = 200
+
+# memory
+shared_buffers = 2GB
+effective_cache_size = 16GB
+work_mem = 16MB
+maintenance_work_mem = 512MB
+huge_pages = off
+
+# WAL / checkpoints: keep checkpoints out of the benchmark window
+wal_buffers = 64MB
+min_wal_size = 2GB
+max_wal_size = 16GB
+checkpoint_timeout = 30min
+checkpoint_completion_target = 0.9
+wal_writer_delay = 10ms
+# Windows defaults to open_datasync, which only reaches the SSD's volatile write cache.
+# fdatasync forces a real flush so acknowledged pseudonyms survive a power loss.
+wal_sync_method = fdatasync
+
+# planner (SSD, short OLTP queries)
+random_page_cost = 1.1
+jit = off
+```
+
+#### vfps setup
+
+```powershell
+dotnet publish src/Vfps/Vfps.csproj -c Release -o artifacts/vfps
+
+$env:ASPNETCORE_ENVIRONMENT = "Production"
+$env:Authorization__IsEnabled = "false"
+# applies the database migrations on startup instead of requiring a separate `migrate` run
+$env:ForceRunDatabaseMigrations = "true"
+$env:MetricsPort = "0"
+# "false" for the rows without namespace caching
+$env:Pseudonymization__Caching__Namespaces__IsEnabled = "true"
+$env:ConnectionStrings__PostgreSQL = "Host=127.0.0.1;Port=35432;Username=postgres;Password=postgres;Database=vfps;Timeout=60;Max Auto Prepare=5;Maximum Pool Size=50"
+
+# appsettings.json is resolved from the working directory
+cd artifacts/vfps
+dotnet Vfps.dll
+```
+
+`MetricsPort=0` disables the Prometheus exporter. It runs on its own `HttpListener` bound to `http://+:8082/metrics/`,
+which on Windows requires a URL reservation (`netsh http add urlacl url=http://+:8082/metrics/ user=<user>` from an
+elevated shell). Unlike a default deployment, these runs therefore did not export any metrics.
+
 ### Resource efficiency
 
 The sample deployment described in [compose.yaml](compose.yaml) sets strict resource
