@@ -80,7 +80,7 @@ builder.Services.AddHealthChecks().AddDbContextCheck<PseudonymContext>();
 // process gets to finish draining rather than being SIGKILLed exactly as it would have: with both
 // at 30s there is no margin at all. Raising this is only useful alongside a matching increase to
 // terminationGracePeriodSeconds (and, for gRPC and Blazor clients to actually be routed away
-// before the drain starts, a preStop hook) - see the deployment notes in the README.
+// before the drain starts, a preStop hook).
 builder.Services.Configure<HostOptions>(hostOptions =>
 {
     // Hosted services otherwise stop one after another in reverse registration order, and
@@ -587,8 +587,7 @@ if (authConfig.IsEnabled)
 // Server's own circuit handshake relies on it regardless of whether OIDC auth is on), so even an
 // auth-disabled deployment needs a shared key ring across replicas, not just a single-process
 // fallback. Persisted to Postgres (the same database vfps already depends on) rather than a
-// separate Redis instance - sticky sessions themselves are an ingress-level concern, documented in
-// the README, not implemented here.
+// separate Redis instance - sticky sessions themselves are an ingress-level concern.
 builder.Services.Configure<DataProtectionConfig>(
     builder.Configuration.GetSection("DataProtection")
 );
@@ -884,7 +883,7 @@ if (
             + "auth cookies and antiforgery tokens are stored as plaintext in the same database "
             + "as the pseudonyms, so anyone who can read that database can forge a session for "
             + "any user, including an admin. Configure a certificate to encrypt the key ring at "
-            + "rest - see the Data Protection section of the README."
+            + "rest."
     );
 }
 

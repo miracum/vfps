@@ -5,8 +5,8 @@ namespace Vfps.Config;
 ///
 /// The key ring holds the master keys that encrypt this deployment's auth cookies and antiforgery
 /// tokens, and it is persisted to the same PostgreSQL database as the pseudonyms themselves (see
-/// <see cref="Data.DataProtectionKeyContext"/> and the ConnectionStrings:PostgreSQL note in the
-/// README). Left unconfigured, those keys are stored as plaintext XML: anyone able to read the
+/// <see cref="Data.DataProtectionKeyContext"/>). Left unconfigured, those keys are stored as
+/// plaintext XML: anyone able to read the
 /// database can decrypt or forge cookies for any user, including an admin. Configuring a
 /// certificate here encrypts the key ring with it before it ever reaches a row.
 ///
