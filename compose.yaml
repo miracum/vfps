@@ -74,12 +74,35 @@ services:
 
   # Local S3-compatible object storage for testing S3__IsEnabled=true (CSV pseudonymization
   # jobs). Not started by default - requires the "s3" compose profile.
-  # Credentials/identities are fixed via tests/seaweedfs/s3.json (mirrors the previous
-  # MINIO_ROOT_USER/PASSWORD env vars, SeaweedFS has no equivalent env-based config).
   seaweedfs:
     image: docker.io/chrislusf/seaweedfs:4.45@sha256:fc9f76fa993ad69966ffeb2f65d0318fcae39c6f8e20cf68ef7b3a5cb97769e5
     restart: unless-stopped
-    command: server -dir=/data -s3 -s3.port=9000 -s3.config=/etc/seaweedfs/s3.json
+    command:
+      - mini
+      - -dir=/data
+      - -s3.port=9000
+      - -master.telemetry=false
+      - -webdav=false
+      - -admin.ui=false
+      - -s3.port.iceberg=0
+      - -s3.port.lance=0
+    environment:
+      # used as the S3 admin identity
+      AWS_ACCESS_KEY_ID: "vfps"
+      # kics-scan ignore-line
+      AWS_SECRET_ACCESS_KEY: "vfps-minio-secret"
+      # the bucket vfps uploads/downloads CSV job files to/from, created on startup if it
+      # doesn't exist yet
+      S3_BUCKET: "vfps-csv-jobs"
+    healthcheck:
+      # the S3 /healthz endpoint is ready before the bucket is created, so check the bucket instead
+      test:
+        - CMD-SHELL
+        - curl -sf -o /dev/null -I --aws-sigv4 "aws:amz:us-east-1:s3" --user "$$AWS_ACCESS_KEY_ID:$$AWS_SECRET_ACCESS_KEY" "http://localhost:9000/$$S3_BUCKET" # gitleaks:allow
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
     deploy:
       resources:
         limits:
@@ -89,27 +112,11 @@ services:
     security_opt:
       - "no-new-privileges:true"
     privileged: false
-    volumes:
-      - ./tests/seaweedfs/s3.json:/etc/seaweedfs/s3.json:ro
     profiles:
       - s3
     ports:
       - "127.0.0.1:9000:9000"
       - "127.0.0.1:8888:8888"
-
-  # One-shot sidecar that creates the "vfps-csv-jobs" bucket vfps uploads/downloads CSV job
-  # files to/from, then exits - SeaweedFS itself doesn't auto-create buckets.
-  seaweedfs-create-bucket:
-    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
-    depends_on:
-      - seaweedfs
-    entrypoint: >
-      /bin/sh -c "
-      until mc alias set local http://seaweedfs:9000 vfps vfps-minio-secret; do sleep 1; done;
-      mc mb --ignore-existing local/vfps-csv-jobs;
-      "
-    profiles:
-      - s3
 
   vfps:
     image: ghcr.io/miracum/vfps:${VFPS_IMAGE_TAG:-v1.21.0} # x-release-please-version
