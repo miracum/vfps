@@ -142,7 +142,7 @@ services:
     profiles:
       - test
     environment:
-      COMPlus_EnableDiagnostics: "0"
+      DOTNET_EnableDiagnostics: "0"
       ForceRunDatabaseMigrations: "true"
       ConnectionStrings__PostgreSQL: "Host=postgresql:5432;Database=vfps;Timeout=60;Max Auto Prepare=5;Application Name=vfps;Maximum Pool Size=50;"
       PGUSER: postgres

@@ -536,6 +536,166 @@ jobs:
           VFPS_IMAGE_TAG: ${{ needs.build.outputs.image-version }}
         run: dotnet test src/Vfps.IntegrationTests --configuration=Release
 
+  # Boots the two stacks publish-compose-stacks below ships as OCI artifacts, from this checkout and
+  # with the image this run built - so a change that breaks either one fails here instead of for
+  # the first person to run `docker compose -f oci://...` after a release.
+  test-compose-stacks:
+    name: test compose stacks
+    runs-on: ubuntu-26.04
+    needs:
+      - build
+    permissions:
+      contents: read
+    env:
+      VFPS_IMAGE_TAG: ${{ needs.build.outputs.image-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Download container image
+        if: ${{ github.event_name == 'pull_request' }}
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: ${{ needs.build.outputs.image-slug }}
+          path: /tmp
+
+      - name: Load image
+        if: ${{ github.event_name == 'pull_request' }}
+        run: |
+          docker load --input /tmp/image.tar
+          docker image ls -a
+
+      - name: Start the getting-started stack
+        run: docker compose -f deploy/compose/getting-started/compose.yaml up -d --wait
+
+      # the same two calls website/getting-started.md walks a new user through
+      - name: Create a namespace and a pseudonym via the REST API
+        run: |
+          curl --fail --retry 5 --retry-all-errors --connect-timeout 30 --max-time 60 --retry-delay 10 http://127.0.0.1:8080/healthz
+          curl --fail-with-body -X POST http://127.0.0.1:8080/v1/namespaces \
+            -H "Content-Type: application/json" \
+            -d '{"name": "test", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}'
+          curl --fail-with-body -X POST http://127.0.0.1:8080/v1/namespaces/test/pseudonyms \
+            -H "Content-Type: application/json" \
+            -d '{"originalValue": "to be pseudonymized"}'
+
+      - name: Print getting-started logs and stop the stack
+        if: always()
+        run: |
+          docker compose -f deploy/compose/getting-started/compose.yaml logs
+          docker compose -f deploy/compose/getting-started/compose.yaml down --volumes --remove-orphans
+
+      # No identity provider runs here, so this checks what can be checked without one: that the
+      # migrations service completes, vfps starts with authorization on, and refuses an
+      # unauthenticated call. The authority is only contacted on the first sign-in or bearer token.
+      - name: Start the production stack
+        env:
+          POSTGRES_PASSWORD: ci-only-not-a-secret
+          VFPS_OIDC_AUTHORITY: https://idp.example.invalid/realms/vfps
+          VFPS_OIDC_CLIENT_ID: vfps
+          VFPS_OIDC_CLIENT_SECRET: ci-only-not-a-secret
+          VFPS_OIDC_AUDIENCE: vfps
+          VFPS_ADMIN_ROLE: vfps-admin
+        run: docker compose -f deploy/compose/production/compose.yaml up -d --wait
+
+      - name: Check vfps is up and requires authentication
+        run: |
+          curl --fail --retry 5 --retry-all-errors --connect-timeout 30 --max-time 60 --retry-delay 10 http://127.0.0.1:8080/healthz
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' -X POST http://127.0.0.1:8080/v1/namespaces \
+            -H "Content-Type: application/json" \
+            -d '{"name": "test", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}')
+          echo "unauthenticated namespace create returned ${status}"
+          [ "${status}" = "401" ]
+
+      # by project name rather than -f: loading the file again would need the variables above
+      - name: Print production logs and stop the stack
+        if: always()
+        run: |
+          docker compose -p vfps-production logs
+          docker compose -p vfps-production down --volumes --remove-orphans
+
+  # Ships deploy/compose/*/compose.yaml as OCI artifacts, so `docker compose -f oci://...` runs a
+  # stack without cloning this repository. Each artifact is tagged exactly like the image it runs
+  # - vX.Y.Z for a release, pr-<number> for a same-repo pull request - and has every image pinned
+  # to a digest by --resolve-image-digests, which is why this waits for build to have pushed the
+  # image first. Forked pull requests are skipped: their image is never pushed, so there is
+  # nothing to pin.
+  publish-compose-stacks:
+    name: publish compose stack (${{ matrix.stack }})
+    runs-on: ubuntu-26.04
+    if: ${{ github.event_name == 'release' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
+    needs:
+      - build
+      - test-compose-stacks
+    strategy:
+      matrix:
+        stack:
+          - getting-started
+          - production
+    permissions:
+      contents: read
+      packages: write # to push the artifact and its signature/attestation to ghcr.io
+      id-token: write # for keyless cosign signing and OIDC-based attestations
+      attestations: write # to publish the build provenance attestation
+      artifact-metadata: write # required by actions/attest-build-provenance
+    env:
+      STACK: ${{ matrix.stack }}
+      ARTIFACT: ghcr.io/${{ github.repository }}/compose/${{ matrix.stack }}
+      TAG: ${{ needs.build.outputs.image-version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # --yes answers the prompt about the getting-started stack's literal default passwords, which
+      # are meant to be published. The production stack's required variables have to be set for
+      # Compose to load the file at all, but the artifact keeps the ${...} references rather than
+      # these placeholders: it carries compose.yaml as written, plus an image-digests.yaml overlay
+      # that only sets each service's image.
+      - name: Publish the compose stack
+        id: publish
+        env:
+          VFPS_IMAGE_TAG: ${{ needs.build.outputs.image-version }}
+          POSTGRES_PASSWORD: placeholder
+          VFPS_OIDC_AUTHORITY: placeholder
+          VFPS_OIDC_CLIENT_ID: placeholder
+          VFPS_OIDC_CLIENT_SECRET: placeholder
+          VFPS_OIDC_AUDIENCE: placeholder
+          VFPS_ADMIN_ROLE: placeholder
+        run: |
+          docker compose -f "deploy/compose/${STACK}/compose.yaml" publish \
+            --resolve-image-digests \
+            --yes \
+            "${ARTIFACT}:${TAG}"
+          digest=$(docker buildx imagetools inspect "${ARTIFACT}:${TAG}" --format '{{ .Manifest.Digest }}')
+          echo "Published ${ARTIFACT}:${TAG}@${digest}"
+          echo "digest=${digest}" >> "${GITHUB_OUTPUT}"
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+
+      - name: Sign the compose artifact
+        env:
+          DIGEST: ${{ steps.publish.outputs.digest }}
+        run: cosign sign --yes "${ARTIFACT}@${DIGEST}"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ env.ARTIFACT }}
+          subject-digest: ${{ steps.publish.outputs.digest }}
+          push-to-registry: true
+
   lint:
     uses: miracum/.github/.github/workflows/standard-lint.yaml@869881c224354c744e09f1d9bba9d47b5c698b44 # v1.26.0
     permissions:

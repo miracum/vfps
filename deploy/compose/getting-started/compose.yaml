@@ -1,0 +1,85 @@
+# The quickest way to try vfps: PostgreSQL and vfps, nothing else, and nothing to clone. CI
+# publishes this file as an OCI artifact next to the image it runs, so it starts with
+#
+#   docker compose -f oci://ghcr.io/miracum/vfps/compose/getting-started:<version> up
+#
+# Not a deployment. The database password is a well-known default, the data lives in an anonymous
+# volume, and authentication is off - anyone who can reach the ports can create and read every
+# pseudonym, which is why both are bound to 127.0.0.1. ../production/compose.yaml is the stack meant
+# to keep data.
+#
+# The artifact holds this file and nothing else, so it has to stay self-contained: no bind mounts
+# (Compose publishes the mount declaration, not the file behind it) and no build section. Image
+# tags are pinned to digests at publish time by an overlay `docker compose publish
+# --resolve-image-digests` adds, which also means VFPS_IMAGE_TAG has no effect on the published
+# artifact - it exists for CI, to run a pull request's own image from a checkout.
+name: vfps-getting-started
+
+services:
+  postgresql:
+    image: docker.io/library/postgres:18.4@sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 1g
+    ipc: private
+    security_opt:
+      - "no-new-privileges:true"
+    privileged: false
+    environment:
+      # kics-scan ignore-line
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: vfps
+    healthcheck:
+      # over TCP rather than the default Unix socket: while the image initializes a new data
+      # directory it runs a temporary server that listens on the socket only, which would pass a
+      # socket check just before it is shut down again
+      test:
+        - CMD
+        - pg_isready
+        - --host=127.0.0.1
+        - --username=postgres
+        - --dbname=vfps
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 5s
+
+  vfps:
+    image: ghcr.io/miracum/vfps:${VFPS_IMAGE_TAG:-v1.22.1} # x-release-please-version
+    restart: unless-stopped
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    # more headroom than compose.yaml's 128m at the repository root: someone trying vfps out is
+    # likely to spend their time in the admin UI, which needs more than the API does - see
+    # compose.test.yaml for the measurements
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+        reservations:
+          memory: 128m
+    ipc: none
+    cap_drop:
+      - ALL
+    read_only: true
+    privileged: false
+    security_opt:
+      - "no-new-privileges:true"
+    environment:
+      DOTNET_EnableDiagnostics: "0"
+      # fine for a single replica, which is all this stack ever runs
+      ForceRunDatabaseMigrations: "true"
+      ConnectionStrings__PostgreSQL: "Host=postgresql:5432;Database=vfps;Timeout=60;Max Auto Prepare=5;Application Name=vfps;Maximum Pool Size=50;"
+      PGUSER: postgres
+      # kics-scan ignore-line
+      PGPASSWORD: postgres
+    ports:
+      # REST API, admin UI and gRPC over HTTP/1.1, HTTP/2 and HTTP/3
+      - "127.0.0.1:8080:8080"
+      # HTTP/2-only for plaintext gRPC
+      - "127.0.0.1:8081:8081"

@@ -35,6 +35,26 @@
         },
         {
           "type": "generic",
+          "path": "deploy/compose/getting-started/compose.yaml"
+        },
+        {
+          "type": "generic",
+          "path": "deploy/compose/production/compose.yaml"
+        },
+        {
+          "type": "generic",
+          "path": "README.md"
+        },
+        {
+          "type": "generic",
+          "path": "website/getting-started.md"
+        },
+        {
+          "type": "generic",
+          "path": "website/deployment/compose.md"
+        },
+        {
+          "type": "generic",
           "path": "website/security.md"
         },
         {

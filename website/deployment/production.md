@@ -10,6 +10,8 @@ helm install --create-namespace vfps oci://ghcr.io/miracum/vfps/charts/vfps -n v
 The [VOPRF](../voprf.md) key holder has a chart of its own,
 [charts/voprf-server](https://github.com/miracum/vfps/tree/master/charts/voprf-server).
 
+For a single host without Kubernetes, see [Docker Compose](compose.md).
+
 ## Architecture
 
 A highly available deployment, with the admin UI, the API and CSV jobs separated, and the database

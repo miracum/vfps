@@ -30,6 +30,7 @@ nav = [
   ] },
   { "Operations" = [
     { "Production deployment" = "deployment/production.md" },
+    { "Compose" = "deployment/compose.md" },
     { "PostgreSQL TLS" = "deployment/postgresql-tls.md" },
     { "Data Protection key ring" = "deployment/data-protection.md" },
     { "Configuration reference" = "configuration.md" },
