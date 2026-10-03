@@ -1,0 +1,83 @@
+/*
+ * Colors follow the admin UI's "Midnight" theme (src/Vfps/wwwroot/css/theme-midnight.css), so
+ * the documentation and the application read as the same product.
+ */
+
+/* The theme's variable names use BEM-style "--modifier" suffixes, which aren't ours to rename. */
+/* stylelint-disable custom-property-pattern */
+:root > * {
+  --md-primary-fg-color: oklch(47.21% 0.0927 237.7893deg);
+  --md-primary-fg-color--light: oklch(56% 0.09 237deg);
+  --md-primary-fg-color--dark: oklch(38.18% 0.0757 237.4085deg);
+  --md-primary-bg-color: oklch(100% 0 0deg);
+  --md-primary-bg-color--light: oklch(100% 0 0deg / 70%);
+  --md-accent-fg-color: oklch(50.51% 0.0989 237.3787deg);
+  --md-accent-fg-color--transparent: oklch(50.51% 0.0989 237.3787deg / 10%);
+  --md-typeset-a-color: oklch(47.21% 0.0927 237.7893deg);
+}
+
+/*
+ * Dark scheme. color-scheme is what the logos' own prefers-color-scheme rule follows, so setting
+ * it here makes them switch with the theme toggle rather than only with the OS setting.
+ */
+[data-md-color-scheme="default"] {
+  color-scheme: light;
+}
+
+[data-md-color-scheme="slate"] {
+  color-scheme: dark;
+
+  --md-default-bg-color: oklch(18.84% 0.0128 248.5103deg);
+  --md-primary-fg-color: oklch(73.13% 0.0733 235.1459deg);
+  --md-primary-fg-color--light: oklch(80% 0.06 235deg);
+  --md-primary-fg-color--dark: oklch(62% 0.08 236deg);
+  --md-primary-bg-color: oklch(18.84% 0.0128 248.5103deg);
+  --md-accent-fg-color: oklch(83.3% 0.0499 230.3705deg);
+  --md-accent-fg-color--transparent: oklch(73.13% 0.0733 235.1459deg / 10%);
+  --md-typeset-a-color: oklch(73.13% 0.0733 235.1459deg);
+}
+
+/* Landing page hero */
+.vfps-visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.vfps-hero {
+  text-align: center;
+  padding: 1.5rem 0 1rem;
+}
+
+.vfps-hero img {
+  width: 100%;
+  max-width: 16rem;
+}
+
+.vfps-hero .vfps-tagline {
+  font-size: 1.25rem;
+  margin: 1rem auto 1.5rem;
+  max-width: 36rem;
+}
+
+.vfps-hero .md-button {
+  margin: 0.25rem;
+}
+
+.vfps-stats {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 2rem;
+  margin: 2rem 0;
+  text-align: center;
+}
+
+.vfps-stats strong {
+  display: block;
+  font-size: 1.6rem;
+  color: var(--md-typeset-a-color);
+}
