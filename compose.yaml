@@ -24,7 +24,7 @@ services:
   # Tracing:Otlp:Endpoint points at, not a proprietary Jaeger exporter.
   # https://www.jaegertracing.io/docs/2.19/getting-started/
   jaeger:
-    image: docker.io/jaegertracing/jaeger:2.20.0@sha256:46a886260e04002d8f45e213fc39063fa11a50446048fdaa64786fc0840cb9f8
+    image: docker.io/jaegertracing/jaeger:2.21.0@sha256:3d0ac795ff98aa04d1be04311d2dac6c25b4bfc8322dc02e53bc5b170c5018c3
     restart: unless-stopped
     deploy:
       resources:
@@ -49,7 +49,7 @@ services:
   # reader/reader (realm role vfps-ns-development-read). Not started by default - requires the
   # "keycloak" compose profile.
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7@sha256:37dbaf6f0722c9ec246335f36e1ef8b2e6cb960f7c27e0d8c615121a3d475a85
+    image: quay.io/keycloak/keycloak:26.8@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc
     restart: unless-stopped
     command: start-dev --import-realm
     deploy:
@@ -75,7 +75,7 @@ services:
   # Local S3-compatible object storage for testing S3__IsEnabled=true (CSV pseudonymization
   # jobs). Not started by default - requires the "s3" compose profile.
   seaweedfs:
-    image: docker.io/chrislusf/seaweedfs:4.45@sha256:fc9f76fa993ad69966ffeb2f65d0318fcae39c6f8e20cf68ef7b3a5cb97769e5
+    image: docker.io/chrislusf/seaweedfs:4.47@sha256:ce9e796f1fe6f06968f4c04bdaf8f678dad9c8acdfef3d244133d71bfa6bf882
     restart: unless-stopped
     command:
       - mini
