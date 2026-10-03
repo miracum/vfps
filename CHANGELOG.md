@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.22.1](https://github.com/miracum/vfps/compare/v1.22.0...v1.22.1) (2026-10-03)
+
+
+### Documentation
+
+* added diagram showing a HA setup ([#385](https://github.com/miracum/vfps/issues/385)) ([1b9af43](https://github.com/miracum/vfps/commit/1b9af4318a7f1f7cd06eb1140c624a463459cfab))
+
+
+### Miscellaneous Chores
+
+* **deps:** update all digest updates ([#388](https://github.com/miracum/vfps/issues/388)) ([ea000a4](https://github.com/miracum/vfps/commit/ea000a4e64c1d76d0d2bf8e67d2fd94d0ae5f87d))
+* **deps:** update all non-major dependencies ([#390](https://github.com/miracum/vfps/issues/390)) ([1ef6bcd](https://github.com/miracum/vfps/commit/1ef6bcdb7677137e164c1386d232ccf254394712))
+* **deps:** update dotnet sdk and runtime ([#389](https://github.com/miracum/vfps/issues/389)) ([7efd95c](https://github.com/miracum/vfps/commit/7efd95c56c1a45f5dd2296626a8e6b57acb81922))
+
+
+### CI/CD
+
+* fix chaos test and ignore vfps images in renovate ([#387](https://github.com/miracum/vfps/issues/387)) ([6b93d82](https://github.com/miracum/vfps/commit/6b93d8294b061175f5a583c07b645e69c9a51a25))
+
 ## [1.22.0](https://github.com/miracum/vfps/compare/v1.21.0...v1.22.0) (2026-10-03)
 
 
