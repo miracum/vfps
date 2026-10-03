@@ -1269,6 +1269,40 @@ Status code distribution:
   [OK]   100000 responses
 ```
 
+#### Native on Windows
+
+Applying the same limits natively on Windows, with PostgreSQL set up as in [Native PostgreSQL on Windows](#native-postgresql-on-windows)
+(durable `fdatasync`, not resource-limited), more than doubles the throughput and cuts the P99 latency to about a quarter:
+
+| CPU limit                              | Namespace caching | Requests/sec | P50            | P99              |
+| -------------------------------------- | ----------------- | ------------ | -------------- | ---------------- |
+| WSL2 + Docker, `cpus: "1"` (see above) | off               | 1,184        | 29.68 ms       | 112.61 ms        |
+| Native, pinned to 1 logical CPU        | off               | 2,808–2,825  | 15.92–16.04 ms | 30.25–31.09 ms   |
+| Native, pinned to 1 logical CPU        | on                | 4,564–4,755  | 9.63–9.82 ms   | 18.04–22.32 ms   |
+| Native, CPU rate hard cap              | off               | 1,780–2,159  | 8.10–8.99 ms   | 427.41–438.18 ms |
+
+vfps runs inside a [Job Object](https://learn.microsoft.com/en-us/windows/win32/procthread/job-objects), the Windows
+equivalent of a cgroup, with a 128 MiB job memory limit and either an affinity to a single logical CPU (like
+`docker run --cpuset-cpus`) or a hard CPU rate cap of 4.16% of the machine, i.e. 0.998 of its 24 logical CPUs (like
+`cpus: "1"`). The process has to be created suspended and assigned to the job before it is resumed, so the .NET runtime
+sees the limits during startup. It then behaves as in a container: `Environment.ProcessorCount` is 1, Server GC falls
+back to workstation GC, and the GC heap hard limit is 96 MiB (75% of 128 MiB). A cap of 4.17%, just over one CPU, would
+already make .NET round up to 2 processors. Peak committed memory was 98–99 MiB in every run, and all requests succeeded. The environment is the same
+as for the unconstrained native runs, plus `DOTNET_EnableDiagnostics=0` to mirror [compose.yaml](compose.yaml).
+
+The results are ranges over two consecutive runs once the throughput had stabilized. On a single CPU, the background
+JIT competes with request processing, so the first 100,000 to 200,000 requests after startup are noticeably slower
+(2,118 req/s and a P99 of 61.83 ms when pinned without namespace caching).
+
+Pinning to a single CPU gives the more useful numbers on Windows. Windows enforces the CPU rate cap over windows of about
+600 ms: vfps processes requests on several cores for about 150 ms, exhausts its budget, and is then suspended entirely
+for about 450 ms, which causes the P99 latency of over 400 ms. Linux enforces the CFS quota behind `cpus: "1"` over 100 ms
+periods instead.
+
+Two more differences from the WSL2 run: the job memory limit only counts committed private memory, while the cgroup
+limit behind `memory: 128m` also counts the page cache, and the hyperthread sibling of the logical CPU vfps was pinned to
+remained available to `ghz` and PostgreSQL.
+
 ## Image signature and provenance verification
 
 Prerequisites:
