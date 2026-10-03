@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1790892429399,
+  "lastUpdate": 1790987214599,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -12594,6 +12594,66 @@ window.BENCHMARK_DATA = {
             "value": 924.1011122976031,
             "unit": "ns",
             "range": "± 1.0550722620613955"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "8c22f001d49dc7e6d1f16267bdc26a4e772a7a68",
+          "message": "docs: added documentation site (#378)\n\n* chore: get rid od minio\n\n* drop docs links in code\n\n* docs: added docs site\n\n* light/dark mode",
+          "timestamp": "2026-10-03T02:24:01+02:00",
+          "tree_id": "5bc5388ef13111f7792fd5e7e425b491a974b8de",
+          "url": "https://github.com/miracum/vfps/commit/8c22f001d49dc7e6d1f16267bdc26a4e772a7a68"
+        },
+        "date": 1790987213925,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 580.2131064278739,
+            "unit": "ns",
+            "range": "± 7.032829377169536"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 400.36720571517947,
+            "unit": "ns",
+            "range": "± 1.7345495745741317"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 431.27231918970745,
+            "unit": "ns",
+            "range": "± 1.286250928116399"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 523.6323005131313,
+            "unit": "ns",
+            "range": "± 1.0930120214118249"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 620.9659216063363,
+            "unit": "ns",
+            "range": "± 1.3026555485679734"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 590.8268360137939,
+            "unit": "ns",
+            "range": "± 1.616112130729736"
           }
         ]
       }
