@@ -1,9 +1,5 @@
 name: docs
 
-# Builds the documentation site (zensical.toml, website/) on every pull request touching it, and
-# publishes it to https://miracum.github.io/vfps/ on each release - so the site describes the
-# version people can actually run, not unreleased work on master. Run it by hand to publish a
-# documentation-only fix between releases.
 on:
   pull_request:
     branches: [master]
@@ -15,7 +11,7 @@ on:
       - .github/workflows/docs.yaml
   release:
     types: [published]
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -53,7 +49,7 @@ jobs:
 
   deploy:
     name: deploy
-    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+    if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
     needs: build
     runs-on: ubuntu-26.04
     permissions:
