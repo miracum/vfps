@@ -1,0 +1,123 @@
+# Documentation site, published to https://miracum.github.io/vfps/ by .github/workflows/docs.yaml.
+# Preview locally with `uv run zensical serve`.
+#
+# The site's sources live in website/ rather than docs/: docs/ holds internal design and
+# working notes that are referenced from code, and Zensical has no way to exclude part of its
+# docs_dir from the build.
+
+[project]
+site_name = "vfps"
+site_url = "https://miracum.github.io/vfps/"
+site_description = "A very fast and resource-efficient pseudonymization service."
+site_author = "The Vfps developers"
+copyright = "Copyright &copy; The Vfps developers. Licensed under the Apache License 2.0."
+
+repo_url = "https://github.com/miracum/vfps"
+repo_name = "miracum/vfps"
+edit_uri = "edit/master/website/"
+
+docs_dir = "website"
+
+nav = [
+  { "Home" = "index.md" },
+  { "Getting started" = "getting-started.md" },
+  { "Guides" = [
+    { "Namespaces" = "namespaces.md" },
+    { "VOPRF pseudonyms" = "voprf.md" },
+    { "Admin UI" = "admin-ui.md" },
+    { "Access control" = "access-control.md" },
+    { "CSV jobs" = "csv-jobs.md" },
+  ] },
+  { "Operations" = [
+    { "Production deployment" = "deployment/production.md" },
+    { "PostgreSQL TLS" = "deployment/postgresql-tls.md" },
+    { "Data Protection key ring" = "deployment/data-protection.md" },
+    { "Configuration reference" = "configuration.md" },
+    { "Observability" = "observability.md" },
+  ] },
+  { "Performance" = "benchmarks.md" },
+  { "Security" = "security.md" },
+]
+
+extra_css = ["assets/extra.css"]
+
+[project.theme]
+language = "en"
+logo = "assets/logo.svg"
+favicon = "assets/logo.svg"
+features = [
+  "announce.dismiss",
+  "content.action.edit",
+  "content.code.annotate",
+  "content.code.copy",
+  "content.code.select",
+  "content.footnote.tooltips",
+  "content.tabs.link",
+  "content.tooltips",
+  "navigation.footer",
+  "navigation.indexes",
+  "navigation.instant",
+  "navigation.instant.prefetch",
+  "navigation.path",
+  "navigation.sections",
+  "navigation.top",
+  "navigation.tracking",
+  "search.highlight",
+  "toc.follow",
+]
+
+# "custom" picks up the colors defined in assets/extra.css, which match the admin UI's theme.
+[[project.theme.palette]]
+media = "(prefers-color-scheme)"
+toggle.icon = "lucide/sun-moon"
+toggle.name = "Switch to light mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: light)"
+scheme = "default"
+primary = "custom"
+accent = "custom"
+toggle.icon = "lucide/sun"
+toggle.name = "Switch to dark mode"
+
+[[project.theme.palette]]
+media = "(prefers-color-scheme: dark)"
+scheme = "slate"
+primary = "custom"
+accent = "custom"
+toggle.icon = "lucide/moon"
+toggle.name = "Switch to system preference"
+
+[[project.extra.social]]
+icon = "fontawesome/brands/github"
+link = "https://github.com/miracum/vfps"
+
+[project.markdown_extensions]
+abbr = {}
+admonition = {}
+attr_list = {}
+def_list = {}
+footnotes = {}
+md_in_html = {}
+tables = {}
+toc.permalink = true
+pymdownx.betterem = {}
+pymdownx.caret = {}
+pymdownx.details = {}
+pymdownx.emoji.emoji_generator = "zensical.extensions.emoji.to_svg"
+pymdownx.emoji.emoji_index = "zensical.extensions.emoji.twemoji"
+pymdownx.highlight.anchor_linenums = true
+pymdownx.highlight.line_spans = "__span"
+pymdownx.highlight.pygments_lang_class = true
+pymdownx.inlinehilite = {}
+pymdownx.keys = {}
+pymdownx.magiclink = {}
+pymdownx.mark = {}
+pymdownx.smartsymbols = {}
+pymdownx.superfences.custom_fences = [
+  { name = "mermaid", class = "mermaid", format = "pymdownx.superfences.fence_code_format" },
+]
+pymdownx.tabbed.alternate_style = true
+pymdownx.tabbed.combine_header_slug = true
+pymdownx.tasklist.custom_checkbox = true
+pymdownx.tilde = {}

@@ -1,0 +1,105 @@
+name: docs
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - website/**
+      - zensical.toml
+      - pyproject.toml
+      - uv.lock
+      - .github/workflows/docs.yaml
+  release:
+    types: [published]
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          # this workflow publishes on release, so it must not restore anything a pull request
+          # run could have written
+          enable-cache: false
+
+      # --strict fails the build on broken links between pages.
+      - name: Build site
+        run: uv run --locked zensical build --strict
+
+      - name: Upload site
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: site
+          path: site/
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    name: deploy
+    if: ${{ github.event_name == 'release' || github.event_name == 'workflow_dispatch' }}
+    needs: build
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+    concurrency:
+      group: docs-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Download site
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: site
+          path: site
+
+      # GitHub Pages serves the gh-pages branch, which also holds the benchmark history in
+      # dev/bench/ that benchmarks.yaml commits there on every push to master. Everything else on
+      # the branch is replaced by the freshly built site.
+      - name: Publish to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          git clone --depth=1 --branch=gh-pages \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" gh-pages
+          cd gh-pages
+
+          git rm -r -q --ignore-unmatch -- . ':(exclude)dev/bench'
+          cp -a ../site/. .
+          # serve the files as they are rather than running them through Jekyll
+          touch .nojekyll
+          git add -A
+
+          if git diff --cached --quiet; then
+            echo "The published site is already up to date."
+            exit 0
+          fi
+
+          git -c user.name="github-actions[bot]" \
+            -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+            commit -q -m "docs: publish site for ${SOURCE_SHA}"
+
+          # The benchmark workflow may have pushed in the meantime. Its commits only ever touch
+          # dev/bench/, which this one leaves alone, so rebasing onto them can't conflict.
+          for attempt in 1 2 3; do
+            if git push origin HEAD:gh-pages; then
+              exit 0
+            fi
+            echo "Push attempt ${attempt} was rejected, rebasing onto the current gh-pages."
+            git pull -q --rebase origin gh-pages
+          done
+          exit 1

@@ -17,7 +17,7 @@
             // whenever IsEnabled=false, since no authentication scheme is registered in that
             // case. AuthorizeView has no such endpoint-level side effect, so this @if is the only
             // thing that actually decides whether login is required, matching the "off by
-            // default, fully open" behavior documented in the README.
+            // default, fully open".
             <LayoutView Layout="typeof(MainLayout)">
                 <AuthorizeView>
                     <Authorized>

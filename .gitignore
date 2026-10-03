@@ -413,3 +413,7 @@ charts/*/charts/
 
 # HA chaos test artifacts (tests/chaos/ha/run.sh)
 ha-chaos-artifacts/
+
+# documentation site build output and its Python environment (zensical.toml, pyproject.toml)
+/site/
+/.venv/
