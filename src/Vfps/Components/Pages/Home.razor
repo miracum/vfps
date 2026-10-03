@@ -15,12 +15,10 @@
 <PageTitle>Vfps</PageTitle>
 
 <div class="bb:mx-auto bb:space-y-6">
-    <div>
-        <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">Vfps</h1>
-        <p class="bb:text-muted-foreground">
-            @Localizer["App.Home.Subtitle"]
-        </p>
-    </div>
+    @* Visually hidden rather than left out: the dashboard needs no title on screen, but a page
+       without an h1 has no top-level heading for a screen reader to land on - and nothing for
+       Routes.razor's FocusOnNavigate to move focus to after a navigation. *@
+    <h1 class="bb:sr-only">Vfps</h1>
 
     @if (Summary is { } summary)
     {

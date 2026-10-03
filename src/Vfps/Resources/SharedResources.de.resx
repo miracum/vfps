@@ -631,9 +631,6 @@
   <data name="App.Home.RecentJobsTitle" xml:space="preserve">
     <value>Letzte CSV-Jobs</value>
   </data>
-  <data name="App.Home.Subtitle" xml:space="preserve">
-    <value>A very fast pseudonymization service.</value>
-  </data>
   <data name="App.Home.ViewAll" xml:space="preserve">
     <value>Alle anzeigen</value>
   </data>
