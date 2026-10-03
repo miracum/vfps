@@ -1,7 +1,15 @@
 @page "/"
+@using Humanizer
+@using Microsoft.Extensions.DependencyInjection
 @using Microsoft.Extensions.Options
 @using Vfps.Config
+@using Vfps.Data.Models
 @inject IOptions<S3Config> S3ConfigOptions
+@inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
+@inject IServiceProvider ServiceProvider
+@inject INamespaceAppService NamespaceAppService
+@inject IAccessTokenAppService AccessTokenAppService
+@inject INamespacePermissionChecker PermissionChecker
 @inject IStringLocalizer<SharedResources> Localizer
 
 <PageTitle>Vfps</PageTitle>
@@ -14,42 +22,484 @@
         </p>
     </div>
 
-    <div class="bb:grid bb:gap-4 bb:sm:grid-cols-2">
-        <BbCard>
-            <BbCardHeader>
-                <div class="bb:flex bb:items-center bb:gap-2">
-                    <LucideIcon Name="database" Size="18" Class="bb:text-primary" />
-                    <BbCardTitle>@Localizer["App.Nav.Namespaces"]</BbCardTitle>
-                </div>
-                <BbCardDescription>
-                    @Localizer["App.Home.NamespacesDescription"]
-                </BbCardDescription>
-            </BbCardHeader>
-            <BbCardFooter>
-                <BbButton Href="/ui/namespaces" Variant="ButtonVariant.Outline">
-                    @Localizer["App.Common.Open"]
-                </BbButton>
-            </BbCardFooter>
-        </BbCard>
+    @if (Summary is { } summary)
+    {
+        var now = DateTimeOffset.UtcNow;
 
-        @if (S3ConfigOptions.Value.IsEnabled)
+        <div class="bb:grid bb:grid-cols-1 bb:gap-4 @StatGridClass(summary)">
+            <HomeStatTile
+                Label="@Localizer["App.Nav.Namespaces"]"
+                Value="@summary.NamespaceCount.ToString("N0")"
+                Icon="database"
+                Href="/ui/namespaces"
+                TestId="stat-namespaces"
+            />
+            <HomeStatTile
+                Label="@Localizer["App.Nav.Pseudonyms"]"
+                Value="@(summary.PseudonymTotal?.ToString("N0") ?? "—")"
+                Icon="fingerprint-pattern"
+                Href="/ui/namespaces"
+                Caption="@PseudonymsCaption(summary, now)"
+                TestId="stat-pseudonyms"
+            />
+            @if (summary.RecentJobs is not null)
+            {
+                <HomeStatTile
+                    Label="@Localizer["App.Home.ActiveJobsStat"]"
+                    Value="@summary.ActiveJobCount.ToString("N0")"
+                    Icon="file-spreadsheet"
+                    Href="/ui/csv-jobs"
+                    Caption="@Localizer["App.Home.ActiveJobsCaption"]"
+                    TestId="stat-csv-jobs"
+                />
+            }
+            @if (summary.ActiveTokenCount is { } activeTokenCount)
+            {
+                <HomeStatTile
+                    Label="@Localizer["App.Home.ActiveTokensStat"]"
+                    Value="@activeTokenCount.ToString("N0")"
+                    Icon="key-round"
+                    Href="/ui/access-tokens"
+                    Caption="@(summary.ExpiringTokenCount > 0
+                        ? Localizer["App.Home.ExpiringTokensCaption", summary.ExpiringTokenCount]
+                        : Localizer["App.Home.ActiveTokensCaption"])"
+                    TestId="stat-access-tokens"
+                />
+            }
+        </div>
+
+        @if (summary.Attention.Count > 0)
         {
-            <BbCard>
-                <BbCardHeader>
-                    <div class="bb:flex bb:items-center bb:gap-2">
-                        <LucideIcon Name="file-spreadsheet" Size="18" Class="bb:text-primary" />
-                        <BbCardTitle>@Localizer["App.Nav.CsvProcessing"]</BbCardTitle>
-                    </div>
-                    <BbCardDescription>
-                        @Localizer["App.Home.CsvProcessingDescription"]
-                    </BbCardDescription>
-                </BbCardHeader>
-                <BbCardFooter>
-                    <BbButton Href="/ui/csv-jobs" Variant="ButtonVariant.Outline">
-                        @Localizer["App.Common.Open"]
-                    </BbButton>
-                </BbCardFooter>
-            </BbCard>
+            <BbAlert Variant="AlertVariant.Warning" data-testid="attention">
+                <Icon>
+                    <LucideIcon Name="triangle-alert" Size="16" />
+                </Icon>
+                <ChildContent>
+                    <BbAlertTitle>@Localizer["App.Home.AttentionTitle"]</BbAlertTitle>
+                    <BbAlertDescription>
+                        <ul class="bb:mt-2 bb:space-y-2">
+                            @foreach (var item in summary.Attention)
+                            {
+                                <li class="bb:min-w-0">
+                                    <a href="@AttentionHref(item.Kind)" class="bb:underline-offset-4 bb:hover:underline">
+                                        @AttentionText(item, now)
+                                    </a>
+                                    @if (item.ErrorMessage is not null)
+                                    {
+                                        <span class="bb:block bb:truncate bb:text-xs" title="@item.ErrorMessage">
+                                            @item.ErrorMessage
+                                        </span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    </BbAlertDescription>
+                </ChildContent>
+            </BbAlert>
         }
-    </div>
+
+        @* grid-cols-1 rather than the implicit single column: that one is sized to its content, so a
+           long namespace description or job name would push the cards off a narrow screen. *@
+        <div class="bb:grid bb:grid-cols-1 bb:gap-4 @(summary.RecentJobs is null ? "" : "bb:md:grid-cols-2")">
+            <BbCard data-testid="home-namespaces">
+                <BbCardHeader>
+                    @* A row of our own rather than BbCardAction, which the shipped stylesheet
+                       stacks under the description instead of beside the title. *@
+                    <div class="bb:flex bb:items-start bb:justify-between bb:gap-4">
+                        <div class="bb:space-y-1.5">
+                            <BbCardTitle As="h2">@Localizer["App.Nav.Namespaces"]</BbCardTitle>
+                            <BbCardDescription>@Localizer["App.Home.NamespacesDescription"]</BbCardDescription>
+                        </div>
+                        <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Small" Class="bb:shrink-0" Href="/ui/namespaces">
+                            @Localizer["App.Home.ViewAll"]
+                            <LucideIcon Name="arrow-right" Size="14" />
+                        </BbButton>
+                    </div>
+                </BbCardHeader>
+                <BbCardContent>
+                    @if (summary.TopNamespaces.Count == 0)
+                    {
+                        <BbEmpty
+                            Size="EmptySize.Small"
+                            Title="@Localizer["App.Home.NoNamespacesTitle"]"
+                            Description="@(summary.IsAdmin
+                                ? Localizer["App.Home.NoNamespacesAdminDescription"]
+                                : Localizer["App.Home.NoNamespacesDescription"])"
+                        >
+                            <Icon>
+                                <LucideIcon Name="database" />
+                            </Icon>
+                        </BbEmpty>
+                    }
+                    else
+                    {
+                        <BbItemGroup>
+                            @foreach (var ns in summary.TopNamespaces)
+                            {
+                                <BbItem
+                                    AsChild="a"
+                                    Href="@($"/ui/namespaces/{Uri.EscapeDataString(ns.Name)}/pseudonyms")"
+                                    Size="ItemSize.Sm"
+                                >
+                                    <BbItemMedia Variant="ItemMediaVariant.Icon">
+                                        <LucideIcon Name="database" Size="16" />
+                                    </BbItemMedia>
+                                    <BbItemContent Class="bb:min-w-0">
+                                        <BbItemTitle>@ns.Name</BbItemTitle>
+                                        @if (!string.IsNullOrWhiteSpace(ns.Description))
+                                        {
+                                            <BbItemDescription>@ns.Description</BbItemDescription>
+                                        }
+                                    </BbItemContent>
+                                    <BbItemActions>
+                                        <span class="bb:text-sm bb:tabular-nums bb:text-muted-foreground">
+                                            @(ns.PseudonymCount?.ToString("N0") ?? "—")
+                                        </span>
+                                    </BbItemActions>
+                                </BbItem>
+                            }
+                        </BbItemGroup>
+                    }
+                </BbCardContent>
+            </BbCard>
+
+            @if (summary.RecentJobs is { } recentJobs)
+            {
+                <BbCard data-testid="home-csv-jobs">
+                    <BbCardHeader>
+                        <div class="bb:flex bb:items-start bb:justify-between bb:gap-4">
+                            <div class="bb:space-y-1.5">
+                                <BbCardTitle As="h2">@Localizer["App.Home.RecentJobsTitle"]</BbCardTitle>
+                                <BbCardDescription>
+                                    @(summary.SeesEveryonesJobs
+                                        ? Localizer["App.Home.RecentJobsAllUsersDescription"]
+                                        : Localizer["App.Home.RecentJobsDescription"])
+                                </BbCardDescription>
+                            </div>
+                            <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Small" Class="bb:shrink-0" Href="/ui/csv-jobs">
+                                @Localizer["App.Home.ViewAll"]
+                                <LucideIcon Name="arrow-right" Size="14" />
+                            </BbButton>
+                        </div>
+                    </BbCardHeader>
+                    <BbCardContent>
+                        @if (recentJobs.Count == 0)
+                        {
+                            <BbEmpty
+                                Size="EmptySize.Small"
+                                Title="@Localizer["App.Home.NoJobsTitle"]"
+                                Description="@Localizer["App.Home.CsvProcessingDescription"]"
+                            >
+                                <Icon>
+                                    <LucideIcon Name="file-spreadsheet" />
+                                </Icon>
+                                <ChildContent>
+                                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" Href="/ui/csv-jobs">
+                                        @Localizer["App.CsvJobs.NewJobTitle"]
+                                    </BbButton>
+                                </ChildContent>
+                            </BbEmpty>
+                        }
+                        else
+                        {
+                            <BbItemGroup>
+                                @foreach (var job in recentJobs)
+                                {
+                                    <BbItem AsChild="a" Href="/ui/csv-jobs" Size="ItemSize.Sm">
+                                        <BbItemMedia Variant="ItemMediaVariant.Icon">
+                                            <LucideIcon Name="file-spreadsheet" Size="16" />
+                                        </BbItemMedia>
+                                        <BbItemContent Class="bb:min-w-0">
+                                            <BbItemTitle Class="bb:truncate">@(job.Subject ?? "—")</BbItemTitle>
+                                            <BbItemDescription>
+                                                @CsvJobDisplay.DirectionLabel(job.Direction, Localizer) · @job.CreatedAt.Humanize(now)
+                                            </BbItemDescription>
+                                        </BbItemContent>
+                                        <BbItemActions>
+                                            @if (job.Status == PseudonymizationJobStatus.Running && job.ProgressPercent is { } progress)
+                                            {
+                                                <BbProgress Value="@progress" Class="bb:w-16" />
+                                            }
+                                            <CsvJobStatusBadge Status="job.Status" />
+                                        </BbItemActions>
+                                    </BbItem>
+                                }
+                            </BbItemGroup>
+                        }
+                    </BbCardContent>
+                </BbCard>
+            }
+        </div>
+    }
 </div>
+
+@code {
+    // How many namespaces and jobs the two lists show. Enough to recognize what's there; the
+    // "View all" link on each is for everything else.
+    private const int ListLength = 5;
+
+    // How far back the attention panel looks for the caller's own failed CSV jobs. Long enough to
+    // still be there after a weekend away, short enough that a failure nobody is going to act on
+    // stops being reported on its own. Clearing finished jobs on the CSV page removes it sooner.
+    private static readonly TimeSpan FailedJobLookback = TimeSpan.FromDays(7);
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    /// <summary>
+    /// Everything this page shows, carried over from the prerender into the interactive render
+    /// (App.razor renders Routes with InteractiveServer, which prerenders by default). Without it
+    /// the page would run every query below twice per visit, and in between flash back to an empty
+    /// page - the interactive render starts out with nothing until its own queries come back.
+    ///
+    /// Display-only values rather than the entities they're read from: persisted state is embedded
+    /// in the prerendered page, and an AccessToken row carries its token hash.
+    /// </summary>
+    [PersistentState]
+    public HomeSummary? Summary { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Summary ??= await LoadSummaryAsync();
+    }
+
+    private async Task<HomeSummary> LoadSummaryAsync()
+    {
+        var user =
+            AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
+        var now = DateTimeOffset.UtcNow;
+        var authorization = AuthorizationConfigOptions.Value;
+        var isAdmin = PermissionChecker.IsAdmin(user);
+
+        var namespaces = await NamespaceAppService.GetAllAsync(user, CancellationToken.None);
+        var counts = await NamespaceAppService.GetPseudonymCountsAsync(user, CancellationToken.None);
+        var countByName = counts.ToDictionary(
+            c => c.NamespaceName,
+            c => c.Count,
+            StringComparer.Ordinal
+        );
+
+        var summary = new HomeSummary
+        {
+            IsAdmin = isAdmin,
+            // With authorization off, everyone counts as an admin - but there's only ever the one
+            // anonymous user, so "every user's jobs" would be a strange thing to say.
+            SeesEveryonesJobs = authorization.IsEnabled && isAdmin,
+            NamespaceCount = namespaces.Count,
+            // "Not counted yet" only when there is something to count: someone who can't read any
+            // namespace simply has none of the pseudonyms, rather than an unknown number of them.
+            PseudonymTotal =
+                namespaces.Count > 0 && counts.Count == 0 ? null : counts.Sum(c => c.Count),
+            // Every row is written by the same recompute, so they all carry the same timestamp -
+            // except that a namespace created since has no row at all yet.
+            CountedAt = counts.Count == 0 ? null : counts.Max(c => c.ComputedAt),
+            TopNamespaces =
+            [
+                .. namespaces
+                    .Select(n => new NamespaceSummary(
+                        n.Name,
+                        n.Description,
+                        countByName.TryGetValue(n.Name, out var count) ? count : null
+                    ))
+                    .OrderByDescending(n => n.PseudonymCount ?? -1)
+                    .ThenBy(n => n.Name, StringComparer.Ordinal)
+                    .Take(ListLength),
+            ],
+        };
+
+        var tokenAttention = new List<AttentionItem>();
+        var jobAttention = new List<AttentionItem>();
+
+        if (S3ConfigOptions.Value.IsEnabled)
+        {
+            // Resolved here rather than injected, as on the CSV jobs page: it's only registered
+            // when S3 is enabled.
+            var jobAppService = ServiceProvider.GetRequiredService<IPseudonymizationJobAppService>();
+            var jobs = await jobAppService.ListAsync(user, CancellationToken.None);
+
+            summary.ActiveJobCount = jobs.Count(j =>
+                j.Status is PseudonymizationJobStatus.Queued or PseudonymizationJobStatus.Running
+            );
+            summary.RecentJobs =
+            [
+                .. jobs.Take(ListLength)
+                    .Select(j => new JobSummary(
+                        CsvJobDisplay.Subject(j),
+                        j.Direction,
+                        j.Status,
+                        j.TotalBytes > 0 ? 100.0 * j.BytesProcessed / j.TotalBytes : null,
+                        j.CreatedAt
+                    )),
+            ];
+
+            // Only the caller's own, even for an admin who can see everyone's: this panel is for
+            // what *you* need to act on, and somebody else's failed upload isn't that.
+            var subject = user.GetSubject();
+            jobAttention.AddRange(
+                jobs.Where(j =>
+                        j.CreatedBy == subject
+                        && j.Status
+                            is PseudonymizationJobStatus.Failed
+                                or PseudonymizationJobStatus.Stalled
+                        && j.LastUpdatedAt >= now - FailedJobLookback
+                    )
+                    .OrderByDescending(j => j.LastUpdatedAt)
+                    .Select(j => new AttentionItem(
+                        j.Status == PseudonymizationJobStatus.Stalled
+                            ? AttentionKind.JobStalled
+                            : AttentionKind.JobFailed,
+                        CsvJobDisplay.Subject(j) ?? j.Id.ToString()[..8],
+                        j.LastUpdatedAt
+                    )
+                    {
+                        ErrorMessage = j.ErrorMessage,
+                    })
+            );
+        }
+
+        if (authorization.IsEnabled && authorization.AccessTokens.IsEnabled)
+        {
+            var warningPeriod = authorization.AccessTokens.ExpiryWarningPeriod;
+
+            var mine = await AccessTokenAppService.GetMineAsync(user, CancellationToken.None);
+            summary.ActiveTokenCount = mine.Count(t => t.IsActiveAt(now));
+
+            var expiringMine = mine.Where(t => t.IsExpiringSoonAt(now, warningPeriod)).ToList();
+            summary.ExpiringTokenCount = expiringMine.Count;
+            tokenAttention.AddRange(
+                expiringMine.Select(t => new AttentionItem(
+                    AttentionKind.PersonalTokenExpiring,
+                    t.Name,
+                    t.ExpiresAt
+                ))
+            );
+
+            // Service accounts belong to no one in particular, so their tokens are every admin's
+            // to renew - the same tokens the Service Accounts page already flags.
+            if (isAdmin)
+            {
+                var all = await AccessTokenAppService.GetAllAsync(user, CancellationToken.None);
+                tokenAttention.AddRange(
+                    all.Where(t =>
+                            t.TokenType == AccessTokenType.ServiceAccount
+                            && t.IsExpiringSoonAt(now, warningPeriod)
+                        )
+                        .Select(t => new AttentionItem(
+                            AttentionKind.ServiceAccountTokenExpiring,
+                            t.Name,
+                            t.ExpiresAt
+                        )
+                        {
+                            ServiceAccountName = t.ServiceAccountName,
+                        })
+                );
+            }
+        }
+
+        // Soonest-expiring token first, then the most recent failure.
+        summary.Attention = [.. tokenAttention.OrderBy(i => i.At), .. jobAttention];
+
+        return summary;
+    }
+
+    private string? PseudonymsCaption(HomeSummary summary, DateTimeOffset now) =>
+        summary.CountedAt is { } countedAt
+            ? Localizer["App.Home.PseudonymsCountedAt", countedAt.Humanize(now)].Value
+        : summary.PseudonymTotal is null
+            ? Localizer[
+                "App.Home.PseudonymsNotCountedYet",
+                Program.PseudonymCountRecomputeIntervalMinutes
+            ].Value
+        : null;
+
+    private static string StatGridClass(HomeSummary summary)
+    {
+        var tiles = 2 + (summary.RecentJobs is null ? 0 : 1) + (summary.ActiveTokenCount is null ? 0 : 1);
+
+        // Never more than two side by side below lg: a large pseudonym count wouldn't fit a third
+        // of a small screen.
+        return tiles switch
+        {
+            4 => "bb:sm:grid-cols-2 bb:lg:grid-cols-4",
+            3 => "bb:sm:grid-cols-2 bb:lg:grid-cols-3",
+            _ => "bb:sm:grid-cols-2",
+        };
+    }
+
+    private string AttentionText(AttentionItem item, DateTimeOffset now)
+    {
+        var when = item.At.Humanize(now);
+        return item.Kind switch
+        {
+            AttentionKind.PersonalTokenExpiring =>
+                Localizer["App.Home.AttentionPersonalTokenExpiring", item.Subject, when],
+            AttentionKind.ServiceAccountTokenExpiring =>
+                Localizer[
+                    "App.Home.AttentionServiceAccountTokenExpiring",
+                    item.Subject,
+                    item.ServiceAccountName ?? "—",
+                    when
+                ],
+            AttentionKind.JobStalled => Localizer["App.Home.AttentionJobStalled", item.Subject, when],
+            _ => Localizer["App.Home.AttentionJobFailed", item.Subject, when],
+        };
+    }
+
+    private static string AttentionHref(AttentionKind kind) =>
+        kind switch
+        {
+            AttentionKind.PersonalTokenExpiring => "/ui/access-tokens",
+            AttentionKind.ServiceAccountTokenExpiring => "/ui/service-accounts",
+            _ => "/ui/csv-jobs",
+        };
+
+    public sealed class HomeSummary
+    {
+        public bool IsAdmin { get; set; }
+        public bool SeesEveryonesJobs { get; set; }
+        public int NamespaceCount { get; set; }
+
+        /// <summary>
+        /// Null while none of the caller's namespaces has been counted yet - before the first
+        /// recompute, mostly.
+        /// </summary>
+        public long? PseudonymTotal { get; set; }
+
+        public DateTimeOffset? CountedAt { get; set; }
+        public List<NamespaceSummary> TopNamespaces { get; set; } = [];
+        public int ActiveJobCount { get; set; }
+
+        /// <summary>Null when CSV processing is disabled, which hides everything job-related.</summary>
+        public List<JobSummary>? RecentJobs { get; set; }
+
+        /// <summary>Null when access tokens are disabled, which hides the tile.</summary>
+        public int? ActiveTokenCount { get; set; }
+
+        public int ExpiringTokenCount { get; set; }
+        public List<AttentionItem> Attention { get; set; } = [];
+    }
+
+    public sealed record NamespaceSummary(string Name, string? Description, long? PseudonymCount);
+
+    public sealed record JobSummary(
+        string? Subject,
+        PseudonymizationJobDirection Direction,
+        PseudonymizationJobStatus Status,
+        double? ProgressPercent,
+        DateTimeOffset CreatedAt
+    );
+
+    public enum AttentionKind
+    {
+        PersonalTokenExpiring,
+        ServiceAccountTokenExpiring,
+        JobFailed,
+        JobStalled,
+    }
+
+    public sealed record AttentionItem(AttentionKind Kind, string Subject, DateTimeOffset At)
+    {
+        public string? ServiceAccountName { get; init; }
+        public string? ErrorMessage { get; init; }
+    }
+}

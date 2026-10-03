@@ -287,6 +287,43 @@ public class NamespaceAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task GetPseudonymCountsAsync_WithAuthorizationEnabled_ShouldOnlyReturnCountsOfNamespacesUserCanRead()
+    {
+        // A count reveals that its namespace exists, so it has to be filtered exactly like the
+        // namespace list itself.
+        await new PseudonymCountRepository(ContextFactory).ReplaceAllAsync(
+            new Dictionary<string, long> { ["existingNamespace"] = 1, ["emptyNamespace"] = 0 },
+            DateTimeOffset.UtcNow,
+            CancellationToken.None
+        );
+        var sut = CreateNamespaceAppService(
+            new NamespaceRepository(ContextFactory),
+            new AuthorizationConfig { IsEnabled = true },
+            Grants.ForRole("existingNamespace", "can-read-existing", read: true)
+        );
+
+        var result = await sut.GetPseudonymCountsAsync(
+            UserWithRoles("can-read-existing"),
+            CancellationToken.None
+        );
+
+        result.Should().ContainSingle().Which.NamespaceName.Should().Be("existingNamespace");
+    }
+
+    [Fact]
+    public async Task GetPseudonymCountsAsync_BeforeTheFirstRecompute_ShouldReturnNoCounts()
+    {
+        var sut = CreateNamespaceAppService(new NamespaceRepository(ContextFactory));
+
+        var result = await sut.GetPseudonymCountsAsync(
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        result.Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task GetAsync_WithAuthorizationEnabledAndNoReadAccess_ShouldThrowForbidden()
     {
         var namespaceRepository = new NamespaceRepository(ContextFactory);

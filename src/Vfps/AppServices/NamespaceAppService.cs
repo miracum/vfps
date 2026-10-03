@@ -10,6 +10,7 @@ namespace Vfps.AppServices;
 /// <inheritdoc cref="INamespaceAppService"/>
 public class NamespaceAppService(
     INamespaceRepository namespaceRepository,
+    IPseudonymCountRepository pseudonymCountRepository,
     INamespacePermissionChecker permissionChecker,
     PseudonymizationMethodsLookup methodsLookup
 ) : INamespaceAppService
@@ -256,5 +257,17 @@ public class NamespaceAppService(
         // Filtered per-row, exactly as GetAllAsync does - a caller who can read the parent but
         // not a given child simply doesn't see that child.
         return [.. children.Where(n => permissions.HasReadAccess(n.Name))];
+    }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<PseudonymCount>> GetPseudonymCountsAsync(
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        var counts = await pseudonymCountRepository.ListAsync(cancellationToken);
+
+        var permissions = await permissionChecker.ResolveAsync(user, cancellationToken);
+        return [.. counts.Where(c => permissions.HasReadAccess(c.NamespaceName))];
     }
 }

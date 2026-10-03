@@ -127,3 +127,15 @@ body {
 .token-meta {
   gap: 0.25rem 1rem; /* row, column */
 }
+
+/*
+ * Routes.razor's <FocusOnNavigate Selector="h1"> moves focus to each page's heading after a
+ * navigation, so a screen reader announces the new page. Programmatic focus on a heading with no
+ * prior pointer interaction - every full page load, including the one back from the identity
+ * provider's login - matches :focus-visible in Chromium, which drew a heavy outline around the
+ * title of every page. The heading isn't interactive, so there is nothing for that outline to
+ * indicate; the same rule ships in the Blazor project template for the same reason.
+ */
+h1:focus {
+  outline: none;
+}

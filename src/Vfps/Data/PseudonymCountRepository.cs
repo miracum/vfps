@@ -75,4 +75,11 @@ public class PseudonymCountRepository(IDbContextFactory<PseudonymContext> contex
             .PseudonymCounts.AsNoTracking()
             .ToDictionaryAsync(row => row.NamespaceName, row => row.Count, cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<PseudonymCount>> ListAsync(CancellationToken cancellationToken)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context.PseudonymCounts.AsNoTracking().ToListAsync(cancellationToken);
+    }
 }

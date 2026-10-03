@@ -307,9 +307,6 @@
   <data name="App.Common.Name" xml:space="preserve">
     <value>Name</value>
   </data>
-  <data name="App.Common.Open" xml:space="preserve">
-    <value>Öffnen</value>
-  </data>
   <data name="App.CsvJobs.AddColumnMapping" xml:space="preserve">
     <value>Spaltenzuordnung hinzufügen</value>
   </data>
@@ -571,14 +568,74 @@
   <data name="App.CsvJobs.WarningCountSingular" xml:space="preserve">
     <value>{0} Warnung</value>
   </data>
+  <data name="App.Home.ActiveJobsCaption" xml:space="preserve">
+    <value>In der Warteschlange oder laufend</value>
+  </data>
+  <data name="App.Home.ActiveJobsStat" xml:space="preserve">
+    <value>Aktive CSV-Jobs</value>
+  </data>
+  <data name="App.Home.ActiveTokensCaption" xml:space="preserve">
+    <value>Ihre persönlichen Token</value>
+  </data>
+  <data name="App.Home.ActiveTokensStat" xml:space="preserve">
+    <value>Aktive Zugriffstoken</value>
+  </data>
+  <data name="App.Home.AttentionJobFailed" xml:space="preserve">
+    <value>CSV-Job "{0}" ist {1} fehlgeschlagen.</value>
+  </data>
+  <data name="App.Home.AttentionJobStalled" xml:space="preserve">
+    <value>CSV-Job "{0}" ist {1} ins Stocken geraten.</value>
+  </data>
+  <data name="App.Home.AttentionPersonalTokenExpiring" xml:space="preserve">
+    <value>Ihr Zugriffstoken "{0}" läuft {1} ab.</value>
+  </data>
+  <data name="App.Home.AttentionServiceAccountTokenExpiring" xml:space="preserve">
+    <value>Token "{0}" des Service Accounts "{1}" läuft {2} ab.</value>
+  </data>
+  <data name="App.Home.AttentionTitle" xml:space="preserve">
+    <value>Erfordert Ihre Aufmerksamkeit</value>
+  </data>
   <data name="App.Home.CsvProcessingDescription" xml:space="preserve">
     <value>Spalten in einer CSV-Datei pseudonymisieren.</value>
   </data>
+  <data name="App.Home.ExpiringTokensCaption" xml:space="preserve">
+    <value>davon {0} bald ablaufend</value>
+  </data>
   <data name="App.Home.NamespacesDescription" xml:space="preserve">
-    <value>Namespaces erstellen und Pseudonyme anzeigen.</value>
+    <value>Die 5 größten Namespaces auf die Sie Zugriff haben.</value>
+  </data>
+  <data name="App.Home.NoJobsTitle" xml:space="preserve">
+    <value>Noch keine CSV-Jobs</value>
+  </data>
+  <data name="App.Home.NoNamespacesAdminDescription" xml:space="preserve">
+    <value>Legen Sie den ersten auf der Seite Namespaces an.</value>
+  </data>
+  <data name="App.Home.NoNamespacesDescription" xml:space="preserve">
+    <value>Sie haben noch auf keinen Namespace Zugriff. Wenden Sie sich an eine Administratorin oder einen Administrator.</value>
+  </data>
+  <data name="App.Home.NoNamespacesTitle" xml:space="preserve">
+    <value>Noch keine Namespaces</value>
+  </data>
+  <data name="App.Home.PseudonymsCountedAt" xml:space="preserve">
+    <value>Gezählt {0}</value>
+  </data>
+  <data name="App.Home.PseudonymsNotCountedYet" xml:space="preserve">
+    <value>Noch nicht gezählt - wird alle {0} Minuten neu gezählt</value>
+  </data>
+  <data name="App.Home.RecentJobsAllUsersDescription" xml:space="preserve">
+    <value>Die zuletzt erstellten CSV-Jobs aller Benutzer.</value>
+  </data>
+  <data name="App.Home.RecentJobsDescription" xml:space="preserve">
+    <value>Ihre zuletzt erstellten CSV-Jobs.</value>
+  </data>
+  <data name="App.Home.RecentJobsTitle" xml:space="preserve">
+    <value>Letzte CSV-Jobs</value>
   </data>
   <data name="App.Home.Subtitle" xml:space="preserve">
     <value>A very fast pseudonymization service.</value>
+  </data>
+  <data name="App.Home.ViewAll" xml:space="preserve">
+    <value>Alle anzeigen</value>
   </data>
   <data name="App.MainLayout.Email" xml:space="preserve">
     <value>E-Mail</value>

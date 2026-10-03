@@ -446,6 +446,19 @@
           "AngleSharp.Css": "1.0.1"
         }
       },
+      "Humanizer.Core": {
+        "type": "Transitive",
+        "resolved": "3.0.10",
+        "contentHash": "yZIhtw8sYuvsONzQbZxWpR60tMWYHXoo0DL6nyOqSFiU5POjBTSEyWFpTQtJEZuy+oqiYTXKXY/Mjx7KnqIQFw=="
+      },
+      "Humanizer.Core.de": {
+        "type": "Transitive",
+        "resolved": "3.0.10",
+        "contentHash": "UoJk/DmAOFZivuMulLoB52Pn5iFvSqurF7qQQAyUAz1/IUZjxkoeoiI5mMILEjVeGoQJqrylt6O+f8johCo0Bg==",
+        "dependencies": {
+          "Humanizer.Core": "[3.0.10]"
+        }
+      },
       "Ical.Net": {
         "type": "Transitive",
         "resolved": "5.2.3",
@@ -1429,6 +1442,8 @@
           "Hangfire.AspNetCore": "[1.8.25, )",
           "Hangfire.PostgreSql": "[1.21.1, )",
           "Hl7.Fhir.R4": "[6.5.0, )",
+          "Humanizer.Core": "[3.0.10, )",
+          "Humanizer.Core.de": "[3.0.10, )",
           "Microsoft.AspNetCore.Authentication.JwtBearer": "[10.0.12, )",
           "Microsoft.AspNetCore.Authentication.OpenIdConnect": "[10.0.12, )",
           "Microsoft.AspNetCore.DataProtection.EntityFrameworkCore": "[10.0.12, )",
@@ -1446,7 +1461,7 @@
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.19.0, )",
           "OpenTelemetry.Instrumentation.Http": "[1.19.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.19.0, )",
-          "Vfps.Voprf.Client": "[1.19.1, )"
+          "Vfps.Voprf.Client": "[1.21.0, )"
         }
       },
       "vfps.voprf": {
@@ -1459,8 +1474,8 @@
         "type": "Project",
         "dependencies": {
           "Grpc.Net.ClientFactory": "[2.83.0, )",
-          "Vfps.Voprf": "[1.19.1, )",
-          "Vfps.Voprf.Contracts": "[1.19.1, )"
+          "Vfps.Voprf": "[1.21.0, )",
+          "Vfps.Voprf.Contracts": "[1.21.0, )"
         }
       },
       "vfps.voprf.contracts": {

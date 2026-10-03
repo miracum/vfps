@@ -1,0 +1,41 @@
+@*
+    One of the figures across the top of the home page. The whole tile is the link to the page the
+    figure comes from, so it reads as a way in rather than as a number to look at and then go and
+    find somewhere else.
+*@
+
+<a href="@Href" class="bb:block bb:rounded-lg" data-testid="@TestId">
+    <BbCard Class="bb:h-full bb:transition-colors bb:hover:bg-accent">
+        <BbCardHeader>
+            <div class="bb:flex bb:items-center bb:justify-between bb:gap-2">
+                <span class="bb:text-sm bb:font-medium bb:text-muted-foreground">@Label</span>
+                <LucideIcon Name="@Icon" Size="16" Class="bb:shrink-0 bb:text-muted-foreground" />
+            </div>
+            <p class="bb:text-3xl bb:font-semibold bb:tracking-tight bb:tabular-nums">@Value</p>
+            @if (Caption is not null)
+            {
+                <p class="bb:text-xs bb:text-muted-foreground">@Caption</p>
+            }
+        </BbCardHeader>
+    </BbCard>
+</a>
+
+@code {
+    [Parameter, EditorRequired]
+    public required string Label { get; set; }
+
+    [Parameter, EditorRequired]
+    public required string Value { get; set; }
+
+    [Parameter, EditorRequired]
+    public required string Icon { get; set; }
+
+    [Parameter, EditorRequired]
+    public required string Href { get; set; }
+
+    [Parameter]
+    public string? Caption { get; set; }
+
+    [Parameter]
+    public string? TestId { get; set; }
+}
