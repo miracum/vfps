@@ -77,8 +77,10 @@ public class CsvProcessingConfig
     /// app's job server). Pinned rather than left at Hangfire's own default of
     /// <c>min(ProcessorCount * 5, 20)</c>, because that default is chosen for short, cheap jobs
     /// and knows nothing about this app's real constraint: the shared Npgsql connection pool.
-    /// Every direction now resolves a chunk over a single connection at a time, so N workers cost
-    /// about N connections rather than the up-to-20-per-job a de-pseudonymizing job used to take
+    /// Every direction now resolves a chunk over a single connection at a time (an import holds a
+    /// second one for its namespace lock - see Data.IPseudonymRepository.AcquireImportLockAsync),
+    /// so N workers cost about N connections rather than the up-to-20-per-job a de-pseudonymizing
+    /// job used to take
     /// - 4 is kept as a conservative default that leaves plenty of the pool for the API and
     /// Hangfire itself, and is the knob to raise in step with `Maximum Pool Size` if a deployment
     /// wants more job concurrency.

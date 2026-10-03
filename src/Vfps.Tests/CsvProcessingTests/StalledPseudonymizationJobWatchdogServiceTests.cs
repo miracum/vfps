@@ -49,23 +49,61 @@ public class StalledPseudonymizationJobWatchdogServiceTests
         await sut.StopAsync(TestContext.Current.CancellationToken);
 
         A.CallTo(() =>
-                jobRepository.UpdateStatusAsync(
+                jobRepository.MarkStalledAsync(
                     stalledJobId1,
-                    PseudonymizationJobStatus.Stalled,
+                    staleThreshold,
                     A<string>.That.IsNotNull(),
                     A<CancellationToken>._
                 )
             )
             .MustHaveHappenedOnceOrMore();
         A.CallTo(() =>
-                jobRepository.UpdateStatusAsync(
+                jobRepository.MarkStalledAsync(
                     stalledJobId2,
-                    PseudonymizationJobStatus.Stalled,
+                    staleThreshold,
                     A<string>.That.IsNotNull(),
                     A<CancellationToken>._
                 )
             )
             .MustHaveHappenedOnceOrMore();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_ShouldNeverWriteAStatusUnconditionally()
+    {
+        // The job may progress, complete or be cancelled between the query that found it and the
+        // write that marks it - and every replica runs this service. Only the conditional
+        // transition, which re-checks both at write time, is safe; a plain status write would
+        // relabel a job that has since finished.
+        var jobRepository = A.Fake<IPseudonymizationJobRepository>();
+        A.CallTo(() =>
+                jobRepository.FindStalledRunningJobIdsAsync(A<TimeSpan>._, A<CancellationToken>._)
+            )
+            .Returns([Guid.NewGuid()]);
+        var sut = CreateSut(jobRepository);
+
+        await sut.StartAsync(TestContext.Current.CancellationToken);
+        await Task.Delay(200, TestContext.Current.CancellationToken);
+        await sut.StopAsync(TestContext.Current.CancellationToken);
+
+        A.CallTo(() =>
+                jobRepository.MarkStalledAsync(
+                    A<Guid>._,
+                    A<TimeSpan>._,
+                    A<string>._,
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceOrMore();
+        A.CallTo(() =>
+                jobRepository.UpdateStatusAsync(
+                    A<Guid>._,
+                    A<PseudonymizationJobStatus>._,
+                    A<string>._,
+                    A<CancellationToken>._
+                )
+            )
+            .MustNotHaveHappened();
     }
 
     [Fact]
@@ -111,9 +149,9 @@ public class StalledPseudonymizationJobWatchdogServiceTests
         await sut.StopAsync(TestContext.Current.CancellationToken);
 
         A.CallTo(() =>
-                jobRepository.UpdateStatusAsync(
+                jobRepository.MarkStalledAsync(
                     A<Guid>._,
-                    A<PseudonymizationJobStatus>._,
+                    A<TimeSpan>._,
                     A<string>._,
                     A<CancellationToken>._
                 )

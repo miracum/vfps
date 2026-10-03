@@ -244,6 +244,16 @@ public class CachingPseudonymRepository(
         );
     }
 
+    /// <inheritdoc/>
+    public async Task<IAsyncDisposable> AcquireImportLockAsync(
+        string namespaceName,
+        CancellationToken cancellationToken
+    )
+    {
+        // Nothing to cache: the lock has to be taken in the database to exclude other replicas.
+        return await Repository.AcquireImportLockAsync(namespaceName, cancellationToken);
+    }
+
     // CreatedAt is part of the key because deleting a namespace takes its pseudonyms with it: one
     // re-created under the same name must not be served the old one's entries.
     private static FirstPseudonymKey FirstPseudonymKeyFor(

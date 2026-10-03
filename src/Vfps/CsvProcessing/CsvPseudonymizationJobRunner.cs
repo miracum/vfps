@@ -83,12 +83,17 @@ internal sealed class CsvPseudonymizationJobRunner(
         // without needing separate access to vfps's own database.
         context?.SetJobParameter("InputObjectKey", job.InputObjectKey);
 
-        await jobRepository.UpdateStatusAsync(
-            jobId,
-            PseudonymizationJobStatus.Running,
-            null,
-            CancellationToken.None
-        );
+        // The same terminal states as the check above, re-checked by the write itself: a Cancel
+        // click (possibly on another replica) can land between that read and this write, and a
+        // plain status write here would quietly un-cancel the job.
+        if (!await jobRepository.MarkRunningAsync(jobId, CancellationToken.None))
+        {
+            logger.LogInformation(
+                "CSV pseudonymization job {JobId} finished or was cancelled before it could start - not processing it.",
+                jobId
+            );
+            return;
+        }
 
         var phases = new CsvJobPhaseTimer(job.Direction);
 
@@ -110,6 +115,8 @@ internal sealed class CsvPseudonymizationJobRunner(
             // looked dead but was actually still alive) at any point, including while ProcessAsync
             // above was still finishing up - that verdict shouldn't be silently overwritten by a
             // late success either, so the discrepancy stays visible instead of being hidden.
+            // CompleteAsync applies the same rule again inside its own write, which is what covers
+            // a status change landing between this read and that write.
             var current = await jobRepository.FindAsync(jobId, CancellationToken.None);
             if (
                 current?.Status

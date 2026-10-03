@@ -149,11 +149,17 @@ public class PseudonymizationJobRepository(IDbContextFactory<PseudonymContext> c
     }
 
     /// <inheritdoc/>
-    public async Task MarkQueuedAsync(Guid id, long totalBytes, CancellationToken cancellationToken)
+    public async Task<bool> MarkQueuedAsync(
+        Guid id,
+        long totalBytes,
+        CancellationToken cancellationToken
+    )
     {
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        await context
-            .PseudonymizationJobs.Where(j => j.Id == id)
+        var rowsAffected = await context
+            .PseudonymizationJobs.Where(j =>
+                j.Id == id && j.Status == PseudonymizationJobStatus.AwaitingUpload
+            )
             .ExecuteUpdateAsync(
                 s =>
                     s.SetProperty(j => j.Status, PseudonymizationJobStatus.Queued)
@@ -161,6 +167,82 @@ public class PseudonymizationJobRepository(IDbContextFactory<PseudonymContext> c
                         .SetProperty(j => j.LastUpdatedAt, DateTimeOffset.UtcNow),
                 cancellationToken
             );
+
+        return rowsAffected > 0;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> MarkRunningAsync(Guid id, CancellationToken cancellationToken)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var rowsAffected = await context
+            .PseudonymizationJobs.Where(j =>
+                j.Id == id
+                && j.Status != PseudonymizationJobStatus.Cancelled
+                && j.Status != PseudonymizationJobStatus.Completed
+                && j.Status != PseudonymizationJobStatus.Failed
+            )
+            .ExecuteUpdateAsync(
+                s =>
+                    s.SetProperty(j => j.Status, PseudonymizationJobStatus.Running)
+                        .SetProperty(j => j.ErrorMessage, (string?)null)
+                        .SetProperty(j => j.LastUpdatedAt, DateTimeOffset.UtcNow),
+                cancellationToken
+            );
+
+        return rowsAffected > 0;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> MarkStalledAsync(
+        Guid id,
+        TimeSpan staleAfter,
+        string errorMessage,
+        CancellationToken cancellationToken
+    )
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var threshold = DateTimeOffset.UtcNow - staleAfter;
+
+        var rowsAffected = await context
+            .PseudonymizationJobs.Where(j =>
+                j.Id == id
+                && j.Status == PseudonymizationJobStatus.Running
+                && j.LastUpdatedAt < threshold
+            )
+            .ExecuteUpdateAsync(
+                s =>
+                    s.SetProperty(j => j.Status, PseudonymizationJobStatus.Stalled)
+                        .SetProperty(j => j.ErrorMessage, errorMessage)
+                        .SetProperty(j => j.LastUpdatedAt, DateTimeOffset.UtcNow),
+                cancellationToken
+            );
+
+        return rowsAffected > 0;
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> MarkCancelledAsync(Guid id, CancellationToken cancellationToken)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var rowsAffected = await context
+            .PseudonymizationJobs.Where(j =>
+                j.Id == id
+                && (
+                    j.Status == PseudonymizationJobStatus.AwaitingUpload
+                    || j.Status == PseudonymizationJobStatus.Queued
+                    || j.Status == PseudonymizationJobStatus.Running
+                )
+            )
+            .ExecuteUpdateAsync(
+                s =>
+                    s.SetProperty(j => j.Status, PseudonymizationJobStatus.Cancelled)
+                        .SetProperty(j => j.ErrorMessage, (string?)null)
+                        .SetProperty(j => j.LastUpdatedAt, DateTimeOffset.UtcNow),
+                cancellationToken
+            );
+
+        return rowsAffected > 0;
     }
 
     /// <inheritdoc/>
@@ -182,7 +264,7 @@ public class PseudonymizationJobRepository(IDbContextFactory<PseudonymContext> c
     }
 
     /// <inheritdoc/>
-    public async Task CompleteAsync(
+    public async Task<bool> CompleteAsync(
         Guid id,
         string outputObjectKey,
         long rowsProcessed,
@@ -190,8 +272,10 @@ public class PseudonymizationJobRepository(IDbContextFactory<PseudonymContext> c
     )
     {
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        await context
-            .PseudonymizationJobs.Where(j => j.Id == id)
+        var rowsAffected = await context
+            .PseudonymizationJobs.Where(j =>
+                j.Id == id && j.Status == PseudonymizationJobStatus.Running
+            )
             .ExecuteUpdateAsync(
                 s =>
                     s.SetProperty(j => j.Status, PseudonymizationJobStatus.Completed)
@@ -200,6 +284,8 @@ public class PseudonymizationJobRepository(IDbContextFactory<PseudonymContext> c
                         .SetProperty(j => j.LastUpdatedAt, DateTimeOffset.UtcNow),
                 cancellationToken
             );
+
+        return rowsAffected > 0;
     }
 
     /// <inheritdoc/>

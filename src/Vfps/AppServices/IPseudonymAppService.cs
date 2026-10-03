@@ -182,7 +182,10 @@ public interface IPseudonymAppService
     ///
     /// Costs three round trips per call regardless of <paramref name="entries"/>'s size (plus one
     /// per validating parent namespace): what's already stored for these original values, which
-    /// of these pseudonym values are already taken, and the batched upsert itself.
+    /// of these pseudonym values are already taken, and the batched upsert itself. Two more take
+    /// and release the namespace's import lock around them (see
+    /// <see cref="Data.IPseudonymRepository.AcquireImportLockAsync"/>), which serializes concurrent
+    /// imports into the same namespace call by call.
     /// </summary>
     /// <returns>
     /// One result per entry in <paramref name="entries"/>, in the same order - including for

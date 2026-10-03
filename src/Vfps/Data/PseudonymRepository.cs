@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Text;
@@ -699,5 +700,116 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
             WHERE namespace_name = {0} AND original_value = {1}
             ORDER BY sequence_number
             """;
+    }
+
+    // The first key of every advisory lock this app takes - "vfps" in ASCII. Locks taken with two
+    // int keys never overlap ones taken with a single bigint key, so this keeps them clear of any
+    // other user of the database's advisory lock space, and leaves room for other lock kinds here.
+    private const int ImportLockClassId = 0x76667073;
+
+    /// <inheritdoc/>
+    public async Task<IAsyncDisposable> AcquireImportLockAsync(
+        string namespaceName,
+        CancellationToken cancellationToken
+    )
+    {
+        var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        if (!context.Database.IsNpgsql())
+        {
+            await context.DisposeAsync();
+            return NoImportLock.Instance;
+        }
+
+        // Transaction-scoped rather than a session-level pg_advisory_lock: the lock then ends with
+        // the transaction however that ends - rolled back on dispose, or by the server when the
+        // connection drops - so it can't outlive this handle on a connection returned to the pool.
+        // Opened on the context's connection through ADO.NET rather than EF's BeginTransaction,
+        // which a retrying execution strategy refuses outside of its own ExecuteAsync - and the
+        // transaction has to stay open after that returns.
+        DbTransaction? transaction = null;
+        try
+        {
+            // Under the same retry strategy every other database call here gets (see
+            // EnableRetryOnFailure in Program.cs), so an import rides out a connection blip while
+            // taking the lock just as it does everywhere else.
+            await context
+                .Database.CreateExecutionStrategy()
+                .ExecuteAsync(
+                    async ct =>
+                    {
+                        // A retry starts over on a fresh connection: whatever the failed attempt
+                        // left open is broken by definition.
+                        if (transaction is not null)
+                        {
+                            await transaction.DisposeAsync();
+                            transaction = null;
+                        }
+
+                        await context.Database.CloseConnectionAsync();
+                        await context.Database.OpenConnectionAsync(ct);
+
+                        var connection = context.Database.GetDbConnection();
+                        transaction = await connection.BeginTransactionAsync(ct);
+
+                        await using var command = connection.CreateCommand();
+                        command.Transaction = transaction;
+                        // hashtext rather than a hash computed here: every replica asks the same
+                        // server, so its answer is consistent by construction. Two namespaces
+                        // that happen to share a hash merely take turns importing.
+                        command.CommandText =
+                            "SELECT pg_advisory_xact_lock(@classId, hashtext(@namespaceName))";
+                        AddParameter(command, "classId", ImportLockClassId);
+                        AddParameter(command, "namespaceName", namespaceName);
+                        await command.ExecuteNonQueryAsync(ct);
+                    },
+                    cancellationToken
+                );
+        }
+        catch
+        {
+            if (transaction is not null)
+            {
+                await transaction.DisposeAsync();
+            }
+
+            await context.DisposeAsync();
+            throw;
+        }
+
+        return new ImportLock(context, transaction!);
+    }
+
+    private static void AddParameter(DbCommand command, string name, object value)
+    {
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = name;
+        parameter.Value = value;
+        command.Parameters.Add(parameter);
+    }
+
+    private sealed class ImportLock(PseudonymContext context, DbTransaction transaction)
+        : IAsyncDisposable
+    {
+        public async ValueTask DisposeAsync()
+        {
+            try
+            {
+                // Rolling back is what releases a transaction-scoped advisory lock. Nothing was
+                // written through this transaction, so there is nothing to commit - and on a
+                // connection that has already dropped, the server released the lock with it.
+                await transaction.DisposeAsync();
+            }
+            finally
+            {
+                await context.DisposeAsync();
+            }
+        }
+    }
+
+    private sealed class NoImportLock : IAsyncDisposable
+    {
+        public static readonly NoImportLock Instance = new();
+
+        public ValueTask DisposeAsync() => ValueTask.CompletedTask;
     }
 }

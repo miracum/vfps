@@ -31,7 +31,8 @@ public class CsvNamespaceImportExportTests
     // A real, non-cancelled job's check-in returns "still active". Without this the fake's own
     // default for a Task<bool> is false, which the runner reads as "cancelled" - every job would
     // then stop dead at its first check-in (row 200), and the cancellation tests below would pass
-    // whether or not cancellation actually worked.
+    // whether or not cancellation actually worked. The transition to Running needs the same:
+    // false there means "already finished or cancelled", and the runner wouldn't start at all.
     public CsvNamespaceImportExportTests()
     {
         A.CallTo(() =>
@@ -45,6 +46,8 @@ public class CsvNamespaceImportExportTests
                     A<CancellationToken>._
                 )
             )
+            .Returns(true);
+        A.CallTo(() => jobRepository.MarkRunningAsync(A<Guid>._, A<CancellationToken>._))
             .Returns(true);
     }
 

@@ -203,7 +203,15 @@ public class PseudonymizationJobAppService(
             );
         }
 
-        await jobRepository.MarkQueuedAsync(jobId, totalBytes, cancellationToken);
+        // The status check above only spares a repeat request the S3 round trip. Two requests
+        // that arrive together - possibly on different replicas - can both pass it, so this is
+        // what actually decides which one gets to enqueue: only the request whose transition out
+        // of AwaitingUpload matched does.
+        if (!await jobRepository.MarkQueuedAsync(jobId, totalBytes, cancellationToken))
+        {
+            return;
+        }
+
         await EnqueueAsync(job, cancellationToken);
     }
 
@@ -297,19 +305,22 @@ public class PseudonymizationJobAppService(
             return;
         }
 
+        // Conditional, so a job that finished between the check above and this write keeps its
+        // real outcome rather than being relabelled Cancelled - and so its Hangfire job is left
+        // alone below.
+        if (!await jobRepository.MarkCancelledAsync(jobId, cancellationToken))
+        {
+            return;
+        }
+
         // Removes it from Hangfire's queue if it hasn't started running yet. If it's already
         // running, this is a no-op - the runner cooperatively checks Status between rows instead.
+        // After the status write rather than before it: a worker that picks the job up in between
+        // already sees Cancelled and stops.
         if (job.HangfireJobId is not null)
         {
             backgroundJobClient.Delete(job.HangfireJobId);
         }
-
-        await jobRepository.UpdateStatusAsync(
-            jobId,
-            PseudonymizationJobStatus.Cancelled,
-            null,
-            cancellationToken
-        );
     }
 
     /// <inheritdoc/>
