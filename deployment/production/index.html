@@ -632,6 +632,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Architecture
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#running-more-than-one-replica" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -860,6 +871,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Architecture
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#running-more-than-one-replica" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -966,6 +988,90 @@ production-grade deployment on Kubernetes via Helm:</p>
 </span></code></pre></div>
 <p>The <a href="../../voprf/">VOPRF</a> key holder has a chart of its own,
 <a href="https://github.com/miracum/vfps/tree/master/charts/voprf-server">charts/voprf-server</a>.</p>
+<h2 id="architecture">Architecture<a class="headerlink" href="#architecture" title="Permanent link">&para;</a></h2>
+<p>A highly available deployment, with the admin UI, the API and CSV jobs separated, and the database
+run by <a href="https://cloudnative-pg.io/">CloudNativePG</a> instead of the chart's bundled single-instance
+PostgreSQL:</p>
+<pre class="mermaid"><code>flowchart TB
+    rest["REST and&lt;br/&gt;FHIR clients"]
+    browser["Browser&lt;br/&gt;admin UI"]
+    grpc["gRPC clients&lt;br/&gt;in-cluster"]
+
+    ingress["Ingress"]
+    svc_ui["Service vfps-ui&lt;br/&gt;sticky sessions"]
+    svc_api["Service vfps"]
+    svc_headless["Service&lt;br/&gt;vfps-headless"]
+
+    subgraph api["Deployment vfps · API"]
+        direction LR
+        api1["pod"] ~~~ api2["pod"] ~~~ api3["pod"]
+    end
+
+    subgraph workers["Deployment vfps-worker · CSV jobs"]
+        direction LR
+        worker1["pod"] ~~~ worker2["pod"]
+    end
+
+    migrate["Job&lt;br/&gt;Vfps.dll migrate"]
+    s3[("S3-compatible&lt;br/&gt;object storage")]
+
+    subgraph cnpg["CloudNativePG Cluster vfps-db"]
+        rw["Service vfps-db-rw"] --&gt; primary[("primary")]
+        primary -. "synchronous&lt;br/&gt;replication" .-&gt; standby1[("standby")]
+        primary -.-&gt; standby2[("standby")]
+    end
+
+    rest --&gt; ingress
+    browser --&gt; ingress
+    ingress -- "/" --&gt; svc_ui --&gt; api
+    ingress -- "/v1" --&gt; svc_api --&gt; api
+    grpc -- "round robin" --&gt; svc_headless --&gt; api
+
+    api --&gt; rw
+    workers --&gt; rw
+    migrate --&gt; rw
+
+    browser -. "presigned URLs" .-&gt; s3
+    workers &lt;-- "stream CSV" --&gt; s3</code></pre>
+<table>
+<thead>
+<tr>
+<th>In the diagram</th>
+<th>Chart values</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Three API replicas spread across zones, at most one down at a time</td>
+<td><code>replicaCount</code>, <code>topologySpreadConstraints</code>, <code>podDisruptionBudget</code></td>
+</tr>
+<tr>
+<td><code>/</code> to a separate UI Service holding the session affinity, <code>/v1</code> to the main one</td>
+<td><code>ingress.hosts[].paths[].serviceName</code>, <code>service.ui</code></td>
+</tr>
+<tr>
+<td>gRPC clients balancing per request across all API pods</td>
+<td>the <code>-headless</code> Service, always created</td>
+</tr>
+<tr>
+<td>CSV jobs in their own Deployment, with its own shutdown window and resource budget</td>
+<td><code>worker.enabled</code>, <code>worker.replicaCount</code></td>
+</tr>
+<tr>
+<td>Schema migrations run once per release rather than by every replica</td>
+<td><code>migrationsJob.enabled</code></td>
+</tr>
+<tr>
+<td>An external, replicated PostgreSQL reached through its read-write Service, over verified TLS</td>
+<td><code>postgres.enabled: false</code>, <code>database.host</code>, <code>database.tls</code></td>
+</tr>
+</tbody>
+</table>
+<p>The reasons behind each of these are explained below. Encrypting the database connection is
+covered in <a href="../postgresql-tls/">PostgreSQL TLS</a>, and CSV jobs and object storage in
+<a href="../../csv-jobs/">CSV jobs</a>. Configure the CloudNativePG cluster with synchronous replication
+(<code>spec.postgresql.synchronous</code>), so that a failover can't lose a pseudonym vfps has already
+returned to a caller.</p>
 <h2 id="running-more-than-one-replica">Running more than one replica<a class="headerlink" href="#running-more-than-one-replica" title="Permanent link">&para;</a></h2>
 <p>vfps keeps no durable state of its own outside PostgreSQL, so replicas are interchangeable and can
 be scaled horizontally. A few things are the deployment's responsibility rather than the
