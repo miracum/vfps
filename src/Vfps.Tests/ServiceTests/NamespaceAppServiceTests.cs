@@ -434,6 +434,26 @@ public class NamespaceAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task DeleteAsync_ShouldInvalidateTheGrantCache()
+    {
+        // The namespace's grants are cascade-deleted in the database, but the cached snapshot
+        // still holds them - left alone, a namespace re-created under the same name would inherit
+        // them until the snapshot expired.
+        var grantCache = new StaticNamespaceAccessGrantCache();
+        var sut = new NamespaceAppService(
+            new NamespaceRepository(ContextFactory),
+            new PseudonymCountRepository(ContextFactory),
+            CreatePermissionChecker(),
+            grantCache,
+            new PseudonymizationMethodsLookup()
+        );
+
+        await sut.DeleteAsync("existingNamespace", new ClaimsPrincipal(), CancellationToken.None);
+
+        grantCache.InvalidateCallCount.Should().Be(1);
+    }
+
+    [Fact]
     public async Task DeleteAsync_WithNonExistingNamespace_ShouldThrowNamespaceNotFoundException()
     {
         var namespaceRepository = new NamespaceRepository(ContextFactory);

@@ -85,12 +85,65 @@ public interface IPseudonymizationJobRepository
         CancellationToken cancellationToken
     );
 
-    /// <summary>Transitions a job from AwaitingUpload to Queued once its input file is confirmed present.</summary>
-    Task MarkQueuedAsync(Guid id, long totalBytes, CancellationToken cancellationToken);
+    // The Mark* transitions below, and CompleteAsync, are conditional on the job's current status
+    // inside the UPDATE itself rather than on a status read beforehand. Several actors write a
+    // job's status - the runner, a user's Cancel click, the upload-complete endpoint and the stall
+    // watchdog - and they can all be on different replicas, so a read-then-write lets whichever
+    // writes last silently overwrite a transition that landed in between (a Cancelled or
+    // Completed job flipped to Stalled, say). A predicate in the UPDATE is evaluated against the
+    // row as it is at write time, so a transition the job no longer qualifies for simply matches
+    // nothing.
+
+    /// <summary>
+    /// Transitions a job from AwaitingUpload to Queued once its input file is confirmed present.
+    /// </summary>
+    /// <returns>
+    /// false if the job was no longer awaiting its upload - most likely a duplicate
+    /// upload-complete request that already queued it - in which case it must not be enqueued
+    /// again.
+    /// </returns>
+    Task<bool> MarkQueuedAsync(Guid id, long totalBytes, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Transitions a job to Running, unless it has reached Cancelled, Completed or Failed. Stalled
+    /// is deliberately allowed - see <see cref="CsvProcessing.CsvPseudonymizationJobRunner"/> for
+    /// why a re-dispatched Stalled job must still be processable.
+    /// </summary>
+    /// <returns>false if the job is in one of those terminal states and must not be processed.</returns>
+    Task<bool> MarkRunningAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Transitions a job from Running to Stalled, but only if it is still Running and has still
+    /// had no progress update in over <paramref name="staleAfter"/> at the moment of the write -
+    /// a job that progressed, completed or was cancelled since
+    /// <see cref="FindStalledRunningJobIdsAsync"/> found it is left alone.
+    /// </summary>
+    /// <returns>
+    /// false if the job no longer qualified - including because another replica's watchdog marked
+    /// it first.
+    /// </returns>
+    Task<bool> MarkStalledAsync(
+        Guid id,
+        TimeSpan staleAfter,
+        string errorMessage,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// Transitions a job to Cancelled from AwaitingUpload, Queued or Running. A job that has
+    /// already finished - including one marked Stalled - is left alone.
+    /// </summary>
+    /// <returns>false if the job had already finished by the time of the write.</returns>
+    Task<bool> MarkCancelledAsync(Guid id, CancellationToken cancellationToken);
 
     Task SetHangfireJobIdAsync(Guid id, string hangfireJobId, CancellationToken cancellationToken);
 
-    Task CompleteAsync(
+    /// <summary>
+    /// Transitions a job from Running to Completed. A job cancelled, failed or marked Stalled
+    /// while its last chunk was still being processed keeps that status instead.
+    /// </summary>
+    /// <returns>false if the job was no longer Running.</returns>
+    Task<bool> CompleteAsync(
         Guid id,
         string outputObjectKey,
         long rowsProcessed,

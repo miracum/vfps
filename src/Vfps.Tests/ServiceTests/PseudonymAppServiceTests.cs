@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using FakeItEasy;
 using Microsoft.Extensions.Caching.Memory;
 using Vfps.Config;
 
@@ -1230,6 +1231,49 @@ public class PseudonymAppServiceTests : ServiceTestBase
         results[0].Outcome.Should().Be(PseudonymImportOutcome.PseudonymValueConflict);
         var stored = await FindStoredAsync("existingNamespace", "existingPseudonym");
         stored!.OriginalValue.Should().Be("an original value");
+    }
+
+    [Fact]
+    public async Task ImportTrustedBatchAsync_ShouldHoldTheNamespacesImportLockFromTheFirstReadUntilTheInsert()
+    {
+        // The test above only holds while nothing else writes between the classification and
+        // the insert: two imports into one namespace, on any replicas, could otherwise both find
+        // a pseudonym value free and both store it. So the lock has to span both halves - taken
+        // before the first read of what's stored, released only once the insert has landed.
+        var repository = A.Fake<IPseudonymRepository>();
+        var importLock = A.Fake<IAsyncDisposable>();
+        A.CallTo(() => repository.AcquireImportLockAsync("emptyNamespace", A<CancellationToken>._))
+            .Returns(importLock);
+        var sut = CreatePseudonymAppService(new NamespaceRepository(ContextFactory), repository);
+
+        await sut.ImportTrustedBatchAsync(
+            NamespaceNamed("emptyNamespace"),
+            [new PseudonymImportEntry("alice", "imported-psn-1")],
+            CancellationToken.None
+        );
+
+        A.CallTo(() => repository.AcquireImportLockAsync("emptyNamespace", A<CancellationToken>._))
+            .MustHaveHappenedOnceExactly()
+            .Then(
+                A.CallTo(() =>
+                        repository.FindAllByOriginalValuesAsync(
+                            "emptyNamespace",
+                            A<IReadOnlyCollection<string>>._,
+                            A<CancellationToken>._
+                        )
+                    )
+                    .MustHaveHappenedOnceExactly()
+            )
+            .Then(
+                A.CallTo(() =>
+                        repository.CreateIfNotExistBatchAsync(
+                            A<IReadOnlyList<Data.Models.Pseudonym>>._,
+                            A<CancellationToken>._
+                        )
+                    )
+                    .MustHaveHappenedOnceExactly()
+            )
+            .Then(A.CallTo(() => importLock.DisposeAsync()).MustHaveHappenedOnceExactly());
     }
 
     [Fact]

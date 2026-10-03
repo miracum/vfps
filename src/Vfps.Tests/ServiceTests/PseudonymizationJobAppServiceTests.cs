@@ -582,6 +582,101 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
             .MustHaveHappenedOnceExactly();
     }
 
+    // The overlapping version of the test above, which its status check alone can't pass: two
+    // requests - say a retried POST that landed on another replica - both read AwaitingUpload
+    // before either has written anything. The S3 existence check sits between that read and the
+    // write, so that is where the first request is held until the second has also passed the read.
+    [Fact]
+    public async Task MarkUploadCompleteAsync_CalledConcurrently_ShouldEnqueueOnlyOnce()
+    {
+        var (sut, _, s3, backgroundJobClient) = CreateSut();
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            ",",
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
+        );
+        var (job, _) = await sut.CreateJobAsync(
+            request,
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+
+        var arrivals = 0;
+        var secondPassedTheCheck = new TaskCompletionSource();
+        A.CallTo(() => s3.GetObjectMetadataAsync(Bucket, A<string>._, A<CancellationToken>._))
+            .ReturnsLazily(async () =>
+            {
+                if (Interlocked.Increment(ref arrivals) == 1)
+                {
+                    await secondPassedTheCheck.Task;
+                }
+                else
+                {
+                    secondPassedTheCheck.SetResult();
+                }
+
+                return new GetObjectMetadataResponse { ContentLength = 1234 };
+            });
+
+        var first = sut.MarkUploadCompleteAsync(
+            job.Id,
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+        var second = sut.MarkUploadCompleteAsync(
+            job.Id,
+            UserWithSubject("alice"),
+            CancellationToken.None
+        );
+        await Task.WhenAll(first, second);
+
+        arrivals.Should().Be(2, "both requests must have got past the status check");
+        A.CallTo(() => backgroundJobClient.Create(A<Job>._, A<IState>._))
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task CancelAsync_WhenTheJobFinishesBeforeTheCancelIsWritten_ShouldLeaveItsHangfireJobAlone()
+    {
+        // The job still read as Running, but it finished before the cancel's own write - which
+        // then matches nothing. Its outcome stands, and so does its Hangfire job.
+        var repository = A.Fake<IPseudonymizationJobRepository>();
+        var job = new PseudonymizationJob
+        {
+            Id = Guid.NewGuid(),
+            Status = PseudonymizationJobStatus.Running,
+            CreatedBy = "alice",
+            HangfireJobId = "hangfire-job-id",
+        };
+        A.CallTo(() => repository.FindAsync(job.Id, A<CancellationToken>._)).Returns(job);
+        A.CallTo(() => repository.MarkCancelledAsync(job.Id, A<CancellationToken>._))
+            .Returns(false);
+        var backgroundJobClient = A.Fake<IBackgroundJobClient>();
+        var sut = new PseudonymizationJobAppService(
+            repository,
+            CreatePermissionChecker(),
+            A.Fake<IAmazonS3>(),
+            backgroundJobClient,
+            Options.Create(new S3Config { Bucket = Bucket })
+        );
+
+        await sut.CancelAsync(job.Id, UserWithSubject("alice"), CancellationToken.None);
+
+        A.CallTo(() => backgroundJobClient.ChangeState(A<string>._, A<IState>._, A<string>._))
+            .MustNotHaveHappened();
+        A.CallTo(() =>
+                repository.UpdateStatusAsync(
+                    A<Guid>._,
+                    A<PseudonymizationJobStatus>._,
+                    A<string>._,
+                    A<CancellationToken>._
+                )
+            )
+            .MustNotHaveHappened();
+    }
+
     [Fact]
     public async Task GetDownloadUrlAsync_WithPseudonymizeDirection_ShouldNameFileAfterInputPlusSuffix()
     {
@@ -599,6 +694,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
             UserWithSubject("alice"),
             CancellationToken.None
         );
+        await repository.MarkRunningAsync(job.Id, CancellationToken.None);
         await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
 
         GetPreSignedUrlRequest? presignedRequest = null;
@@ -635,6 +731,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
             UserWithRoles("can-reverse-lookup"),
             CancellationToken.None
         );
+        await repository.MarkRunningAsync(job.Id, CancellationToken.None);
         await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
 
         GetPreSignedUrlRequest? presignedRequest = null;
@@ -670,6 +767,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
             UserWithSubject("alice"),
             CancellationToken.None
         );
+        await repository.MarkRunningAsync(job.Id, CancellationToken.None);
         await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
 
         GetPreSignedUrlRequest? presignedRequest = null;
@@ -714,6 +812,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
             alice,
             CancellationToken.None
         );
+        await repository.MarkRunningAsync(job.Id, CancellationToken.None);
         await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
 
         // Her own job, on the same data - but the grant that let her run it is gone. Without the
@@ -740,6 +839,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
             alice,
             CancellationToken.None
         );
+        await repository.MarkRunningAsync(job.Id, CancellationToken.None);
         await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
 
         var url = await sut.GetDownloadUrlAsync(job.Id, alice, CancellationToken.None);
@@ -764,6 +864,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
             alice,
             CancellationToken.None
         );
+        await repository.MarkRunningAsync(job.Id, CancellationToken.None);
         await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
 
         var (afterRevocation, _, _, _) = CreateSut(
@@ -969,6 +1070,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
             UserWithSubject("alice"),
             CancellationToken.None
         );
+        await repository.MarkRunningAsync(job.Id, CancellationToken.None);
         await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
 
         GetPreSignedUrlRequest? presignedRequest = null;
@@ -1009,6 +1111,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
             UserWithSubject("alice"),
             CancellationToken.None
         );
+        await repository.MarkRunningAsync(job.Id, CancellationToken.None);
         await repository.CompleteAsync(job.Id, "csv-jobs/output.csv", 10, CancellationToken.None);
 
         GetPreSignedUrlRequest? presignedRequest = null;

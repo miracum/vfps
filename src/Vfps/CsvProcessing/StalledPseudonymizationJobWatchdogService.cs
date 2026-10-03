@@ -68,27 +68,36 @@ public class StalledPseudonymizationJobWatchdogService(
 
             foreach (var jobId in stalledJobIds)
             {
-                logger.LogWarning(
-                    "Pseudonymization job {JobId} had no progress update in over {Threshold} - "
-                        + "marking it Stalled.",
-                    jobId,
-                    csvProcessingConfig.Value.StalledJobThreshold
-                );
-
                 // Stalled, not Failed - this is a heuristic guess ("looks dead"), not a confirmed
                 // failure, and occasionally wrong (e.g. a restart delayed progress updates past
                 // the threshold on a job that was still fine). Keeping it distinct from a run that
                 // actually hit an exception lets the UI say so instead of implying the processing
                 // itself failed.
-                await jobRepository.UpdateStatusAsync(
+                //
+                // Conditional rather than a plain status write: the job may have progressed,
+                // completed or been cancelled since the query above found it, and this service
+                // runs on every replica, so another one may already have marked it. Each of those
+                // makes this match nothing, which is also what keeps the warning below from being
+                // logged once per replica.
+                var marked = await jobRepository.MarkStalledAsync(
                     jobId,
-                    PseudonymizationJobStatus.Stalled,
+                    csvProcessingConfig.Value.StalledJobThreshold,
                     "Processing appears to have stalled (no progress update in over "
                         + $"{csvProcessingConfig.Value.StalledJobThreshold}) - the worker may "
                         + "have crashed, lost its database connection, or been killed by an app "
                         + "restart. See server logs for details.",
                     cancellationToken
                 );
+
+                if (marked)
+                {
+                    logger.LogWarning(
+                        "Pseudonymization job {JobId} had no progress update in over {Threshold} - "
+                            + "marked it Stalled.",
+                        jobId,
+                        csvProcessingConfig.Value.StalledJobThreshold
+                    );
+                }
             }
         }
         catch (Exception ex) when (ex is not OperationCanceledException)

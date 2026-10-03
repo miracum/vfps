@@ -159,6 +159,7 @@ public class ServiceTestBase : IDisposable
             namespaceRepository,
             new PseudonymCountRepository(ContextFactory),
             CreatePermissionChecker(config, grants),
+            new StaticNamespaceAccessGrantCache(grants),
             methodsLookup ?? new PseudonymizationMethodsLookup()
         );
 

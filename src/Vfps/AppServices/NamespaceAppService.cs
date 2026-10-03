@@ -12,6 +12,7 @@ public class NamespaceAppService(
     INamespaceRepository namespaceRepository,
     IPseudonymCountRepository pseudonymCountRepository,
     INamespacePermissionChecker permissionChecker,
+    INamespaceAccessGrantCache grantCache,
     PseudonymizationMethodsLookup methodsLookup
 ) : INamespaceAppService
 {
@@ -227,6 +228,13 @@ public class NamespaceAppService(
         }
 
         await namespaceRepository.DeleteAsync(namespaceName, cancellationToken);
+
+        // The namespace's grants went with it through ON DELETE CASCADE, but the cached snapshot
+        // still holds them. Without this, a namespace re-created under the same name within
+        // Authorization:GrantCacheDuration would inherit its predecessor's grants on this replica
+        // - exactly what the cascade exists to prevent. Other replicas still serve their snapshot
+        // until it expires, the same bound as for any other grant change.
+        grantCache.Invalidate();
     }
 
     /// <inheritdoc/>

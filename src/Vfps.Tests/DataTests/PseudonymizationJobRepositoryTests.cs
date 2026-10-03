@@ -253,4 +253,225 @@ public class PseudonymizationJobRepositoryTests : ServiceTests.ServiceTestBase
         );
         remaining.Should().ContainSingle().Which.CreatedBy.Should().Be("bob");
     }
+
+    // The conditional transitions below are what keeps two actors - possibly on different
+    // replicas - from overwriting each other's status change: each one must apply from exactly
+    // the statuses it is documented for, and leave the job untouched from every other.
+
+    private async Task<PseudonymizationJob> SeedAsync(
+        PseudonymizationJobStatus status,
+        DateTimeOffset? lastUpdatedAt = null
+    )
+    {
+        var job = CreateJob(status, lastUpdatedAt ?? DateTimeOffset.UtcNow.AddMinutes(-1));
+        InMemoryPseudonymContext.PseudonymizationJobs.Add(job);
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+        return job;
+    }
+
+    private async Task<PseudonymizationJobStatus> StatusOfAsync(Guid id) =>
+        (
+            await InMemoryPseudonymContext
+                .PseudonymizationJobs.AsNoTracking()
+                .SingleAsync(j => j.Id == id, TestContext.Current.CancellationToken)
+        ).Status;
+
+    [Theory]
+    [InlineData(PseudonymizationJobStatus.AwaitingUpload, true)]
+    [InlineData(PseudonymizationJobStatus.Queued, false)]
+    [InlineData(PseudonymizationJobStatus.Running, false)]
+    [InlineData(PseudonymizationJobStatus.Completed, false)]
+    [InlineData(PseudonymizationJobStatus.Failed, false)]
+    [InlineData(PseudonymizationJobStatus.Cancelled, false)]
+    [InlineData(PseudonymizationJobStatus.Stalled, false)]
+    public async Task MarkQueuedAsync_ShouldOnlyApplyToAJobAwaitingItsUpload(
+        PseudonymizationJobStatus status,
+        bool shouldApply
+    )
+    {
+        var job = await SeedAsync(status);
+        var sut = new PseudonymizationJobRepository(ContextFactory);
+
+        var applied = await sut.MarkQueuedAsync(
+            job.Id,
+            1024,
+            TestContext.Current.CancellationToken
+        );
+
+        applied.Should().Be(shouldApply);
+        (await StatusOfAsync(job.Id))
+            .Should()
+            .Be(shouldApply ? PseudonymizationJobStatus.Queued : status);
+    }
+
+    [Fact]
+    public async Task MarkQueuedAsync_CalledTwice_ShouldOnlyApplyOnce()
+    {
+        // Two upload-complete requests for the same job: only the first may go on to enqueue it.
+        var job = await SeedAsync(PseudonymizationJobStatus.AwaitingUpload);
+        var sut = new PseudonymizationJobRepository(ContextFactory);
+
+        var first = await sut.MarkQueuedAsync(job.Id, 1024, TestContext.Current.CancellationToken);
+        var second = await sut.MarkQueuedAsync(job.Id, 1024, TestContext.Current.CancellationToken);
+
+        first.Should().BeTrue();
+        second.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(PseudonymizationJobStatus.AwaitingUpload, true)]
+    [InlineData(PseudonymizationJobStatus.Queued, true)]
+    [InlineData(PseudonymizationJobStatus.Running, true)]
+    [InlineData(PseudonymizationJobStatus.Stalled, true)]
+    [InlineData(PseudonymizationJobStatus.Completed, false)]
+    [InlineData(PseudonymizationJobStatus.Failed, false)]
+    [InlineData(PseudonymizationJobStatus.Cancelled, false)]
+    public async Task MarkRunningAsync_ShouldApplyUnlessTheJobIsCancelledCompletedOrFailed(
+        PseudonymizationJobStatus status,
+        bool shouldApply
+    )
+    {
+        var job = await SeedAsync(status);
+        var sut = new PseudonymizationJobRepository(ContextFactory);
+
+        var applied = await sut.MarkRunningAsync(job.Id, TestContext.Current.CancellationToken);
+
+        applied.Should().Be(shouldApply);
+        (await StatusOfAsync(job.Id))
+            .Should()
+            .Be(shouldApply ? PseudonymizationJobStatus.Running : status);
+    }
+
+    [Theory]
+    [InlineData(PseudonymizationJobStatus.AwaitingUpload)]
+    [InlineData(PseudonymizationJobStatus.Queued)]
+    [InlineData(PseudonymizationJobStatus.Completed)]
+    [InlineData(PseudonymizationJobStatus.Failed)]
+    [InlineData(PseudonymizationJobStatus.Cancelled)]
+    [InlineData(PseudonymizationJobStatus.Stalled)]
+    public async Task MarkStalledAsync_WithAStaleJobThatIsNotRunning_ShouldLeaveItAlone(
+        PseudonymizationJobStatus status
+    )
+    {
+        // The case the condition exists for: found as a stale Running job, then completed or
+        // cancelled - or marked by another replica's watchdog - before this write.
+        var job = await SeedAsync(status, DateTimeOffset.UtcNow.AddMinutes(-20));
+        var sut = new PseudonymizationJobRepository(ContextFactory);
+
+        var applied = await sut.MarkStalledAsync(
+            job.Id,
+            TimeSpan.FromMinutes(10),
+            "stalled",
+            TestContext.Current.CancellationToken
+        );
+
+        applied.Should().BeFalse();
+        (await StatusOfAsync(job.Id)).Should().Be(status);
+    }
+
+    [Fact]
+    public async Task MarkStalledAsync_WithARunningJobThatHasSinceProgressed_ShouldLeaveItAlone()
+    {
+        var job = await SeedAsync(
+            PseudonymizationJobStatus.Running,
+            DateTimeOffset.UtcNow.AddSeconds(-5)
+        );
+        var sut = new PseudonymizationJobRepository(ContextFactory);
+
+        var applied = await sut.MarkStalledAsync(
+            job.Id,
+            TimeSpan.FromMinutes(10),
+            "stalled",
+            TestContext.Current.CancellationToken
+        );
+
+        applied.Should().BeFalse();
+        (await StatusOfAsync(job.Id)).Should().Be(PseudonymizationJobStatus.Running);
+    }
+
+    [Fact]
+    public async Task MarkStalledAsync_WithAStaleRunningJob_ShouldMarkItStalledExactlyOnce()
+    {
+        // Every replica runs the watchdog: the second one to get here must find nothing to do.
+        var job = await SeedAsync(
+            PseudonymizationJobStatus.Running,
+            DateTimeOffset.UtcNow.AddMinutes(-20)
+        );
+        var sut = new PseudonymizationJobRepository(ContextFactory);
+
+        var first = await sut.MarkStalledAsync(
+            job.Id,
+            TimeSpan.FromMinutes(10),
+            "stalled",
+            TestContext.Current.CancellationToken
+        );
+        var second = await sut.MarkStalledAsync(
+            job.Id,
+            TimeSpan.FromMinutes(10),
+            "stalled",
+            TestContext.Current.CancellationToken
+        );
+
+        first.Should().BeTrue();
+        second.Should().BeFalse();
+        var stored = await InMemoryPseudonymContext
+            .PseudonymizationJobs.AsNoTracking()
+            .SingleAsync(j => j.Id == job.Id, TestContext.Current.CancellationToken);
+        stored.Status.Should().Be(PseudonymizationJobStatus.Stalled);
+        stored.ErrorMessage.Should().Be("stalled");
+    }
+
+    [Theory]
+    [InlineData(PseudonymizationJobStatus.AwaitingUpload, true)]
+    [InlineData(PseudonymizationJobStatus.Queued, true)]
+    [InlineData(PseudonymizationJobStatus.Running, true)]
+    [InlineData(PseudonymizationJobStatus.Completed, false)]
+    [InlineData(PseudonymizationJobStatus.Failed, false)]
+    [InlineData(PseudonymizationJobStatus.Cancelled, false)]
+    [InlineData(PseudonymizationJobStatus.Stalled, false)]
+    public async Task MarkCancelledAsync_ShouldOnlyApplyToAJobThatHasNotFinished(
+        PseudonymizationJobStatus status,
+        bool shouldApply
+    )
+    {
+        var job = await SeedAsync(status);
+        var sut = new PseudonymizationJobRepository(ContextFactory);
+
+        var applied = await sut.MarkCancelledAsync(job.Id, TestContext.Current.CancellationToken);
+
+        applied.Should().Be(shouldApply);
+        (await StatusOfAsync(job.Id))
+            .Should()
+            .Be(shouldApply ? PseudonymizationJobStatus.Cancelled : status);
+    }
+
+    [Theory]
+    [InlineData(PseudonymizationJobStatus.Running, true)]
+    [InlineData(PseudonymizationJobStatus.AwaitingUpload, false)]
+    [InlineData(PseudonymizationJobStatus.Queued, false)]
+    [InlineData(PseudonymizationJobStatus.Completed, false)]
+    [InlineData(PseudonymizationJobStatus.Failed, false)]
+    [InlineData(PseudonymizationJobStatus.Cancelled, false)]
+    [InlineData(PseudonymizationJobStatus.Stalled, false)]
+    public async Task CompleteAsync_ShouldOnlyApplyToARunningJob(
+        PseudonymizationJobStatus status,
+        bool shouldApply
+    )
+    {
+        var job = await SeedAsync(status);
+        var sut = new PseudonymizationJobRepository(ContextFactory);
+
+        var applied = await sut.CompleteAsync(
+            job.Id,
+            "csv-jobs/output.csv",
+            10,
+            TestContext.Current.CancellationToken
+        );
+
+        applied.Should().Be(shouldApply);
+        (await StatusOfAsync(job.Id))
+            .Should()
+            .Be(shouldApply ? PseudonymizationJobStatus.Completed : status);
+    }
 }

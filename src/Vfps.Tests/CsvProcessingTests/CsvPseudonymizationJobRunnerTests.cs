@@ -40,7 +40,8 @@ public class CsvPseudonymizationJobRunnerTests
     // A real, non-cancelled job's check-in returns "still active". Without this the fake's own
     // default for a Task<bool> is false, which the runner reads as "cancelled" - every job would
     // then stop dead at its first check-in (row 200), and the cancellation tests below would pass
-    // whether or not cancellation actually worked.
+    // whether or not cancellation actually worked. The transition to Running needs the same:
+    // false there means "already finished or cancelled", and the runner wouldn't start at all.
     public CsvPseudonymizationJobRunnerTests()
     {
         A.CallTo(() =>
@@ -54,6 +55,8 @@ public class CsvPseudonymizationJobRunnerTests
                     A<CancellationToken>._
                 )
             )
+            .Returns(true);
+        A.CallTo(() => jobRepository.MarkRunningAsync(A<Guid>._, A<CancellationToken>._))
             .Returns(true);
     }
 
@@ -340,14 +343,7 @@ public class CsvPseudonymizationJobRunnerTests
             .MustHaveHappenedOnceExactly();
         A.CallTo(() => jobRepository.CompleteAsync(job.Id, A<string>._, 1, A<CancellationToken>._))
             .MustHaveHappenedOnceExactly();
-        A.CallTo(() =>
-                jobRepository.UpdateStatusAsync(
-                    job.Id,
-                    PseudonymizationJobStatus.Running,
-                    null,
-                    A<CancellationToken>._
-                )
-            )
+        A.CallTo(() => jobRepository.MarkRunningAsync(job.Id, A<CancellationToken>._))
             .MustHaveHappenedOnceExactly();
     }
 
@@ -1228,7 +1224,43 @@ public class CsvPseudonymizationJobRunnerTests
                 )
             )
             .MustNotHaveHappened();
+        A.CallTo(() => jobRepository.MarkRunningAsync(job.Id, A<CancellationToken>._))
+            .MustNotHaveHappened();
         A.CallTo(() => s3.GetObjectAsync(A<string>._, A<string>._, A<CancellationToken>._))
+            .MustNotHaveHappened();
+    }
+
+    [Fact]
+    public async Task RunAsync_WhenCancelledBetweenItsReadAndTheTransitionToRunning_ShouldNotProcess()
+    {
+        // The job reads as Queued, but a Cancel click (possibly on another replica) lands before
+        // the runner's own write: the conditional transition to Running matches nothing, and the
+        // runner has to take that as its answer rather than processing a cancelled job.
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => jobRepository.MarkRunningAsync(job.Id, A<CancellationToken>._))
+            .Returns(false);
+
+        var sut = CreateSut();
+        await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+
+        A.CallTo(() => s3.GetObjectAsync(A<string>._, A<string>._, A<CancellationToken>._))
+            .MustNotHaveHappened();
+        A.CallTo(() =>
+                jobRepository.CompleteAsync(job.Id, A<string>._, A<long>._, A<CancellationToken>._)
+            )
+            .MustNotHaveHappened();
+        A.CallTo(() =>
+                jobRepository.UpdateStatusAsync(
+                    job.Id,
+                    A<PseudonymizationJobStatus>._,
+                    A<string>._,
+                    A<CancellationToken>._
+                )
+            )
             .MustNotHaveHappened();
     }
 
@@ -1251,15 +1283,9 @@ public class CsvPseudonymizationJobRunnerTests
         // that raced with it (see the runner's own comment on that check) - the real repository
         // would report the Running status set below, so the fake must mirror that mutation for
         // this second read to see anything other than the stale Stalled this test starts with.
-        A.CallTo(() =>
-                jobRepository.UpdateStatusAsync(
-                    job.Id,
-                    A<PseudonymizationJobStatus>._,
-                    A<string?>._,
-                    A<CancellationToken>._
-                )
-            )
-            .Invokes(call => job.Status = call.GetArgument<PseudonymizationJobStatus>(1));
+        A.CallTo(() => jobRepository.MarkRunningAsync(job.Id, A<CancellationToken>._))
+            .Invokes(() => job.Status = PseudonymizationJobStatus.Running)
+            .Returns(true);
         A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
             .Returns(CreateNamespace("ns"));
         FakeInputObject(job, "id,value\n1,secret\n");
@@ -1268,14 +1294,7 @@ public class CsvPseudonymizationJobRunnerTests
         var sut = CreateSut();
         await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
-        A.CallTo(() =>
-                jobRepository.UpdateStatusAsync(
-                    job.Id,
-                    PseudonymizationJobStatus.Running,
-                    null,
-                    A<CancellationToken>._
-                )
-            )
+        A.CallTo(() => jobRepository.MarkRunningAsync(job.Id, A<CancellationToken>._))
             .MustHaveHappenedOnceExactly();
         A.CallTo(() => jobRepository.CompleteAsync(job.Id, A<string>._!, 1, A<CancellationToken>._))
             .MustHaveHappenedOnceExactly();

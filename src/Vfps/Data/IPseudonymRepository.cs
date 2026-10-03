@@ -188,4 +188,25 @@ public interface IPseudonymRepository
         IReadOnlyCollection<string> pseudonymValues,
         CancellationToken cancellationToken
     );
+
+    /// <summary>
+    /// Takes an exclusive lock on importing into <paramref name="namespaceName"/>, held until the
+    /// returned handle is disposed - waiting for it first if another import holds it. The lock
+    /// lives in the database, so it excludes imports running on every replica, not just this one.
+    ///
+    /// Exists for <see cref="AppServices.IPseudonymAppService.ImportTrustedBatchAsync"/>, which
+    /// classifies each row against what is already stored and then writes the ones it accepted -
+    /// correct only if no other import into the same namespace can write in between. Nothing else
+    /// in the schema would catch it: (namespace_name, pseudonym_value) is deliberately not unique.
+    /// Nothing but imports takes this lock, so it never delays a pseudonym Create.
+    /// </summary>
+    /// <remarks>
+    /// Holds a pooled connection of its own for as long as it is held, alongside whatever
+    /// connection the work done under it uses. A no-op on SQLite, which only ever backs the
+    /// single-process test suite.
+    /// </remarks>
+    Task<IAsyncDisposable> AcquireImportLockAsync(
+        string namespaceName,
+        CancellationToken cancellationToken
+    );
 }

@@ -497,6 +497,17 @@ public class PseudonymAppService(
             .Distinct(StringComparer.Ordinal)
             .ToList();
 
+        // Held from the first read of what's stored until the insert has landed: every row below
+        // is classified against that stored state, which is only still true at write time if no
+        // other import into this namespace - on this replica or any other - wrote in between.
+        // Without it, two imports could both find the same pseudonym value free and both store it
+        // for different original values, leaving its reverse lookup ambiguous; or, in a multi-psn
+        // namespace, both pick the same next sequence number for one original value.
+        await using var importLock = await pseudonymRepository.AcquireImportLockAsync(
+            @namespace.Name,
+            cancellationToken
+        );
+
         // Everything already stored for the original values this batch touches, so each row can
         // be classified against it without a round trip of its own. Also seeds the next free
         // sequence number per original value for a multi-psn namespace: one past the highest one
