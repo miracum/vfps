@@ -151,3 +151,9 @@ reportgenerator -reports:"./coverage/coverage.cobertura.xml" -targetdir:"coverag
 ```sh
 docker build -t ghcr.io/miracum/vfps:latest .
 ```
+
+### Documentation site
+
+```sh
+uv run zensical serve
+```

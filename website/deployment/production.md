@@ -10,6 +10,71 @@ helm install --create-namespace vfps oci://ghcr.io/miracum/vfps/charts/vfps -n v
 The [VOPRF](../voprf.md) key holder has a chart of its own,
 [charts/voprf-server](https://github.com/miracum/vfps/tree/master/charts/voprf-server).
 
+## Architecture
+
+A highly available deployment, with the admin UI, the API and CSV jobs separated, and the database
+run by [CloudNativePG](https://cloudnative-pg.io/) instead of the chart's bundled single-instance
+PostgreSQL:
+
+```mermaid
+flowchart TB
+    rest["REST and<br/>FHIR clients"]
+    browser["Browser<br/>admin UI"]
+    grpc["gRPC clients<br/>in-cluster"]
+
+    ingress["Ingress"]
+    svc_ui["Service vfps-ui<br/>sticky sessions"]
+    svc_api["Service vfps"]
+    svc_headless["Service<br/>vfps-headless"]
+
+    subgraph api["Deployment vfps · API"]
+        direction LR
+        api1["pod"] ~~~ api2["pod"] ~~~ api3["pod"]
+    end
+
+    subgraph workers["Deployment vfps-worker · CSV jobs"]
+        direction LR
+        worker1["pod"] ~~~ worker2["pod"]
+    end
+
+    migrate["Job<br/>Vfps.dll migrate"]
+    s3[("S3-compatible<br/>object storage")]
+
+    subgraph cnpg["CloudNativePG Cluster vfps-db"]
+        rw["Service vfps-db-rw"] --> primary[("primary")]
+        primary -. "synchronous<br/>replication" .-> standby1[("standby")]
+        primary -.-> standby2[("standby")]
+    end
+
+    rest --> ingress
+    browser --> ingress
+    ingress -- "/" --> svc_ui --> api
+    ingress -- "/v1" --> svc_api --> api
+    grpc -- "round robin" --> svc_headless --> api
+
+    api --> rw
+    workers --> rw
+    migrate --> rw
+
+    browser -. "presigned URLs" .-> s3
+    workers <-- "stream CSV" --> s3
+```
+
+| In the diagram                                                                               | Chart values                                                       |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Three API replicas spread across zones, at most one down at a time                           | `replicaCount`, `topologySpreadConstraints`, `podDisruptionBudget` |
+| `/` to a separate UI Service holding the session affinity, `/v1` to the main one             | `ingress.hosts[].paths[].serviceName`, `service.ui`                |
+| gRPC clients balancing per request across all API pods                                       | the `-headless` Service, always created                            |
+| CSV jobs in their own Deployment, with its own shutdown window and resource budget           | `worker.enabled`, `worker.replicaCount`                            |
+| Schema migrations run once per release rather than by every replica                          | `migrationsJob.enabled`                                            |
+| An external, replicated PostgreSQL reached through its read-write Service, over verified TLS | `postgres.enabled: false`, `database.host`, `database.tls`         |
+
+The reasons behind each of these are explained below. Encrypting the database connection is
+covered in [PostgreSQL TLS](postgresql-tls.md), and CSV jobs and object storage in
+[CSV jobs](../csv-jobs.md). Configure the CloudNativePG cluster with synchronous replication
+(`spec.postgresql.synchronous`), so that a failover can't lose a pseudonym vfps has already
+returned to a caller.
+
 ## Running more than one replica
 
 vfps keeps no durable state of its own outside PostgreSQL, so replicas are interchangeable and can
