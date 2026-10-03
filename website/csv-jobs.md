@@ -2,7 +2,8 @@
 
 Upload a CSV file to pseudonymize or de-pseudonymize one or more columns as a background job. Files are streamed directly to and from S3-compatible object storage.
 
-![CSV pseudonymization jobs page](img/ui-jobs.png)
+![CSV pseudonymization jobs page](img/ui/ui-jobs-light.png#only-light)
+![CSV pseudonymization jobs page](img/ui/ui-jobs-dark.png#only-dark)
 
 CSV job input/output bytes never pass through the vfps process itself: the admin UI uploads directly to a presigned S3 PUT URL and downloads directly from a presigned S3 GET URL, and the Hangfire background job (running in-process, no separate worker deployment) streams the file S3-to-S3. See `compose.yaml`'s `s3` profile for a local SeaweedFS setup usable for manual testing.
 
