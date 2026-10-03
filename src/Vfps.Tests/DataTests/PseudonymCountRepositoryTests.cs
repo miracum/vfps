@@ -141,4 +141,27 @@ public class PseudonymCountRepositoryTests : ServiceTests.ServiceTestBase
 
         read.Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task ListAsync_ShouldReturnEachCountWithWhenItWasComputed()
+    {
+        var alpha = await CreateNamespaceAsync();
+        var beta = await CreateNamespaceAsync();
+        var computedAt = DateTimeOffset.UtcNow;
+
+        await CreateSut()
+            .ReplaceAllAsync(
+                new Dictionary<string, long> { [alpha] = 3, [beta] = 7 },
+                computedAt,
+                TestContext.Current.CancellationToken
+            );
+
+        var rows = await CreateSut().ListAsync(TestContext.Current.CancellationToken);
+
+        rows.Should().HaveCount(2);
+        rows.Should().ContainSingle(r => r.NamespaceName == alpha).Which.Count.Should().Be(3);
+        rows.Should().ContainSingle(r => r.NamespaceName == beta).Which.Count.Should().Be(7);
+        rows.Should()
+            .AllSatisfy(r => r.ComputedAt.Should().BeCloseTo(computedAt, TimeSpan.FromSeconds(1)));
+    }
 }

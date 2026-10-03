@@ -82,6 +82,20 @@ public interface INamespaceAppService
         ClaimsPrincipal user,
         CancellationToken cancellationToken
     );
+
+    /// <summary>
+    /// The periodically recomputed pseudonym count of every namespace the caller has read access
+    /// to, filtered per-row exactly as <see cref="GetAllAsync"/> does - a count says that a
+    /// namespace exists, so one the caller can't read must not show up here either.
+    ///
+    /// A stored snapshot, not a live count (see <see cref="Metrics.PseudonymCountMetrics"/>): each
+    /// row's <see cref="PseudonymCount.ComputedAt"/> says how current it is, and a namespace that
+    /// hasn't been counted yet - or none, before the first recompute - simply has no row.
+    /// </summary>
+    Task<IReadOnlyList<PseudonymCount>> GetPseudonymCountsAsync(
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
 }
 
 /// <summary>

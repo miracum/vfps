@@ -458,21 +458,19 @@ else
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.File"]">
                             <ChildContent Context="j">
-                                <div class="bb:truncate bb:text-xs" title="@JobSubject(j)">
-                                    @(JobSubject(j) ?? "—")
+                                <div class="bb:truncate bb:text-xs" title="@CsvJobDisplay.Subject(j)">
+                                    @(CsvJobDisplay.Subject(j) ?? "—")
                                 </div>
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Direction"]">
                             <ChildContent Context="j">
-                                @DirectionLabel(j.Direction)
+                                @CsvJobDisplay.DirectionLabel(j.Direction, Localizer)
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Status"]">
                             <ChildContent Context="j">
-                                <BbBadge Variant="@BadgeVariantFor(j.Status)" Class="@BadgeClassFor(j.Status)">
-                                    @StatusLabel(j.Status)
-                                </BbBadge>
+                                <CsvJobStatusBadge Status="j.Status" />
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Progress"]">
@@ -845,66 +843,11 @@ else
             ? Localizer["App.CsvJobs.ThroughputRowsPerSecond", rowsPerSecond.ToString("N0")].Value
             : null;
 
-    private string DirectionLabel(PseudonymizationJobDirection direction) =>
-        direction switch
-        {
-            PseudonymizationJobDirection.Depseudonymize =>
-                Localizer["App.CsvJobs.DirectionDepseudonymize"],
-            PseudonymizationJobDirection.Import => Localizer["App.CsvJobs.DirectionImport"],
-            PseudonymizationJobDirection.Export => Localizer["App.CsvJobs.DirectionExport"],
-            _ => Localizer["App.CsvJobs.DirectionPseudonymize"],
-        };
-
-    // What the "File" column shows. An export has no uploaded file, so it's identified by the
-    // namespace it reads instead - the same thing its downloaded file is named after. Read
-    // defensively rather than via PseudonymizationJobAppService.ResolveSingleNamespaceMapping:
-    // this is a grid cell, and a malformed row should render as "—" rather than throw the whole
-    // page's render away.
-    private static string? JobSubject(PseudonymizationJob job) =>
-        job.Direction == PseudonymizationJobDirection.Export
-            ? job.ColumnMappings.FirstOrDefault()?.Namespace
-            : job.OriginalFileName;
-
-    private string StatusLabel(PseudonymizationJobStatus status) =>
-        status switch
-        {
-            PseudonymizationJobStatus.AwaitingUpload => Localizer["App.CsvJobs.StatusAwaitingUpload"],
-            PseudonymizationJobStatus.Queued => Localizer["App.CsvJobs.StatusQueued"],
-            PseudonymizationJobStatus.Running => Localizer["App.CsvJobs.StatusRunning"],
-            PseudonymizationJobStatus.Completed => Localizer["App.CsvJobs.StatusCompleted"],
-            PseudonymizationJobStatus.Failed => Localizer["App.CsvJobs.StatusFailed"],
-            PseudonymizationJobStatus.Cancelled => Localizer["App.CsvJobs.StatusCancelled"],
-            PseudonymizationJobStatus.Stalled => Localizer["App.CsvJobs.StatusStalled"],
-            _ => status.ToString(),
-        };
-
     // NavigationManager.BaseUri already includes the "/ui/" path base (App.razor's <base href>),
     // so appending the dashboard's own relative route gives an absolute link to the Hangfire
     // dashboard's job details page without hardcoding host/port or the "/ui" prefix.
     private string HangfireJobDetailsUrl(string hangfireJobId) =>
         $"{NavigationManager.BaseUri}hangfire/jobs/details/{Uri.EscapeDataString(hangfireJobId)}";
-
-    private static BadgeVariant BadgeVariantFor(PseudonymizationJobStatus status) =>
-        status switch
-        {
-            PseudonymizationJobStatus.Failed => BadgeVariant.Destructive,
-            // Outline, not Destructive - Stalled is only ever a heuristic guess (see the enum's
-            // own doc comment), so the badge shouldn't read as confidently as a confirmed Failed.
-            PseudonymizationJobStatus.Stalled => BadgeVariant.Outline,
-            PseudonymizationJobStatus.Cancelled => BadgeVariant.Outline,
-            PseudonymizationJobStatus.Completed => BadgeVariant.Default,
-            _ => BadgeVariant.Secondary,
-        };
-
-    // Plain, global CSS classes (wwwroot/app.css), not Tailwind utilities - see that file's own
-    // comment for why arbitrary Tailwind classes (and Blazor CSS isolation) don't work here.
-    private static string? BadgeClassFor(PseudonymizationJobStatus status) =>
-        status switch
-        {
-            PseudonymizationJobStatus.Completed => "badge-completed",
-            PseudonymizationJobStatus.Stalled => "badge-warning-amber",
-            _ => null,
-        };
 
     private async Task OnHasHeaderRowChangedAsync(bool value)
     {

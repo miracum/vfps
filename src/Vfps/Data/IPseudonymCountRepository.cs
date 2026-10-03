@@ -30,4 +30,10 @@ public interface IPseudonymCountRepository
     /// short interval - one small row per namespace, and namespace cardinality is low by design.
     /// </summary>
     Task<IReadOnlyDictionary<string, long>> GetAllAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// The stored rows themselves, rather than <see cref="GetAllAsync"/>'s bare counts - for a
+    /// reader that also needs to say how current they are (<see cref="PseudonymCount.ComputedAt"/>).
+    /// </summary>
+    Task<IReadOnlyList<PseudonymCount>> ListAsync(CancellationToken cancellationToken);
 }

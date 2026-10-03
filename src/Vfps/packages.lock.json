@@ -119,6 +119,21 @@
           "Hl7.Fhir.Conformance": "6.5.0"
         }
       },
+      "Humanizer.Core": {
+        "type": "Direct",
+        "requested": "[3.0.10, )",
+        "resolved": "3.0.10",
+        "contentHash": "yZIhtw8sYuvsONzQbZxWpR60tMWYHXoo0DL6nyOqSFiU5POjBTSEyWFpTQtJEZuy+oqiYTXKXY/Mjx7KnqIQFw=="
+      },
+      "Humanizer.Core.de": {
+        "type": "Direct",
+        "requested": "[3.0.10, )",
+        "resolved": "3.0.10",
+        "contentHash": "UoJk/DmAOFZivuMulLoB52Pn5iFvSqurF7qQQAyUAz1/IUZjxkoeoiI5mMILEjVeGoQJqrylt6O+f8johCo0Bg==",
+        "dependencies": {
+          "Humanizer.Core": "[3.0.10]"
+        }
+      },
       "Microsoft.AspNetCore.App.Internal.Assets": {
         "type": "Direct",
         "requested": "[10.0.12, )",
@@ -485,11 +500,6 @@
           "AngleSharp": "1.7.0",
           "AngleSharp.Css": "1.0.1"
         }
-      },
-      "Humanizer.Core": {
-        "type": "Transitive",
-        "resolved": "2.14.1",
-        "contentHash": "lQKvtaTDOXnoVJ20ibTuSIOf2i0uO0MPbDhd1jm238I+U/2ZnRENj0cktKZhtchBMtCUSRQ5v4xBCUbKNmyVMw=="
       },
       "Ical.Net": {
         "type": "Transitive",
@@ -873,8 +883,8 @@
         "type": "Project",
         "dependencies": {
           "Grpc.Net.ClientFactory": "[2.83.0, )",
-          "Vfps.Voprf": "[1.19.1, )",
-          "Vfps.Voprf.Contracts": "[1.19.1, )"
+          "Vfps.Voprf": "[1.21.0, )",
+          "Vfps.Voprf.Contracts": "[1.21.0, )"
         }
       },
       "vfps.voprf.contracts": {
