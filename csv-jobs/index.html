@@ -1005,7 +1005,8 @@
 
 <h1 id="csv-jobs">CSV jobs<a class="headerlink" href="#csv-jobs" title="Permanent link">&para;</a></h1>
 <p>Upload a CSV file to pseudonymize or de-pseudonymize one or more columns as a background job. Files are streamed directly to and from S3-compatible object storage.</p>
-<p><img alt="CSV pseudonymization jobs page" src="../img/ui-jobs.png" /></p>
+<p><img alt="CSV pseudonymization jobs page" src="../img/ui/ui-jobs-light.png#only-light" />
+<img alt="CSV pseudonymization jobs page" src="../img/ui/ui-jobs-dark.png#only-dark" /></p>
 <p>CSV job input/output bytes never pass through the vfps process itself: the admin UI uploads directly to a presigned S3 PUT URL and downloads directly from a presigned S3 GET URL, and the Hangfire background job (running in-process, no separate worker deployment) streams the file S3-to-S3. See <code>compose.yaml</code>'s <code>s3</code> profile for a local SeaweedFS setup usable for manual testing.</p>
 <p>Each job runs in one of two directions: <strong>Pseudonymize</strong> (replace original values with their pseudonym - requires write access to every namespace used) or <strong>De-pseudonymize</strong> (replace pseudonym values with their original value - requires reverse-lookup access, since this reveals data). A pseudonym with no match in its namespace during de-pseudonymization is left unchanged in the output rather than failing the job.</p>
 <h2 id="unknown-values">Unknown values<a class="headerlink" href="#unknown-values" title="Permanent link">&para;</a></h2>
