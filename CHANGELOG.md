@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.22.0](https://github.com/miracum/vfps/compare/v1.21.0...v1.22.0) (2026-10-03)
+
+
+### Features
+
+* **ui:** nicer homepage ([#380](https://github.com/miracum/vfps/issues/380)) ([0393c97](https://github.com/miracum/vfps/commit/0393c97cad35348200b2757df648e4c881d5e419))
+
+
+### Bug Fixes
+
+* multi-replica and multi-import correctness checks ([#381](https://github.com/miracum/vfps/issues/381)) ([d9f089c](https://github.com/miracum/vfps/commit/d9f089cf95f696b53c26b30f618735dc2ebe8946))
+
+
+### Documentation
+
+* added documentation site ([#378](https://github.com/miracum/vfps/issues/378)) ([8c22f00](https://github.com/miracum/vfps/commit/8c22f001d49dc7e6d1f16267bdc26a4e772a7a68))
+* screenshots and ui update ([#383](https://github.com/miracum/vfps/issues/383)) ([70e388e](https://github.com/miracum/vfps/commit/70e388e0cb4ada1ac128a9b61e119f7fcb6bb5d4))
+
+
+### Miscellaneous Chores
+
+* get rid od minio ([#376](https://github.com/miracum/vfps/issues/376)) ([b285ab5](https://github.com/miracum/vfps/commit/b285ab5dd8060a3ed00e02947fd28218f0892b92))
+
 ## [1.21.0](https://github.com/miracum/vfps/compare/v1.20.5...v1.21.0) (2026-10-01)
 
 
