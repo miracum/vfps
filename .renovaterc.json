@@ -12,6 +12,11 @@
   ],
   "packageRules": [
     {
+      "description": "Images built and published from this repo (vfps itself, voprf-server, stress-test) - their tags in compose.yaml and the charts' values.yaml are bumped by release-please, so Renovate must neither update nor digest-pin them.",
+      "matchPackageNames": ["ghcr.io/miracum/vfps", "ghcr.io/miracum/vfps/**"],
+      "enabled": false
+    },
+    {
       "description": "global.json's SDK version, the Dockerfiles' dotnet/sdk and dotnet/aspnet image tags, and the annotated dotnet-version CI inputs have to move together - a mismatch between global.json/CI and the Dockerfile's SDK image breaks 'dotnet restore --locked-mode' on src/Vfps/Vfps.csproj, whose packages.lock.json pins Microsoft.AspNetCore.App.Internal.Assets to whatever ASP.NET Core runtime the build-stage SDK bundles.",
       "matchPackageNames": [
         "dotnet-sdk",
