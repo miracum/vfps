@@ -9,7 +9,7 @@ The application-side items are **done**. Most of the chart-side work is done too
 listed under "Still to do".
 
 Operator-facing guidance that came out of this lives in the README under
-[Running more than one replica](../../README.md#running-more-than-one-replica).
+[Running more than one replica](../../website/deployment/production.md#running-more-than-one-replica).
 
 ## Done application-side
 
