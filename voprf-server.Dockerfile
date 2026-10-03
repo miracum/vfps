@@ -2,7 +2,7 @@
 # zlib1g-dev - see https://aka.ms/nativeaot-prerequisites) already installed, so nothing has
 # to be added here. The plain (non-aot) tag is what the sibling Dockerfile uses, since that
 # target has no PublishAot and doesn't need a native linker.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.401-resolute-aot@sha256:c3d043bc8720363072224429968f167a664180718faee03c47285c78e4a7db45 AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.401-resolute-aot@sha256:37ed819a2da28a5cb2de264b64a35ce68137f04207656464b48ce3a5b7f9e32c AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     ASPNETCORE_ENVIRONMENT="Production" \

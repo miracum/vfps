@@ -1,4 +1,4 @@
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.401-resolute@sha256:4bd809877fc795924d30c686774a3c2136710f0e923f15224c5fbb70a09cfb2f AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.401-resolute@sha256:99dcd621d714abc31ba55bec6931c5d5b1ca007e181ac939ad728822cb964405 AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     PATH="/root/.dotnet/tools:${PATH}" \
@@ -77,7 +77,7 @@ USER 0:0
 ENTRYPOINT ["dotnet"]
 CMD ["/opt/vfps-stress/Vfps.StressTests.dll", "-reporter", "verbose"]
 
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.12-resolute-chiseled-extra@sha256:5b5936af84ee5564e5b2e3868f9c1830a3c5529c4bd70baeffb67343ccc0bb82 AS runtime
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/aspnet:10.0.12-resolute-chiseled-extra@sha256:eb6bfb796597cd99174076a1a267d6eff845c91b4d3584bb0aea8620b66e34e7 AS runtime
 WORKDIR /opt/vfps
 EXPOSE 8080/tcp 8081/tcp 8082/tcp
 USER 65534:65534
