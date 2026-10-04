@@ -57,13 +57,14 @@
     <ProjectReference Include="..\Vfps.Voprf.Client\Vfps.Voprf.Client.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <!-- Rooted at Protos, so a file's name in its compiled descriptor is "vfps/api/v1/..." and
-         it imports "google/api/annotations.proto" - the very name that file is registered under
-         at runtime (by Google.Api.CommonProtos). gRPC server reflection serves these descriptors
-         as they are, and a client resolves each import by that name: rooted at the project
-         instead, the import read "Protos/google/api/annotations.proto", which reflection has no
-         file for, and stricter clients (grpcurl before 1.9, ghz) failed to resolve any vfps
-         service. -->
+    <!--
+      Rooted at Protos, so a file's name in its compiled descriptor is "vfps/api/v1/..." and it
+      imports "google/api/annotations.proto" - the very name that file is registered under at
+      runtime (by Google.Api.CommonProtos). gRPC server reflection serves these descriptors as
+      they are, and a client resolves each import by that name: rooted at the project instead, the
+      import read "Protos/google/api/annotations.proto", which reflection has no file for, and
+      stricter clients (grpcurl before 1.9, ghz) failed to resolve any vfps service.
+    -->
     <Protobuf Include="Protos\vfps\api\v1\*.proto" ProtoRoot="Protos" />
   </ItemGroup>
   <ItemGroup>
