@@ -58,16 +58,18 @@ the namespace, with `PermissionDenied`.
 
 ## The gRPC utils image
 
-`ghcr.io/miracum/vfps-grpc-utils` is a small image for talking to vfps where nothing is installed,
+`ghcr.io/miracum/vfps/grpc-utils` is a small image for talking to vfps where nothing is installed,
 such as from inside a cluster. It contains:
 
 - [grpcurl](https://github.com/fullstorydev/grpcurl), for making individual calls
 - [ghz](https://ghz.sh/), for load testing
 - `curl` and `jq`
-- vfps's `.proto` files, under `/tmp/protos/Protos`, for tools that can't use reflection
+- vfps's `.proto` files, under `/tmp/protos` - for a tool that can't use reflection, pass
+  `-import-path /tmp/protos -proto vfps/api/v1/pseudonyms.proto`
 
 Every vfps release has a matching image tag, and `latest` follows the latest release and `master`
-the default branch. The image runs as `nobody` (UID 65534).
+the default branch. The image runs as `nobody` (UID 65534). Releases up to v1.22.2 published it as
+`ghcr.io/miracum/vfps-grpc-utils`.
 
 ### From Docker
 
@@ -77,7 +79,7 @@ binds port 8081 on `127.0.0.1` - share the host's network so `127.0.0.1` reaches
 <!-- x-release-please-start-version -->
 
 ```sh
-docker run --rm --network=host ghcr.io/miracum/vfps-grpc-utils:v1.22.2 \
+docker run --rm --network=host ghcr.io/miracum/vfps/grpc-utils:v1.22.2 \
   grpcurl -plaintext \
   -H "authorization: Bearer $VFPS_TOKEN" \
   -d "{\"namespace\": \"$VFPS_NAMESPACE\", \"originalValue\": \"to be pseudonymized\"}" \
@@ -101,7 +103,7 @@ from the image in vfps's namespace and call the chart's Service, which is named 
 
 ```sh
 kubectl run --namespace=vfps --rm -i --tty --restart=Never \
-  --image=ghcr.io/miracum/vfps-grpc-utils:v1.22.2 \
+  --image=ghcr.io/miracum/vfps/grpc-utils:v1.22.2 \
   vfps-grpc-utils -- bash
 
 nobody@vfps-grpc-utils:/$ grpcurl -plaintext vfps:8081 list

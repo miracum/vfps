@@ -25,7 +25,7 @@ template`, or a GitOps controller that diffs/applies templated manifests instead
 ## Usage
 
 ```sh
-kubectl run --namespace=vfps -i --tty --rm --image=ghcr.io/miracum/vfps-grpc-utils:latest --restart=Never vfps-tester -- bash
+kubectl run --namespace=vfps -i --tty --rm --image=ghcr.io/miracum/vfps/grpc-utils:latest --restart=Never vfps-tester -- bash
 
 nobody@debug:/$ grpcurl \
   -plaintext \

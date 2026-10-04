@@ -40,9 +40,9 @@ done
 # Usage: grpc <method> <request json>
 grpc() {
   grpcurl -plaintext -connect-timeout 1 \
-    -import-path "${REPO_ROOT}/src/Vfps" \
-    -proto Protos/vfps/api/v1/pseudonyms.proto \
-    -proto Protos/vfps/api/v1/namespaces.proto \
+    -import-path "${REPO_ROOT}/src/Vfps/Protos" \
+    -proto vfps/api/v1/pseudonyms.proto \
+    -proto vfps/api/v1/namespaces.proto \
     -d "$2" 127.0.0.1:8081 "$1"
 }
 

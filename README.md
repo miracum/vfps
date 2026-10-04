@@ -38,8 +38,6 @@ For example, using [grpcurl](https://github.com/fullstorydev/grpcurl) to create 
 ```sh
 grpcurl \
   -plaintext \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
   -d '{"name": "test", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}' \
   127.0.0.1:8081 \
   vfps.api.v1.NamespaceService/Create
@@ -50,8 +48,6 @@ And to create a new pseudonym inside this namespace:
 ```sh
 grpcurl \
   -plaintext \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/pseudonyms.proto \
   -d '{"namespace": "test", "originalValue": "to be pseudonymized"}' \
   127.0.0.1:8081 \
   vfps.api.v1.PseudonymService/Create
