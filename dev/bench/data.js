@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791074592993,
+  "lastUpdate": 1791126347659,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -13194,6 +13194,66 @@ window.BENCHMARK_DATA = {
             "value": 891.9735609201284,
             "unit": "ns",
             "range": "± 0.9065493090212521"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "9e1763c16d311b60d538e3aac84cf5bb3c895d07",
+          "message": "fix: silence kerberos warning and added cold-start time to docs (#397)\n\n* fix: silence kerberos lib warning\n\n* docs: added cold start benchmark to docs and scripts\n\n* ci: fix chaos testing\n\n* fix ha docs/test\n\n* added token usage docs and enable grpc reflection\n\n* core: re-order protos to be compliant with ghz/grpcurl expected dirs\n\n* indent\n\n* fix test",
+          "timestamp": "2026-10-04T17:02:35+02:00",
+          "tree_id": "d0af1bc7306e9a8caaa5630a7fb0116d3efe790b",
+          "url": "https://github.com/miracum/vfps/commit/9e1763c16d311b60d538e3aac84cf5bb3c895d07"
+        },
+        "date": 1791126347070,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 448.12754314824156,
+            "unit": "ns",
+            "range": "± 9.944197813925651"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 351.5370638256981,
+            "unit": "ns",
+            "range": "± 7.0270360992635"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 375.106070790972,
+            "unit": "ns",
+            "range": "± 4.2448085454078495"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 402.1371860844748,
+            "unit": "ns",
+            "range": "± 4.605039367057365"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 486.65019822120667,
+            "unit": "ns",
+            "range": "± 2.941177903224836"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 482.16492508075856,
+            "unit": "ns",
+            "range": "± 12.316109255075373"
           }
         ]
       }
