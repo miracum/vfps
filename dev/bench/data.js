@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791130169055,
+  "lastUpdate": 1791145255172,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -13434,6 +13434,66 @@ window.BENCHMARK_DATA = {
             "value": 927.650867325919,
             "unit": "ns",
             "range": "± 0.8414146510678234"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "efc6886c6f985b9700219cad0ac43bef1578cf27",
+          "message": "fix: image provenance bug in ci - already fixed in shared workflow (#399)\n\n* docs: updated slsa verification docs\n\n* ci: bumped .github workflow\n\n* ci: bumped buf action",
+          "timestamp": "2026-10-04T22:17:55+02:00",
+          "tree_id": "058ef0fbf67a01a97e2d0940e5f666df8062085d",
+          "url": "https://github.com/miracum/vfps/commit/efc6886c6f985b9700219cad0ac43bef1578cf27"
+        },
+        "date": 1791145254527,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 497.553369140625,
+            "unit": "ns",
+            "range": "± 7.434780674266454"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 394.9432690302531,
+            "unit": "ns",
+            "range": "± 3.08735362489376"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 424.9202282269796,
+            "unit": "ns",
+            "range": "± 3.9842898532347735"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 451.2522352536519,
+            "unit": "ns",
+            "range": "± 5.091097381040429"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 562.0688461303711,
+            "unit": "ns",
+            "range": "± 4.348147197848879"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 532.424746131897,
+            "unit": "ns",
+            "range": "± 5.37005100638243"
           }
         ]
       }
