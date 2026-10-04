@@ -1273,14 +1273,14 @@ the default branch. The image runs as <code>nobody</code> (UID 65534). Releases 
 <code>ghcr.io/miracum/vfps-grpc-utils</code>.</p>
 <h3 id="from-docker">From Docker<a class="headerlink" href="#from-docker" title="Permanent link">&para;</a></h3>
 <p>With vfps running locally - for example the <a href="../getting-started/">getting started</a> stack, which
-binds port 8081 on <code>127.0.0.1</code> - share the host's network so <code>127.0.0.1</code> reaches it:</p>
+binds port 8081 on <code>127.0.0.1</code> - share the host's network so <code>localhost</code> reaches it:</p>
 <!-- x-release-please-start-version -->
 
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--network<span class="o">=</span>host<span class="w"> </span>ghcr.io/miracum/vfps/grpc-utils:v1.22.2<span class="w"> </span><span class="se">\</span>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--network<span class="o">=</span>host<span class="w"> </span>ghcr.io/miracum/vfps/grpc-utils:v1.22.3<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"authorization: Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">"{\"namespace\": \"</span><span class="nv">$VFPS_NAMESPACE</span><span class="s2">\", \"originalValue\": \"to be pseudonymized\"}"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>localhost:8081<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Create
 </span></code></pre></div>
 <!-- x-release-please-end -->
@@ -1295,7 +1295,7 @@ from the image in vfps's namespace and call the chart's Service, which is named 
 <!-- x-release-please-start-version -->
 
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>run<span class="w"> </span>--namespace<span class="o">=</span>vfps<span class="w"> </span>--rm<span class="w"> </span>-i<span class="w"> </span>--tty<span class="w"> </span>--restart<span class="o">=</span>Never<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--image<span class="o">=</span>ghcr.io/miracum/vfps/grpc-utils:v1.22.2<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--image<span class="o">=</span>ghcr.io/miracum/vfps/grpc-utils:v1.22.3<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>vfps-grpc-utils<span class="w"> </span>--<span class="w"> </span>bash
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
 </span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>nobody@vfps-grpc-utils:/$<span class="w"> </span>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span>vfps:8081<span class="w"> </span>list
