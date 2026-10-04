@@ -4,18 +4,30 @@
 
 !!! warning
 
-    Using the provided `compose.yaml` is not a production-ready deployment but merely
-    used to get started and testing quickly.
-    It sets very restrictive resource limits uses the default password for an included,
-    unoptimized PostgreSQL deployment. See [Production deployment](deployment/production.md) instead.
+    This stack is for trying vfps out, not for keeping data: it uses a well-known database
+    password, stores everything in an anonymous volume, and has authentication turned off. See
+    [Production deployment](deployment/production.md) to run vfps for real.
+
+With [Docker Compose](https://docs.docker.com/compose/install/) 2.34 or later, start vfps and a
+PostgreSQL database straight as an OCI artifact:
+
+<!-- x-release-please-start-version -->
 
 ```sh
-git clone https://github.com/miracum/vfps.git --depth=1 && cd vfps
-docker compose -f compose.yaml --profile=test up
+docker compose -f oci://ghcr.io/miracum/vfps/compose/getting-started:v1.22.1 up
 ```
 
+<!-- x-release-please-end -->
+
 Visit <http://localhost:8080/swagger/> to view the OpenAPI specification of the Vfps API, and
-<http://localhost:8080/ui> for the [admin UI](admin-ui.md).
+<http://localhost:8080/ui> for the [admin UI](admin-ui.md). Both ports are only bound to
+`127.0.0.1`.
+
+To stop the stack and delete everything it stored:
+
+```sh
+docker compose -p vfps-getting-started down --volumes
+```
 
 ## Using the REST API
 

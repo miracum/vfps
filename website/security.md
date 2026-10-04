@@ -41,4 +41,35 @@ slsa-verifier verify-image \
     "${IMAGE_DIGEST_PINNED}"
 ```
 
+<!-- x-release-please-end -->
+
 See also <https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/container#verification> for details on verifying the image integrity using automated policy controllers.
+
+## Compose artifact verification
+
+The [getting-started](getting-started.md) Compose stack is an OCI artifact signed with cosign,
+with a build provenance attestation. Unlike the images, it is signed by this repository's own `ci`
+workflow. Verify it by digest, then run that digest:
+
+<!-- x-release-please-start-version -->
+
+```sh
+ARTIFACT=ghcr.io/miracum/vfps/compose/getting-started:v1.22.1
+DIGEST=$(crane digest "${ARTIFACT}")
+ARTIFACT_DIGEST_PINNED="${ARTIFACT%:*}@${DIGEST}"
+ARTIFACT_TAG="${ARTIFACT##*:}"
+
+cosign verify \
+   --certificate-oidc-issuer=https://token.actions.githubusercontent.com \
+   --certificate-identity="https://github.com/miracum/vfps/.github/workflows/ci.yaml@refs/tags/${ARTIFACT_TAG}" \
+   "${ARTIFACT_DIGEST_PINNED}"
+
+gh attestation verify "oci://${ARTIFACT_DIGEST_PINNED}" --repo miracum/vfps
+
+docker compose -f "oci://${ARTIFACT_DIGEST_PINNED}" up
+```
+
+<!-- x-release-please-end -->
+
+Every image inside the artifact is pinned to a digest, so verifying the artifact fixes which
+images run. Verify the vfps image itself as shown above.

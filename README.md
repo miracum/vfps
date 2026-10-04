@@ -14,14 +14,21 @@ Supports horizontal service replication for highly-available deployments.
 ## Run it
 
 > **Warning**
-> Using the provided docker-compose.yaml is not a production-ready deployment but merely
-> used to get started and testing quickly.
-> It sets very restrictive resource limits uses the default password for an included,
-> unoptimized PostgreSQL deployment.
+> This stack is for trying vfps out, not for keeping data: it uses a well-known database password,
+> stores everything in an anonymous volume, and has authentication turned off. See
+> [Production deployment](https://miracum.github.io/vfps/deployment/production/) to run vfps for real.
+
+With Docker Compose 2.34 or later, and without cloning this repository:
+
+<!-- x-release-please-start-version -->
 
 ```sh
-docker compose -f compose.yaml --profile=test up
+docker compose -f oci://ghcr.io/miracum/vfps/compose/getting-started:v1.22.1 up
 ```
+
+<!-- x-release-please-end -->
+
+From a checkout, `docker compose -f compose.yaml --profile=test up` starts the same services.
 
 Visit <http://localhost:8080/swagger> to view the OpenAPI specification of the Vfps API:
 
