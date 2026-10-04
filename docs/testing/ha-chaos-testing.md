@@ -233,6 +233,11 @@ docker buildx build --load -t ghcr.io/miracum/vfps:ci .
 docker buildx build --load --target=stress-test -t ghcr.io/miracum/vfps/stress-test:ci .
 ```
 
+On Linux, `run.sh` also refuses to start below kind's recommended inotify limits
+(`fs.inotify.max_user_instances=512`, `fs.inotify.max_user_watches=524288`). The four nodes share
+the host's budget, and at the common default of 128 instances setup fails with pods crash-looping on
+"too many open files". The CI workflow raises both before it runs.
+
 A plain `dotnet test Vfps.slnx` is unaffected by any of this - the resilience test is explicit and
 gets skipped.
 

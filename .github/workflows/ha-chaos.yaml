@@ -90,6 +90,20 @@ jobs:
           kubectl version --client
           envsubst --version | head -1
 
+      - name: Raise inotify limits
+        run: |
+          # Every kind node runs its own systemd, containerd and kubelet as root on the runner's
+          # kernel, so all four share one inotify instance budget, and the default of 128 is nearly
+          # spent by the idle cluster. Whatever starts after CloudNativePG then crash-loops on "too
+          # many open files" - it was Chaos Mesh's controller-manager. run.sh checks the same values;
+          # only raised, since the kernel may already size max_user_watches above this from RAM.
+          for setting in fs.inotify.max_user_instances=512 fs.inotify.max_user_watches=524288; do
+            if [ "$(sysctl -n "${setting%%=*}")" -lt "${setting#*=}" ]; then
+              sudo sysctl -w "${setting}"
+            fi
+          done
+          sysctl fs.inotify
+
       - name: Build images
         env:
           IMAGE_TAG: ${{ inputs.image-tag }}
@@ -166,6 +180,9 @@ jobs:
         run: |
           mkdir -p "${ARTIFACT_DIR}"
           REPORT="${ARTIFACT_DIR}/issue-report.md"
+          # run.sh styles its lines with ANSI escapes for the Actions log viewer. An issue renders
+          # the raw ESC byte as "�[1m" around every one of them, so they are dropped from the report.
+          strip_ansi() { sed -E 's/\x1b\[[0-9;]*[A-Za-z]//g'; }
           {
             echo "[ha chaos testing](${RUN_URL}) failed on \`${GITHUB_REF_NAME}\` (${GITHUB_SHA}), triggered by \`${GITHUB_EVENT_NAME}\`."
             echo
@@ -173,7 +190,7 @@ jobs:
             if [ -f "${ARTIFACT_DIR}/failures.txt" ]; then
               echo "## Failures"
               echo '```'
-              cat "${ARTIFACT_DIR}/failures.txt"
+              strip_ansi <"${ARTIFACT_DIR}/failures.txt"
               echo '```'
               echo
             fi
@@ -181,7 +198,7 @@ jobs:
             echo "## Last 200 lines of the driver log"
             echo '```'
             if [ -f "${ARTIFACT_DIR}/run.log" ]; then
-              tail -n 200 "${ARTIFACT_DIR}/run.log"
+              tail -n 200 "${ARTIFACT_DIR}/run.log" | strip_ansi
             else
               echo "run.sh produced no log - the job failed before it ran (tool setup or image build). See ${RUN_URL}."
             fi
@@ -191,7 +208,7 @@ jobs:
               echo
               echo "## Last 60 lines of the resilience Job log"
               echo '```'
-              tail -n 60 "${ARTIFACT_DIR}/resilience.log"
+              tail -n 60 "${ARTIFACT_DIR}/resilience.log" | strip_ansi
               echo '```'
             fi
 
