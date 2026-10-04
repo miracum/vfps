@@ -16,8 +16,7 @@ Supports horizontal service replication for highly-available deployments.
 > **Warning**
 > This stack is for trying vfps out, not for keeping data: it uses a well-known database password,
 > stores everything in an anonymous volume, and has authentication turned off. See
-> [Docker Compose](https://miracum.github.io/vfps/deployment/compose/) or the
-> [Helm chart](https://miracum.github.io/vfps/deployment/production/) for production.
+> [Production deployment](https://miracum.github.io/vfps/deployment/production/) to run vfps for real.
 
 With Docker Compose 2.34 or later, and without cloning this repository:
 

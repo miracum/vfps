@@ -484,11 +484,11 @@ jobs:
           VFPS_IMAGE_TAG: ${{ needs.build.outputs.image-version }}
         run: dotnet test src/Vfps.IntegrationTests --configuration=Release
 
-  # Boots the two stacks publish-compose-stacks below ships as OCI artifacts, from this checkout and
-  # with the image this run built - so a change that breaks either one fails here instead of for
-  # the first person to run `docker compose -f oci://...` after a release.
-  test-compose-stacks:
-    name: test compose stacks
+  # Boots the stack publish-compose-stack below ships as an OCI artifact, from this checkout and
+  # with the image this run built - so a change that breaks it fails here instead of for the first
+  # person to run `docker compose -f oci://...` after a release.
+  test-compose-stack:
+    name: test getting-started compose stack
     runs-on: ubuntu-26.04
     needs:
       - build
@@ -529,59 +529,25 @@ jobs:
             -H "Content-Type: application/json" \
             -d '{"originalValue": "to be pseudonymized"}'
 
-      - name: Print getting-started logs and stop the stack
+      - name: Print compose logs and stop the stack
         if: always()
         run: |
           docker compose -f deploy/compose/getting-started/compose.yaml logs
           docker compose -f deploy/compose/getting-started/compose.yaml down --volumes --remove-orphans
 
-      # No identity provider runs here, so this checks what can be checked without one: that the
-      # migrations service completes, vfps starts with authorization on, and refuses an
-      # unauthenticated call. The authority is only contacted on the first sign-in or bearer token.
-      - name: Start the production stack
-        env:
-          POSTGRES_PASSWORD: ci-only-not-a-secret
-          VFPS_OIDC_AUTHORITY: https://idp.example.invalid/realms/vfps
-          VFPS_OIDC_CLIENT_ID: vfps
-          VFPS_OIDC_CLIENT_SECRET: ci-only-not-a-secret
-          VFPS_OIDC_AUDIENCE: vfps
-          VFPS_ADMIN_ROLE: vfps-admin
-        run: docker compose -f deploy/compose/production/compose.yaml up -d --wait
-
-      - name: Check vfps is up and requires authentication
-        run: |
-          curl --fail --retry 5 --retry-all-errors --connect-timeout 30 --max-time 60 --retry-delay 10 http://127.0.0.1:8080/healthz
-          status=$(curl --silent --output /dev/null --write-out '%{http_code}' -X POST http://127.0.0.1:8080/v1/namespaces \
-            -H "Content-Type: application/json" \
-            -d '{"name": "test", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}')
-          echo "unauthenticated namespace create returned ${status}"
-          [ "${status}" = "401" ]
-
-      # by project name rather than -f: loading the file again would need the variables above
-      - name: Print production logs and stop the stack
-        if: always()
-        run: |
-          docker compose -p vfps-production logs
-          docker compose -p vfps-production down --volumes --remove-orphans
-
-  # Ships deploy/compose/*/compose.yaml as OCI artifacts, so `docker compose -f oci://...` runs a
-  # stack without cloning this repository. Each artifact is tagged exactly like the image it runs
-  # - vX.Y.Z for a release, pr-<number> for a same-repo pull request - and has every image pinned
-  # to a digest by --resolve-image-digests, which is why this waits for build to have pushed the
-  # image first. Forked pull requests are skipped: their image is never pushed, so there is
-  # nothing to pin.
-  publish-compose-stacks:
-    name: publish compose stack (${{ matrix.stack }})
+  # Ships deploy/compose/getting-started/compose.yaml as an OCI artifact, so `docker compose -f
+  # oci://...` runs it without cloning this repository. The artifact is tagged exactly like the
+  # image it runs - vX.Y.Z for a release, pr-<number> for a same-repo pull request - and has every
+  # image pinned to a digest by --resolve-image-digests, which is why this waits for build to have
+  # pushed the image first. Forked pull requests are skipped: their image is never pushed, so there
+  # is nothing to pin.
+  publish-compose-stack:
+    name: publish getting-started compose stack
     runs-on: ubuntu-26.04
     if: ${{ github.event_name == 'release' || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name) }}
     needs:
       - build
-      - test-compose-stacks
-    strategy:
-      matrix:
-        stack:
-          - getting-started
-          - production
+      - test-compose-stack
     permissions:
       contents: read
       packages: write # to push the artifact and its signature/attestation to ghcr.io
@@ -589,8 +555,7 @@ jobs:
       attestations: write # to publish the build provenance attestation
       artifact-metadata: write # required by actions/attest-build-provenance
     env:
-      STACK: ${{ matrix.stack }}
-      ARTIFACT: ghcr.io/${{ github.repository }}/compose/${{ matrix.stack }}
+      ARTIFACT: ghcr.io/${{ github.repository }}/compose/getting-started
       TAG: ${{ needs.build.outputs.image-version }}
     steps:
       - name: Checkout
@@ -605,23 +570,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # --yes answers the prompt about the getting-started stack's literal default passwords, which
-      # are meant to be published. The production stack's required variables have to be set for
-      # Compose to load the file at all, but the artifact keeps the ${...} references rather than
-      # these placeholders: it carries compose.yaml as written, plus an image-digests.yaml overlay
+      # --yes answers the prompt about the stack's literal default passwords, which are meant to be
+      # published. The artifact carries compose.yaml as written, plus an image-digests.yaml overlay
       # that only sets each service's image.
       - name: Publish the compose stack
         id: publish
         env:
           VFPS_IMAGE_TAG: ${{ needs.build.outputs.image-version }}
-          POSTGRES_PASSWORD: placeholder
-          VFPS_OIDC_AUTHORITY: placeholder
-          VFPS_OIDC_CLIENT_ID: placeholder
-          VFPS_OIDC_CLIENT_SECRET: placeholder
-          VFPS_OIDC_AUDIENCE: placeholder
-          VFPS_ADMIN_ROLE: placeholder
         run: |
-          docker compose -f "deploy/compose/${STACK}/compose.yaml" publish \
+          docker compose -f deploy/compose/getting-started/compose.yaml publish \
             --resolve-image-digests \
             --yes \
             "${ARTIFACT}:${TAG}"

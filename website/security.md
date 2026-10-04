@@ -47,14 +47,14 @@ See also <https://github.com/slsa-framework/slsa-github-generator/tree/main/inte
 
 ## Compose artifact verification
 
-The [Docker Compose](deployment/compose.md) stacks are OCI artifacts signed with cosign, with a
-build provenance attestation. Unlike the images, they are signed by this repository's own `ci`
-workflow. Verify one by digest, then run that digest:
+The [getting-started](getting-started.md) Compose stack is an OCI artifact signed with cosign,
+with a build provenance attestation. Unlike the images, it is signed by this repository's own `ci`
+workflow. Verify it by digest, then run that digest:
 
 <!-- x-release-please-start-version -->
 
 ```sh
-ARTIFACT=ghcr.io/miracum/vfps/compose/production:v1.22.1
+ARTIFACT=ghcr.io/miracum/vfps/compose/getting-started:v1.22.1
 DIGEST=$(crane digest "${ARTIFACT}")
 ARTIFACT_DIGEST_PINNED="${ARTIFACT%:*}@${DIGEST}"
 ARTIFACT_TAG="${ARTIFACT##*:}"
@@ -66,7 +66,7 @@ cosign verify \
 
 gh attestation verify "oci://${ARTIFACT_DIGEST_PINNED}" --repo miracum/vfps
 
-docker compose --env-file vfps.env -f "oci://${ARTIFACT_DIGEST_PINNED}" up -d
+docker compose -f "oci://${ARTIFACT_DIGEST_PINNED}" up
 ```
 
 <!-- x-release-please-end -->

@@ -5,8 +5,7 @@
 #
 # Not a deployment. The database password is a well-known default, the data lives in an anonymous
 # volume, and authentication is off - anyone who can reach the ports can create and read every
-# pseudonym, which is why both are bound to 127.0.0.1. ../production/compose.yaml is the stack meant
-# to keep data.
+# pseudonym, which is why both are bound to 127.0.0.1.
 #
 # The artifact holds this file and nothing else, so it has to stay self-contained: no bind mounts
 # (Compose publishes the mount declaration, not the file behind it) and no build section. Image

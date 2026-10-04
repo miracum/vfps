@@ -5,12 +5,11 @@
 !!! warning
 
     This stack is for trying vfps out, not for keeping data: it uses a well-known database
-    password, stores everything in an anonymous volume, and has authentication turned off. To run
-    vfps for real, see [Docker Compose](deployment/compose.md) for a single host or
-    [Production deployment](deployment/production.md) for Kubernetes.
+    password, stores everything in an anonymous volume, and has authentication turned off. See
+    [Production deployment](deployment/production.md) to run vfps for real.
 
 With [Docker Compose](https://docs.docker.com/compose/install/) 2.34 or later, start vfps and a
-PostgreSQL database straight from the container registry. There's nothing to clone:
+PostgreSQL database straight as an OCI artifact:
 
 <!-- x-release-please-start-version -->
 
@@ -19,9 +18,6 @@ docker compose -f oci://ghcr.io/miracum/vfps/compose/getting-started:v1.22.1 up
 ```
 
 <!-- x-release-please-end -->
-
-Compose first lists the variables the stack reads and asks before it starts anything. Pass
-`--yes` to `up` to skip the question.
 
 Visit <http://localhost:8080/swagger/> to view the OpenAPI specification of the Vfps API, and
 <http://localhost:8080/ui> for the [admin UI](admin-ui.md). Both ports are only bound to
