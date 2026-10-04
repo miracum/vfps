@@ -13,7 +13,8 @@ Only the most recent major version is regularly updated and receives security fi
 Prerequisites:
 
 - [cosign](https://github.com/sigstore/cosign/releases)
-- [slsa-verifier](https://github.com/slsa-framework/slsa-verifier/releases)
+- [GitHub CLI](https://cli.github.com/), logged in to any GitHub account (`gh auth login`) - it
+  fetches the provenance from GitHub's attestations API
 - [crane](https://github.com/google/go-containerregistry/releases)
 
 All released container images are signed using [cosign](https://github.com/sigstore/cosign) and SLSA Level 3 provenance is available for verification.
@@ -35,15 +36,16 @@ cosign verify \
    --certificate-github-workflow-ref="refs/tags/${IMAGE_TAG}" \
    "${IMAGE_DIGEST_PINNED}"
 
-slsa-verifier verify-image \
-    --source-uri github.com/miracum/vfps \
-    --source-tag ${IMAGE_TAG} \
-    "${IMAGE_DIGEST_PINNED}"
+gh attestation verify "oci://${IMAGE_DIGEST_PINNED}" \
+   --repo miracum/vfps \
+   --signer-workflow miracum/.github/.github/workflows/standard-build.yaml \
+   --source-ref "refs/tags/${IMAGE_TAG}"
 ```
 
 <!-- x-release-please-end -->
 
-See also <https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/container#verification> for details on verifying the image integrity using automated policy controllers.
+The images are built by a reusable workflow in [miracum/.github](https://github.com/miracum/.github),
+which is why `--signer-workflow` names that workflow rather than one in this repository.
 
 ## Compose artifact verification
 
