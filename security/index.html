@@ -1073,13 +1073,14 @@ to report any vulnerabilities. For more information, see
 <p>Prerequisites:</p>
 <ul>
 <li><a href="https://github.com/sigstore/cosign/releases">cosign</a></li>
-<li><a href="https://github.com/slsa-framework/slsa-verifier/releases">slsa-verifier</a></li>
+<li><a href="https://cli.github.com/">GitHub CLI</a>, logged in to any GitHub account (<code>gh auth login</code>) - it
+  fetches the provenance from GitHub's attestations API</li>
 <li><a href="https://github.com/google/go-containerregistry/releases">crane</a></li>
 </ul>
 <p>All released container images are signed using <a href="https://github.com/sigstore/cosign">cosign</a> and SLSA Level 3 provenance is available for verification.</p>
 <!-- x-release-please-start-version -->
 
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">IMAGE</span><span class="o">=</span>ghcr.io/miracum/vfps:v1.22.3
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">IMAGE</span><span class="o">=</span>ghcr.io/miracum/vfps:v1.22.4
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">DIGEST</span><span class="o">=</span><span class="k">$(</span>crane<span class="w"> </span>digest<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">IMAGE</span><span class="si">}</span><span class="s2">"</span><span class="k">)</span>
 </span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nv">IMAGE_DIGEST_PINNED</span><span class="o">=</span><span class="s2">"ghcr.io/miracum/vfps@</span><span class="si">${</span><span class="nv">DIGEST</span><span class="si">}</span><span class="s2">"</span>
 </span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="nv">IMAGE_TAG</span><span class="o">=</span><span class="s2">"</span><span class="si">${</span><span class="nv">IMAGE</span><span class="p">#*:</span><span class="si">}</span><span class="s2">"</span>
@@ -1093,21 +1094,25 @@ to report any vulnerabilities. For more information, see
 </span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">   </span>--certificate-github-workflow-ref<span class="o">=</span><span class="s2">"refs/tags/</span><span class="si">${</span><span class="nv">IMAGE_TAG</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">   </span><span class="s2">"</span><span class="si">${</span><span class="nv">IMAGE_DIGEST_PINNED</span><span class="si">}</span><span class="s2">"</span>
 </span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>slsa-verifier<span class="w"> </span>verify-image<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">    </span>--source-uri<span class="w"> </span>github.com/miracum/vfps<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">    </span>--source-tag<span class="w"> </span><span class="si">${</span><span class="nv">IMAGE_TAG</span><span class="si">}</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">    </span><span class="s2">"</span><span class="si">${</span><span class="nv">IMAGE_DIGEST_PINNED</span><span class="si">}</span><span class="s2">"</span>
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>gh<span class="w"> </span>attestation<span class="w"> </span>verify<span class="w"> </span><span class="s2">"oci://</span><span class="si">${</span><span class="nv">IMAGE_DIGEST_PINNED</span><span class="si">}</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">   </span>--repo<span class="w"> </span>miracum/vfps<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">   </span>--signer-workflow<span class="w"> </span>miracum/.github/.github/workflows/standard-build.yaml<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">   </span>--source-ref<span class="w"> </span><span class="s2">"refs/tags/</span><span class="si">${</span><span class="nv">IMAGE_TAG</span><span class="si">}</span><span class="s2">"</span>
 </span></code></pre></div>
 <!-- x-release-please-end -->
 
-<p>See also <a href="https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/container#verification">https://github.com/slsa-framework/slsa-github-generator/tree/main/internal/builders/container#verification</a> for details on verifying the image integrity using automated policy controllers.</p>
+<p>The images are built by a reusable workflow in <a href="https://github.com/miracum/.github">miracum/.github</a>,
+which is why <code>--signer-workflow</code> names that workflow rather than one in this repository.</p>
+<p>The provenance is also pushed to the registry next to the image, so it can be enforced at deploy
+time - see GitHub's guide to
+<a href="https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/enforce-artifact-attestations">enforcing artifact attestations with a Kubernetes admission controller</a>.</p>
 <h2 id="compose-artifact-verification">Compose artifact verification<a class="headerlink" href="#compose-artifact-verification" title="Permanent link">&para;</a></h2>
 <p>The <a href="../getting-started/">getting-started</a> Compose stack is an OCI artifact signed with cosign,
 with a build provenance attestation. Unlike the images, it is signed by this repository's own <code>ci</code>
 workflow. Verify it by digest, then run that digest:</p>
 <!-- x-release-please-start-version -->
 
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">ARTIFACT</span><span class="o">=</span>ghcr.io/miracum/vfps/compose/getting-started:v1.22.3
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nv">ARTIFACT</span><span class="o">=</span>ghcr.io/miracum/vfps/compose/getting-started:v1.22.4
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nv">DIGEST</span><span class="o">=</span><span class="k">$(</span>crane<span class="w"> </span>digest<span class="w"> </span><span class="s2">"</span><span class="si">${</span><span class="nv">ARTIFACT</span><span class="si">}</span><span class="s2">"</span><span class="k">)</span>
 </span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nv">ARTIFACT_DIGEST_PINNED</span><span class="o">=</span><span class="s2">"</span><span class="si">${</span><span class="nv">ARTIFACT</span><span class="p">%:*</span><span class="si">}</span><span class="s2">@</span><span class="si">${</span><span class="nv">DIGEST</span><span class="si">}</span><span class="s2">"</span>
 </span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nv">ARTIFACT_TAG</span><span class="o">=</span><span class="s2">"</span><span class="si">${</span><span class="nv">ARTIFACT</span><span class="p">##*:</span><span class="si">}</span><span class="s2">"</span>
