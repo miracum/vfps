@@ -994,9 +994,12 @@ and OpenTelemetry metrics and traces.</p>
 <!-- prettier-ignore-end -->
 
 <h2 id="try-it-in-a-minute">Try it in a minute<a class="headerlink" href="#try-it-in-a-minute" title="Permanent link">&para;</a></h2>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/miracum/vfps.git<span class="w"> </span>--depth<span class="o">=</span><span class="m">1</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="nb">cd</span><span class="w"> </span>vfps
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>compose.yaml<span class="w"> </span>--profile<span class="o">=</span><span class="nb">test</span><span class="w"> </span>up
+<!-- x-release-please-start-version -->
+
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>oci://ghcr.io/miracum/vfps/compose/getting-started:v1.22.2<span class="w"> </span>up
 </span></code></pre></div>
+<!-- x-release-please-end -->
+
 <p>Then create a namespace and a first pseudonym through the REST API:</p>
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8080/v1/namespaces<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
