@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.22.2](https://github.com/miracum/vfps/compare/v1.22.1...v1.22.2) (2026-10-04)
+
+
+### Documentation
+
+* updated getting started guide to use compose ([#395](https://github.com/miracum/vfps/issues/395)) ([9afa1bb](https://github.com/miracum/vfps/commit/9afa1bb5aca2422567025a3860468b83f39376a9))
+
+
+### Miscellaneous Chores
+
+* publish getting started compose as an OCI artifact ([#393](https://github.com/miracum/vfps/issues/393)) ([8539040](https://github.com/miracum/vfps/commit/853904075ef1692f21b069ee78164ec35b886d76))
+
 ## [1.22.1](https://github.com/miracum/vfps/compare/v1.22.0...v1.22.1) (2026-10-03)
 
 
