@@ -7,9 +7,9 @@
     <InvariantGlobalization>true</InvariantGlobalization>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Grpc.AspNetCore" Version="2.83.0" />
-    <PackageReference Include="Grpc.AspNetCore.HealthChecks" Version="2.83.0" />
-    <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.83.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.84.0" />
+    <PackageReference Include="Grpc.AspNetCore.HealthChecks" Version="2.84.0" />
+    <PackageReference Include="Grpc.AspNetCore.Server.Reflection" Version="2.84.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Certificate" Version="10.0.12" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.12" />
   </ItemGroup>
