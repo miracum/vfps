@@ -28,7 +28,13 @@
         <loc>https://miracum.github.io/vfps/deployment/production/</loc>
       </url>
       <url>
+        <loc>https://miracum.github.io/vfps/development/ha-chaos-testing/</loc>
+      </url>
+      <url>
         <loc>https://miracum.github.io/vfps/getting-started/</loc>
+      </url>
+      <url>
+        <loc>https://miracum.github.io/vfps/grpc/</loc>
       </url>
       <url>
         <loc>https://miracum.github.io/vfps/namespaces/</loc>

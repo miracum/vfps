@@ -314,6 +314,8 @@
       
         
       
+        
+      
     
     
     
@@ -454,6 +456,33 @@
     
   
   Access control
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../grpc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  gRPC API
 
     
   </span>
@@ -833,6 +862,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#cold-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Cold start
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -863,6 +903,96 @@
   
 
       </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Development
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Development
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/ha-chaos-testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  HA chaos testing
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
     </li>
   
 
@@ -968,6 +1098,17 @@
   
 </li>
       
+        <li class="md-nav__item">
+  <a href="#cold-start" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Cold start
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
     </ul>
   
 </nav>
@@ -1007,20 +1148,16 @@
 <p>Create a pseudonym namespace used for benchmarking:</p>
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>grpcurl<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>-plaintext<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>-import-path<span class="w"> </span>src/Vfps/<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span>-proto<span class="w"> </span>src/Vfps/Protos/vfps/api/v1/namespaces.proto<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"name": "benchmark", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}'</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span>vfps.api.v1.NamespaceService/Create
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"name": "benchmark", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span>vfps.api.v1.NamespaceService/Create
 </span></code></pre></div>
 <p>Generate 100.000 pseudonyms in the namespace from random original values:</p>
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>ghz<span class="w"> </span>-n<span class="w"> </span><span class="m">100000</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span>--insecure<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span>--import-paths<span class="w"> </span>src/Vfps/<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span>--proto<span class="w"> </span>src/Vfps/Protos/vfps/api/v1/pseudonyms.proto<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span>--call<span class="w"> </span>vfps.api.v1.PseudonymService/Create<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span>-d<span class="w"> </span><span class="s1">'{"originalValue": "{{randomString 32}}", "namespace": "benchmark"}'</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="m">127</span>.0.0.1:8081
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span>--call<span class="w"> </span>vfps.api.v1.PseudonymService/Create<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span>-d<span class="w"> </span><span class="s1">'{"originalValue": "{{randomString 32}}", "namespace": "benchmark"}'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="m">127</span>.0.0.1:8081
 </span></code></pre></div>
 <p>Sample output running on</p>
 <div class="language-console highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="go">OS=Windows 11 (10.0.26300.9457/26H2)</span>
@@ -1205,6 +1342,103 @@ periods instead.</p>
 <p>Two more differences from the WSL2 run: the job memory limit only counts committed private memory, while the cgroup
 limit behind <code>memory: 128m</code> also counts the page cache, and the hyperthread sibling of the logical CPU vfps was pinned to
 remained available to <code>ghz</code> and PostgreSQL.</p>
+<h2 id="cold-start">Cold start<a class="headerlink" href="#cold-start" title="Permanent link">&para;</a></h2>
+<p>How long a new vfps container takes from <code>docker run</code> to answering its first pseudonymization request, measured with
+<a href="https://github.com/miracum/vfps/blob/master/src/Vfps.Benchmarks/cold-start.sh"><code>src/Vfps.Benchmarks/cold-start.sh</code></a>
+against the PostgreSQL from <a href="https://github.com/miracum/vfps/blob/master/compose.yaml">compose.yaml</a>:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d<span class="w"> </span>--wait
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>src/Vfps.Benchmarks/cold-start.sh<span class="w"> </span><span class="m">10</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="c1"># with the resource limits of the vfps service in compose.yaml</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>src/Vfps.Benchmarks/cold-start.sh<span class="w"> </span><span class="m">10</span><span class="w"> </span>--cpus<span class="o">=</span><span class="m">1</span><span class="w"> </span>--memory<span class="o">=</span>128m
+</span></code></pre></div>
+<p>The script needs <code>grpcurl</code>, GNU <code>date</code>, a Linux Docker Engine for host networking, and free ports 8080 to 8082. It
+first applies the database migrations with <code>Vfps.dll migrate</code>, as the Helm chart's migrations Job does, so the timed
+starts don't include them. Each run then starts the container with the environment of the vfps service in
+<a href="https://github.com/miracum/vfps/blob/master/compose.yaml">compose.yaml</a>, calls <code>PseudonymService/Create</code> with a new
+original value in a loop until a call succeeds, sends one more call, and stops the container gracefully.</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Time from</th>
+<th>until</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>total</code></td>
+<td><code>docker run</code></td>
+<td>the first successful response</td>
+</tr>
+<tr>
+<td><code>listening</code></td>
+<td>the container start</td>
+<td>Kestrel logs that it listens on gRPC port 8081</td>
+</tr>
+<tr>
+<td><code>first_response</code></td>
+<td>the container start</td>
+<td>the first successful response</td>
+</tr>
+<tr>
+<td><code>first_request</code></td>
+<td>sending the first successful request</td>
+<td>its response</td>
+</tr>
+<tr>
+<td><code>warm_request</code></td>
+<td>sending a second request right after it</td>
+<td>its response</td>
+</tr>
+</tbody>
+</table>
+<p>All durations are in milliseconds and include about 20 ms for starting <code>grpcurl</code> itself, which is also about how long
+each polling attempt takes. The <code>warm_request</code> column is therefore mostly that overhead.</p>
+<p>Sample output running on</p>
+<div class="language-console highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="go">OS=Windows 11 (10.0.26300.9457/26H2), WSL2 (Linux 6.18.40.1-microsoft-standard-WSL2) with 8 logical CPUs and 20 GiB of RAM</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="go">Intel Core Ultra 7 258V</span>
+</span><span id="__span-7-3"><a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="go">Docker Engine 29.8.2 inside WSL2</span>
+</span><span id="__span-7-4"><a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="go">vfps v1.22.2 container image, PostgreSQL 18.4 from compose.yaml</span>
+</span><span id="__span-7-5"><a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="go">grpcurl v1.9.3</span>
+</span></code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Container limits</th>
+<th><code>total</code></th>
+<th><code>listening</code></th>
+<th><code>first_response</code></th>
+<th><code>first_request</code></th>
+<th><code>warm_request</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>none</td>
+<td>1,794</td>
+<td>1,501</td>
+<td>1,755</td>
+<td>259</td>
+<td>24</td>
+</tr>
+<tr>
+<td><code>--cpus=1 --memory=128m</code></td>
+<td>2,350</td>
+<td>1,709</td>
+<td>2,308</td>
+<td>606</td>
+<td>24</td>
+</tr>
+</tbody>
+</table>
+<p>The values are medians over 10 runs. Apart from the slowest run of each series, with a <code>total</code> of 2,395 ms and 3,952 ms,
+the <code>total</code> ranged from 1,723 to 1,826 ms without limits and from 2,229 to 2,500 ms with them.</p>
+<p>Most of the start happens before Kestrel listens: about 1.5 s, during which vfps can't answer anything, including its
+health checks. Limiting vfps to one CPU only adds about 200 ms to that. The first request then takes 259 ms, against
+24 ms for the one after it. It is the first to run vfps' own code paths and those of EF Core, Npgsql and gRPC, none of
+which are precompiled, so the .NET JIT compiles them during that request. This part does depend on the CPU: on one CPU,
+the first request takes 606 ms. A replica that has just passed its readiness check therefore answers its first request
+noticeably slower than the ones after it.</p>
 
 
 

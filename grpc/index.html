@@ -12,13 +12,13 @@
         <meta name="author" content="The Vfps developers">
       
       
-        <link rel="canonical" href="https://miracum.github.io/vfps/namespaces/">
+        <link rel="canonical" href="https://miracum.github.io/vfps/grpc/">
       
       
-        <link rel="prev" href="../getting-started/">
+        <link rel="prev" href="../access-control/">
       
       
-        <link rel="next" href="../voprf/">
+        <link rel="next" href="../csv-jobs/">
       
       
         
@@ -29,7 +29,7 @@
     
     
       
-        <title>Namespaces - vfps</title>
+        <title>gRPC API - vfps</title>
       
     
     
@@ -87,7 +87,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#namespaces" class="md-skip">
+        <a href="#grpc-api" class="md-skip">
           Skip to content
         </a>
       
@@ -122,7 +122,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Namespaces
+              gRPC API
             
           </span>
         </div>
@@ -366,36 +366,10 @@
                   
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    
-  
-  Namespaces
-
-    
-  </span>
-  
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="././" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../namespaces/" class="md-nav__link">
         
   
   
@@ -410,60 +384,6 @@
   
 
       </a>
-      
-        
-
-
-<nav class="md-nav md-nav--secondary" aria-label="On this page">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      On this page
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#pseudonym-generation-methods" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Pseudonym generation methods
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multiple-pseudonyms-per-original-value" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Multiple pseudonyms per original value
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#multi-level-namespaces" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Multi-level namespaces
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -554,10 +474,36 @@
                   
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../grpc/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  gRPC API
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
         
   
   
@@ -572,6 +518,99 @@
   
 
       </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#server-reflection" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Server reflection
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#authenticating" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Authenticating
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-grpc-utils-image" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        The gRPC utils image
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The gRPC utils image">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        From Docker
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inside-kubernetes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Inside Kubernetes
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#load-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Load testing
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1001,10 +1040,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#pseudonym-generation-methods" class="md-nav__link">
+  <a href="#server-reflection" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Pseudonym generation methods
+        Server reflection
       </span>
     </span>
   </a>
@@ -1012,10 +1051,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#multiple-pseudonyms-per-original-value" class="md-nav__link">
+  <a href="#authenticating" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Multiple pseudonyms per original value
+        Authenticating
       </span>
     </span>
   </a>
@@ -1023,10 +1062,49 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#multi-level-namespaces" class="md-nav__link">
+  <a href="#the-grpc-utils-image" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        Multi-level namespaces
+        The gRPC utils image
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="The gRPC utils image">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#from-docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        From Docker
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#inside-kubernetes" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Inside Kubernetes
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#load-testing" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Load testing
       </span>
     </span>
   </a>
@@ -1094,7 +1172,7 @@
     
     
       <li class="md-path__item">
-        <a href="././" class="md-path__link">
+        <a href="../namespaces/" class="md-path__link">
           
   
   <span class="md-ellipsis">
@@ -1116,7 +1194,7 @@
                   
 
   
-    <a href="https://github.com/miracum/vfps/edit/master/website/namespaces.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/miracum/vfps/edit/master/website/grpc.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
     </a>
@@ -1124,99 +1202,126 @@
   
 
 
-<h1 id="namespaces">Namespaces<a class="headerlink" href="#namespaces" title="Permanent link">&para;</a></h1>
-<p>A namespace is an independent mapping between original values and their pseudonyms. Each one
-fixes, at creation, how its pseudonyms are generated: the generation method, the pseudonym length,
-an optional prefix and suffix, and an optional regular expression every original value has to
-match. Namespaces are immutable once created.</p>
-<h2 id="pseudonym-generation-methods">Pseudonym generation methods<a class="headerlink" href="#pseudonym-generation-methods" title="Permanent link">&para;</a></h2>
+<h1 id="grpc-api">gRPC API<a class="headerlink" href="#grpc-api" title="Permanent link">&para;</a></h1>
+<p>vfps's API is defined in Protocol Buffers, and every operation is served over gRPC as well as the
+JSON-transcoded <a href="../getting-started/#using-the-rest-api">REST API</a>. The definitions are in
+<a href="https://github.com/miracum/vfps/tree/master/src/Vfps/Protos/vfps/api/v1"><code>src/Vfps/Protos/vfps/api/v1</code></a>:</p>
 <table>
 <thead>
 <tr>
-<th>Method</th>
-<th>Pseudonyms</th>
+<th>Service</th>
+<th>RPCs</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED</code></td>
-<td>The default. The first 4 bytes of the SHA-256-hashed host name, the 4 least significant bytes of the millisecond tick count since system start, and <code>pseudonymLength</code> cryptographically secure random bytes, encoded as URL-safe Base64.</td>
+<td><code>vfps.api.v1.NamespaceService</code></td>
+<td><code>Create</code>, <code>Get</code>, <code>GetAll</code>, <code>Delete</code>, <code>ListChildren</code></td>
 </tr>
 <tr>
-<td><code>PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED</code></td>
-<td>A cryptographically secure random string, hex-encoded.</td>
-</tr>
-<tr>
-<td><code>PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_BASE62_ENCODED</code></td>
-<td>A cryptographically secure random string, Base62-encoded.</td>
-</tr>
-<tr>
-<td><code>PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_BASE32_ENCODED</code></td>
-<td>A cryptographically secure random string, Base32-encoded with the <a href="https://datatracker.ietf.org/doc/html/rfc4648#section-6">RFC 4648 §6</a> alphabet.</td>
-</tr>
-<tr>
-<td><code>PSEUDONYM_GENERATION_METHOD_UUID4</code></td>
-<td>A version 4 UUID (<a href="https://datatracker.ietf.org/doc/html/rfc4122#section-4.4">RFC 4122</a>).</td>
-</tr>
-<tr>
-<td><code>PSEUDONYM_GENERATION_METHOD_UUID7</code></td>
-<td>A version 7 UUID (<a href="https://datatracker.ietf.org/doc/html/rfc9562">RFC 9562</a>).</td>
-</tr>
-<tr>
-<td><code>PSEUDONYM_GENERATION_METHOD_VOPRF</code></td>
-<td>Derived deterministically from the original value by a separate key-holding service that never sees it. See <a href="../voprf/">VOPRF pseudonyms</a>.</td>
+<td><code>vfps.api.v1.PseudonymService</code></td>
+<td><code>Create</code>, <code>Resolve</code>, <code>Get</code>, <code>List</code></td>
 </tr>
 </tbody>
 </table>
-<p>Every method except VOPRF is random: the same original value only maps to the same pseudonym
-because vfps stores the pair. The full set of request fields is documented in
-<a href="https://github.com/miracum/vfps/blob/master/src/Vfps/Protos/vfps/api/v1/namespaces.proto"><code>namespaces.proto</code></a>.</p>
-<h2 id="multiple-pseudonyms-per-original-value">Multiple pseudonyms per original value<a class="headerlink" href="#multiple-pseudonyms-per-original-value" title="Permanent link">&para;</a></h2>
-<p>A namespace created with <code>"allowsMultiplePseudonyms": true</code> lets a single <code>Create</code> call store more
-than one distinct pseudonym for the same original value, via the request's optional <code>count</code> field
-(omitted or <code>1</code> preserves the default single-pseudonym behavior for every other namespace):</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>grpcurl<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>-plaintext<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"name": "multi-psn-example", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED", "pseudonymLength": 32, "allowsMultiplePseudonyms": true}'</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span>vfps.api.v1.NamespaceService/Create
-</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
-</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>grpcurl<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span>-plaintext<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"namespace": "multi-psn-example", "originalValue": "to be pseudonymized", "count": 3}'</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Create
+<p>Plaintext gRPC is served on port <strong>8081</strong>, which accepts HTTP/2 only - the <code>HttpGrpc</code> endpoint in
+<code>Kestrel__Endpoints</code>, and the <code>grpc</code> port of the Helm chart's Service. Port 8080 serves the REST API
+and the admin UI.</p>
+<h2 id="server-reflection">Server reflection<a class="headerlink" href="#server-reflection" title="Permanent link">&para;</a></h2>
+<p>The server offers gRPC server reflection, so clients such as
+<a href="https://github.com/fullstorydev/grpcurl">grpcurl</a>, <a href="https://ghz.sh/">ghz</a>, grpcui or Postman need
+no copy of the <code>.proto</code> files - and always see the API the server actually runs. To explore it:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>list
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>describe<span class="w"> </span>vfps.api.v1.PseudonymService
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>describe<span class="w"> </span>vfps.api.v1.PseudonymServiceCreateRequest
 </span></code></pre></div>
-<p>The response's <code>pseudonyms</code> array holds the full set (<code>pseudonym</code> is kept, populated with the
-first one, for callers that only read a single value). The stored set for a given original value
-only ever grows: calling <code>Create</code> again with a <code>count</code> at or below what's already stored returns
-the existing set unchanged, while a larger <code>count</code> adds exactly the missing pseudonyms, up to a
-maximum <code>count</code> of 10,000. CSV pseudonymization jobs and the FHIR <code>$create-pseudonym</code> operation
-don't support requesting more than one pseudonym - both always operate on the first
-(<code>sequenceNumber: 0</code>) pseudonym for a multi-psn namespace.</p>
-<h2 id="multi-level-namespaces">Multi-level namespaces<a class="headerlink" href="#multi-level-namespaces" title="Permanent link">&para;</a></h2>
-<p>Namespaces can form a hierarchy: a namespace created with a <code>parentName</code> is a <em>child</em> namespace,
-whose original values are pseudonym values produced by its parent. This is how multiple levels of
-pseudonymization are built - e.g. an MPI is pseudonymized in a root namespace, and that pseudonym
-is then re-pseudonymized in a per-study child namespace, so a study never sees a value that
-resolves directly to the MPI.</p>
-<p>Each namespace keeps its own generation configuration; nothing is inherited from the parent.
-Setting <code>parentValidationMode</code> to <code>PARENT_VALIDATION_MODE_ENSURE_EXISTS</code> additionally requires
-every original value to already exist as a pseudonym in the parent namespace, rejecting anything
-else with a <code>FAILED_PRECONDITION</code> error:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>grpcurl<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>-plaintext<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"name": "study-a", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED", "pseudonymLength": 32, "parentName": "test", "parentValidationMode": "PARENT_VALIDATION_MODE_ENSURE_EXISTS"}'</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>vfps.api.v1.NamespaceService/Create
+<p>And to call it:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"namespace": "test", "originalValue": "to be pseudonymized"}'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Create
 </span></code></pre></div>
-<p>Chaining a pseudonym into the child namespace is an ordinary <code>Create</code> call whose <code>originalValue</code>
-is the parent's pseudonym value. A namespace's direct children can be listed with <code>ListChildren</code>
-(<code>GET /v1/namespaces/{name}/children</code>), which is deliberately non-recursive - call it once per
-level to walk a whole tree.</p>
-<p>The parent link is set at creation and can't be changed afterwards, like every other namespace
-field, which also makes hierarchy cycles impossible. A namespace that still has children can't be
-deleted; delete the children first. Deleting a pseudonym level doesn't cascade to any other level.</p>
+<h2 id="authenticating">Authenticating<a class="headerlink" href="#authenticating" title="Permanent link">&para;</a></h2>
+<p>With <a href="../access-control/">access control</a> turned on, every call needs a bearer token - from the
+identity provider, or a <a href="../access-control/#access-tokens">vfps access token</a> created on the admin
+UI's <em>Access tokens</em> page, which also shows these calls ready to copy. Reflection is part of the API
+and takes the same token, so without one even <code>list</code> fails. grpcurl's <code>-H</code> sends the header with
+reflection and the call alike:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">VFPS_TOKEN</span><span class="o">=</span><span class="s2">"vfps_pat_..."</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">VFPS_NAMESPACE</span><span class="o">=</span><span class="s2">"..."</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"authorization: Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">"{\"namespace\": \"</span><span class="nv">$VFPS_NAMESPACE</span><span class="s2">\", \"originalValue\": \"to be pseudonymized\"}"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Create
+</span></code></pre></div>
+<p>A call without a valid token fails with <code>Unauthenticated</code>; one with a token that holds no grant on
+the namespace, with <code>PermissionDenied</code>.</p>
+<h2 id="the-grpc-utils-image">The gRPC utils image<a class="headerlink" href="#the-grpc-utils-image" title="Permanent link">&para;</a></h2>
+<p><code>ghcr.io/miracum/vfps/grpc-utils</code> is a small image for talking to vfps where nothing is installed,
+such as from inside a cluster. It contains:</p>
+<ul>
+<li><a href="https://github.com/fullstorydev/grpcurl">grpcurl</a>, for making individual calls</li>
+<li><a href="https://ghz.sh/">ghz</a>, for load testing</li>
+<li><code>curl</code> and <code>jq</code></li>
+<li>vfps's <code>.proto</code> files, under <code>/tmp/protos</code> - for a tool that can't use reflection, pass
+  <code>-import-path /tmp/protos -proto vfps/api/v1/pseudonyms.proto</code></li>
+</ul>
+<p>Every vfps release has a matching image tag, and <code>latest</code> follows the latest release and <code>master</code>
+the default branch. The image runs as <code>nobody</code> (UID 65534). Releases up to v1.22.2 published it as
+<code>ghcr.io/miracum/vfps-grpc-utils</code>.</p>
+<h3 id="from-docker">From Docker<a class="headerlink" href="#from-docker" title="Permanent link">&para;</a></h3>
+<p>With vfps running locally - for example the <a href="../getting-started/">getting started</a> stack, which
+binds port 8081 on <code>127.0.0.1</code> - share the host's network so <code>127.0.0.1</code> reaches it:</p>
+<!-- x-release-please-start-version -->
+
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--network<span class="o">=</span>host<span class="w"> </span>ghcr.io/miracum/vfps/grpc-utils:v1.22.2<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"authorization: Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">"{\"namespace\": \"</span><span class="nv">$VFPS_NAMESPACE</span><span class="s2">\", \"originalValue\": \"to be pseudonymized\"}"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Create
+</span></code></pre></div>
+<!-- x-release-please-end -->
+
+<p>Your own shell expands <code>$VFPS_TOKEN</code> and <code>$VFPS_NAMESPACE</code> before Docker starts, so neither needs
+passing into the container - leave out the <code>-H</code> line when access control is off. <code>--network=host</code>
+is what lets the container reach a port the host only binds on <code>127.0.0.1</code>; Docker Desktop supports
+it only once host networking is enabled in its settings.</p>
+<h3 id="inside-kubernetes">Inside Kubernetes<a class="headerlink" href="#inside-kubernetes" title="Permanent link">&para;</a></h3>
+<p>The plaintext gRPC port is usually reachable only from inside the cluster. Start a throwaway pod
+from the image in vfps's namespace and call the chart's Service, which is named after the release:</p>
+<!-- x-release-please-start-version -->
+
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>run<span class="w"> </span>--namespace<span class="o">=</span>vfps<span class="w"> </span>--rm<span class="w"> </span>-i<span class="w"> </span>--tty<span class="w"> </span>--restart<span class="o">=</span>Never<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--image<span class="o">=</span>ghcr.io/miracum/vfps/grpc-utils:v1.22.2<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>vfps-grpc-utils<span class="w"> </span>--<span class="w"> </span>bash
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>nobody@vfps-grpc-utils:/$<span class="w"> </span>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span>vfps:8081<span class="w"> </span>list
+</span></code></pre></div>
+<!-- x-release-please-end -->
+
+<p>If the chart's NetworkPolicy is enabled with <code>networkPolicy.allowExternal: false</code>, only pods
+labelled <code>&lt;release&gt;-client: "true"</code> may reach vfps - add <code>--labels=vfps-client=true</code> to
+<code>kubectl run</code>.</p>
+<h2 id="load-testing">Load testing<a class="headerlink" href="#load-testing" title="Permanent link">&para;</a></h2>
+<p>ghz uses reflection too. For example, from the pod above, a minute of pseudonym creation against the
+chart's headless Service, which lets ghz spread the load across every replica:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>ghz<span class="w"> </span>--duration<span class="o">=</span>1m<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--connections<span class="o">=</span><span class="m">3</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--lb-strategy<span class="o">=</span>round_robin<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--insecure<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--call<span class="o">=</span>vfps.api.v1.PseudonymService/Create<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"originalValue": "{{ randomString 32 }}", "namespace": "test"}'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>dns:///vfps-headless:8081
+</span></code></pre></div>
+<p>Unlike grpcurl, ghz keeps the metadata for its calls and for reflection apart - with access control
+on, pass the token to both:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>--metadata<span class="o">=</span><span class="s2">"{\"authorization\": \"Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">\"}"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>--reflect-metadata<span class="o">=</span><span class="s2">"{\"authorization\": \"Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">\"}"</span>
+</span></code></pre></div>
+<p>See <a href="../benchmarks/">Performance</a> for measured numbers.</p>
 
 
 
@@ -1256,7 +1361,7 @@ deleted; delete the children first. Deleting a pseudonym level doesn't cascade t
       <nav class="md-footer__inner md-grid" aria-label="Footer" >
         
           
-          <a href="../getting-started/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Getting started">
+          <a href="../access-control/" class="md-footer__link md-footer__link--prev" aria-label="Previous: Access control">
             <div class="md-footer__button md-icon">
               
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
@@ -1266,20 +1371,20 @@ deleted; delete the children first. Deleting a pseudonym level doesn't cascade t
                 Previous
               </span>
               <div class="md-ellipsis">
-                Getting started
+                Access control
               </div>
             </div>
           </a>
         
         
           
-          <a href="../voprf/" class="md-footer__link md-footer__link--next" aria-label="Next: VOPRF pseudonyms">
+          <a href="../csv-jobs/" class="md-footer__link md-footer__link--next" aria-label="Next: CSV jobs">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                VOPRF pseudonyms
+                CSV jobs
               </div>
             </div>
             <div class="md-footer__button md-icon">

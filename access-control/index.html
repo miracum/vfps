@@ -18,7 +18,7 @@
         <link rel="prev" href="../admin-ui/">
       
       
-        <link rel="next" href="../csv-jobs/">
+        <link rel="next" href="../grpc/">
       
       
         
@@ -316,6 +316,8 @@
       
         
       
+        
+      
     
     
     
@@ -560,6 +562,33 @@
   
 </nav>
       
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../grpc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  gRPC API
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -858,6 +887,96 @@
   
 
     
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Development
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Development
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/ha-chaos-testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  HA chaos testing
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
   </ul>
 </nav>
                   </div>
@@ -1002,6 +1121,8 @@
       
         
       
+        
+      
     
     
     
@@ -1088,7 +1209,9 @@ to the identity provider, and keeps working while the authority is unreachable. 
 an <code>OperationOutcome</code>. Every refusal made <em>after</em> authentication - including a <code>403</code> for a namespace
 the token holds no grant on - is an <code>OperationOutcome</code>.</p>
 <p>The gRPC health-checking service and the <code>/healthz</code>, <code>/livez</code> and <code>/readyz</code> endpoints stay
-anonymous, so probes and load balancers need no token. An admin's browser session, on the other
+anonymous, so probes and load balancers need no token. gRPC server reflection does not: it
+describes the API, so listing the services takes a token like calling them does - grpcurl sends
+its <code>-H</code> header with both. An admin's browser session, on the other
 hand, does <em>not</em> authenticate an API call: the login cookie is for the admin UI, and the API reads
 bearer tokens only. The bundled Swagger UI at <code>/swagger</code> therefore gains an <strong>Authorize</strong> button
 when authorization is enabled - paste an access token there, without the <code>Bearer</code> prefix, before
@@ -1121,11 +1244,9 @@ rolling it out, and revoking the first; the grants belong to the account, so the
 </span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>grpcurl<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">  </span>-plaintext<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"authorization: Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span>-import-path<span class="w"> </span>src/Vfps/<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span>-proto<span class="w"> </span>src/Vfps/Protos/vfps/api/v1/pseudonyms.proto<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"namespace": "test", "originalValue": "to be pseudonymized"}'</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Create
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"namespace": "test", "originalValue": "to be pseudonymized"}'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Create
 </span></code></pre></div>
 <p>A token is shown <strong>once</strong>, when it is created: only its SHA-256 hash is stored, so one that has
 been lost can be replaced but never recovered. The <code>vfps_pat_</code>/<code>vfps_sat_</code> prefix is fixed so that
@@ -1236,13 +1357,13 @@ to <code>"*"</code> has no UI equivalent any more and has to be re-created per n
         
         
           
-          <a href="../csv-jobs/" class="md-footer__link md-footer__link--next" aria-label="Next: CSV jobs">
+          <a href="../grpc/" class="md-footer__link md-footer__link--next" aria-label="Next: gRPC API">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                CSV jobs
+                gRPC API
               </div>
             </div>
             <div class="md-footer__button md-icon">
