@@ -23,7 +23,7 @@ With Docker Compose 2.34 or later, and without cloning this repository:
 <!-- x-release-please-start-version -->
 
 ```sh
-docker compose -f oci://ghcr.io/miracum/vfps/compose/getting-started:v1.22.3 up
+docker compose -f oci://ghcr.io/miracum/vfps/compose/getting-started:v1.22.4 up
 ```
 
 <!-- x-release-please-end -->

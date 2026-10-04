@@ -79,7 +79,7 @@ binds port 8081 on `127.0.0.1` - share the host's network so `localhost` reaches
 <!-- x-release-please-start-version -->
 
 ```sh
-docker run --rm --network=host ghcr.io/miracum/vfps/grpc-utils:v1.22.3 \
+docker run --rm --network=host ghcr.io/miracum/vfps/grpc-utils:v1.22.4 \
   grpcurl -plaintext \
   -H "authorization: Bearer $VFPS_TOKEN" \
   -d "{\"namespace\": \"$VFPS_NAMESPACE\", \"originalValue\": \"to be pseudonymized\"}" \
@@ -103,7 +103,7 @@ from the image in vfps's namespace and call the chart's Service, which is named 
 
 ```sh
 kubectl run --namespace=vfps --rm -i --tty --restart=Never \
-  --image=ghcr.io/miracum/vfps/grpc-utils:v1.22.3 \
+  --image=ghcr.io/miracum/vfps/grpc-utils:v1.22.4 \
   vfps-grpc-utils -- bash
 
 nobody@vfps-grpc-utils:/$ grpcurl -plaintext vfps:8081 list

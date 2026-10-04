@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.4](https://github.com/miracum/vfps/compare/v1.22.3...v1.22.4) (2026-10-04)
+
+
+### Bug Fixes
+
+* image provenance bug in ci - already fixed in shared workflow ([#399](https://github.com/miracum/vfps/issues/399)) ([efc6886](https://github.com/miracum/vfps/commit/efc6886c6f985b9700219cad0ac43bef1578cf27))
+
 ## [1.22.3](https://github.com/miracum/vfps/compare/v1.22.2...v1.22.3) (2026-10-04)
 
 
