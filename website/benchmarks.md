@@ -157,3 +157,58 @@ periods instead.
 Two more differences from the WSL2 run: the job memory limit only counts committed private memory, while the cgroup
 limit behind `memory: 128m` also counts the page cache, and the hyperthread sibling of the logical CPU vfps was pinned to
 remained available to `ghz` and PostgreSQL.
+
+## Cold start
+
+How long a new vfps container takes from `docker run` to answering its first pseudonymization request, measured with
+[`src/Vfps.Benchmarks/cold-start.sh`](https://github.com/miracum/vfps/blob/master/src/Vfps.Benchmarks/cold-start.sh)
+against the PostgreSQL from [compose.yaml](https://github.com/miracum/vfps/blob/master/compose.yaml):
+
+```sh
+docker compose up -d --wait
+src/Vfps.Benchmarks/cold-start.sh 10
+# with the resource limits of the vfps service in compose.yaml
+src/Vfps.Benchmarks/cold-start.sh 10 --cpus=1 --memory=128m
+```
+
+The script needs `grpcurl`, GNU `date`, a Linux Docker Engine for host networking, and free ports 8080 to 8082. It
+first applies the database migrations with `Vfps.dll migrate`, as the Helm chart's migrations Job does, so the timed
+starts don't include them. Each run then starts the container with the environment of the vfps service in
+[compose.yaml](https://github.com/miracum/vfps/blob/master/compose.yaml), calls `PseudonymService/Create` with a new
+original value in a loop until a call succeeds, sends one more call, and stops the container gracefully.
+
+| Column           | Time from                               | until                                          |
+| ---------------- | --------------------------------------- | ---------------------------------------------- |
+| `total`          | `docker run`                            | the first successful response                  |
+| `listening`      | the container start                     | Kestrel logs that it listens on gRPC port 8081 |
+| `first_response` | the container start                     | the first successful response                  |
+| `first_request`  | sending the first successful request    | its response                                   |
+| `warm_request`   | sending a second request right after it | its response                                   |
+
+All durations are in milliseconds and include about 20 ms for starting `grpcurl` itself, which is also about how long
+each polling attempt takes. The `warm_request` column is therefore mostly that overhead.
+
+Sample output running on
+
+```console
+OS=Windows 11 (10.0.26300.9457/26H2), WSL2 (Linux 6.18.40.1-microsoft-standard-WSL2) with 8 logical CPUs and 20 GiB of RAM
+Intel Core Ultra 7 258V
+Docker Engine 29.8.2 inside WSL2
+vfps v1.22.2 container image, PostgreSQL 18.4 from compose.yaml
+grpcurl v1.9.3
+```
+
+| Container limits         | `total` | `listening` | `first_response` | `first_request` | `warm_request` |
+| ------------------------ | ------- | ----------- | ---------------- | --------------- | -------------- |
+| none                     | 1,794   | 1,501       | 1,755            | 259             | 24             |
+| `--cpus=1 --memory=128m` | 2,350   | 1,709       | 2,308            | 606             | 24             |
+
+The values are medians over 10 runs. Apart from the slowest run of each series, with a `total` of 2,395 ms and 3,952 ms,
+the `total` ranged from 1,723 to 1,826 ms without limits and from 2,229 to 2,500 ms with them.
+
+Most of the start happens before Kestrel listens: about 1.5 s, during which vfps can't answer anything, including its
+health checks. Limiting vfps to one CPU only adds about 200 ms to that. The first request then takes 259 ms, against
+24 ms for the one after it. It is the first to run vfps' own code paths and those of EF Core, Npgsql and gRPC, none of
+which are precompiled, so the .NET JIT compiles them during that request. This part does depend on the CPU: on one CPU,
+the first request takes 606 ms. A replica that has just passed its readiness check therefore answers its first request
+noticeably slower than the ones after it.
