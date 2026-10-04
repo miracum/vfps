@@ -51,6 +51,10 @@
         },
         {
           "type": "generic",
+          "path": "website/index.md"
+        },
+        {
+          "type": "generic",
           "path": "charts/vfps/Chart.yaml"
         },
         {

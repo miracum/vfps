@@ -97,10 +97,13 @@ with gRPC, REST and FHIR APIs, an admin UI, and highly available deployments.</p
 
 ## Try it in a minute
 
+<!-- x-release-please-start-version -->
+
 ```sh
-git clone https://github.com/miracum/vfps.git --depth=1 && cd vfps
-docker compose -f compose.yaml --profile=test up
+docker compose -f oci://ghcr.io/miracum/vfps/compose/getting-started:v1.22.1 up
 ```
+
+<!-- x-release-please-end -->
 
 Then create a namespace and a first pseudonym through the REST API:
 
