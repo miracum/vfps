@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   build:
-    uses: miracum/.github/.github/workflows/standard-build.yaml@869881c224354c744e09f1d9bba9d47b5c698b44 # v1.26.0
+    uses: miracum/.github/.github/workflows/standard-build.yaml@a22046808f8ee1af34781418e0e59fd23be420c5 # v1.28.0
     permissions:
       contents: write
       id-token: write
@@ -152,14 +152,14 @@ jobs:
             ghcr.io/${{ github.repository }}/voprf-server
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@37fe631027851001ddb9b187196cc803df7f5f0e # v4.3.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
       # Vfps.Voprf.Server.Tests covers the server and Vfps.Voprf.Client, and runs nowhere
       # else: the build-test layer above is scoped to src/Vfps.Tests. The test stage runs
       # `dotnet test` in the image, so a failing test fails this job. cacheonly: nothing
       # consumes the coverage it writes.
       - name: Run the VOPRF server and client tests
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           push: false
           target: test
@@ -184,7 +184,7 @@ jobs:
       # Dockerfile this runtime stage is not pinned to $BUILDPLATFORM - so linux/arm64 would
       # pull an arm64 base image and fill it with x64 binaries.
       - name: Build and push the VOPRF server image
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           push: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.event.pull_request.base.repo.full_name }}
           target: runtime
@@ -602,7 +602,7 @@ jobs:
           push-to-registry: true
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@869881c224354c744e09f1d9bba9d47b5c698b44 # v1.26.0
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@a22046808f8ee1af34781418e0e59fd23be420c5 # v1.28.0
     permissions:
       contents: read
       pull-requests: write
