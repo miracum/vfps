@@ -47,6 +47,10 @@ gh attestation verify "oci://${IMAGE_DIGEST_PINNED}" \
 The images are built by a reusable workflow in [miracum/.github](https://github.com/miracum/.github),
 which is why `--signer-workflow` names that workflow rather than one in this repository.
 
+The provenance is also pushed to the registry next to the image, so it can be enforced at deploy
+time - see GitHub's guide to
+[enforcing artifact attestations with a Kubernetes admission controller](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/enforce-artifact-attestations).
+
 ## Compose artifact verification
 
 The [getting-started](getting-started.md) Compose stack is an OCI artifact signed with cosign,
