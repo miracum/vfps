@@ -1,14 +1,14 @@
 name: ha chaos testing
 
-# Stands vfps up in the configuration docs/deployment/high-availability.md argues for - three
-# replicas spread across three zones, backed by a replicated CloudNativePG cluster - and breaks it on
-# purpose while asserting that no pseudonym it already handed out is lost or changes identity.
+# Stands vfps up in a highly available configuration - three replicas spread across three zones,
+# backed by a replicated CloudNativePG cluster - and breaks it on purpose while asserting that no
+# pseudonym it already handed out is lost or changes identity.
 #
-# See docs/testing/ha-chaos-testing.md. Not run on every pull request - it takes the best part of an
-# hour, and a chaos test that gates merges is a chaos test that gets disabled. Apply the `ha-chaos`
-# label to a PR to opt that PR in; it then runs a trimmed scenario set on every push until the label
-# is removed. Requiring a label also means a forked PR cannot burn an hour of runner time unless a
-# maintainer asks for it.
+# See website/development/ha-chaos-testing.md. Not run on every pull request - it takes the best
+# part of an hour, and a chaos test that gates merges is a chaos test that gets disabled. Apply the
+# `ha-chaos` label to a PR to opt that PR in; it then runs a trimmed scenario set on every push until
+# the label is removed. Requiring a label also means a forked PR cannot burn an hour of runner time
+# unless a maintainer asks for it.
 
 on:
   pull_request:

@@ -1,9 +1,8 @@
 # Documentation site, published to https://miracum.github.io/vfps/ by .github/workflows/docs.yaml.
 # Preview locally with `uv run zensical serve`.
 #
-# The site's sources live in website/ rather than docs/: docs/ holds internal design and
-# working notes that are referenced from code, and Zensical has no way to exclude part of its
-# docs_dir from the build.
+# The site's sources live in website/. Design and working notes for contributors are in
+# website/development/, and are referenced from code by that path.
 
 [project]
 site_name = "vfps"
@@ -26,6 +25,7 @@ nav = [
     { "VOPRF pseudonyms" = "voprf.md" },
     { "Admin UI" = "admin-ui.md" },
     { "Access control" = "access-control.md" },
+    { "gRPC API" = "grpc.md" },
     { "CSV jobs" = "csv-jobs.md" },
   ] },
   { "Operations" = [
@@ -37,6 +37,9 @@ nav = [
   ] },
   { "Performance" = "benchmarks.md" },
   { "Security" = "security.md" },
+  { "Development" = [
+    { "HA chaos testing" = "development/ha-chaos-testing.md" },
+  ] },
 ]
 
 extra_css = ["assets/extra.css"]

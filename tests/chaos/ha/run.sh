@@ -2,7 +2,7 @@
 #
 # Drives the HA chaos test: stands vfps up on a four-node kind cluster against a replicated
 # CloudNativePG cluster, runs a load generator in-cluster, and breaks things on a schedule while it
-# runs. See docs/testing/ha-chaos-testing.md for what this is asserting and why.
+# runs. See website/development/ha-chaos-testing.md for what this is asserting and why.
 #
 # Usage: tests/chaos/ha/run.sh [all|up|scenarios|collect|down]
 #
@@ -315,9 +315,9 @@ scenario_rollout() {
   timeline "rollout" "complete"
 }
 
-# A drain that times out *is* the failure: it means the PodDisruptionBudget cannot be satisfied, the
-# exact deadlock docs/deployment/high-availability.md calls out. Uncordoning happens either way, so
-# the cluster is healthy again before verification.
+# A drain that times out *is* the failure: it means the PodDisruptionBudget cannot be satisfied, so
+# no voluntary eviction can ever succeed. Uncordoning happens either way, so the cluster is healthy
+# again before verification.
 scenario_drain() {
   log "scenario: node drain (PodDisruptionBudget)"
   local node

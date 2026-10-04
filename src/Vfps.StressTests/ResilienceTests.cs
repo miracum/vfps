@@ -8,9 +8,9 @@ namespace Vfps.StressTests;
 /// chaos schedule from outside the cluster while this runs as a Job in its own namespace.
 /// </summary>
 /// <remarks>
-/// Gated behind a trait so it never runs alongside the ordinary stress simulation - it is a
-/// quarter-hour scenario that is meaningless without something actively breaking the cluster around
-/// it. See <c>docs/testing/ha-chaos-testing.md</c>.
+/// Explicit, so a plain <c>dotnet test</c> skips it - it is a quarter-hour scenario that is
+/// meaningless without something actively breaking the cluster around it. The Job selects it by
+/// this trait plus <c>-explicit only</c>. See <c>website/development/ha-chaos-testing.md</c>.
 /// </remarks>
 [Trait("Category", "Resilience")]
 public class ResilienceTests

@@ -74,6 +74,8 @@ grpcurl \
 
 The service definitions are in
 [`src/Vfps/Protos/vfps/api/v1`](https://github.com/miracum/vfps/tree/master/src/Vfps/Protos/vfps/api/v1).
+Without a checkout, use the [gRPC utils image](grpc.md#the-grpc-utils-image), which comes with
+grpcurl and these files.
 
 ## Next steps
 

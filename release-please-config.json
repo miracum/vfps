@@ -51,6 +51,10 @@
         },
         {
           "type": "generic",
+          "path": "website/grpc.md"
+        },
+        {
+          "type": "generic",
           "path": "website/security.md"
         },
         {
