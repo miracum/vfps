@@ -1,4 +1,6 @@
 using System.Collections.Concurrent;
+using Grpc.Net.Client.Balancer;
+using Microsoft.Extensions.DependencyInjection;
 using Vfps.StressTests.Resilience;
 
 namespace Vfps.StressTests;
@@ -65,6 +67,22 @@ public class ResilienceTests
     /// 10s: 1+2+4+8+10x5 = 65s) so it never fires before genuine retries have had their chance.
     /// </summary>
     private static readonly TimeSpan VerifyCallDeadline = TimeSpan.FromSeconds(90);
+
+    /// <summary>
+    /// grpc-dotnet's <c>dns:///</c> resolver never re-resolves on a timer by default - only when a
+    /// connection it already holds fails, which a healthy replica's never does. Without this the
+    /// replacements the pod-kill scenario creates are never discovered, and the client's view of the
+    /// backends only ever shrinks. 15s is the resolver's own floor: it rate-limits re-resolution to
+    /// that regardless.
+    /// </summary>
+    private static readonly TimeSpan DnsRefreshInterval = TimeSpan.FromSeconds(15);
+
+    /// <summary>
+    /// <see cref="SocketsHttpHandler.ConnectTimeout"/> defaults to infinite, so dialling the IP of a
+    /// pod that no longer exists waits out the kernel's SYN retries - over two minutes on Linux -
+    /// with every call queued behind it. In-cluster connects take milliseconds.
+    /// </summary>
+    private static readonly TimeSpan ConnectTimeout = TimeSpan.FromSeconds(5);
 
     // Explicit so a plain `dotnet test` - at the solution level or on this project - skips it. It
     // needs a live kind cluster with Chaos Mesh and CloudNativePG standing behind it, and takes the
@@ -367,9 +385,17 @@ public class ResilienceTests
             {
                 Credentials = ChannelCredentials.Insecure,
                 UnsafeUseInsecureChannelCallCredentials = true,
+                HttpHandler = new SocketsHttpHandler { ConnectTimeout = ConnectTimeout },
+                DisposeHttpClient = true,
+                ServiceProvider = new ServiceCollection()
+                    .AddSingleton<ResolverFactory>(new DnsResolverFactory(DnsRefreshInterval))
+                    .BuildServiceProvider(),
                 MaxRetryAttempts = retryPolicy.MaxAttempts,
                 ServiceConfig = new ServiceConfig
                 {
+                    // Without this the channel is pick_first: every call goes to whichever replica
+                    // answered first, and a pod-kill that misses that one replica tests nothing.
+                    LoadBalancingConfigs = { new RoundRobinConfig() },
                     MethodConfigs =
                     {
                         new MethodConfig
