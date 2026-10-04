@@ -47,14 +47,12 @@ curl -X POST http://localhost:8080/v1/namespaces/test/pseudonyms \
 ## Using gRPC
 
 You can use the JSON-transcoded REST API described via OpenAPI or interact with the service using gRPC.
-For example, using [grpcurl](https://github.com/fullstorydev/grpcurl) from a checkout of the
-repository to create a new namespace:
+The server offers gRPC reflection, so a client like [grpcurl](https://github.com/fullstorydev/grpcurl)
+needs no `.proto` files. To create a new namespace:
 
 ```sh
 grpcurl \
   -plaintext \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
   -d '{"name": "test", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}' \
   127.0.0.1:8081 \
   vfps.api.v1.NamespaceService/Create
@@ -65,15 +63,13 @@ And to create a new pseudonym inside this namespace:
 ```sh
 grpcurl \
   -plaintext \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/pseudonyms.proto \
   -d '{"namespace": "test", "originalValue": "to be pseudonymized"}' \
   127.0.0.1:8081 \
   vfps.api.v1.PseudonymService/Create
 ```
 
-The service definitions are in
-[`src/Vfps/Protos/vfps/api/v1`](https://github.com/miracum/vfps/tree/master/src/Vfps/Protos/vfps/api/v1).
+`grpcurl -plaintext 127.0.0.1:8081 list` lists the services, and `describe` shows their methods and
+messages. See [gRPC API](grpc.md) for more, including a container image that comes with grpcurl.
 
 ## Next steps
 

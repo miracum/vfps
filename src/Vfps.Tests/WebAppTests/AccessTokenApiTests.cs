@@ -282,6 +282,26 @@ public class AccessTokenApiTests(AccessTokensEnabledTestFactory factory)
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
     }
 
+    /// <summary>
+    /// The other half of ApiAuthorizationTests.GrpcReflection_WithoutToken_ShouldBeRefused: with
+    /// authorization on, reflection takes a token like the API does, and any valid one will do -
+    /// listing the services needs no grant on any namespace.
+    /// </summary>
+    [Fact]
+    public async Task AnyValidToken_ShouldListTheApiServicesOverGrpcReflection()
+    {
+        var (token, secret) = Tokens.ForServiceAccount("reflecting-account");
+        await SeedAsync(token);
+
+        var services = await GrpcReflection.ListServicesAsync(
+            factory,
+            TestContext.Current.CancellationToken,
+            secret
+        );
+
+        services.Should().Contain(["vfps.api.v1.PseudonymService", "vfps.api.v1.NamespaceService"]);
+    }
+
     [Fact]
     public async Task HealthEndpoints_ShouldStayAnonymous()
     {

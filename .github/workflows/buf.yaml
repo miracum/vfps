@@ -25,19 +25,19 @@ jobs:
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
 
+      # The module is rooted at src/Vfps/Protos, the same root Vfps.csproj compiles from - see the
+      # comment on its Protobuf item for why the two have to agree.
       - name: check formatting
-        working-directory: src/Vfps
+        working-directory: src/Vfps/Protos
         run: buf format --exit-code
 
       - uses: bufbuild/buf-lint-action@06f9dd823d873146471cfaaf108a993fe00e5325 # v1.1.1
         with:
-          input: src/Vfps
-      # Doesn't currently work due to the weird file setup. Fails with:
-      # Error: Protos/vfps/api/v1/meta.proto: does not exist
-      # Error: Protos/vfps/api/v1/meta.proto: does not exist
-      # Error: google/api/http.proto: does not exist
-      # Error: buf found 3 breaking changes.
+          input: src/Vfps/Protos
+      # Can be enabled once master has the Protos-rooted layout: before it, master's files import
+      # each other as "Protos/...", which doesn't resolve from this root, so buf can't build the
+      # side it compares against.
       # - uses: bufbuild/buf-breaking-action@1cd949a5f7c5581990772f1e0c8a5270d7e4401b # tag=v1.1.1
       #   with:
-      #     input: src/Vfps
-      #     against: "https://github.com/${{ github.repository }}.git#branch=master"
+      #     input: src/Vfps/Protos
+      #     against: "https://github.com/${{ github.repository }}.git#branch=master,subdir=src/Vfps/Protos"

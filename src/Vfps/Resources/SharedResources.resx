@@ -223,8 +223,23 @@
   <data name="App.AccessTokens.TypeServiceAccount" xml:space="preserve">
     <value>Service account</value>
   </data>
+  <data name="App.AccessTokens.UsageDescription" xml:space="preserve">
+    <value>Send it in the Authorization header, exactly like a token from the identity provider. Set VFPS_NAMESPACE to a namespace you can write to.</value>
+  </data>
+  <data name="App.AccessTokens.UsageDocsLink" xml:space="preserve">
+    <value>More on access tokens in the documentation</value>
+  </data>
+  <data name="App.AccessTokens.UsageGrpcDocsLink" xml:space="preserve">
+    <value>The gRPC API in the documentation</value>
+  </data>
+  <data name="App.AccessTokens.UsageGrpcNote" xml:space="preserve">
+    <value>The server offers gRPC reflection, so grpcurl needs no .proto files. Plaintext gRPC is served on port {0}.</value>
+  </data>
   <data name="App.AccessTokens.UsageHint" xml:space="preserve">
     <value>Send it to the API as {0}, exactly like a token from the identity provider.</value>
+  </data>
+  <data name="App.AccessTokens.UsageTitle" xml:space="preserve">
+    <value>Use a token</value>
   </data>
   <data name="App.Common.Close" xml:space="preserve">
     <value>Close</value>

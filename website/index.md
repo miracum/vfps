@@ -23,7 +23,8 @@ with gRPC, REST and FHIR APIs, an admin UI, and highly available deployments.</p
 <div class="vfps-stats" markdown>
 
 <div><strong>~12,000 req/s</strong>pseudonym creation on a single instance</div>
-<div><strong>&lt; 10 ms</strong>P99 latency</div>
+<div><strong>&lt; 10 ms</strong>P99 request latency</div>
+<div><strong>&lt; 2 s</strong>from cold start to first pseudonym</div>
 <div><strong>~1,000 req/s</strong>with just 1 CPU and 128 MiB memory</div>
 
 </div>

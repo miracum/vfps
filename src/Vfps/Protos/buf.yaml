@@ -1,11 +1,9 @@
 version: v1
 lint:
   ignore:
-    - Protos/google/
+    - google/
   use:
     - DEFAULT
-  except:
-    - PACKAGE_DIRECTORY_MATCH
 breaking:
   use:
     - FILE

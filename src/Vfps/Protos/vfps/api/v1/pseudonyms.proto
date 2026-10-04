@@ -2,9 +2,9 @@ syntax = "proto3";
 
 package vfps.api.v1;
 
-import "Protos/google/api/annotations.proto";
-import "Protos/vfps/api/v1/meta.proto";
+import "google/api/annotations.proto";
 import "google/protobuf/timestamp.proto";
+import "vfps/api/v1/meta.proto";
 
 option csharp_namespace = "Vfps.Protos";
 

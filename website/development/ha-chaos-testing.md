@@ -1,16 +1,10 @@
 # HA chaos testing in CI
 
-`.github/workflows/ha-chaos.yaml` stands vfps up the way the
-[high-availability notes](../deployment/high-availability.md) say it should be run - three replicas
-spread across three zones, backed by a replicated CloudNativePG cluster - and then breaks it on
-purpose while asserting that it keeps its promises.
-
-It replaces the old `nightly-chaos.yaml`, which installed the _published_ chart with
-`replicaCount: 3` and the bundled single-instance PostgreSQL, killed one vfps pod a minute, and
-asserted the failure rate stayed under 0.1%. That covered exactly one failure mode - an API pod
-dying - against the one component whose failure was guaranteed to be a total outage anyway. This
-closes the `# TODO: could add database/cnpg chaos if deployed HA` that sat in the old
-`tests/chaos/chaos.yaml`, and section 7 of the HA notes.
+`.github/workflows/ha-chaos.yaml` stands vfps up in a highly available configuration - three
+replicas spread across three zones, backed by a replicated CloudNativePG cluster - and then breaks
+it on purpose while asserting that it keeps its promises. The deployment side of that configuration
+is described under
+[Running more than one replica](../deployment/production.md#running-more-than-one-replica).
 
 ## 1. What this is actually testing
 
@@ -28,22 +22,21 @@ two. Every pod is `Running`, every probe is green, the error rate is zero, and t
 
 The test therefore gates on three properties:
 
-|        | Property                                                                                                                                    | How it is measured                                                                                       | Budget                                                                                  |
-| ------ | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| **P1** | **Availability.** Calls succeed within a bounded client retry budget **and a per-call deadline**.                                           | Two durations: the longest run of seconds with no successful call, and total failure-equivalent seconds. | `RESILIENCE_MAX_OUTAGE_SECONDS` (30) and `RESILIENCE_MAX_UNAVAILABLE_SECONDS` - see §7. |
-| **P2** | **Pseudonym stability.** Every `(original → pseudonym)` pair observed before chaos re-`Create`s to the byte-identical pseudonym afterwards. | Sampled ledger, replayed in a verification pass.                                                         | **Zero.**                                                                               |
-| **P3** | **Reverse lookup survives.** `Get(namespace, pseudonym_value)` for that same sample still returns its original value.                       | Same verification pass.                                                                                  | **Zero.**                                                                               |
+|        | Property                                                                                                                                    | How it is measured                                                                                       | Budget                                                                                                                                  |
+| ------ | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **P1** | **Availability.** Calls succeed within a bounded client retry budget **and a per-call deadline**.                                           | Two durations: the longest run of seconds with no successful call, and total failure-equivalent seconds. | `RESILIENCE_MAX_OUTAGE_SECONDS` (30) and `RESILIENCE_MAX_UNAVAILABLE_SECONDS` - see [§7](#p1-is-gated-on-durations-not-a-failure-rate). |
+| **P2** | **Pseudonym stability.** Every `(original → pseudonym)` pair observed before chaos re-`Create`s to the byte-identical pseudonym afterwards. | Sampled ledger, replayed in a verification pass.                                                         | **Zero.**                                                                                                                               |
+| **P3** | **Reverse lookup survives.** `Get(namespace, pseudonym_value)` for that same sample still returns its original value.                       | Same verification pass.                                                                                  | **Zero.**                                                                                                                               |
 
-P2 and P3 are the reason this exists. P1 alone was already covered, weakly, by the old nightly.
+P2 and P3 are the reason this exists.
 
-### Two measurement traps
+### Measurement traps
 
-Both are places the previous NBomber-based stress test got it wrong for this purpose, which is
-worth recording now that it is gone.
+Three ways a load test can report a healthy service that wasn't, and how this one avoids them.
 
-**The retry policy is deliberately narrow.** The old test retried `StatusCode.Internal` alongside
-`Unavailable`. `Internal` is how a genuine server-side failure surfaces, so retrying it hides
-precisely what is under test. `ResilienceTests` retries `Unavailable` only.
+**The retry policy is deliberately narrow.** `ResilienceTests` retries `Unavailable` only.
+`Internal` is how a genuine server-side failure surfaces, so retrying it would hide precisely what is
+under test.
 
 **Every call carries a deadline.** vfps answers an 8ms call and a 22-second call with the same
 `OK`, so without one, P1 cannot see a stall at all - the first run in CI returned **zero failed
@@ -55,10 +48,10 @@ whatever status eventually comes back. `RESILIENCE_MAX_IN_FLIGHT` must stay well
 `RatePerSecond * CallDeadline`, or the ceiling fires first and the cliff returns; the test says so
 explicitly when shedding outweighs real failures.
 
-**The load profile is an open model.** The old test used `KeepConstant(copies: 100)`, a closed
-model: every virtual user waits for its own response before issuing the next request. When the
-database fails over and latency spikes, a closed model simply issues fewer requests, so the outage
-shows up as a throughput dip rather than as errors, systematically understating impact.
+**The load profile is an open model.** In a closed model, every virtual user waits for its own
+response before issuing the next request. When the database fails over and latency spikes, a closed
+model simply issues fewer requests, so the outage shows up as a throughput dip rather than as
+errors, systematically understating impact.
 `OpenModelLoadRunner` dispatches on a wall-clock schedule and never waits, so offered load stays flat
 and an outage lands where it belongs - in the failure count. For the same reason, load shedding past
 `MaxInFlight` is **counted as a failure** rather than quietly dropped: silently issuing less work
@@ -79,8 +72,8 @@ taking P2 and P3 with it.
 ## 3. Database: CloudNativePG
 
 `tests/chaos/ha/cnpg-cluster.yaml`: three instances, `primaryUpdateStrategy: unsupervised`, required
-pod anti-affinity by hostname, and `max_connections: 200` budgeted against the chart's
-`Maximum Pool Size=25` per replica.
+pod anti-affinity by hostname, and `max_connections: 200` budgeted against the
+`Maximum Pool Size=25` per replica that `vfps-ha-values.yaml` sets.
 
 ### Synchronous replication is not optional here
 
@@ -100,19 +93,20 @@ flaky _and_ right to fail: a real defect indistinguishable from noise.
 Requiring one standby to acknowledge every commit means promotion cannot lose an acknowledged write.
 That is what makes P2 and P3 legitimately zero-tolerance.
 
-**Hard consequence:** never take down more than one database instance at a time. With three instances
-and `number: 1`, losing the primary leaves two and writes continue; losing a primary _and_ a standby
-leaves one, quorum is unreachable, and writes block indefinitely. That is correct PostgreSQL
-behaviour, not a vfps bug. `run.sh` therefore sequences primary kills by cluster health rather than
-by a timer, and never runs two database scenarios concurrently.
+!!! warning "Never take down more than one database instance at a time"
+
+    With three instances and `number: 1`, losing the primary leaves two and writes continue; losing
+    a primary _and_ a standby leaves one, quorum is unreachable, and writes block indefinitely. That
+    is correct PostgreSQL behaviour, not a vfps bug. `run.sh` therefore sequences primary kills by
+    cluster health rather than by a timer, and never runs two database scenarios concurrently.
 
 ### Chart wiring
 
-`postgres.enabled: false` plus CNPG's generated `vfps-db-app` secret. **No chart change was needed** -
-verified with `helm template`:
+`postgres.enabled: false` plus CNPG's generated `vfps-db-app` secret, which `helm template` renders
+as:
 
-```
-ConnectionStrings__PostgreSQL: "Host=vfps-db-rw:5432;Database=vfps;…;Maximum Pool Size=25;"
+```text
+ConnectionStrings__PostgreSQL: "Host=vfps-db-rw:5432;Database=vfps;…;Maximum Pool Size=25;Gss Encryption Mode=Disable;"
 PGPASSWORD: secretKeyRef{ name: "vfps-db-app", key: "password" }
 ```
 
@@ -140,14 +134,14 @@ Run sequentially under continuous load. Durations are `DURATION_*` variables in 
 window is computed as their sum plus `LOAD_MARGIN_SECONDS`, so the two halves can never disagree
 about how long the run is.
 
-| #   | Scenario               | Mechanism                                                                                | What it proves                                                                                                                                                           |
-| --- | ---------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0   | `baseline`             | nothing injected                                                                         | The ambient error floor. Without it you cannot tell a chaos-induced failure from a flaky runner.                                                                         |
-| 1   | `vfps-pod-kill`        | `PodChaos/pod-kill`, `mode: one`, Schedule @45s                                          | Replicas, PDB, Service endpoint churn.                                                                                                                                   |
-| 2   | `cnpg-primary-kill`    | one-shot `PodChaos`, selector `cnpg.io/instanceRole: primary`, repeated as health allows | **The headline.** A real failover: promotion, `-rw` repointing, `EnableRetryOnFailure` riding it out. P2 and P3 are decided here.                                        |
-| 3   | `db-network-partition` | `NetworkChaos/partition`, 20s bursts                                                     | A distinct failure mode from 2: the database is _up_ but unreachable, so Npgsql sees timeouts rather than resets. Tests `Timeout=60` and the retry policy, not failover. |
-| 4   | `rollout`              | `kubectl rollout restart`                                                                | HA notes §2 - `preStop`, `terminationGracePeriodSeconds`, `minReadySeconds`.                                                                                             |
-| 5   | `drain`                | `kubectl drain --timeout=120s`                                                           | HA notes §1's PDB deadlock. **A drain that times out is the failure.** `run.sh` uncordons either way so the cluster is healthy before verification.                      |
+| #   | Scenario               | Mechanism                                                                                | What it proves                                                                                                                                                                              |
+| --- | ---------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0   | `baseline`             | nothing injected                                                                         | The ambient error floor. Without it you cannot tell a chaos-induced failure from a flaky runner.                                                                                            |
+| 1   | `vfps-pod-kill`        | `PodChaos/pod-kill`, `mode: one`, Schedule @45s                                          | Replicas, PDB, Service endpoint churn.                                                                                                                                                      |
+| 2   | `cnpg-primary-kill`    | one-shot `PodChaos`, selector `cnpg.io/instanceRole: primary`, repeated as health allows | **The headline.** A real failover: promotion, `-rw` repointing, `EnableRetryOnFailure` riding it out. P2 and P3 are decided here.                                                           |
+| 3   | `db-network-partition` | `NetworkChaos/partition`, 20s bursts                                                     | A distinct failure mode from 2: the database is _up_ but unreachable, so Npgsql sees timeouts rather than resets. Tests `Timeout=60` and the retry policy, not failover.                    |
+| 4   | `rollout`              | `kubectl rollout restart`                                                                | Zero-downtime rolling upgrades: `preStop`, `terminationGracePeriodSeconds`, `minReadySeconds`.                                                                                              |
+| 5   | `drain`                | `kubectl drain --timeout=120s`                                                           | That the PodDisruptionBudget lets a node drain at all. **A drain that times out is the failure.** `run.sh` uncordons either way so the cluster is healthy before verification.              |
 
 ## 6. Load generator
 
@@ -159,14 +153,16 @@ only ever run on purpose. The Job opts in with `-explicit only`, alongside
 
 A skipped explicit test is reported as _skipped_ rather than _not discovered_, so the assembly still
 exits 0 and a solution-wide `dotnet test` does not fail on it. That also means forgetting
-`-explicit only` would give a green Job that ran nothing - which is precisely what the timeline guard
-in §6 catches, since a skipped test emits no CSV.
+`-explicit only` would give a green Job that ran nothing - which is precisely what `run.sh`'s
+timeline guard catches: a skipped test emits no CSV, and `collect` fails the run without one.
 
 It runs as a Job in its own namespace (`vfps-loadgen`) and reaches the service at
 `dns:///vfps-headless.vfps.svc.cluster.local:8081` - the only way to exercise the client-side
-round-robin load balancing the HA notes §4 recommend. A ClusterIP Service balances connections rather
-than requests, so one long-lived HTTP/2 connection would pin the whole run to a single replica and
-make scenario 1 far easier to pass than it should be.
+round-robin load balancing that
+[Running more than one replica](../deployment/production.md#running-more-than-one-replica)
+recommends. A ClusterIP Service balances connections rather than requests, so one long-lived HTTP/2
+connection would pin the whole run to a single replica and make scenario 1 far easier to pass than
+it should be.
 
 Phases, all driven by `RESILIENCE_*` environment variables:
 
@@ -183,23 +179,19 @@ Phases, all driven by `RESILIENCE_*` environment variables:
 
 ### No load-testing framework
 
-NBomber became proprietary with License Agreement 3.0 (2025-09-01): _"NBomber is not free for
-organizational use. Any use by, for, or on behalf of an organization ... requires a valid Commercial
-Subscription."_ Only v4 and earlier are Apache-2.0. It has been **removed from the repository
-entirely**, along with the `RunStressSimulation` scenario that used it.
-
-Rather than swap one third-party dependency for another, the resilience test uses none. This is not
-really a load test: P2/P3 need a ledger of issued pseudonyms recorded during traffic and replayed
-afterwards, which no load framework provides, so that part is bespoke either way. What is left -
-"issue N requests per second for M minutes and count failures" - is a `PeriodicTimer` and a
-semaphore. The parts of NBomber that would have earned their keep (ramping profiles, distributed
+This is not really a load test: P2/P3 need a ledger of issued pseudonyms recorded during traffic and
+replayed afterwards, which no load framework provides, so that part is bespoke either way. What is
+left - "issue N requests per second for M minutes and count failures" - is a `PeriodicTimer` and a
+semaphore. The parts of a framework that would earn their keep (ramping profiles, distributed
 agents, HTML reports) are exactly the parts this test does not use, and writing it directly means
-reusing `Vfps.Protos`, the existing `GrpcChannel` setup, xunit and AwesomeAssertions.
+reusing `Vfps.Protos`, the existing `GrpcChannel` setup, xunit and AwesomeAssertions. NBomber, the
+obvious candidate, has also been proprietary since its License Agreement 3.0 (2025-09-01); only v4
+and earlier are Apache-2.0.
 
-`Vfps.StressTests` now contains only the resilience test and takes no third-party dependency beyond
-xunit, AwesomeAssertions and the gRPC client it already shared with the application. The project name
-is now a slight misnomer; renaming it would churn the Dockerfile, the published
-`ghcr.io/miracum/vfps/stress-test` image path and the Job manifest, so it has been left alone.
+`Vfps.StressTests` contains only the resilience test and takes no third-party dependency beyond
+xunit, AwesomeAssertions and the gRPC client it shares with the application. The name is a leftover;
+renaming it would churn the Dockerfile, the published `ghcr.io/miracum/vfps/stress-test` image path
+and the Job manifest.
 
 ### What is machine-gated vs. human-diagnosed
 
@@ -232,6 +224,11 @@ Requires `kind`, `kubectl`, `helm`, `envsubst` and `docker`, and the two images 
 docker buildx build --load -t ghcr.io/miracum/vfps:ci .
 docker buildx build --load --target=stress-test -t ghcr.io/miracum/vfps/stress-test:ci .
 ```
+
+On Linux, `run.sh` also refuses to start below kind's recommended inotify limits
+(`fs.inotify.max_user_instances=512`, `fs.inotify.max_user_watches=524288`). The four nodes share
+the host's budget, and at the common default of 128 instances setup fails with pods crash-looping on
+"too many open files". The CI workflow raises both before it runs.
 
 A plain `dotnet test Vfps.slnx` is unaffected by any of this - the resilience test is explicit and
 gets skipped.
@@ -267,10 +264,12 @@ run. So P1 is two durations instead:
 | `RESILIENCE_MAX_OUTAGE_SECONDS`      | 30               | Longest run of consecutive seconds in which load was offered and nothing succeeded. Run-length independent, so it means the same thing on both scenario sets, and it is the number an operator actually cares about: _how long was it down?_          |
 | `RESILIENCE_MAX_UNAVAILABLE_SECONDS` | 150 (60 on a PR) | Total failure-equivalent seconds, `(failed + shed) / rate`. Catches chronic flakiness that never blacks out a whole second and so never trips the gate above. Scales with the number of disruptions, hence the smaller allowance for the trimmed run. |
 
-**Both defaults are provisional**, set at roughly 2x the first two observed CI runs (16s longest
-outage, 34s total across two disruptions). They are a starting point to be revised as runs
-accumulate, not a measurement - but revise them _as durations_. Reverting to a percentage would
-reintroduce the run-length coupling above.
+!!! note "Both defaults are provisional"
+
+    Set at roughly 2x the first two observed CI runs (16s longest outage, 34s total across two
+    disruptions). They are a starting point to be revised as runs accumulate, not a measurement -
+    but revise them _as durations_. Reverting to a percentage would reintroduce the run-length
+    coupling above.
 
 A single-primary PostgreSQL failover costs an outage by construction: the primary dies, a standby is
 promoted, `-rw` repoints, and clients reconnect. The gate is on that outage staying bounded, not on
@@ -279,19 +278,20 @@ hold connections across a switchover - not a tuning exercise.
 
 To see the ambient floor on an undisturbed cluster:
 
-```
+```text
 workflow_dispatch -> scenarios: baseline
 ```
 
 ## 8. Artifacts
 
-Always uploaded, whatever the outcome: `resilience.log`, `load-timeline.csv`, `chaos-timeline.csv`,
-`pods.txt`, `events.txt`, `cnpg-cluster.yaml` (the live status, including replication state),
-`cnpg-instances.log`, `vfps-api.log`, and a full `cluster-dump/`. If the `cnpg` kubectl plugin
-happens to be installed, `cnpg-report.zip` too - its bundle is the first thing to open after a P2 or
-P3 violation. The workflow itself adds `run.log` (`run.sh`'s own output, teed rather than left to
-live only in the Actions log) and, on failure, `failures.txt` (the `FAILURES` array `summary()`
-collected - see §5) and `issue-report.md` (below).
+Uploaded whatever the outcome, once the run gets as far as `collect`: `resilience.log`,
+`load-timeline.csv`, `chaos-timeline.csv`, `pods.txt`, `events.txt`, `cnpg-cluster.yaml` (the live
+status, including replication state), `cnpg-instances.log`, `vfps-api.log`, and a full
+`cluster-dump/`. If the `cnpg` kubectl plugin happens to be installed, `cnpg-report.zip` too - its
+bundle is the first thing to open after a P2 or P3 violation. On failure, `run.sh` also writes
+`failures.txt` (the reasons `summary()` collected). The workflow adds `run.log` (`run.sh`'s own
+output, teed rather than left to live only in the Actions log) and, on failure, `issue-report.md`
+(below). A run that fails during setup has only `run.log`.
 
 A chaos failure you cannot reconstruct after the cluster is gone is a chaos failure you will end up
 ignoring.
@@ -301,8 +301,7 @@ ignoring.
 A red **schedule** or **`workflow_dispatch`** run opens (or updates, via
 [`micalevisk/last-issue-action`](https://github.com/micalevisk/last-issue-action) plus
 [`peter-evans/create-issue-from-file`](https://github.com/peter-evans/create-issue-from-file) - the
-same pair `standard-schedule.yaml`'s link checker uses, see `.github/workflows/ha-chaos.yaml`) an
-issue labelled `report, automated issue, ha chaos testing`, built from `issue-report.md`: the
+same pair the link checker in miracum/.github's `standard-schedule.yaml` uses) an issue labelled `report, automated issue, ha chaos testing`, built from `issue-report.md`: the
 `failures.txt` reasons if any, the last 200 lines of `run.log`, and the last 60 lines of
 `resilience.log` if the Job got that far, plus a link to the full `ha-chaos-artifacts` artifact.
 
@@ -337,26 +336,23 @@ P1, P2 or P3 - which is the run you actually want it for.
    `run.sh` fails loudly rather than silently if it cannot find a pod labelled as the primary, and
    polls `.status.readyInstances` rather than waiting on a condition name that has changed across
    versions.
-3. **`NetworkChaos` on kind** needs the chaos daemon to manipulate pod network namespaces. It works,
-   but scenario 3 is the one to prove out first.
-4. **Nothing here has been run against a live cluster yet.** The chart wiring, both trait filters,
-   the Job manifest after `envsubst`, and all YAML and shell syntax are verified; the cluster
-   behaviour is not.
+3. **`NetworkChaos` on kind** needs the chaos daemon to manipulate pod network namespaces, which is
+   why `run.sh` points it at kind's containerd socket.
 
 ## 10. Deliberately out of scope
 
-- **CSV job resilience.** Resumable CSV jobs are implemented but deliberately unmerged (HA notes,
-  "Deferred"), so on master a job killed mid-processing restarts from row 0 _by design_. A test
-  asserting otherwise would fail correctly and tell us nothing. Revisit when `resumable-csv` lands.
+- **CSV job resilience.** On master a job killed mid-processing restarts from row 0 _by design_ -
+  resumable CSV jobs exist only on the unmerged `resumable-csv` branch - so a test asserting
+  otherwise would fail correctly and tell us nothing. Revisit if that lands.
 - **S3 / object storage**, which CSV jobs need and nothing else does.
 - **NetworkPolicy.** The chart can render one; enabling it here would require allowing the
   cross-namespace loadgen traffic. A follow-up scenario of its own.
-- **The admin UI.** Blazor session affinity under failover (HA notes §3) is a real gap, but it is a
-  Playwright problem, not a load-generator one.
+- **The admin UI.** Blazor Server circuits under failover are a Playwright problem, not a
+  load-generator one.
 
 ## 11. Files
 
-```
+```text
 .github/workflows/ha-chaos.yaml
 tests/chaos/ha/run.sh                          # the driver
 tests/chaos/ha/kind-config.yaml
@@ -372,13 +368,5 @@ src/Vfps.StressTests/Resilience/PseudonymLedger.cs
 src/Vfps.StressTests/Resilience/OpenModelLoadRunner.cs
 ```
 
-Removed with NBomber: `src/Vfps.StressTests/StressTests.cs`, the `NBomber` package reference, its two
-global usings, and 296 lines of transitive dependencies from `packages.lock.json`.
-
-Removed with the old nightly: `Taskfile.yaml`, `.github/workflows/nightly-chaos.yaml`, and the Argo
-Workflows assets under `tests/chaos/` (`workflow.yaml`, `argo-workflows-values.yaml`,
-`chaos-mesh-rbac.yaml`, `chaos.yaml`, `vfps-values.yaml`). Argo installed a controller, a CLI and a
-cluster-wide RBAC bundle to do what amounts to "apply a CR, run a container, delete the CR"; its
-`onExit` cleanup bought nothing in CI, where the cluster is discarded seconds later. Driving chaos
-from outside the cluster with the runner's own kubeconfig also removed the RBAC entirely, and let the
-stress-test image drop its bundled `kubectl`.
+Chaos is driven from outside the cluster with the runner's own kubeconfig, so nothing in the
+cluster needs RBAC to create chaos objects, and the load generator image carries no `kubectl`.

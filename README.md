@@ -38,8 +38,6 @@ For example, using [grpcurl](https://github.com/fullstorydev/grpcurl) to create 
 ```sh
 grpcurl \
   -plaintext \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
   -d '{"name": "test", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}' \
   127.0.0.1:8081 \
   vfps.api.v1.NamespaceService/Create
@@ -50,8 +48,6 @@ And to create a new pseudonym inside this namespace:
 ```sh
 grpcurl \
   -plaintext \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/pseudonyms.proto \
   -d '{"namespace": "test", "originalValue": "to be pseudonymized"}' \
   127.0.0.1:8081 \
   vfps.api.v1.PseudonymService/Create
@@ -115,7 +111,7 @@ gRPC services. You can use [grpcurl](https://github.com/fullstorydev/grpcurl)
 to interact with the API:
 
 > **Note**
-> In development mode gRPC reflection is enabled and used by grpcurl by default.
+> The server offers gRPC reflection, so grpcurl needs no `.proto` files.
 
 ```sh
 grpcurl -plaintext \

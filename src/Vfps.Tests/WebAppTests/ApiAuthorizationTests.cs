@@ -2,6 +2,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Grpc.Core;
+using Grpc.Net.Client;
+using Grpc.Reflection.V1Alpha;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Task = System.Threading.Tasks.Task;
@@ -105,6 +108,22 @@ public class ApiAuthorizationTests(AuthorizationEnabledTestFactory factory)
         parsed.RootElement.TryGetProperty("security", out _).Should().BeTrue();
     }
 
+    /// <summary>
+    /// Reflection describes the API, so it answers to the same token the API does - a caller
+    /// without one can't even list the services. AccessTokenApiTests has the other half: with a
+    /// token, the same call succeeds.
+    /// </summary>
+    [Fact]
+    public async Task GrpcReflection_WithoutToken_ShouldBeRefused()
+    {
+        var act = () =>
+            GrpcReflection.ListServicesAsync(factory, TestContext.Current.CancellationToken);
+
+        (await act.Should().ThrowAsync<RpcException>())
+            .Which.StatusCode.Should()
+            .Be(StatusCode.Unauthenticated);
+    }
+
     [Theory]
     [InlineData("/readyz")]
     [InlineData("/livez")]
@@ -167,6 +186,21 @@ public class ApiAuthorizationDisabledTests(
     }
 
     /// <summary>
+    /// Served outside Development too - the test host runs as "Test" - so that clients like
+    /// grpcurl need no copy of the .proto files.
+    /// </summary>
+    [Fact]
+    public async Task GrpcReflection_ShouldListTheApiServices()
+    {
+        var services = await GrpcReflection.ListServicesAsync(
+            factory,
+            TestContext.Current.CancellationToken
+        );
+
+        services.Should().Contain(["vfps.api.v1.PseudonymService", "vfps.api.v1.NamespaceService"]);
+    }
+
+    /// <summary>
     /// And the document must not advertise a credential the deployment ignores.
     /// </summary>
     [Fact]
@@ -187,5 +221,47 @@ public class ApiAuthorizationDisabledTests(
             .Should()
             .BeFalse();
         parsed.RootElement.TryGetProperty("security", out _).Should().BeFalse();
+    }
+}
+
+/// <summary>
+/// Lists the services a test host offers over gRPC server reflection, the way grpcurl's "list"
+/// does: v1alpha, which is what the grpcurl in the grpc-utils image speaks.
+/// </summary>
+[ExcludeFromCodeCoverage]
+internal static class GrpcReflection
+{
+    public static async Task<IReadOnlyList<string>> ListServicesAsync(
+        WebApplicationFactory<Program> factory,
+        CancellationToken cancellationToken,
+        string? bearerToken = null
+    )
+    {
+        using var channel = GrpcChannel.ForAddress(
+            factory.Server.BaseAddress,
+            new GrpcChannelOptions { HttpHandler = factory.Server.CreateHandler() }
+        );
+        var client = new ServerReflection.ServerReflectionClient(channel);
+
+        var headers = new Metadata();
+        if (bearerToken is not null)
+        {
+            headers.Add("authorization", $"Bearer {bearerToken}");
+        }
+
+        using var call = client.ServerReflectionInfo(headers, cancellationToken: cancellationToken);
+        await call.RequestStream.WriteAsync(
+            new ServerReflectionRequest { ListServices = string.Empty },
+            cancellationToken
+        );
+        await call.RequestStream.CompleteAsync();
+
+        var services = new List<string>();
+        await foreach (var response in call.ResponseStream.ReadAllAsync(cancellationToken))
+        {
+            services.AddRange(response.ListServicesResponse.Service.Select(s => s.Name));
+        }
+
+        return services;
     }
 }

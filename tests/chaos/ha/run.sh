@@ -2,7 +2,7 @@
 #
 # Drives the HA chaos test: stands vfps up on a four-node kind cluster against a replicated
 # CloudNativePG cluster, runs a load generator in-cluster, and breaks things on a schedule while it
-# runs. See docs/testing/ha-chaos-testing.md for what this is asserting and why.
+# runs. See website/development/ha-chaos-testing.md for what this is asserting and why.
 #
 # Usage: tests/chaos/ha/run.sh [all|up|scenarios|collect|down]
 #
@@ -86,6 +86,23 @@ require_tools() {
   fi
 }
 
+# Every kind node runs as root on the host kernel, so all four share one inotify budget. Below kind's
+# recommended limits it runs out partway through setup, and what that looks like is a Helm --wait
+# timing out on some unrelated Deployment whose pods are crash-looping on "too many open files".
+require_inotify_limits() {
+  local setting key want have
+  for setting in fs.inotify.max_user_instances=512 fs.inotify.max_user_watches=524288; do
+    key="${setting%%=*}"
+    want="${setting#*=}"
+    # Linux only. Under Docker Desktop the limits that count are the VM's, which this cannot see.
+    have="$(cat "/proc/sys/${key//.//}" 2>/dev/null)" || continue
+    if ((have < want)); then
+      echo "${key} is ${have}, kind needs at least ${want}: sudo sysctl -w ${setting}" >&2
+      exit 2
+    fi
+  done
+}
+
 compute_load_seconds() {
   local total=0 scenario
   local -a selected
@@ -108,6 +125,7 @@ compute_load_seconds() {
 }
 
 create_cluster() {
+  require_inotify_limits
   if kind get clusters 2>/dev/null | grep -qx "${CLUSTER_NAME}"; then
     log "kind cluster ${CLUSTER_NAME} already exists"
   else
@@ -297,9 +315,9 @@ scenario_rollout() {
   timeline "rollout" "complete"
 }
 
-# A drain that times out *is* the failure: it means the PodDisruptionBudget cannot be satisfied, the
-# exact deadlock docs/deployment/high-availability.md calls out. Uncordoning happens either way, so
-# the cluster is healthy again before verification.
+# A drain that times out *is* the failure: it means the PodDisruptionBudget cannot be satisfied, so
+# no voluntary eviction can ever succeed. Uncordoning happens either way, so the cluster is healthy
+# again before verification.
 scenario_drain() {
   log "scenario: node drain (PodDisruptionBudget)"
   local node

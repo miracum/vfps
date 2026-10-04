@@ -39,11 +39,19 @@
         },
         {
           "type": "generic",
+          "path": "src/Vfps.Benchmarks/cold-start.sh"
+        },
+        {
+          "type": "generic",
           "path": "README.md"
         },
         {
           "type": "generic",
           "path": "website/getting-started.md"
+        },
+        {
+          "type": "generic",
+          "path": "website/grpc.md"
         },
         {
           "type": "generic",

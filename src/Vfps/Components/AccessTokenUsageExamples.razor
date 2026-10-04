@@ -1,0 +1,107 @@
+@using Microsoft.Extensions.Configuration
+@inject NavigationManager NavigationManager
+@inject IConfiguration Configuration
+@inject IJSRuntime JS
+@inject ILogger<AccessTokenUsageExamples> Logger
+@inject IStringLocalizer<SharedResources> Localizer
+
+@*
+    How to call the API with a token, beside the Access Tokens page's forms and lists. The calls
+    are the documentation's own (website/access-control.md), with this deployment's address filled
+    in and the token and namespace left as shell variables for the reader to set.
+*@
+
+<BbCard data-testid="access-token-usage">
+    <BbCardHeader>
+        <BbCardTitle As="h2">@Localizer["App.AccessTokens.UsageTitle"]</BbCardTitle>
+        <BbCardDescription>@Localizer["App.AccessTokens.UsageDescription"]</BbCardDescription>
+    </BbCardHeader>
+    <BbCardContent Class="bb:space-y-3">
+        <BbTabs @bind-Value="_activeTab">
+            <div class="bb:flex bb:items-center bb:justify-between bb:gap-2">
+                <BbTabsList>
+                    <BbTabsTrigger Value="@RestTab">REST</BbTabsTrigger>
+                    <BbTabsTrigger Value="@GrpcTab">gRPC</BbTabsTrigger>
+                </BbTabsList>
+                <BbButton
+                    Variant="ButtonVariant.Ghost"
+                    Size="ButtonSize.Small"
+                    OnClick="CopyAsync"
+                    IconPosition="IconPosition.Start"
+                >
+                    <Icon>
+                        <LucideIcon Name="@(_copiedTab == _activeTab ? "check" : "copy")" Size="14" />
+                    </Icon>
+                    <ChildContent>
+                        @(_copiedTab == _activeTab
+                            ? Localizer["App.AccessTokens.CopiedAction"]
+                            : Localizer["App.AccessTokens.CopyAction"])
+                    </ChildContent>
+                </BbButton>
+            </div>
+            <BbTabsContent Value="@RestTab">
+                <pre class="bb:overflow-x-auto bb:rounded-md bb:bg-muted bb:p-3 bb:font-mono bb:text-xs bb:leading-relaxed"><code>@Curl</code></pre>
+            </BbTabsContent>
+            <BbTabsContent Value="@GrpcTab" Class="bb:space-y-3">
+                <pre class="bb:overflow-x-auto bb:rounded-md bb:bg-muted bb:p-3 bb:font-mono bb:text-xs bb:leading-relaxed"><code>@Grpcurl</code></pre>
+                <p class="bb:text-xs bb:text-muted-foreground">
+                    @Localizer["App.AccessTokens.UsageGrpcNote", GrpcPort]
+                </p>
+                @DocsLink("https://miracum.github.io/vfps/grpc/", Localizer["App.AccessTokens.UsageGrpcDocsLink"])
+            </BbTabsContent>
+        </BbTabs>
+        @DocsLink(
+            "https://miracum.github.io/vfps/access-control/#access-tokens",
+            Localizer["App.AccessTokens.UsageDocsLink"]
+        )
+    </BbCardContent>
+</BbCard>
+
+@code {
+    private const string RestTab = "rest";
+    private const string GrpcTab = "grpc";
+
+    private string? _activeTab = RestTab;
+    private string? _copiedTab;
+
+    private string Curl => ApiCallExamples.Curl(new Uri(NavigationManager.BaseUri));
+
+    // Same host the browser reached the UI on - right for a local or compose setup. Behind an
+    // Ingress the plaintext gRPC port is often reachable only from inside the cluster, at an
+    // address this server can't know; the linked docs cover that case.
+    private string Grpcurl =>
+        ApiCallExamples.Grpcurl($"{new Uri(NavigationManager.BaseUri).Host}:{GrpcPort}");
+
+    private int GrpcPort => ApiCallExamples.GrpcPort(Configuration["Kestrel:Endpoints:HttpGrpc:Url"]);
+
+    private static RenderFragment DocsLink(string href, string text) =>
+        @<a
+            href="@href"
+            target="_blank"
+            rel="noopener"
+            class="bb:inline-flex bb:items-center bb:gap-1 bb:text-xs bb:text-primary bb:underline-offset-4 bb:hover:underline"
+        >
+            @text
+            <LucideIcon Name="external-link" Size="12" />
+        </a>;
+
+    private async Task CopyAsync()
+    {
+        var tab = _activeTab ?? RestTab;
+
+        try
+        {
+            var copied = await JS.InvokeAsync<bool>(
+                "vfpsClipboard.copy",
+                tab == GrpcTab ? Grpcurl : Curl
+            );
+            _copiedTab = copied ? tab : null;
+        }
+        catch (Microsoft.JSInterop.JSException ex)
+        {
+            // The command is on screen to select by hand either way.
+            Logger.LogWarning(ex, "Failed to copy the example API call to the clipboard");
+            _copiedTab = null;
+        }
+    }
+}

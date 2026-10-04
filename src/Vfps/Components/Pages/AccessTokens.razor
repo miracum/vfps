@@ -53,128 +53,139 @@
     }
     else
     {
-        @if (_issuedSecret is not null)
-        {
-            @* Shown once and never again: only the hash is stored, so navigating away without
-               copying this means creating a new token. *@
-            <BbAlert Variant="AlertVariant.Warning">
-                <BbAlertTitle>@Localizer["App.AccessTokens.IssuedTitle"]</BbAlertTitle>
-                <BbAlertDescription>
-                    <p class="bb:mb-3">@Localizer["App.AccessTokens.IssuedDescription"]</p>
-                    <div class="bb:flex bb:flex-wrap bb:items-center bb:gap-2">
-                        <BbInput
-                            id="issuedTokenSecret"
-                            Value="@_issuedSecret"
-                            ReadOnly="true"
-                            Class="bb:font-mono bb:w-full"
-                        />
-                        <BbButton id="copyIssuedTokenButton" Variant="ButtonVariant.Outline" OnClick="CopySecretAsync">
-                            @(_secretCopied
-                                ? Localizer["App.AccessTokens.CopiedAction"]
-                                : Localizer["App.AccessTokens.CopyAction"])
-                        </BbButton>
-                        <BbButton Variant="ButtonVariant.Ghost" OnClick="DismissSecret">
-                            @Localizer["App.Common.Close"]
-                        </BbButton>
-                    </div>
-                    <p class="bb:mt-3 bb:text-xs">
-                        @((MarkupString)
-                            string.Format(
-                                Localizer["App.AccessTokens.UsageHint"].Value,
-                                "<code>Authorization: Bearer &lt;token&gt;</code>"
-                            ))
-                    </p>
-                </BbAlertDescription>
-            </BbAlert>
-        }
-
-        @if (_error is not null)
-        {
-            <BbAlert Variant="AlertVariant.Danger">
-                <BbAlertTitle>@Localizer["App.AccessTokens.ErrorTitle"]</BbAlertTitle>
-                <BbAlertDescription>@_error</BbAlertDescription>
-            </BbAlert>
-        }
-
-        <BbCard>
-            <BbCardHeader>
-                <BbCardTitle>@Localizer["App.AccessTokens.CreateTitle"]</BbCardTitle>
-                <BbCardDescription>@Localizer["App.AccessTokens.CreateDescription"]</BbCardDescription>
-            </BbCardHeader>
-            <BbCardContent>
-                <EditForm Model="_newToken" FormName="create-access-token" OnValidSubmit="CreateAsync">
-                    <div class="bb:grid bb:gap-4 bb:sm:grid-cols-2">
-                        <BbField>
-                            <BbFieldLabel For="newTokenName">@Localizer["App.AccessTokens.NameLabel"]</BbFieldLabel>
-                            <BbFieldContent>
+        @* Two columns once there's room - the tokens themselves, and beside them how to use one -
+           stacked below lg. Only from utilities the shipped stylesheet carries (see app.css's note
+           on why that matters), which is why the side card caps its width from md rather than lg:
+           there is no lg:max-w-* in the bundle, so on a tablet the stacked card stays 420px wide. *@
+        <div class="bb:space-y-6 bb:lg:flex bb:lg:gap-8">
+            <div class="bb:min-w-0 bb:flex-1 bb:space-y-6">
+                @if (_issuedSecret is not null)
+                {
+                    @* Shown once and never again: only the hash is stored, so navigating away without
+                       copying this means creating a new token. *@
+                    <BbAlert Variant="AlertVariant.Warning">
+                        <BbAlertTitle>@Localizer["App.AccessTokens.IssuedTitle"]</BbAlertTitle>
+                        <BbAlertDescription>
+                            <p class="bb:mb-3">@Localizer["App.AccessTokens.IssuedDescription"]</p>
+                            <div class="bb:flex bb:flex-wrap bb:items-center bb:gap-2">
                                 <BbInput
-                                    @bind-Value="_newToken.Name"
-                                    Id="newTokenName"
-                                    Required="true"
-                                    Placeholder="@Localizer["App.AccessTokens.NamePlaceholder"].Value"
+                                    id="issuedTokenSecret"
+                                    Value="@_issuedSecret"
+                                    ReadOnly="true"
+                                    Class="bb:font-mono bb:w-full"
                                 />
-                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
-                                    @Localizer["App.AccessTokens.NameHelp"]
-                                </p>
-                            </BbFieldContent>
-                        </BbField>
-                        <BbField>
-                            <BbFieldLabel For="newTokenLifetime">
-                                @Localizer["App.AccessTokens.LifetimeLabel"]
-                            </BbFieldLabel>
-                            <BbFieldContent>
-                                <BbNumericInput
-                                    @bind-Value="_newToken.LifetimeDays"
-                                    Id="newTokenLifetime"
-                                    Min="1"
-                                    Max="@MaximumLifetimeDays"
-                                />
-                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
-                                    @LifetimeHelp
-                                </p>
-                            </BbFieldContent>
-                        </BbField>
-                    </div>
-                    <BbButton
-                        id="createAccessTokenButton"
-                        Type="ButtonType.Submit"
-                        Loading="_isCreating"
-                        Class="bb:mt-4"
-                        IconPosition="IconPosition.Start"
-                    >
-                        <Icon>
-                            <LucideIcon Name="plus" Size="16" />
-                        </Icon>
-                        <ChildContent>
-                            @Localizer["App.AccessTokens.CreateAction"]
-                        </ChildContent>
-                    </BbButton>
-                </EditForm>
-            </BbCardContent>
-        </BbCard>
+                                <BbButton id="copyIssuedTokenButton" Variant="ButtonVariant.Outline" OnClick="CopySecretAsync">
+                                    @(_secretCopied
+                                        ? Localizer["App.AccessTokens.CopiedAction"]
+                                        : Localizer["App.AccessTokens.CopyAction"])
+                                </BbButton>
+                                <BbButton Variant="ButtonVariant.Ghost" OnClick="DismissSecret">
+                                    @Localizer["App.Common.Close"]
+                                </BbButton>
+                            </div>
+                            <p class="bb:mt-3 bb:text-xs">
+                                @((MarkupString)
+                                    string.Format(
+                                        Localizer["App.AccessTokens.UsageHint"].Value,
+                                        "<code>Authorization: Bearer &lt;token&gt;</code>"
+                                    ))
+                            </p>
+                        </BbAlertDescription>
+                    </BbAlert>
+                }
 
-        <BbCard>
-            <BbCardHeader>
-                <BbCardTitle>@Localizer["App.AccessTokens.MineTitle"]</BbCardTitle>
-                <BbCardDescription>@Localizer["App.AccessTokens.MineDescription"]</BbCardDescription>
-            </BbCardHeader>
-            <BbCardContent>
-                @TokenTable(_myTokens, showOwner: false)
-            </BbCardContent>
-        </BbCard>
+                @if (_error is not null)
+                {
+                    <BbAlert Variant="AlertVariant.Danger">
+                        <BbAlertTitle>@Localizer["App.AccessTokens.ErrorTitle"]</BbAlertTitle>
+                        <BbAlertDescription>@_error</BbAlertDescription>
+                    </BbAlert>
+                }
 
-        @if (_isAdmin)
-        {
-            <BbCard>
-                <BbCardHeader>
-                    <BbCardTitle>@Localizer["App.AccessTokens.AllTitle"]</BbCardTitle>
-                    <BbCardDescription>@Localizer["App.AccessTokens.AllDescription"]</BbCardDescription>
-                </BbCardHeader>
-                <BbCardContent>
-                    @TokenTable(_allTokens, showOwner: true)
-                </BbCardContent>
-            </BbCard>
-        }
+                <BbCard>
+                    <BbCardHeader>
+                        <BbCardTitle>@Localizer["App.AccessTokens.CreateTitle"]</BbCardTitle>
+                        <BbCardDescription>@Localizer["App.AccessTokens.CreateDescription"]</BbCardDescription>
+                    </BbCardHeader>
+                    <BbCardContent>
+                        <EditForm Model="_newToken" FormName="create-access-token" OnValidSubmit="CreateAsync">
+                            <div class="bb:grid bb:gap-4 bb:sm:grid-cols-2">
+                                <BbField>
+                                    <BbFieldLabel For="newTokenName">@Localizer["App.AccessTokens.NameLabel"]</BbFieldLabel>
+                                    <BbFieldContent>
+                                        <BbInput
+                                            @bind-Value="_newToken.Name"
+                                            Id="newTokenName"
+                                            Required="true"
+                                            Placeholder="@Localizer["App.AccessTokens.NamePlaceholder"].Value"
+                                        />
+                                        <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
+                                            @Localizer["App.AccessTokens.NameHelp"]
+                                        </p>
+                                    </BbFieldContent>
+                                </BbField>
+                                <BbField>
+                                    <BbFieldLabel For="newTokenLifetime">
+                                        @Localizer["App.AccessTokens.LifetimeLabel"]
+                                    </BbFieldLabel>
+                                    <BbFieldContent>
+                                        <BbNumericInput
+                                            @bind-Value="_newToken.LifetimeDays"
+                                            Id="newTokenLifetime"
+                                            Min="1"
+                                            Max="@MaximumLifetimeDays"
+                                        />
+                                        <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
+                                            @LifetimeHelp
+                                        </p>
+                                    </BbFieldContent>
+                                </BbField>
+                            </div>
+                            <BbButton
+                                id="createAccessTokenButton"
+                                Type="ButtonType.Submit"
+                                Loading="_isCreating"
+                                Class="bb:mt-4"
+                                IconPosition="IconPosition.Start"
+                            >
+                                <Icon>
+                                    <LucideIcon Name="plus" Size="16" />
+                                </Icon>
+                                <ChildContent>
+                                    @Localizer["App.AccessTokens.CreateAction"]
+                                </ChildContent>
+                            </BbButton>
+                        </EditForm>
+                    </BbCardContent>
+                </BbCard>
+
+                <BbCard>
+                    <BbCardHeader>
+                        <BbCardTitle>@Localizer["App.AccessTokens.MineTitle"]</BbCardTitle>
+                        <BbCardDescription>@Localizer["App.AccessTokens.MineDescription"]</BbCardDescription>
+                    </BbCardHeader>
+                    <BbCardContent>
+                        @TokenTable(_myTokens, showOwner: false)
+                    </BbCardContent>
+                </BbCard>
+
+                @if (_isAdmin)
+                {
+                    <BbCard>
+                        <BbCardHeader>
+                            <BbCardTitle>@Localizer["App.AccessTokens.AllTitle"]</BbCardTitle>
+                            <BbCardDescription>@Localizer["App.AccessTokens.AllDescription"]</BbCardDescription>
+                        </BbCardHeader>
+                        <BbCardContent>
+                            @TokenTable(_allTokens, showOwner: true)
+                        </BbCardContent>
+                    </BbCard>
+                }
+            </div>
+            <aside class="bb:w-full bb:self-start bb:sticky bb:top-6 bb:md:max-w-[420px]">
+                <AccessTokenUsageExamples />
+            </aside>
+        </div>
     }
 </div>
 

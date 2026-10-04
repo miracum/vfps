@@ -35,7 +35,7 @@ ingress:
           portName: grpc
 
 database:
-  additionalConnectionStringParameters: "Timeout=60;Max Auto Prepare=5;Maximum Pool Size=25;"
+  additionalConnectionStringParameters: "Timeout=60;Max Auto Prepare=5;Maximum Pool Size=25;Gss Encryption Mode=Disable;"
 
 extraEnv:
   - name: "Pseudonymization__Caching__Namespaces__IsEnabled"

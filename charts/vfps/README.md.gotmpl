@@ -27,12 +27,10 @@ helm install --create-namespace vfps oci://ghcr.io/miracum/vfps/charts/vfps -n v
 ## Usage
 
 ```sh
-kubectl run --namespace=vfps -i --tty --rm --image=ghcr.io/miracum/vfps-grpc-utils:latest --restart=Never vfps-tester -- bash
+kubectl run --namespace=vfps -i --tty --rm --image=ghcr.io/miracum/vfps/grpc-utils:latest --restart=Never vfps-tester -- bash
 
 nobody@debug:/$ grpcurl \
   -plaintext \
-  -import-path=/tmp/protos/ \
-  -proto=Protos/vfps/api/v1/namespaces.proto \
   -d '{"name": "test", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}' \
   vfps-headless:8081 \
   vfps.api.v1.NamespaceService/Create
@@ -43,8 +41,6 @@ nobody@debug:/$ ghz --duration=1m \
   --cpus=3 \
   --insecure \
   --enable-compression \
-  --import-paths=/tmp/protos/ \
-  --proto=Protos/vfps/api/v1/pseudonyms.proto \
   --call=vfps.api.v1.PseudonymService/Create \
   -d '{"originalValue": "{{ `{{ randomString 32 }}` }}", "namespace": "test"}' \
   dns:///vfps-headless:8081

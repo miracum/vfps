@@ -59,7 +59,9 @@ an `OperationOutcome`. Every refusal made _after_ authentication - including a `
 the token holds no grant on - is an `OperationOutcome`.
 
 The gRPC health-checking service and the `/healthz`, `/livez` and `/readyz` endpoints stay
-anonymous, so probes and load balancers need no token. An admin's browser session, on the other
+anonymous, so probes and load balancers need no token. gRPC server reflection does not: it
+describes the API, so listing the services takes a token like calling them does - grpcurl sends
+its `-H` header with both. An admin's browser session, on the other
 hand, does _not_ authenticate an API call: the login cookie is for the admin UI, and the API reads
 bearer tokens only. The bundled Swagger UI at `/swagger` therefore gains an **Authorize** button
 when authorization is enabled - paste an access token there, without the `Bearer ` prefix, before
@@ -99,8 +101,6 @@ curl -H "Authorization: Bearer $VFPS_TOKEN" \
 grpcurl \
   -plaintext \
   -H "authorization: Bearer $VFPS_TOKEN" \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/pseudonyms.proto \
   -d '{"namespace": "test", "originalValue": "to be pseudonymized"}' \
   127.0.0.1:8081 \
   vfps.api.v1.PseudonymService/Create
