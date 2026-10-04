@@ -15,7 +15,7 @@ resources:
     memory: 256Mi
 
 database:
-  additionalConnectionStringParameters: "Timeout=60;Max Auto Prepare=5;Maximum Pool Size=50;"
+  additionalConnectionStringParameters: "Timeout=60;Max Auto Prepare=5;Maximum Pool Size=50;Gss Encryption Mode=Disable;"
 
 service:
   ui:

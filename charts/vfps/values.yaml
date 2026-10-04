@@ -439,7 +439,10 @@ database:
   # `max_connections` commonly defaults to 100, and connection exhaustion looks like a total
   # outage. Budget roughly `replicaCount * (Maximum Pool Size)` plus the CSV job workers, and raise
   # both this and the server's `max_connections` together (or put PgBouncer in front).
-  additionalConnectionStringParameters: "Timeout=60;Max Auto Prepare=5;Maximum Pool Size=50;"
+  # `Gss Encryption Mode=Disable` stops Npgsql from probing for Kerberos/GSSAPI encryption, which
+  # the container image ships no `libgssapi_krb5` for - left at its `Prefer` default, every start
+  # logs a harmless `Cannot load library libgssapi_krb5.so.2` error.
+  additionalConnectionStringParameters: "Timeout=60;Max Auto Prepare=5;Maximum Pool Size=50;Gss Encryption Mode=Disable;"
 
   tls:
     # -- Npgsql `SSL Mode` for the database connection: one of `Disable`, `Allow`, `Prefer`,
