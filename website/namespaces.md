@@ -30,16 +30,12 @@ than one distinct pseudonym for the same original value, via the request's optio
 ```sh
 grpcurl \
   -plaintext \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
   -d '{"name": "multi-psn-example", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED", "pseudonymLength": 32, "allowsMultiplePseudonyms": true}' \
   127.0.0.1:8081 \
   vfps.api.v1.NamespaceService/Create
 
 grpcurl \
   -plaintext \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/pseudonyms.proto \
   -d '{"namespace": "multi-psn-example", "originalValue": "to be pseudonymized", "count": 3}' \
   127.0.0.1:8081 \
   vfps.api.v1.PseudonymService/Create
@@ -69,8 +65,6 @@ else with a `FAILED_PRECONDITION` error:
 ```sh
 grpcurl \
   -plaintext \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
   -d '{"name": "study-a", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED", "pseudonymLength": 32, "parentName": "test", "parentValidationMode": "PARENT_VALIDATION_MODE_ENSURE_EXISTS"}' \
   127.0.0.1:8081 \
   vfps.api.v1.NamespaceService/Create

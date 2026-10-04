@@ -894,6 +894,14 @@ app.UseRouting();
 var pseudonymEndpoints = app.MapGrpcService<PseudonymService>();
 var namespaceEndpoints = app.MapGrpcService<NamespaceService>();
 
+// Served in every environment, not just Development: it lets grpcurl, ghz and GUI clients find the
+// API without a copy of the .proto files - and always the API this server actually runs, rather
+// than whichever version of the files the client happens to have. It discloses nothing new: the
+// .proto files are published with the source, and /swagger describes the same operations
+// anonymously. It does sit behind the API's own gate below, though, so with authorization on,
+// listing the services takes the same bearer token as calling them.
+var reflectionEndpoints = app.MapGrpcReflectionService();
+
 if (authConfig.IsEnabled)
 {
     // Applied to the gRPC services rather than globally, and only when authorization is on at
@@ -903,6 +911,7 @@ if (authConfig.IsEnabled)
     // the policy's own comment for why it is bearer-only and what that gate is for.
     pseudonymEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
     namespaceEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
+    reflectionEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
 }
 
 // Left anonymous on purpose, like the /healthz endpoints below: a kubelet probe and a gRPC
@@ -1038,11 +1047,6 @@ app.MapHealthChecks(
 );
 
 app.MapHealthChecks("/livez", new HealthCheckOptions { Predicate = _ => false });
-
-if (app.Environment.IsDevelopment())
-{
-    app.MapGrpcReflectionService();
-}
 
 if (isHangfireEnabled)
 {

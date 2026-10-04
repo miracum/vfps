@@ -115,7 +115,7 @@ gRPC services. You can use [grpcurl](https://github.com/fullstorydev/grpcurl)
 to interact with the API:
 
 > **Note**
-> In development mode gRPC reflection is enabled and used by grpcurl by default.
+> The server offers gRPC reflection, so grpcurl needs no `.proto` files.
 
 ```sh
 grpcurl -plaintext \

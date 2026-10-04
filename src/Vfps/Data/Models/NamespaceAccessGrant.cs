@@ -51,7 +51,7 @@ public class NamespaceAccessGrant : TracksCreationAndUpdates
     /// The namespace this grant applies to, or null for "every namespace" - the database-backed
     /// equivalent of the old <c>Authorization:NamespaceRules</c> <c>"*"</c> wildcard. Deliberately
     /// not inherited down a parent/child namespace hierarchy: like the generation configuration a
-    /// namespace carries, access is set per namespace (see docs/design/multi-level-namespaces.md).
+    /// namespace carries, access is set per namespace.
     /// </summary>
     public string? NamespaceName { get; set; }
 

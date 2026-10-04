@@ -11,8 +11,6 @@ Create a pseudonym namespace used for benchmarking:
 ```sh
 grpcurl \
   -plaintext \
-  -import-path src/Vfps/ \
-  -proto src/Vfps/Protos/vfps/api/v1/namespaces.proto \
   -d '{"name": "benchmark", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}' \
   127.0.0.1:8081 \
   vfps.api.v1.NamespaceService/Create
@@ -23,8 +21,6 @@ Generate 100.000 pseudonyms in the namespace from random original values:
 ```sh
 ghz -n 100000 \
     --insecure \
-    --import-paths src/Vfps/ \
-    --proto src/Vfps/Protos/vfps/api/v1/pseudonyms.proto \
     --call vfps.api.v1.PseudonymService/Create \
     -d '{"originalValue": "{{randomString 32}}", "namespace": "benchmark"}' \
     127.0.0.1:8081
