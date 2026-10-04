@@ -74,7 +74,7 @@ the default branch. The image runs as `nobody` (UID 65534). Releases up to v1.22
 ### From Docker
 
 With vfps running locally - for example the [getting started](getting-started.md) stack, which
-binds port 8081 on `127.0.0.1` - share the host's network so `127.0.0.1` reaches it:
+binds port 8081 on `127.0.0.1` - share the host's network so `localhost` reaches it:
 
 <!-- x-release-please-start-version -->
 
@@ -83,7 +83,7 @@ docker run --rm --network=host ghcr.io/miracum/vfps/grpc-utils:v1.22.2 \
   grpcurl -plaintext \
   -H "authorization: Bearer $VFPS_TOKEN" \
   -d "{\"namespace\": \"$VFPS_NAMESPACE\", \"originalValue\": \"to be pseudonymized\"}" \
-  127.0.0.1:8081 \
+  localhost:8081 \
   vfps.api.v1.PseudonymService/Create
 ```
 
