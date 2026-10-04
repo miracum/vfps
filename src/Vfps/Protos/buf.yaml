@@ -3,7 +3,7 @@ lint:
   ignore:
     - google/
   use:
-    - DEFAULT
+    - STANDARD
 breaking:
   use:
     - FILE

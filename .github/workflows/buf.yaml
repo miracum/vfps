@@ -21,23 +21,37 @@ jobs:
         with:
           persist-credentials: false
 
-      - uses: bufbuild/buf-setup-action@a47c93e0b1648d5651a065437926377d060baa99 # v1.50.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-
       # The module is rooted at src/Vfps/Protos, the same root Vfps.csproj compiles from - see the
       # comment on its Protobuf item for why the two have to agree.
-      - name: check formatting
-        working-directory: src/Vfps/Protos
-        run: buf format --exit-code
-
-      - uses: bufbuild/buf-lint-action@06f9dd823d873146471cfaaf108a993fe00e5325 # v1.1.1
+      #
+      # Checks formatting and lint, and on pull requests also breaking changes against the PR's
+      # base commit - apply the "buf skip breaking" label to a PR that breaks the API on purpose.
+      # The action only enables lint and format for pull_request events by default, so both are
+      # forced on to keep them running in the merge queue too.
+      - uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7 # v1.6.0
         with:
           input: src/Vfps/Protos
-      # Can be enabled once master has the Protos-rooted layout: before it, master's files import
-      # each other as "Protos/...", which doesn't resolve from this root, so buf can't build the
-      # side it compares against.
-      # - uses: bufbuild/buf-breaking-action@1cd949a5f7c5581990772f1e0c8a5270d7e4401b # tag=v1.1.1
-      #   with:
-      #     input: src/Vfps/Protos
-      #     against: "https://github.com/${{ github.repository }}.git#branch=master,subdir=src/Vfps/Protos"
+          lint: true
+          format: true
+
+  # The VOPRF server's gRPC contract, shared by Vfps.Voprf.Server and Vfps.Voprf.Client, is a buf
+  # module of its own. It gets a job of its own rather than a second step above: buf-action keys
+  # its pull request comment by workflow and job, so two steps in one job would overwrite each
+  # other's comment.
+  lint-voprf-contracts:
+    name: lint voprf contracts
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # same settings and reasoning as the job above
+      - uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7 # v1.6.0
+        with:
+          input: src/Vfps.Voprf.Contracts
+          lint: true
+          format: true
