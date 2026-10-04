@@ -17,7 +17,7 @@ set -Eeuo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 
-VFPS_IMAGE_TAG="${VFPS_IMAGE_TAG:-v1.22.2}" # x-release-please-version
+VFPS_IMAGE_TAG="${VFPS_IMAGE_TAG:-v1.22.3}" # x-release-please-version
 VFPS_IMAGE="${VFPS_IMAGE:-ghcr.io/miracum/vfps:${VFPS_IMAGE_TAG}}"
 CONTAINER_NAME="${CONTAINER_NAME:-vfps-cold-start}"
 NAMESPACE="${NAMESPACE:-cold-start}"

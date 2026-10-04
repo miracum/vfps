@@ -21,7 +21,7 @@ All released container images are signed using [cosign](https://github.com/sigst
 <!-- x-release-please-start-version -->
 
 ```sh
-IMAGE=ghcr.io/miracum/vfps:v1.22.2
+IMAGE=ghcr.io/miracum/vfps:v1.22.3
 DIGEST=$(crane digest "${IMAGE}")
 IMAGE_DIGEST_PINNED="ghcr.io/miracum/vfps@${DIGEST}"
 IMAGE_TAG="${IMAGE#*:}"
@@ -54,7 +54,7 @@ workflow. Verify it by digest, then run that digest:
 <!-- x-release-please-start-version -->
 
 ```sh
-ARTIFACT=ghcr.io/miracum/vfps/compose/getting-started:v1.22.2
+ARTIFACT=ghcr.io/miracum/vfps/compose/getting-started:v1.22.3
 DIGEST=$(crane digest "${ARTIFACT}")
 ARTIFACT_DIGEST_PINNED="${ARTIFACT%:*}@${DIGEST}"
 ARTIFACT_TAG="${ARTIFACT##*:}"

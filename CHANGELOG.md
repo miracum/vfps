@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.22.3](https://github.com/miracum/vfps/compare/v1.22.2...v1.22.3) (2026-10-04)
+
+
+### Bug Fixes
+
+* silence kerberos warning and added cold-start time to docs ([#397](https://github.com/miracum/vfps/issues/397)) ([9e1763c](https://github.com/miracum/vfps/commit/9e1763c16d311b60d538e3aac84cf5bb3c895d07))
+
+
+### Documentation
+
+* fix so release please doesnt replace 127.0.0.1 with a version tag ([a4fd5e5](https://github.com/miracum/vfps/commit/a4fd5e534f0988f506ea9232bda6eb4a1ad49220))
+
+
+### CI/CD
+
+* fix missing image tag env var ([e02bb98](https://github.com/miracum/vfps/commit/e02bb98ced5435fd3237f91b966e54293f5d8167))
+
 ## [1.22.2](https://github.com/miracum/vfps/compare/v1.22.1...v1.22.2) (2026-10-04)
 
 
