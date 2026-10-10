@@ -883,8 +883,8 @@
         "type": "Project",
         "dependencies": {
           "Grpc.Net.ClientFactory": "[2.83.0, )",
-          "Vfps.Voprf": "[1.21.0, )",
-          "Vfps.Voprf.Contracts": "[1.21.0, )"
+          "Vfps.Voprf": "[1.22.4, )",
+          "Vfps.Voprf.Contracts": "[1.22.4, )"
         }
       },
       "vfps.voprf.contracts": {
