@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.22.5](https://github.com/miracum/vfps/compare/v1.22.4...v1.22.5) (2026-10-10)
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#391](https://github.com/miracum/vfps/issues/391)) ([4ac6c57](https://github.com/miracum/vfps/commit/4ac6c574e8c105fbc4b52479ad961b1210aac588))
+
 ## [1.22.4](https://github.com/miracum/vfps/compare/v1.22.3...v1.22.4) (2026-10-04)
 
 
