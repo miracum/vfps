@@ -489,7 +489,10 @@
         if (isSearch)
         {
             // Linked to the grid's own token, so either that or the Cancel button ends the query.
-            searchCts = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken);
+            using var linkedSearchCts = CancellationTokenSource.CreateLinkedTokenSource(
+                request.CancellationToken
+            );
+            searchCts = linkedSearchCts;
             _searchCts = searchCts;
             cancellationToken = searchCts.Token;
             _isSearching = true;
@@ -572,7 +575,6 @@
                 }
             }
 
-            searchCts?.Dispose();
             StateHasChanged();
         }
     }
