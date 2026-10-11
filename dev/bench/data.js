@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791628618306,
+  "lastUpdate": 1791741722035,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -13674,6 +13674,66 @@ window.BENCHMARK_DATA = {
             "value": 893.8967599868774,
             "unit": "ns",
             "range": "± 0.875652618466947"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "79b3eaf28407747d4138772a917f79655ea80151",
+          "message": "fix(ui): show searching indicator and require button or enter to search (#402)\n\n* fix(ui): show searching indicator and require button or enter to search\n\n* Potential fix for pull request finding 'CodeQL / Missed 'using' opportunity'\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>\n\n* fix first page search\n\ncancelling used to re-run the previous search, which cost a second or two of skeleton on this data, right after you asked to stop waiting. The page now keeps the first page of what's on screen and restores it on cancel. This is uncommitted in Pseudonyms.razor; PseudonymSearchTests still passes. Your commit 0f41e80 has the earlier version.\n\n* fix chart trivy complaints\n\n* test fix\n\n* fix\n\n---------\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>",
+          "timestamp": "2026-10-11T19:58:15+02:00",
+          "tree_id": "0c798c32f3424e755de2b4c7902880a017c7481d",
+          "url": "https://github.com/miracum/vfps/commit/79b3eaf28407747d4138772a917f79655ea80151"
+        },
+        "date": 1791741721561,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 906.169506413596,
+            "unit": "ns",
+            "range": "± 7.537991996630033"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 752.648698425293,
+            "unit": "ns",
+            "range": "± 4.788272292123952"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 784.6861793200175,
+            "unit": "ns",
+            "range": "± 2.5334721155174944"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 815.3323970941397,
+            "unit": "ns",
+            "range": "± 0.7883921787188946"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 942.1616584232876,
+            "unit": "ns",
+            "range": "± 4.394006197568722"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 889.4817307790121,
+            "unit": "ns",
+            "range": "± 1.2019471566565783"
           }
         ]
       }
