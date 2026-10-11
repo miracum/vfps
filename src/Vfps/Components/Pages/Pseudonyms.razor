@@ -307,8 +307,12 @@
     private string? _searchInput;
     private string? _appliedSearch;
 
-    // The search whose rows are on screen - what a cancelled search goes back to.
+    // The search whose rows are on screen - what a cancelled search goes back to - and the first
+    // page of them, so that going back doesn't have to run that search again: on a large
+    // namespace that is seconds of skeleton right after asking for the opposite.
     private string? _shownSearch;
+    private BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>? _shownFirstPage;
+    private bool _restoreShownFirstPage;
 
     // Changing this makes Blazor throw the grid away and build a new one, which is how a search
     // starts: the new grid is on page 1 and fetches for _appliedSearch by itself. The grid has
@@ -501,6 +505,17 @@
 
         try
         {
+            if (
+                _restoreShownFirstPage
+                && _shownFirstPage is not null
+                && request.StartIndex == 0
+                && searchText == _shownSearch
+            )
+            {
+                _restoreShownFirstPage = false;
+                return _shownFirstPage;
+            }
+
             var user = await GetUserAsync();
             var page = await PseudonymAppService.SearchAsync(
                 NamespaceName,
@@ -512,14 +527,21 @@
             );
 
             _errorMessage = null;
+            var result =
+                new BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>
+                {
+                    Items = [.. page.Items],
+                    // TotalCount is a long; the grid's pagination footer only accepts int. A
+                    // namespace would need over two billion pseudonyms to overflow this.
+                    TotalItemCount = (int)page.TotalCount,
+                };
             _shownSearch = searchText;
-            return new BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>
+            if (request.StartIndex == 0)
             {
-                Items = [.. page.Items],
-                // TotalCount is a long; the grid's pagination footer only accepts int. A
-                // namespace would need over two billion pseudonyms to overflow this.
-                TotalItemCount = (int)page.TotalCount,
-            };
+                _shownFirstPage = result;
+            }
+
+            return result;
         }
         catch (OperationCanceledException)
             when (searchCts is { IsCancellationRequested: true }
@@ -535,6 +557,7 @@
                 _searchInput = _shownSearch;
                 _searchCts = null;
                 _isSearching = false;
+                _restoreShownFirstPage = true;
                 _isLoading = true;
                 _searchGeneration++;
             }
