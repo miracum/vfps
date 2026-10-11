@@ -12,6 +12,8 @@ metadata:
 spec:
   restartPolicy: Never
   automountServiceAccountToken: {{ .Values.tests.automountServiceAccountToken }}
+  securityContext:
+    {{- toYaml .Values.podSecurityContext | nindent 4 }}
   containers:
     - name: probe-healthz-endpoint
       image: "{{ $.Values.curl.image.registry }}/{{ $.Values.curl.image.repository }}:{{ $.Values.curl.image.tag }}"

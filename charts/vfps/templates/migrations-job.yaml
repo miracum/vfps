@@ -23,6 +23,8 @@ spec:
       restartPolicy: {{ .Values.migrationsJob.restartPolicy }}
       serviceAccountName: {{ include "vfps.migrationsJob.serviceAccountName" $ }}
       automountServiceAccountToken: {{ .Values.migrationsJob.serviceAccount.automountServiceAccountToken }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
       initContainers:
         - name: wait-for-db
           image: {{ include "vfps.waitForDatabaseInitContainerImage" . }}
