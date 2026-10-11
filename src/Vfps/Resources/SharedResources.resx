@@ -322,6 +322,9 @@
   <data name="App.Common.Name" xml:space="preserve">
     <value>Name</value>
   </data>
+  <data name="App.Common.Search" xml:space="preserve">
+    <value>Search</value>
+  </data>
   <data name="App.CsvJobs.AddColumnMapping" xml:space="preserve">
     <value>Add column mapping</value>
   </data>
@@ -888,6 +891,9 @@
   </data>
   <data name="App.Pseudonyms.ReverseLookupTitle" xml:space="preserve">
     <value>Reverse lookup</value>
+  </data>
+  <data name="App.Pseudonyms.SearchInProgress" xml:space="preserve">
+    <value>Searching...</value>
   </data>
   <data name="App.Pseudonyms.SearchPlaceholder" xml:space="preserve">
     <value>Search by pseudonym value</value>

@@ -70,7 +70,7 @@ grpcurl \
 
 All settings are listed in the [configuration reference](https://miracum.github.io/vfps/configuration/).
 
-![Vfps admin UI home page](website/img/ui-home.png)
+![Vfps admin UI home page](website/img/ui/ui-home-light.png)
 
 ## Development
 

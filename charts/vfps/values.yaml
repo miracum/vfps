@@ -145,9 +145,17 @@ deploymentAnnotations: {}
 # synchronously, so it isn't the first thing evicted under node pressure.
 priorityClassName: ""
 
-# -- the pod security context
-podSecurityContext: {}
-  # fsGroup: 2000
+# -- the pod security context, applied to every pod the chart creates (the API and worker
+# Deployments, the migrations Job and the Helm test pod) so that none of them is left on the
+# cluster's default, which allows running as root. The containers set a stricter `securityContext`
+# of their own on top of this.
+# @default -- runs as the non-root user 65532 with the `RuntimeDefault` seccomp profile
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
 
 # @ignored
 securityContext:
@@ -633,6 +641,15 @@ postgres:
     username: "vfps_admin"
     # -- disable the default postgres user
     enablePostgresUser: false
+  # @ignored
+  podSecurityContext:
+    fsGroup: 999
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  # @ignored
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
   # @ignored
   resources: # +doc-gen:ignore
     requests:

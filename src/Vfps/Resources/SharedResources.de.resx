@@ -322,6 +322,9 @@
   <data name="App.Common.Name" xml:space="preserve">
     <value>Name</value>
   </data>
+  <data name="App.Common.Search" xml:space="preserve">
+    <value>Suchen</value>
+  </data>
   <data name="App.CsvJobs.AddColumnMapping" xml:space="preserve">
     <value>Spaltenzuordnung hinzufügen</value>
   </data>
@@ -888,6 +891,9 @@
   </data>
   <data name="App.Pseudonyms.ReverseLookupTitle" xml:space="preserve">
     <value>Reverse-Lookup</value>
+  </data>
+  <data name="App.Pseudonyms.SearchInProgress" xml:space="preserve">
+    <value>Suche läuft...</value>
   </data>
   <data name="App.Pseudonyms.SearchPlaceholder" xml:space="preserve">
     <value>Nach Pseudonymwert suchen</value>
