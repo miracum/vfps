@@ -172,20 +172,49 @@
             <BbCardHeader>
                 <BbCardTitle>@Localizer["App.Nav.Pseudonyms"]</BbCardTitle>
             </BbCardHeader>
-            <BbCardContent>
+            <BbCardContent Class="bb:space-y-4">
+                @* Our own search form instead of the grid's ShowSearch box: that one searches a
+                   debounce after every keystroke, and on a large namespace each of those is a
+                   query. Here a search runs on Enter or the button. The input reports every
+                   keystroke rather than on change, so the submit handler always sees all of what
+                   was typed. *@
+                <form class="bb:flex bb:items-center bb:gap-2" role="search" @onsubmit="SubmitSearch">
+                    <BbInput
+                        Type="InputType.Search"
+                        @bind-Value="_searchInput"
+                        UpdateTiming="UpdateTiming.Immediate"
+                        Id="pseudonymSearch"
+                        Placeholder="@(_hasReverseLookupAccess ? Localizer["App.Pseudonyms.SearchWithOriginalValuePlaceholder"] : Localizer["App.Pseudonyms.SearchPlaceholder"])"
+                        AriaLabel="@(_hasReverseLookupAccess ? Localizer["App.Pseudonyms.SearchWithOriginalValuePlaceholder"] : Localizer["App.Pseudonyms.SearchPlaceholder"])"
+                        Class="bb:max-w-sm"
+                    />
+                    <BbButton Type="ButtonType.Submit">
+                        <LucideIcon Name="search" Size="16" />
+                        @Localizer["App.Common.Search"]
+                    </BbButton>
+                    @if (_isSearching)
+                    {
+                        @* Not a disabled Search button: the search can be interrupted, which is
+                           the point of showing that one is running. *@
+                        <BbButton Type="ButtonType.Button" Variant="ButtonVariant.Outline" OnClick="CancelSearch">
+                            <BbSpinner Size="SpinnerSize.Small" AriaLabel="@Localizer["App.Pseudonyms.SearchInProgress"]" />
+                            @Localizer["App.Common.Cancel"]
+                        </BbButton>
+                    }
+                </form>
                 <BbDataGrid
+                    @key="_searchGeneration"
                     @ref="_grid"
                     TData="PseudonymSearchItemDto"
                     ItemsProvider="ProvideItemsAsync"
-                    ShowSearch="true"
-                    SearchPlaceholder="@(_hasReverseLookupAccess ? Localizer["App.Pseudonyms.SearchWithOriginalValuePlaceholder"] : Localizer["App.Pseudonyms.SearchPlaceholder"])"
                     InitialPageSize="PageSize"
                     IsLoading="_isLoading"
                 >
                     <LoadingTemplate>
                         @* Mimics the grid's own row layout instead of the default "Loading..."
-                           text, so the initial fetch doesn't read as an empty table. Only shown
-                           for the first load (see _isLoading), not on every search/page fetch. *@
+                           text, so the initial fetch doesn't read as an empty table. Shown for
+                           the first load and while a search runs (see _isLoading), not on every
+                           page fetch - those already have rows on screen. *@
                         <div class="bb:space-y-3 bb:py-2">
                             @for (var i = 0; i < 6; i++)
                             {
@@ -267,10 +296,34 @@
     private string? _errorMessage;
 
     // Starts true so the grid shows LoadingTemplate instead of an empty table while
-    // ProvideItemsAsync's first fetch is in flight, then stays false for every later
-    // search/page fetch - those already have rows on screen, so a full-grid loading
-    // takeover would just flicker instead of helping.
+    // ProvideItemsAsync's first fetch is in flight, and is set again while a search runs - the
+    // old rows would otherwise sit there as if they were its answer. Page and sort fetches leave
+    // it false: those already have rows on screen, so a full-grid loading takeover would just
+    // flicker instead of helping.
     private bool _isLoading = true;
+
+    // What is typed in the search box, versus what the grid is searching for: the two differ
+    // from the first keystroke until Enter or the Search button is pressed.
+    private string? _searchInput;
+    private string? _appliedSearch;
+
+    // The search whose rows are on screen - what a cancelled search goes back to.
+    private string? _shownSearch;
+
+    // Changing this makes Blazor throw the grid away and build a new one, which is how a search
+    // starts: the new grid is on page 1 and fetches for _appliedSearch by itself. The grid has
+    // no way to be told to go back to page 1, and doesn't pick up a changed SearchText either.
+    private int _searchGeneration;
+
+    // Set while a search is running, and the source of its Cancel button. Only the fetches a
+    // search causes get one - a page change isn't a search, and cancelling it would leave the
+    // grid showing another page than the one it is on.
+    private bool _isSearching;
+    private CancellationTokenSource? _searchCts;
+
+    // Lets a repeated Enter on an unchanged search re-run it (the namespace may have gained
+    // pseudonyms since) and still show up as a search.
+    private bool _searchRequested;
 
     // Only used to pick the search placeholder text below - ProvideItemsAsync re-derives this
     // server-side on every request via PseudonymAppService.SearchAsync, so this flag being stale
@@ -404,29 +457,89 @@
     private async Task<ClaimsPrincipal> GetUserAsync() =>
         AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
 
+    private void SubmitSearch()
+    {
+        // A search still running is for something the reader no longer wants. Unsetting _searchCts
+        // first tells its provider call that this is not the Cancel button, so it doesn't put
+        // the old search back.
+        var running = _searchCts;
+        _searchCts = null;
+        running?.Cancel();
+
+        _appliedSearch = string.IsNullOrWhiteSpace(_searchInput) ? null : _searchInput.Trim();
+        _searchRequested = true;
+        _isLoading = true;
+        _searchGeneration++;
+    }
+
+    private void CancelSearch() => _searchCts?.Cancel();
+
     private async ValueTask<
         BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>
     > ProvideItemsAsync(BlazorBlueprint.Primitives.DataGrid.DataGridRequest request)
     {
+        // Not request.SearchText, which stays empty: the grid's own search box is off.
+        var searchText = _appliedSearch;
+        var isSearch = _searchRequested || searchText != _shownSearch;
+        _searchRequested = false;
+
+        var generation = _searchGeneration;
+        var cancellationToken = request.CancellationToken;
+        CancellationTokenSource? searchCts = null;
+        if (isSearch)
+        {
+            // Linked to the grid's own token, so either that or the Cancel button ends the query.
+            searchCts = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken);
+            _searchCts = searchCts;
+            cancellationToken = searchCts.Token;
+            _isSearching = true;
+            StateHasChanged();
+        }
+
         try
         {
             var user = await GetUserAsync();
             var page = await PseudonymAppService.SearchAsync(
                 NamespaceName,
-                request.SearchText,
+                searchText,
                 request.StartIndex,
                 request.Count ?? PageSize,
                 user,
-                request.CancellationToken
+                cancellationToken
             );
 
             _errorMessage = null;
+            _shownSearch = searchText;
             return new BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>
             {
                 Items = [.. page.Items],
                 // TotalCount is a long; the grid's pagination footer only accepts int. A
                 // namespace would need over two billion pseudonyms to overflow this.
                 TotalItemCount = (int)page.TotalCount,
+            };
+        }
+        catch (OperationCanceledException)
+            when (searchCts is { IsCancellationRequested: true }
+                && !request.CancellationToken.IsCancellationRequested
+            )
+        {
+            // The Cancel button (or a newer search, which has already moved on): this grid is
+            // about to be replaced, so what it returns is never shown. For the button, that
+            // replacement is a grid for the search whose rows were on screen before.
+            if (ReferenceEquals(_searchCts, searchCts))
+            {
+                _appliedSearch = _shownSearch;
+                _searchInput = _shownSearch;
+                _searchCts = null;
+                _isSearching = false;
+                _isLoading = true;
+                _searchGeneration++;
+            }
+
+            return new BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>
+            {
+                Items = [],
+                TotalItemCount = 0,
             };
         }
         catch (Exception ex) when (ex is NamespaceNotFoundException or ForbiddenException)
@@ -446,7 +559,20 @@
             // component) re-evaluate the RenderTree that passed IsLoading="_isLoading" as a
             // parameter. Without this call the grid keeps whatever IsLoading value it was handed
             // on the last render this component did, i.e. true forever after the first fetch.
-            _isLoading = false;
+            //
+            // Not when a newer search or the Cancel button has since swapped in another grid:
+            // that grid's own fetch is what ends the loading state then.
+            if (generation == _searchGeneration)
+            {
+                _isLoading = false;
+                if (ReferenceEquals(_searchCts, searchCts))
+                {
+                    _isSearching = false;
+                    _searchCts = null;
+                }
+            }
+
+            searchCts?.Dispose();
             StateHasChanged();
         }
     }
