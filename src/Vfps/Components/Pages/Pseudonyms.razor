@@ -203,10 +203,10 @@
                     }
                 </form>
                 <BbDataGrid
-                    @key="_searchGeneration"
+                    @key="_run"
                     @ref="_grid"
                     TData="PseudonymSearchItemDto"
-                    ItemsProvider="ProvideItemsAsync"
+                    ItemsProvider="_itemsProvider"
                     InitialPageSize="PageSize"
                     IsLoading="_isLoading"
                 >
@@ -296,40 +296,50 @@
     private string? _errorMessage;
 
     // Starts true so the grid shows LoadingTemplate instead of an empty table while
-    // ProvideItemsAsync's first fetch is in flight, and is set again while a search runs - the
+    // FetchAsync's first fetch is in flight, and is set again while a search runs - the
     // old rows would otherwise sit there as if they were its answer. Page and sort fetches leave
     // it false: those already have rows on screen, so a full-grid loading takeover would just
     // flicker instead of helping.
     private bool _isLoading = true;
 
-    // What is typed in the search box, versus what the grid is searching for: the two differ
-    // from the first keystroke until Enter or the Search button is pressed.
+    // What is typed in the search box. The search the grid runs only changes on Enter or the
+    // Search button, which is when this is copied into a new SearchRun.
     private string? _searchInput;
-    private string? _appliedSearch;
+
+    // The search the grid on screen belongs to. Every search gets a grid of its own (the grid
+    // can't be told to go back to page 1, nor does it pick up a changed SearchText), by using the
+    // run as the grid's @key - and that grid's ItemsProvider is bound to the run, so a grid that
+    // is on its way out can never read or change the state of the search that replaced it.
+    private SearchRun _run = new(null, isUserSearch: false);
+    private BlazorBlueprint.Primitives.DataGrid.DataGridItemsProvider<PseudonymSearchItemDto> _itemsProvider = null!;
 
     // The search whose rows are on screen - what a cancelled search goes back to - and the first
     // page of them, so that going back doesn't have to run that search again: on a large
     // namespace that is seconds of skeleton right after asking for the opposite.
     private string? _shownSearch;
     private BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>? _shownFirstPage;
-    private bool _restoreShownFirstPage;
 
-    // Changing this makes Blazor throw the grid away and build a new one, which is how a search
-    // starts: the new grid is on page 1 and fetches for _appliedSearch by itself. The grid has
-    // no way to be told to go back to page 1, and doesn't pick up a changed SearchText either.
-    private int _searchGeneration;
-
-    // Set while a search is running, and the source of its Cancel button. Only the fetches a
-    // search causes get one - a page change isn't a search, and cancelling it would leave the
-    // grid showing another page than the one it is on.
+    // True while a search runs, and the reason for the Cancel button. Only a search the reader
+    // asked for counts - a page change isn't one, and cancelling it would leave the grid showing
+    // another page than the one it is on.
     private bool _isSearching;
-    private CancellationTokenSource? _searchCts;
 
-    // Lets a repeated Enter on an unchanged search re-run it (the namespace may have gained
-    // pseudonyms since) and still show up as a search.
-    private bool _searchRequested;
+    private sealed class SearchRun(string? text, bool isUserSearch)
+    {
+        public string? Text { get; } = text;
 
-    // Only used to pick the search placeholder text below - ProvideItemsAsync re-derives this
+        // False for the page's first load and for putting back a cancelled search's predecessor.
+        public bool IsUserSearch { get; } = isUserSearch;
+
+        // Whether the first page of the shown search is to be reused instead of fetched.
+        public bool RestoreShownFirstPage { get; init; }
+
+        public bool Started { get; set; }
+        public bool Cancelled { get; set; }
+        public CancellationTokenSource? Cts { get; set; }
+    }
+
+    // Only used to pick the search placeholder text below - FetchAsync re-derives this
     // server-side on every request via PseudonymAppService.SearchAsync, so this flag being stale
     // (e.g. permissions changed mid-session) can't let anyone search original values they aren't
     // allowed to see.
@@ -363,6 +373,7 @@
 
     protected override async Task OnInitializedAsync()
     {
+        StartRun(_run);
         var user = await GetUserAsync();
         _hasReverseLookupAccess = await PermissionChecker.HasReverseLookupAccessAsync(
             user,
@@ -381,7 +392,7 @@
         catch (Exception ex) when (ex is NamespaceNotFoundException or ForbiddenException)
         {
             // Left empty rather than surfaced: the grid below reports the same condition through
-            // ProvideItemsAsync, and a missing chaining action is not worth a second error banner.
+            // FetchAsync, and a missing chaining action is not worth a second error banner.
             _children = [];
         }
 
@@ -461,43 +472,57 @@
     private async Task<ClaimsPrincipal> GetUserAsync() =>
         AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
 
-    private void SubmitSearch()
-    {
-        // A search still running is for something the reader no longer wants. Unsetting _searchCts
-        // first tells its provider call that this is not the Cancel button, so it doesn't put
-        // the old search back.
-        var running = _searchCts;
-        _searchCts = null;
-        running?.Cancel();
+    private void SubmitSearch() =>
+        StartRun(
+            new SearchRun(
+                string.IsNullOrWhiteSpace(_searchInput) ? null : _searchInput.Trim(),
+                isUserSearch: true
+            )
+        );
 
-        _appliedSearch = string.IsNullOrWhiteSpace(_searchInput) ? null : _searchInput.Trim();
-        _searchRequested = true;
+    private void StartRun(SearchRun run)
+    {
+        // Whatever the previous search is still doing is for something the reader no longer
+        // wants.
+        _run.Cts?.Cancel();
+        _run = run;
+        _itemsProvider = request => FetchAsync(run, request);
         _isLoading = true;
-        _searchGeneration++;
     }
 
-    private void CancelSearch() => _searchCts?.Cancel();
+    private void CancelSearch()
+    {
+        if (_run is { IsUserSearch: true, Cts: { } cts } run)
+        {
+            run.Cancelled = true;
+            cts.Cancel();
+        }
+    }
+
+    private static BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto> NoItems() =>
+        new() { Items = [], TotalItemCount = 0 };
 
     private async ValueTask<
         BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>
-    > ProvideItemsAsync(BlazorBlueprint.Primitives.DataGrid.DataGridRequest request)
+    > FetchAsync(SearchRun run, BlazorBlueprint.Primitives.DataGrid.DataGridRequest request)
     {
-        // Not request.SearchText, which stays empty: the grid's own search box is off.
-        var searchText = _appliedSearch;
-        var isSearch = _searchRequested || searchText != _shownSearch;
-        _searchRequested = false;
+        // A grid that has been replaced can still ask once more before it is thrown away.
+        if (!ReferenceEquals(run, _run))
+        {
+            return NoItems();
+        }
 
-        var generation = _searchGeneration;
+        // Only the first fetch of a search is the search; paging through its results isn't.
+        var isSearch = run.IsUserSearch && !run.Started;
+        run.Started = true;
+
         var cancellationToken = request.CancellationToken;
         CancellationTokenSource? searchCts = null;
         if (isSearch)
         {
             // Linked to the grid's own token, so either that or the Cancel button ends the query.
-            using var linkedSearchCts = CancellationTokenSource.CreateLinkedTokenSource(
-                request.CancellationToken
-            );
-            searchCts = linkedSearchCts;
-            _searchCts = searchCts;
+            searchCts = CancellationTokenSource.CreateLinkedTokenSource(request.CancellationToken);
+            run.Cts = searchCts;
             cancellationToken = searchCts.Token;
             _isSearching = true;
             StateHasChanged();
@@ -505,28 +530,21 @@
 
         try
         {
-            if (
-                _restoreShownFirstPage
-                && _shownFirstPage is not null
-                && request.StartIndex == 0
-                && searchText == _shownSearch
-            )
+            if (run.RestoreShownFirstPage && _shownFirstPage is { } cached && request.StartIndex == 0)
             {
-                _restoreShownFirstPage = false;
-                return _shownFirstPage;
+                return cached;
             }
 
             var user = await GetUserAsync();
             var page = await PseudonymAppService.SearchAsync(
                 NamespaceName,
-                searchText,
+                run.Text,
                 request.StartIndex,
                 request.Count ?? PageSize,
                 user,
                 cancellationToken
             );
 
-            _errorMessage = null;
             var result =
                 new BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>
                 {
@@ -535,48 +553,36 @@
                     // namespace would need over two billion pseudonyms to overflow this.
                     TotalItemCount = (int)page.TotalCount,
                 };
-            _shownSearch = searchText;
-            if (request.StartIndex == 0)
+            if (ReferenceEquals(run, _run))
             {
-                _shownFirstPage = result;
+                _errorMessage = null;
+                _shownSearch = run.Text;
+                if (request.StartIndex == 0)
+                {
+                    _shownFirstPage = result;
+                }
             }
 
             return result;
         }
         catch (OperationCanceledException)
-            when (searchCts is { IsCancellationRequested: true }
-                && !request.CancellationToken.IsCancellationRequested
-            )
+            when (run.Cancelled && !request.CancellationToken.IsCancellationRequested)
         {
-            // The Cancel button (or a newer search, which has already moved on): this grid is
-            // about to be replaced, so what it returns is never shown. For the button, that
-            // replacement is a grid for the search whose rows were on screen before.
-            if (ReferenceEquals(_searchCts, searchCts))
+            // The Cancel button: this grid is about to be replaced, so what it returns is never
+            // shown. The replacement is a grid for the search whose rows were on screen before.
+            if (ReferenceEquals(run, _run))
             {
-                _appliedSearch = _shownSearch;
                 _searchInput = _shownSearch;
-                _searchCts = null;
                 _isSearching = false;
-                _restoreShownFirstPage = true;
-                _isLoading = true;
-                _searchGeneration++;
+                StartRun(new SearchRun(_shownSearch, isUserSearch: false) { RestoreShownFirstPage = true });
             }
 
-            return new BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>
-            {
-                Items = [],
-                TotalItemCount = 0,
-            };
+            return NoItems();
         }
         catch (Exception ex) when (ex is NamespaceNotFoundException or ForbiddenException)
         {
             _errorMessage = ex.Message;
-            StateHasChanged();
-            return new BlazorBlueprint.Primitives.DataGrid.DataGridResult<PseudonymSearchItemDto>
-            {
-                Items = [],
-                TotalItemCount = 0,
-            };
+            return NoItems();
         }
         finally
         {
@@ -586,16 +592,21 @@
             // parameter. Without this call the grid keeps whatever IsLoading value it was handed
             // on the last render this component did, i.e. true forever after the first fetch.
             //
-            // Not when a newer search or the Cancel button has since swapped in another grid:
-            // that grid's own fetch is what ends the loading state then.
-            if (generation == _searchGeneration)
+            // Only for the search the grid belongs to: a replaced one has nothing left to say
+            // about the loading state, which is its successor's now.
+            if (ReferenceEquals(run, _run))
             {
                 _isLoading = false;
-                if (ReferenceEquals(_searchCts, searchCts))
+                if (isSearch)
                 {
                     _isSearching = false;
-                    _searchCts = null;
                 }
+            }
+
+            searchCts?.Dispose();
+            if (ReferenceEquals(run.Cts, searchCts))
+            {
+                run.Cts = null;
             }
 
             StateHasChanged();
