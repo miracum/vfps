@@ -134,7 +134,33 @@
     </header>
 
     <main class="bb:flex-1 bb:overflow-auto bb:p-6">
-        @Body
+        @* Without this, an exception a page doesn't handle itself terminates the whole Blazor
+           circuit, and the browser is left with a page that no longer reacts to anything. The
+           boundary logs it and swaps in the error below instead, with the header still working.
+           Routes is rendered InteractiveServer as a whole, so this layout runs in the same
+           circuit as the pages and the boundary sees their errors. *@
+        <ErrorBoundary @ref="_errorBoundary">
+            <ChildContent>
+                @Body
+            </ChildContent>
+            <ErrorContent>
+                <BbAlert Variant="AlertVariant.Danger">
+                    <BbAlertTitle>@Localizer["App.MainLayout.ErrorTitle"]</BbAlertTitle>
+                    <BbAlertDescription>
+                        <p>@Localizer["App.MainLayout.ErrorDescription"]</p>
+                        <BbButton
+                            Variant="ButtonVariant.Outline"
+                            Size="ButtonSize.Small"
+                            Class="bb:mt-3"
+                            OnClick="ReloadPage"
+                        >
+                            <LucideIcon Name="rotate-cw" Size="16" />
+                            @Localizer["App.MainLayout.ErrorReload"]
+                        </BbButton>
+                    </BbAlertDescription>
+                </BbAlert>
+            </ErrorContent>
+        </ErrorBoundary>
     </main>
 
     <footer class="bb:shrink-0 bb:border-t bb:px-4 bb:py-3 bb:text-center bb:text-xs bb:text-muted-foreground">
@@ -167,6 +193,16 @@
     private static readonly string[] SupportedCultures = ["en", "de"];
 
     private IReadOnlyList<NavItemDefinition> _navItems = [];
+
+    private ErrorBoundary? _errorBoundary;
+
+    // The layout is handed a new Body on every navigation, so this is where leaving a broken page
+    // for another one clears the error - otherwise it would stay up on every page after it.
+    protected override void OnParametersSet() => _errorBoundary?.Recover();
+
+    // A full reload rather than ErrorBoundary.Recover(): Recover only re-creates the page's
+    // components, while whatever the circuit's scoped services were left holding stays as it is.
+    private void ReloadPage() => NavigationManager.Refresh(forceReload: true);
 
     protected override async Task OnInitializedAsync()
     {

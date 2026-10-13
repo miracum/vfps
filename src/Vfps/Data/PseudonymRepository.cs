@@ -14,18 +14,54 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
     // The trailing ".seconds" (rather than relying on the exporter's unit-based suffixing) keeps
     // the exported Prometheus name identical to what this repository exposed under
     // prometheus-net: "vfps_upsert_duration_seconds" / "vfps_batch_upsert_duration_seconds".
+    //
+    // Explicit bucket advice is required: without it the SDK falls back to its default boundaries
+    // (0, 5, 10, 25, ... 10000), which are tuned for milliseconds - recorded in seconds, every
+    // upsert lands in the first bucket and any quantile computed from it is meaningless. These are
+    // the boundaries ASP.NET Core advises for request durations, extended at both ends: a
+    // single-row upsert against a nearby database routinely finishes in under 5ms, and a large
+    // batch can legitimately run for longer than a request does.
+    private static readonly InstrumentAdvice<double> DurationAdvice = new()
+    {
+        HistogramBucketBoundaries =
+        [
+            0.001,
+            0.0025,
+            0.005,
+            0.01,
+            0.025,
+            0.05,
+            0.075,
+            0.1,
+            0.25,
+            0.5,
+            0.75,
+            1,
+            2.5,
+            5,
+            7.5,
+            10,
+            30,
+            60,
+        ],
+    };
+
     private static readonly Histogram<double> UpsertDuration =
-        Program.Meter.CreateHistogram<double>(
+        Program.Meter.CreateHistogram(
             "vfps.upsert.duration.seconds",
             unit: "s",
-            description: "Histogram of the durations for upserting a pseudonym into the backend database."
+            description: "Histogram of the durations for upserting a pseudonym into the backend database.",
+            tags: null,
+            advice: DurationAdvice
         );
 
     private static readonly Histogram<double> BatchUpsertDuration =
-        Program.Meter.CreateHistogram<double>(
+        Program.Meter.CreateHistogram(
             "vfps.batch.upsert.duration.seconds",
             unit: "s",
-            description: "Histogram of the durations for upserting a batch of pseudonyms into the backend database in a single round trip."
+            description: "Histogram of the durations for upserting a batch of pseudonyms into the backend database in a single round trip.",
+            tags: null,
+            advice: DurationAdvice
         );
 
     // we can't yet use FlexLabs.Upsert and avoid manual SQL due to

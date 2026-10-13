@@ -4,6 +4,29 @@ The service exports metrics via OpenTelemetry, exposed in Prometheus text format
 Traces can optionally be pushed to an OTLP collector, see `Tracing:IsEnabled` and `Tracing:Otlp:Endpoint` in `appsettings.json`.
 Health-, readiness-, and liveness-probes are exposed at `:8080/healthz`, `:8080/readyz`, and `:8080/livez` respectively.
 
+## Grafana dashboard
+
+[`deploy/grafana/vfps-dashboard.json`](https://github.com/miracum/vfps/blob/master/deploy/grafana/vfps-dashboard.json)
+is a ready-made dashboard for Grafana 11 or later, built on these metrics scraped into Prometheus. Import it via
+**Dashboards → New → Import**, then pick your Prometheus data source in the dashboard's _Data source_ dropdown.
+It covers:
+
+- **Overview** - request rate, 5xx ratio, request and database latency, connection-pool usage, stored pseudonyms,
+  the next service-account token expiry, running versions and scrape health
+- **HTTP & gRPC** - traffic, status codes and latency per route, a latency heatmap, Kestrel queueing, and
+  exceptions by type
+- **Database** - connection pool usage and waits, command and upsert latency, connection churn, and network I/O
+- **Pseudonyms, cache & access tokens** - pseudonyms and growth per namespace, cache hit ratio, and every
+  service-account token's remaining lifetime
+- **CSV jobs & outbound HTTP** - job time per phase, and latency, errors and connections towards object storage and
+  the OIDC provider
+- **.NET runtime** - CPU, memory, GC, allocation rate, thread pool and lock contention
+
+The _Job_ variable lists every scrape job that exposes vfps' own metrics, so it needs no relabelling and picks up
+the worker Deployment's metrics as well when `worker.enabled` is set. Native gRPC calls complete with HTTP 200
+whatever their gRPC status, so their failures don't show up in the status-code panels - only under _Exceptions
+thrown by type_.
+
 ## Diagnosing a slow CSV job
 
 A CSV job runs as a Hangfire background job rather than inside a request, so the AspNetCore
@@ -14,9 +37,9 @@ instrumentation says nothing about it. Two things cover it instead:
   one trace. Enable `Tracing:IsEnabled` and point `Tracing:Otlp:Endpoint` at a collector - see the
   `jaeger` compose profile for a local one.
 - **`vfps_csv_job_phase_duration_seconds_total`**, a counter of seconds broken down by `phase`
-  (`read_input`, `resolve_database`, `write_output`, `report_progress`) and `direction`. The same
-  four numbers are also set as tags on each job's span, so a single trace carries its own
-  breakdown without the metrics backend alongside it.
+  (`fetch_input`, `parse_input`, `resolve_database`, `write_output`, `report_progress`) and
+  `direction`. The same numbers are also set as tags on each job's span, so a single trace carries
+  its own breakdown without the metrics backend alongside it.
 
 The phase split is what separates a job bound by object storage from one bound by the database,
 which is otherwise indistinguishable from outside - the output is written into a pipe that is

@@ -655,6 +655,15 @@
   <data name="App.MainLayout.Email" xml:space="preserve">
     <value>Email</value>
   </data>
+  <data name="App.MainLayout.ErrorDescription" xml:space="preserve">
+    <value>Something went wrong while displaying this page. The error has been logged. Reload the page to continue.</value>
+  </data>
+  <data name="App.MainLayout.ErrorReload" xml:space="preserve">
+    <value>Reload page</value>
+  </data>
+  <data name="App.MainLayout.ErrorTitle" xml:space="preserve">
+    <value>Something went wrong</value>
+  </data>
   <data name="App.MainLayout.NoRoles" xml:space="preserve">
     <value>none</value>
   </data>
@@ -891,6 +900,12 @@
   </data>
   <data name="App.Pseudonyms.ReverseLookupTitle" xml:space="preserve">
     <value>Reverse lookup</value>
+  </data>
+  <data name="App.Pseudonyms.SearchErrorDescription" xml:space="preserve">
+    <value>The pseudonyms could not be loaded. The error has been logged. Try again, or narrow down the search if it keeps failing.</value>
+  </data>
+  <data name="App.Pseudonyms.SearchErrorTitle" xml:space="preserve">
+    <value>Search failed</value>
   </data>
   <data name="App.Pseudonyms.SearchInProgress" xml:space="preserve">
     <value>Searching...</value>
