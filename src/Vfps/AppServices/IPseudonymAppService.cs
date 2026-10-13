@@ -50,6 +50,44 @@ public interface IPseudonymAppService
     );
 
     /// <summary>
+    /// Stores one additional, newly generated pseudonym for <paramref name="originalValue"/> in
+    /// <paramref name="namespaceName"/>, at the sequence number after the highest already stored
+    /// for it (0 if none is). Requires write access to the namespace, the same as
+    /// <see cref="CreateAsync"/>.
+    ///
+    /// The non-idempotent counterpart to <see cref="CreateAsync"/>'s grow-to-N: every successful
+    /// call adds a pseudonym, which is why it is a separate operation rather than a mode of
+    /// <see cref="CreateAsync"/> - a caller retrying a create must never end up appending.
+    /// </summary>
+    /// <returns>The pseudonym this call stored.</returns>
+    /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
+    /// <exception cref="NamespaceNotFoundException">The namespace does not exist.</exception>
+    /// <exception cref="Authorization.ForbiddenException">
+    /// <paramref name="user"/> has no write access to it.
+    /// </exception>
+    /// <exception cref="MultiplePseudonymsNotAllowedException">
+    /// The namespace doesn't allow multiple pseudonyms per original value.
+    /// </exception>
+    /// <exception cref="OriginalValueValidationException">
+    /// <paramref name="originalValue"/> does not match the namespace's
+    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
+    /// </exception>
+    /// <exception cref="ParentPseudonymNotFoundException">
+    /// The namespace validates against its parent and <paramref name="originalValue"/> isn't a
+    /// pseudonym there.
+    /// </exception>
+    /// <exception cref="PseudonymUpsertFailedException">
+    /// Concurrent appends for the same original value kept claiming the next sequence number
+    /// first, past every retry.
+    /// </exception>
+    Task<Pseudonym> AppendAsync(
+        string namespaceName,
+        string originalValue,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Resolves the pseudonym(s) already stored for <paramref name="originalValue"/> in
     /// <paramref name="namespaceName"/>, creating nothing. The lookup-only counterpart to
     /// <see cref="CreateAsync"/>, for a caller whose file or request is supposed to contain only

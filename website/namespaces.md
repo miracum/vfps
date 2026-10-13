@@ -49,6 +49,27 @@ maximum `count` of 10,000. CSV pseudonymization jobs and the FHIR `$create-pseud
 don't support requesting more than one pseudonym - both always operate on the first
 (`sequenceNumber: 0`) pseudonym for a multi-psn namespace.
 
+### Appending a pseudonym
+
+`Create` is idempotent: calling it again with the same `count` returns the same set. To store one
+more pseudonym for an original value regardless of how many it already has, call `Append`
+instead. Each successful call adds a newly generated pseudonym after the highest `sequenceNumber`
+stored for the value, or stores the first one (`sequenceNumber: 0`) if none exists yet. The
+response holds only the pseudonym that was just added:
+
+```sh
+grpcurl \
+  -plaintext \
+  -d '{"namespace": "multi-psn-example", "originalValue": "to be pseudonymized"}' \
+  127.0.0.1:8081 \
+  vfps.api.v1.PseudonymService/Append
+```
+
+Over REST, this is `POST /v1/namespaces/{namespace}/pseudonyms:append`. `Append` is not
+idempotent, so retrying a call that actually succeeded stores an extra pseudonym. It requires the
+same write access as `Create`, and it fails with `FAILED_PRECONDITION` on a namespace that doesn't
+allow multiple pseudonyms. It is only available through the gRPC and REST APIs.
+
 ## Multi-level namespaces
 
 Namespaces can form a hierarchy: a namespace created with a `parentName` is a _child_ namespace,
