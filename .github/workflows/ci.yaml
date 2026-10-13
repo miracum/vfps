@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   build:
-    uses: miracum/.github/.github/workflows/standard-build.yaml@074c1a65db6f09850cd80f38efe230036febb44e # v1.29.2
+    uses: miracum/.github/.github/workflows/standard-build.yaml@43926b6aa69b5a63e15378200f698ce8cfeefc88 # v1.29.3
     permissions:
       contents: write
       id-token: write
@@ -87,7 +87,7 @@ jobs:
     needs:
       - build
       - detect-app-changes
-    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@074c1a65db6f09850cd80f38efe230036febb44e # v1.29.2
+    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@43926b6aa69b5a63e15378200f698ce8cfeefc88 # v1.29.3
     permissions:
       contents: read
       packages: write # to push the chart and its signature/attestation to ghcr.io
@@ -197,7 +197,7 @@ jobs:
     needs:
       - build-voprf-server-image
       - detect-app-changes
-    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@074c1a65db6f09850cd80f38efe230036febb44e # v1.29.2
+    uses: miracum/.github/.github/workflows/standard-chart-publish.yaml@43926b6aa69b5a63e15378200f698ce8cfeefc88 # v1.29.3
     permissions:
       contents: read
       packages: write # to push the chart and its signature/attestation to ghcr.io
@@ -596,7 +596,7 @@ jobs:
           push-to-registry: true
 
   lint:
-    uses: miracum/.github/.github/workflows/standard-lint.yaml@074c1a65db6f09850cd80f38efe230036febb44e # v1.29.2
+    uses: miracum/.github/.github/workflows/standard-lint.yaml@43926b6aa69b5a63e15378200f698ce8cfeefc88 # v1.29.3
     permissions:
       contents: read
       pull-requests: write
