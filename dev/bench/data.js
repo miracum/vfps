@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1791749410846,
+  "lastUpdate": 1791906323390,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -13854,6 +13854,66 @@ window.BENCHMARK_DATA = {
             "value": 889.8598640148456,
             "unit": "ns",
             "range": "± 2.371999766901299"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "03f1ec4660c8942a5e241d31c6a4ed2d62fbed24",
+          "message": "feat: added gRPC/REST Append method to add newly generated pseudonyms to a multi-psn namespace (#404)",
+          "timestamp": "2026-10-13T17:41:55+02:00",
+          "tree_id": "ce1910ee975053d77f4ba5a3944aa049cb6b1901",
+          "url": "https://github.com/miracum/vfps/commit/03f1ec4660c8942a5e241d31c6a4ed2d62fbed24"
+        },
+        "date": 1791906322962,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 918.6034767287118,
+            "unit": "ns",
+            "range": "± 3.430970544029764"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 757.3210622787476,
+            "unit": "ns",
+            "range": "± 3.0722686419038823"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 785.5516447226206,
+            "unit": "ns",
+            "range": "± 0.7376362445310461"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 853.2632646560669,
+            "unit": "ns",
+            "range": "± 5.019844409184434"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 978.706325677725,
+            "unit": "ns",
+            "range": "± 1.8634142218333898"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 890.1964479287466,
+            "unit": "ns",
+            "range": "± 0.9094079955692786"
           }
         ]
       }
