@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.1](https://github.com/miracum/vfps/compare/v1.23.0...v1.23.1) (2026-10-13)
+
+
+### Bug Fixes
+
+* added dashboard and show search related errors in UI ([#406](https://github.com/miracum/vfps/issues/406)) ([1ecb416](https://github.com/miracum/vfps/commit/1ecb416d5752ea36a34d7c4b608fdfb5268ea309))
+
 ## [1.23.0](https://github.com/miracum/vfps/compare/v1.22.5...v1.23.0) (2026-10-13)
 
 
