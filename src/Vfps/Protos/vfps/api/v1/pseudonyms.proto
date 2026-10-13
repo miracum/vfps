@@ -18,6 +18,18 @@ service PseudonymService {
     };
   }
 
+  // store one additional, newly generated pseudonym for an original value, appended after every
+  // pseudonym already stored for it. Only valid for a namespace with allows_multiple_pseudonyms
+  // set - FAILED_PRECONDITION otherwise. Unlike Create this is not idempotent: every successful
+  // call stores another pseudonym, so a retried call that had in fact succeeded leaves one more
+  // than intended. Requires the same write access Create does.
+  rpc Append(PseudonymServiceAppendRequest) returns (PseudonymServiceAppendResponse) {
+    option (google.api.http) = {
+      post: "/v1/namespaces/{namespace}/pseudonyms:append"
+      body: "*"
+    };
+  }
+
   // resolve the pseudonym already stored for an original value, creating nothing. Returns
   // NOT_FOUND when the namespace holds none - the difference from Create, which would generate
   // one. Requires the same write access Create does: this is the same forward mapping, and a
@@ -127,6 +139,22 @@ message PseudonymServiceCreateResponse {
   // every pseudonym stored for the requested original value after this call - length 1 unless
   // the target namespace allows multiple pseudonyms per original value.
   repeated Pseudonym pseudonyms = 2;
+}
+
+// request to store one additional pseudonym for an original value
+message PseudonymServiceAppendRequest {
+  // the namespace to append the pseudonym in. Must allow multiple pseudonyms per original value.
+  string namespace = 1;
+  // the original value to store another pseudonym for. If none is stored for it yet, the
+  // appended pseudonym is its first (sequence_number 0).
+  string original_value = 2;
+}
+
+// response for appending a pseudonym
+message PseudonymServiceAppendResponse {
+  // the pseudonym this call stored - only the new one, not the full set. Its sequence_number is
+  // one past the highest already stored for the original value.
+  Pseudonym pseudonym = 1;
 }
 
 // request to resolve the pseudonym already stored for an original value

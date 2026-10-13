@@ -225,6 +225,68 @@ public class PseudonymServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task Append_OnMultiPsnNamespace_ShouldReturnOnlyTheAppendedPseudonym()
+    {
+        var originalValue = nameof(Append_OnMultiPsnNamespace_ShouldReturnOnlyTheAppendedPseudonym);
+        var created = await sut.Create(
+            new PseudonymServiceCreateRequest
+            {
+                Namespace = "multiPsnNamespace",
+                OriginalValue = originalValue,
+                Count = 2,
+            },
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
+
+        var response = await sut.Append(
+            new PseudonymServiceAppendRequest
+            {
+                Namespace = "multiPsnNamespace",
+                OriginalValue = originalValue,
+            },
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
+
+        response.Pseudonym.SequenceNumber.Should().Be(2);
+        response.Pseudonym.OriginalValue.Should().Be(originalValue);
+        response.Pseudonym.Namespace.Should().Be("multiPsnNamespace");
+        created
+            .Pseudonyms.Select(p => p.PseudonymValue)
+            .Should()
+            .NotContain(response.Pseudonym.PseudonymValue);
+    }
+
+    [Fact]
+    public async Task Append_OnOrdinaryNamespace_ShouldThrowFailedPrecondition()
+    {
+        var request = new PseudonymServiceAppendRequest
+        {
+            Namespace = "existingNamespace",
+            OriginalValue = nameof(Append_OnOrdinaryNamespace_ShouldThrowFailedPrecondition),
+        };
+
+        await sut.Invoking(async s => await s.Append(request, TestServerCallContext.Create()))
+            .Should()
+            .ThrowAsync<RpcException>()
+            .Where(e => e.StatusCode == StatusCode.FailedPrecondition);
+    }
+
+    [Fact]
+    public async Task Append_WithNonExistingNamespace_ShouldThrowNotFoundError()
+    {
+        var request = new PseudonymServiceAppendRequest
+        {
+            Namespace = "nonExistingNamespace",
+            OriginalValue = nameof(Append_WithNonExistingNamespace_ShouldThrowNotFoundError),
+        };
+
+        await sut.Invoking(async s => await s.Append(request, TestServerCallContext.Create()))
+            .Should()
+            .ThrowAsync<RpcException>()
+            .Where(e => e.StatusCode == StatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task Create_WithNonExistingNamespace_ShouldThrowNotFoundError()
     {
         var request = new PseudonymServiceCreateRequest

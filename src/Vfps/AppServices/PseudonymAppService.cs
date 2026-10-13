@@ -87,6 +87,93 @@ public class PseudonymAppService(
         return await FindStoredAsync(@namespace, originalValue, cancellationToken);
     }
 
+    // Bounded retries against concurrent appends for the same original value, each of which can
+    // claim the sequence number this one picked. A lost attempt costs one more round trip and no
+    // extra read: the set it returns already holds the winner's row, so the next attempt picks
+    // the number after it.
+    private const int MaxAppendAttempts = 5;
+
+    /// <inheritdoc/>
+    public async Task<Data.Models.Pseudonym> AppendAsync(
+        string namespaceName,
+        string originalValue,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!await permissionChecker.HasWriteAccessAsync(user, namespaceName, cancellationToken))
+        {
+            throw new ForbiddenException(
+                $"Write access to namespace '{namespaceName}' is required."
+            );
+        }
+
+        var @namespace =
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            ?? throw new NamespaceNotFoundException(namespaceName);
+
+        if (string.IsNullOrWhiteSpace(originalValue))
+        {
+            throw new ArgumentException(
+                "The original value must not be blank.",
+                nameof(originalValue)
+            );
+        }
+
+        // The value-dependent check is the same belt-and-braces guard CreateTrustedAsync has:
+        // namespace creation already refuses to pair such a method with AllowsMultiplePseudonyms,
+        // and a value-dependent method could only ever "append" the pseudonym already stored.
+        if (
+            !@namespace.AllowsMultiplePseudonyms
+            || PseudonymizationMethodsLookup.IsValueDependent(@namespace.PseudonymGenerationMethod)
+        )
+        {
+            throw new MultiplePseudonymsNotAllowedException(@namespace.Name);
+        }
+
+        ValidateOriginalValue(@namespace, originalValue);
+        await ValidateParentAsync(@namespace, [originalValue], cancellationToken);
+
+        var stored = await pseudonymRepository.FindAllByOriginalValueAsync(
+            @namespace.Name,
+            originalValue,
+            cancellationToken
+        );
+
+        for (var attempt = 0; attempt < MaxAppendAttempts; attempt++)
+        {
+            var candidate = new Data.Models.Pseudonym
+            {
+                NamespaceName = @namespace.Name,
+                OriginalValue = originalValue,
+                PseudonymValue = GenerateUniquePseudonymValue(
+                    @namespace,
+                    stored.Select(p => p.PseudonymValue).ToHashSet(StringComparer.Ordinal)
+                ),
+                SequenceNumber = stored.Count == 0 ? 0 : stored.Max(p => p.SequenceNumber) + 1,
+            };
+
+            stored = await pseudonymRepository.CreateSetIfNotExistAsync(
+                @namespace,
+                [candidate],
+                cancellationToken
+            );
+
+            // Matched on the value as well as the sequence number: a concurrent append that won
+            // the same sequence number stored a row there too, just not this one.
+            var appended = stored.FirstOrDefault(p =>
+                p.SequenceNumber == candidate.SequenceNumber
+                && p.PseudonymValue == candidate.PseudonymValue
+            );
+            if (appended is not null)
+            {
+                return appended;
+            }
+        }
+
+        throw new PseudonymUpsertFailedException(@namespace.Name);
+    }
+
     /// <inheritdoc/>
     public async Task<IReadOnlyList<Data.Models.Pseudonym>> CreateTrustedAsync(
         Data.Models.Namespace @namespace,

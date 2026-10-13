@@ -7,7 +7,7 @@ JSON-transcoded [REST API](getting-started.md#using-the-rest-api). The definitio
 | Service                        | RPCs                                                |
 | ------------------------------ | --------------------------------------------------- |
 | `vfps.api.v1.NamespaceService` | `Create`, `Get`, `GetAll`, `Delete`, `ListChildren` |
-| `vfps.api.v1.PseudonymService` | `Create`, `Resolve`, `Get`, `List`                  |
+| `vfps.api.v1.PseudonymService` | `Create`, `Append`, `Resolve`, `Get`, `List`        |
 
 Plaintext gRPC is served on port **8081**, which accepts HTTP/2 only - the `HttpGrpc` endpoint in
 `Kestrel__Endpoints`, and the `grpc` port of the Helm chart's Service. Port 8080 serves the REST API
