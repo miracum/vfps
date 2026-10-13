@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.23.2](https://github.com/miracum/vfps/compare/v1.23.1...v1.23.2) (2026-10-13)
+
+
+### Miscellaneous Chores
+
+* **deps:** update github-actions ([#408](https://github.com/miracum/vfps/issues/408)) ([3d27282](https://github.com/miracum/vfps/commit/3d27282387045efc1dde723e4944301256a1c766))
+* fix labels ([#409](https://github.com/miracum/vfps/issues/409)) ([ce4180f](https://github.com/miracum/vfps/commit/ce4180f2b01e8150f5f80e8fd041b5c0c4321e95))
+
+
+### CI/CD
+
+* bump miracum/.github shared workflows to v1.29.3 ([#411](https://github.com/miracum/vfps/issues/411)) ([489992b](https://github.com/miracum/vfps/commit/489992b64700d5a6275b72c0917d273208616e97))
+
 ## [1.23.1](https://github.com/miracum/vfps/compare/v1.23.0...v1.23.1) (2026-10-13)
 
 
