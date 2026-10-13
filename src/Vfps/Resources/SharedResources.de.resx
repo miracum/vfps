@@ -655,6 +655,15 @@
   <data name="App.MainLayout.Email" xml:space="preserve">
     <value>E-Mail</value>
   </data>
+  <data name="App.MainLayout.ErrorDescription" xml:space="preserve">
+    <value>Beim Anzeigen dieser Seite ist ein Fehler aufgetreten. Der Fehler wurde protokolliert. Laden Sie die Seite neu, um fortzufahren.</value>
+  </data>
+  <data name="App.MainLayout.ErrorReload" xml:space="preserve">
+    <value>Seite neu laden</value>
+  </data>
+  <data name="App.MainLayout.ErrorTitle" xml:space="preserve">
+    <value>Etwas ist schiefgelaufen</value>
+  </data>
   <data name="App.MainLayout.NoRoles" xml:space="preserve">
     <value>keine</value>
   </data>
@@ -891,6 +900,12 @@
   </data>
   <data name="App.Pseudonyms.ReverseLookupTitle" xml:space="preserve">
     <value>Reverse-Lookup</value>
+  </data>
+  <data name="App.Pseudonyms.SearchErrorDescription" xml:space="preserve">
+    <value>Die Pseudonyme konnten nicht geladen werden. Der Fehler wurde protokolliert. Versuchen Sie es erneut oder schränken Sie die Suche ein, falls der Fehler weiterhin auftritt.</value>
+  </data>
+  <data name="App.Pseudonyms.SearchErrorTitle" xml:space="preserve">
+    <value>Suche fehlgeschlagen</value>
   </data>
   <data name="App.Pseudonyms.SearchInProgress" xml:space="preserve">
     <value>Suche läuft...</value>

@@ -4,6 +4,7 @@
 @inject INamespaceAppService NamespaceAppService
 @inject INamespacePermissionChecker PermissionChecker
 @inject IStringLocalizer<SharedResources> Localizer
+@inject ILogger<Pseudonyms> Logger
 
 <PageTitle>@Localizer["App.Pseudonyms.PageTitle", NamespaceName]</PageTitle>
 
@@ -202,6 +203,13 @@
                         </BbButton>
                     }
                 </form>
+                @if (_searchFailed)
+                {
+                    <BbAlert Variant="AlertVariant.Danger">
+                        <BbAlertTitle>@Localizer["App.Pseudonyms.SearchErrorTitle"]</BbAlertTitle>
+                        <BbAlertDescription>@Localizer["App.Pseudonyms.SearchErrorDescription"]</BbAlertDescription>
+                    </BbAlert>
+                }
                 <BbDataGrid
                     @key="_run"
                     @ref="_grid"
@@ -323,6 +331,11 @@
     // asked for counts - a page change isn't one, and cancelling it would leave the grid showing
     // another page than the one it is on.
     private bool _isSearching;
+
+    // Set when a fetch fails for any reason other than the two _errorMessage covers - a database
+    // timeout, a dropped connection. Unlike _errorMessage it leaves the search form on screen:
+    // these are worth retrying, while a missing namespace or a missing permission is not.
+    private bool _searchFailed;
 
     private sealed class SearchRun(string? text, bool isUserSearch)
     {
@@ -472,13 +485,16 @@
     private async Task<ClaimsPrincipal> GetUserAsync() =>
         AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
 
-    private void SubmitSearch() =>
+    private void SubmitSearch()
+    {
+        _searchFailed = false;
         StartRun(
             new SearchRun(
                 string.IsNullOrWhiteSpace(_searchInput) ? null : _searchInput.Trim(),
                 isUserSearch: true
             )
         );
+    }
 
     private void StartRun(SearchRun run)
     {
@@ -556,6 +572,7 @@
             if (ReferenceEquals(run, _run))
             {
                 _errorMessage = null;
+                _searchFailed = false;
                 _shownSearch = run.Text;
                 if (request.StartIndex == 0)
                 {
@@ -582,6 +599,32 @@
         catch (Exception ex) when (ex is NamespaceNotFoundException or ForbiddenException)
         {
             _errorMessage = ex.Message;
+            return NoItems();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            // Anything else would escape into BbDataGrid, which only swallows cancellations, and
+            // from there take down the whole circuit. Any other cancellation is the grid's own
+            // and is left for it to swallow. The search text is left out of the log: with
+            // reverse-lookup access it can be an original value.
+            Logger.LogError(ex, "Fetching pseudonyms of namespace {NamespaceName} failed", NamespaceName);
+
+            if (ReferenceEquals(run, _run))
+            {
+                _searchFailed = true;
+                _isSearching = false;
+
+                // Back to the rows that were on screen, as Cancel does, so a failed search or
+                // page change doesn't leave an empty table. The search box keeps what was typed,
+                // though, so trying again is one Enter away. Without a first page to go back to
+                // (the page's first load failed) there is nothing to show but the error - and
+                // fetching it again here would only fail again, in a loop.
+                if (_shownFirstPage is not null)
+                {
+                    StartRun(new SearchRun(_shownSearch, isUserSearch: false) { RestoreShownFirstPage = true });
+                }
+            }
+
             return NoItems();
         }
         finally
