@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.23.0](https://github.com/miracum/vfps/compare/v1.22.5...v1.23.0) (2026-10-13)
+
+
+### Features
+
+* added gRPC/REST Append method to add newly generated pseudonyms to a multi-psn namespace ([#404](https://github.com/miracum/vfps/issues/404)) ([03f1ec4](https://github.com/miracum/vfps/commit/03f1ec4660c8942a5e241d31c6a4ed2d62fbed24))
+
 ## [1.22.5](https://github.com/miracum/vfps/compare/v1.22.4...v1.22.5) (2026-10-11)
 
 
