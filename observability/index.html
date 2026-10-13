@@ -769,6 +769,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#grafana-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Grafana dashboard
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#diagnosing-a-slow-csv-job" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -979,6 +990,17 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#grafana-dashboard" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Grafana dashboard
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#diagnosing-a-slow-csv-job" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1082,6 +1104,27 @@
 <p>The service exports metrics via OpenTelemetry, exposed in Prometheus text format on <code>:8082/metrics</code>.
 Traces can optionally be pushed to an OTLP collector, see <code>Tracing:IsEnabled</code> and <code>Tracing:Otlp:Endpoint</code> in <code>appsettings.json</code>.
 Health-, readiness-, and liveness-probes are exposed at <code>:8080/healthz</code>, <code>:8080/readyz</code>, and <code>:8080/livez</code> respectively.</p>
+<h2 id="grafana-dashboard">Grafana dashboard<a class="headerlink" href="#grafana-dashboard" title="Permanent link">&para;</a></h2>
+<p><a href="https://github.com/miracum/vfps/blob/master/deploy/grafana/vfps-dashboard.json"><code>deploy/grafana/vfps-dashboard.json</code></a>
+is a ready-made dashboard for Grafana 11 or later, built on these metrics scraped into Prometheus. Import it via
+<strong>Dashboards → New → Import</strong>, then pick your Prometheus data source in the dashboard's <em>Data source</em> dropdown.
+It covers:</p>
+<ul>
+<li><strong>Overview</strong> - request rate, 5xx ratio, request and database latency, connection-pool usage, stored pseudonyms,
+  the next service-account token expiry, running versions and scrape health</li>
+<li><strong>HTTP &amp; gRPC</strong> - traffic, status codes and latency per route, a latency heatmap, Kestrel queueing, and
+  exceptions by type</li>
+<li><strong>Database</strong> - connection pool usage and waits, command and upsert latency, connection churn, and network I/O</li>
+<li><strong>Pseudonyms, cache &amp; access tokens</strong> - pseudonyms and growth per namespace, cache hit ratio, and every
+  service-account token's remaining lifetime</li>
+<li><strong>CSV jobs &amp; outbound HTTP</strong> - job time per phase, and latency, errors and connections towards object storage and
+  the OIDC provider</li>
+<li><strong>.NET runtime</strong> - CPU, memory, GC, allocation rate, thread pool and lock contention</li>
+</ul>
+<p>The <em>Job</em> variable lists every scrape job that exposes vfps' own metrics, so it needs no relabelling and picks up
+the worker Deployment's metrics as well when <code>worker.enabled</code> is set. Native gRPC calls complete with HTTP 200
+whatever their gRPC status, so their failures don't show up in the status-code panels - only under <em>Exceptions
+thrown by type</em>.</p>
 <h2 id="diagnosing-a-slow-csv-job">Diagnosing a slow CSV job<a class="headerlink" href="#diagnosing-a-slow-csv-job" title="Permanent link">&para;</a></h2>
 <p>A CSV job runs as a Hangfire background job rather than inside a request, so the AspNetCore
 instrumentation says nothing about it. Two things cover it instead:</p>
@@ -1091,9 +1134,9 @@ instrumentation says nothing about it. Two things cover it instead:</p>
   one trace. Enable <code>Tracing:IsEnabled</code> and point <code>Tracing:Otlp:Endpoint</code> at a collector - see the
   <code>jaeger</code> compose profile for a local one.</li>
 <li><strong><code>vfps_csv_job_phase_duration_seconds_total</code></strong>, a counter of seconds broken down by <code>phase</code>
-  (<code>read_input</code>, <code>resolve_database</code>, <code>write_output</code>, <code>report_progress</code>) and <code>direction</code>. The same
-  four numbers are also set as tags on each job's span, so a single trace carries its own
-  breakdown without the metrics backend alongside it.</li>
+  (<code>fetch_input</code>, <code>parse_input</code>, <code>resolve_database</code>, <code>write_output</code>, <code>report_progress</code>) and
+  <code>direction</code>. The same numbers are also set as tags on each job's span, so a single trace carries
+  its own breakdown without the metrics backend alongside it.</li>
 </ul>
 <p>The phase split is what separates a job bound by object storage from one bound by the database,
 which is otherwise indistinguishable from outside - the output is written into a pipe that is
