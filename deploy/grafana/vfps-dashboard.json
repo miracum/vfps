@@ -1635,7 +1635,11 @@
         "orientation": "horizontal",
         "displayMode": "gradient",
         "valueMode": "color",
-        "namePlacement": "left",
+        "namePlacement": "top",
+        "text": {
+          "titleSize": 13,
+          "valueSize": 16
+        },
         "showUnfilled": true,
         "sizing": "auto",
         "minVizHeight": 16,
@@ -2806,7 +2810,11 @@
             "orientation": "horizontal",
             "displayMode": "gradient",
             "valueMode": "color",
-            "namePlacement": "left",
+            "namePlacement": "top",
+            "text": {
+              "titleSize": 13,
+              "valueSize": 16
+            },
             "showUnfilled": true,
             "sizing": "auto",
             "minVizHeight": 16,
@@ -3341,7 +3349,11 @@
             "orientation": "horizontal",
             "displayMode": "gradient",
             "valueMode": "color",
-            "namePlacement": "left",
+            "namePlacement": "top",
+            "text": {
+              "titleSize": 13,
+              "valueSize": 16
+            },
             "showUnfilled": true,
             "sizing": "auto",
             "minVizHeight": 16,
