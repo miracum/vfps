@@ -55,19 +55,22 @@ public class VoprfInternalsPropertyTests
     public Property A_shorter_expansion_is_not_a_prefix_of_a_longer_one() =>
         Prop.ForAll(
             Arb.From(Bytes(0, 64)),
-            Arb.From(Gen.Choose(1, 200)),
-            Arb.From(Gen.Choose(1, 200)),
-            (byte[] message, int shorter, int longer) =>
+            // Unrelated outputs still agree on a short prefix by chance - one byte in 256 runs -
+            // so the shorter length starts at 16 bytes, where a coincidence is 2^-128.
+            Arb.From(
+                Gen.Choose(16, 199)
+                    .SelectMany(shorter =>
+                        Gen.Choose(shorter + 1, 200).Select(longer => (shorter, longer))
+                    )
+            ),
+            (byte[] message, (int Shorter, int Longer) lengths) =>
             {
                 // The requested length is hashed into msg_prime, so expansions of different
                 // lengths are unrelated. Worth pinning: the obvious "optimisation" is to expand
                 // once at the longest length and truncate, and it would be wrong in a way that
                 // nothing else in this codebase would detect - the protocol only ever asks for
                 // 64 bytes, so every test would still pass.
-                if (shorter >= longer)
-                {
-                    return true;
-                }
+                var (shorter, longer) = lengths;
 
                 return !ExpandMessage
                     .Xmd(message, "test"u8, longer)
