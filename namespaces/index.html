@@ -447,6 +447,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Multiple pseudonyms per original value">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#appending-a-pseudonym" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Appending a pseudonym
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1020,6 +1037,23 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Multiple pseudonyms per original value">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#appending-a-pseudonym" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Appending a pseudonym
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
       
         <li class="md-nav__item">
@@ -1194,6 +1228,22 @@ the existing set unchanged, while a larger <code>count</code> adds exactly the m
 maximum <code>count</code> of 10,000. CSV pseudonymization jobs and the FHIR <code>$create-pseudonym</code> operation
 don't support requesting more than one pseudonym - both always operate on the first
 (<code>sequenceNumber: 0</code>) pseudonym for a multi-psn namespace.</p>
+<h3 id="appending-a-pseudonym">Appending a pseudonym<a class="headerlink" href="#appending-a-pseudonym" title="Permanent link">&para;</a></h3>
+<p><code>Create</code> is idempotent: calling it again with the same <code>count</code> returns the same set. To store one
+more pseudonym for an original value regardless of how many it already has, call <code>Append</code>
+instead. Each successful call adds a newly generated pseudonym after the highest <code>sequenceNumber</code>
+stored for the value, or stores the first one (<code>sequenceNumber: 0</code>) if none exists yet. The
+response holds only the pseudonym that was just added:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>grpcurl<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>-plaintext<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"namespace": "multi-psn-example", "originalValue": "to be pseudonymized"}'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Append
+</span></code></pre></div>
+<p>Over REST, this is <code>POST /v1/namespaces/{namespace}/pseudonyms:append</code>. <code>Append</code> is not
+idempotent, so retrying a call that actually succeeded stores an extra pseudonym. It requires the
+same write access as <code>Create</code>, and it fails with <code>FAILED_PRECONDITION</code> on a namespace that doesn't
+allow multiple pseudonyms. It is only available through the gRPC and REST APIs.</p>
 <h2 id="multi-level-namespaces">Multi-level namespaces<a class="headerlink" href="#multi-level-namespaces" title="Permanent link">&para;</a></h2>
 <p>Namespaces can form a hierarchy: a namespace created with a <code>parentName</code> is a <em>child</em> namespace,
 whose original values are pseudonym values produced by its parent. This is how multiple levels of
@@ -1204,11 +1254,11 @@ resolves directly to the MPI.</p>
 Setting <code>parentValidationMode</code> to <code>PARENT_VALIDATION_MODE_ENSURE_EXISTS</code> additionally requires
 every original value to already exist as a pseudonym in the parent namespace, rejecting anything
 else with a <code>FAILED_PRECONDITION</code> error:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>grpcurl<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>-plaintext<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"name": "study-a", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED", "pseudonymLength": 32, "parentName": "test", "parentValidationMode": "PARENT_VALIDATION_MODE_ENSURE_EXISTS"}'</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>vfps.api.v1.NamespaceService/Create
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>grpcurl<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>-plaintext<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"name": "study-a", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED", "pseudonymLength": 32, "parentName": "test", "parentValidationMode": "PARENT_VALIDATION_MODE_ENSURE_EXISTS"}'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>vfps.api.v1.NamespaceService/Create
 </span></code></pre></div>
 <p>Chaining a pseudonym into the child namespace is an ordinary <code>Create</code> call whose <code>originalValue</code>
 is the parent's pseudonym value. A namespace's direct children can be listed with <code>ListChildren</code>
