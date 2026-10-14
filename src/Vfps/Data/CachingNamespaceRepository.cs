@@ -43,9 +43,9 @@ public class CachingNamespaceRepository(
         // CreateAsync) would otherwise poison this key for the full cache lifetime, making a
         // namespace that visibly exists (GetAllAsync isn't cached) invisible to every
         // single-namespace lookup - which is exactly what Create/List/Browse use - until
-        // expiry. A hit never goes stale from an edit (namespaces are immutable once created),
-        // only from a deletion - which is why DeleteAsync below explicitly evicts this key
-        // rather than relying on it to expire naturally.
+        // expiry. A hit goes stale from a deletion or a description edit - which is why
+        // DeleteAsync and UpdateDescriptionAsync below explicitly evict this key rather than
+        // relying on it to expire naturally. Everything else about a namespace is immutable.
         if (found is not null)
         {
             memoryCache.Set(
@@ -100,5 +100,28 @@ public class CachingNamespaceRepository(
         // included) would keep seeing a namespace that no longer exists until the cache entry's
         // absolute expiration passes.
         memoryCache.Remove($"namespaces.{namespaceName}");
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> UpdateDescriptionAsync(
+        string namespaceName,
+        string? description,
+        DateTimeOffset lastUpdatedAt,
+        CancellationToken cancellationToken
+    )
+    {
+        var updated = await NamespaceRepository.UpdateDescriptionAsync(
+            namespaceName,
+            description,
+            lastUpdatedAt,
+            cancellationToken
+        );
+
+        // Same reasoning as DeleteAsync. Only this replica's entry can be evicted; another
+        // replica keeps serving the old description until its own entry expires - harmless, since
+        // nothing but display reads it.
+        memoryCache.Remove($"namespaces.{namespaceName}");
+
+        return updated;
     }
 }

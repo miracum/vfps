@@ -40,6 +40,23 @@ public interface INamespaceRepository
     Task DeleteAsync(string namespaceName, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Replaces a namespace's description and bumps its <see cref="Models.TracksCreationAndUpdates.LastUpdatedAt"/>.
+    /// The description is the only part of a namespace that can change after creation - every
+    /// other field shapes how its pseudonyms are generated or validated.
+    /// </summary>
+    /// <param name="namespaceName">The name of the namespace to update.</param>
+    /// <param name="description">The new description, or null to remove it.</param>
+    /// <param name="lastUpdatedAt">The timestamp to record as the namespace's last update.</param>
+    /// <param name="cancellationToken">A cancellation token to abort the action</param>
+    /// <returns>Whether a namespace named <paramref name="namespaceName"/> existed and was updated.</returns>
+    Task<bool> UpdateDescriptionAsync(
+        string namespaceName,
+        string? description,
+        DateTimeOffset lastUpdatedAt,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Lists the direct children of a namespace - those whose <see cref="Models.Namespace.ParentName"/>
     /// is <paramref name="namespaceName"/>. Non-recursive, and unpaginated for the same
     /// low-cardinality reason as <see cref="GetAllAsync"/>.

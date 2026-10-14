@@ -216,6 +216,40 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
     }
 
     [Fact]
+    public async Task EditDescription_UpdatesTheDetailsPanel_AndClearingItRemovesTheDescription()
+    {
+        var name = UniqueName();
+
+        await GotoAsync("/ui/namespaces");
+        await CreateNamespaceAsync(name, description: "the original description");
+        await SelectNamespaceAsync(name);
+
+        var details = Page.Locator("#namespaceDetails");
+        var input = Page.Locator("#editDescription");
+
+        await Page.ClickAsync("#editNamespaceDescriptionButton");
+        // Focused, so the new text can be typed straight away - and used as the settle signal
+        // the same way OpenCreateDialogAsync uses the name field's focus.
+        await Expect(input).ToBeFocusedAsync();
+        await Expect(input).ToHaveValueAsync("the original description");
+
+        await input.FillAsync("the edited description");
+        await Page.ClickAsync("#saveDescriptionButton");
+
+        await Expect(input).ToHaveCountAsync(0);
+        await Expect(details).ToContainTextAsync("the edited description");
+        await Expect(details).Not.ToContainTextAsync("the original description");
+
+        await Page.ClickAsync("#editNamespaceDescriptionButton");
+        await Expect(input).ToBeFocusedAsync();
+        await input.FillAsync("");
+        await Page.ClickAsync("#saveDescriptionButton");
+
+        await Expect(input).ToHaveCountAsync(0);
+        await Expect(details).Not.ToContainTextAsync("the edited description");
+    }
+
+    [Fact]
     public async Task Search_KeepsMatchesAndTheirAncestors_AndHidesEverythingElse()
     {
         var parent = UniqueName();

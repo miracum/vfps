@@ -75,4 +75,25 @@ public class NamespaceRepository(IDbContextFactory<PseudonymContext> contextFact
             .Namespaces.Where(n => n.Name == namespaceName)
             .ExecuteDeleteAsync(cancellationToken);
     }
+
+    /// <inheritdoc/>
+    public async Task<bool> UpdateDescriptionAsync(
+        string namespaceName,
+        string? description,
+        DateTimeOffset lastUpdatedAt,
+        CancellationToken cancellationToken
+    )
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var updated = await context
+            .Namespaces.Where(n => n.Name == namespaceName)
+            .ExecuteUpdateAsync(
+                setters =>
+                    setters
+                        .SetProperty(n => n.Description, description)
+                        .SetProperty(n => n.LastUpdatedAt, lastUpdatedAt),
+                cancellationToken
+            );
+        return updated > 0;
+    }
 }

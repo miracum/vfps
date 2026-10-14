@@ -65,7 +65,7 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
             throw new RpcException(
                 new Status(
                     StatusCode.AlreadyExists,
-                    "A namespace with the same name already exists. Namespaces are immutable, for changes please delete and re-create it."
+                    "A namespace with the same name already exists. Apart from their description, namespaces are immutable, for changes please delete and re-create it."
                 ),
                 metadata
             );

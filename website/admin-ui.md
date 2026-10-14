@@ -7,13 +7,14 @@ vfps ships with a web-based admin UI, served at `/ui`, for creating and browsing
 
 ## Namespaces
 
-Create namespaces and browse or delete existing ones.
+Create namespaces and browse or delete existing ones. Admins can also edit an existing namespace's
+description - the only part of a namespace that can change after it was created.
 
 ![Namespaces page](img/ui/ui-namespaces-light.png#only-light)
 ![Namespaces page](img/ui/ui-namespaces-dark.png#only-dark)
 
 A namespace can carry an **original value validation regex**: a pattern every original value must
-match before a pseudonym is generated for it. Since namespaces are immutable, getting that pattern
+match before a pseudonym is generated for it. Since it can't be changed afterwards, getting that pattern
 wrong means deleting and re-creating the namespace, so the create form checks it as it is typed -
 it reports whether the pattern compiles (with the regex parser's own explanation of what is wrong
 when it doesn't), and lets you try a value against it to see whether it would be accepted or

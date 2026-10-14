@@ -454,6 +454,96 @@ public class NamespaceAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task UpdateDescriptionAsync_WithExistingNamespace_ShouldUpdateOnlyDescriptionAndLastUpdatedAt()
+    {
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+        var before = await namespaceRepository.FindAsync(
+            "existingNamespace",
+            CancellationToken.None
+        );
+
+        var updated = await sut.UpdateDescriptionAsync(
+            "existingNamespace",
+            "a new description",
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        updated.Description.Should().Be("a new description");
+        updated.LastUpdatedAt.Should().BeAfter(before!.LastUpdatedAt);
+        updated
+            .Should()
+            .BeEquivalentTo(
+                before,
+                options =>
+                    options
+                        .Excluding(n => n.Description)
+                        .Excluding(n => n.LastUpdatedAt)
+                        .Excluding(n => n.CreatedAt)
+            );
+        updated.CreatedAt.Should().BeCloseTo(before.CreatedAt, TimeSpan.FromMilliseconds(1));
+    }
+
+    [Fact]
+    public async Task UpdateDescriptionAsync_WithNull_ShouldRemoveTheDescription()
+    {
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var updated = await sut.UpdateDescriptionAsync(
+            "existingNamespace",
+            null,
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        updated.Description.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateDescriptionAsync_WithNonExistingNamespace_ShouldThrowNamespaceNotFoundException()
+    {
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
+        var sut = CreateNamespaceAppService(namespaceRepository);
+
+        var act = () =>
+            sut.UpdateDescriptionAsync(
+                "notExisting",
+                "a description",
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<NamespaceNotFoundException>();
+    }
+
+    [Fact]
+    public async Task UpdateDescriptionAsync_WithAuthorizationEnabledAndNonAdminUser_ShouldThrowForbidden()
+    {
+        var namespaceRepository = new NamespaceRepository(ContextFactory);
+        var sut = CreateNamespaceAppService(
+            namespaceRepository,
+            new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] }
+        );
+
+        var act = () =>
+            sut.UpdateDescriptionAsync(
+                "existingNamespace",
+                "should not be stored",
+                UserWithRoles("some-other-role"),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ForbiddenException>();
+        var unchanged = await namespaceRepository.FindAsync(
+            "existingNamespace",
+            CancellationToken.None
+        );
+        unchanged!.Description.Should().Be("existing namespace description");
+    }
+
+    [Fact]
     public async Task DeleteAsync_WithNonExistingNamespace_ShouldThrowNamespaceNotFoundException()
     {
         var namespaceRepository = new NamespaceRepository(ContextFactory);

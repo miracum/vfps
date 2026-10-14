@@ -238,6 +238,37 @@ public class NamespaceAppService(
     }
 
     /// <inheritdoc/>
+    public async Task<Namespace> UpdateDescriptionAsync(
+        string namespaceName,
+        string? description,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        // Gated like CreateAsync and DeleteAsync rather than by a namespace-scoped write grant:
+        // write access is about pseudonyms, while this changes the namespace itself.
+        if (!permissionChecker.IsAdmin(user))
+        {
+            throw new ForbiddenException("Editing a namespace requires admin access.");
+        }
+
+        if (
+            !await namespaceRepository.UpdateDescriptionAsync(
+                namespaceName,
+                description,
+                DateTimeOffset.UtcNow,
+                cancellationToken
+            )
+        )
+        {
+            throw new NamespaceNotFoundException(namespaceName);
+        }
+
+        return await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            ?? throw new NamespaceNotFoundException(namespaceName);
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Namespace>> ListChildrenAsync(
         string namespaceName,
         ClaimsPrincipal user,

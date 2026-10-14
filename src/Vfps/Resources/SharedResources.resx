@@ -740,7 +740,7 @@
     <value>Counting pseudonyms…</value>
   </data>
   <data name="App.Namespaces.CreateDescription" xml:space="preserve">
-    <value>Namespaces are immutable once created - delete and re-create instead of editing.</value>
+    <value>Apart from the description, a namespace cannot be changed once created - delete and re-create it instead.</value>
   </data>
   <data name="App.Namespaces.CreateErrorTitle" xml:space="preserve">
     <value>Could not create namespace</value>
@@ -963,5 +963,20 @@
   </data>
   <data name="App.ServiceAccounts.TokensTitle" xml:space="preserve">
     <value>Tokens</value>
+  </data>
+  <data name="App.Common.Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="App.Namespaces.EditDescriptionAction" xml:space="preserve">
+    <value>Edit description</value>
+  </data>
+  <data name="App.Namespaces.EditDescriptionTitle" xml:space="preserve">
+    <value>Edit the description of '{0}'</value>
+  </data>
+  <data name="App.Namespaces.EditDescriptionDescription" xml:space="preserve">
+    <value>The description is the only part of a namespace that can be changed after it was created. Leave it empty to remove it.</value>
+  </data>
+  <data name="App.Namespaces.EditDescriptionErrorTitle" xml:space="preserve">
+    <value>Could not update the description</value>
   </data>
 </root>

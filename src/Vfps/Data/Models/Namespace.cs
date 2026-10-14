@@ -31,8 +31,8 @@ public class Namespace : TracksCreationAndUpdates
     /// The name of this namespace's parent, if it is a child in a pseudonymization hierarchy -
     /// i.e. its original values are pseudonym values produced by that parent namespace. Null
     /// means this namespace is a root. Set at creation and never changed afterwards, like every
-    /// other field here; that also makes hierarchy cycles impossible, since a namespace can only
-    /// ever point at one that already existed.
+    /// other field here except <see cref="Description"/>; that also makes hierarchy cycles
+    /// impossible, since a namespace can only ever point at one that already existed.
     /// </summary>
     public string? ParentName { get; set; }
 

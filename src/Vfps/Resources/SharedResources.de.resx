@@ -740,7 +740,7 @@
     <value>Pseudonyme werden gezählt…</value>
   </data>
   <data name="App.Namespaces.CreateDescription" xml:space="preserve">
-    <value>Namespaces sind nach dem Erstellen unveränderlich - löschen und neu erstellen statt bearbeiten.</value>
+    <value>Bis auf die Beschreibung lässt sich ein Namespace nach dem Erstellen nicht mehr ändern - stattdessen löschen und neu erstellen.</value>
   </data>
   <data name="App.Namespaces.CreateErrorTitle" xml:space="preserve">
     <value>Namespace konnte nicht erstellt werden</value>
@@ -963,5 +963,20 @@
   </data>
   <data name="App.ServiceAccounts.TokensTitle" xml:space="preserve">
     <value>Token</value>
+  </data>
+  <data name="App.Common.Save" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="App.Namespaces.EditDescriptionAction" xml:space="preserve">
+    <value>Beschreibung bearbeiten</value>
+  </data>
+  <data name="App.Namespaces.EditDescriptionTitle" xml:space="preserve">
+    <value>Beschreibung von '{0}' bearbeiten</value>
+  </data>
+  <data name="App.Namespaces.EditDescriptionDescription" xml:space="preserve">
+    <value>Die Beschreibung ist der einzige Teil eines Namespaces, der sich nach dem Erstellen noch ändern lässt. Leer lassen, um sie zu entfernen.</value>
+  </data>
+  <data name="App.Namespaces.EditDescriptionErrorTitle" xml:space="preserve">
+    <value>Beschreibung konnte nicht aktualisiert werden</value>
   </data>
 </root>

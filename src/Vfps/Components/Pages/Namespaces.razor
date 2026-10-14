@@ -388,6 +388,67 @@
         </BbDialog>
     }
 
+    @* Only rendered once a namespace has been picked, for the same reason as the access dialog. *@
+    @if (_editDescriptionNamespaceName is not null)
+    {
+        <BbDialog Open="_showEditDescriptionDialog" OpenChanged="OnEditDescriptionDialogOpenChanged">
+            <BbDialogContent style="max-width: 36rem;">
+                <BbDialogHeader>
+                    <BbDialogTitle>
+                        @Localizer["App.Namespaces.EditDescriptionTitle", _editDescriptionNamespaceName]
+                    </BbDialogTitle>
+                    <BbDialogDescription>
+                        @Localizer["App.Namespaces.EditDescriptionDescription"]
+                    </BbDialogDescription>
+                </BbDialogHeader>
+
+                @* In here rather than with the page's other alerts, for the same reason as the
+                   create dialog's error: the overlay would hide it. *@
+                @if (_editDescriptionErrorMessage is not null)
+                {
+                    <BbAlert Variant="AlertVariant.Danger">
+                        <BbAlertTitle>@Localizer["App.Namespaces.EditDescriptionErrorTitle"]</BbAlertTitle>
+                        <BbAlertDescription>@_editDescriptionErrorMessage</BbAlertDescription>
+                    </BbAlert>
+                }
+
+                <EditForm
+                    Model="_editDescriptionModel"
+                    FormName="edit-namespace-description"
+                    OnValidSubmit="SaveDescriptionAsync"
+                >
+                    <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4 bb:py-4">
+                        <BbLabel For="editDescription" Class="text-right">@Localizer["App.Common.Description"]</BbLabel>
+                        <div class="col-span-3">
+                            <BbInput
+                                @ref="_editDescriptionInput"
+                                @bind-Value="_editDescriptionModel.Description"
+                                Id="editDescription"
+                            />
+                        </div>
+                    </div>
+                    <BbDialogFooter>
+                        <BbButton
+                            id="cancelEditDescriptionButton"
+                            Type="ButtonType.Button"
+                            Variant="ButtonVariant.Outline"
+                            OnClick="CloseEditDescriptionDialog"
+                        >
+                            @Localizer["App.Common.Cancel"]
+                        </BbButton>
+                        <BbButton
+                            id="saveDescriptionButton"
+                            Type="ButtonType.Submit"
+                            Loading="_isSavingDescription"
+                        >
+                            @Localizer["App.Common.Save"]
+                        </BbButton>
+                    </BbDialogFooter>
+                </EditForm>
+            </BbDialogContent>
+        </BbDialog>
+    }
+
     <BbCard>
         <BbCardHeader>
             <BbCardTitle>@Localizer["App.Namespaces.HierarchyTitle"]</BbCardTitle>
@@ -468,6 +529,17 @@
                                 >
                                     @Localizer["App.Common.Browse"]
                                 </BbButton>
+                                @if (_isAdmin)
+                                {
+                                    <BbButton
+                                        id="editNamespaceDescriptionButton"
+                                        Variant="ButtonVariant.Outline"
+                                        Size="ButtonSize.Small"
+                                        OnClick="() => OpenEditDescriptionDialog(selected)"
+                                    >
+                                        @Localizer["App.Namespaces.EditDescriptionAction"]
+                                    </BbButton>
+                                }
                                 @if (CanConfigureAccess)
                                 {
                                     <BbButton
@@ -541,6 +613,16 @@
     // without its contents disappearing first.
     private string? _accessNamespaceName;
     private bool _showAccessDialog;
+
+    // Same keep-after-close reasoning as the access dialog above. The description is the only
+    // part of a namespace that can be edited after creation, so this is the whole edit form.
+    private string? _editDescriptionNamespaceName;
+    private bool _showEditDescriptionDialog;
+    private EditDescriptionModel _editDescriptionModel = new();
+    private string? _editDescriptionErrorMessage;
+    private bool _isSavingDescription;
+    private BbInput? _editDescriptionInput;
+    private bool _shouldFocusEditDescription;
 
     // The create form is opened from the header button rather than sitting on the page
     // permanently, so the hierarchy is what greets you instead. Focusing the name field on the
@@ -721,6 +803,12 @@
             _shouldFocusCreateName = false;
             await _createNameInput.FocusAsync();
         }
+
+        if (_shouldFocusEditDescription && _editDescriptionInput is not null)
+        {
+            _shouldFocusEditDescription = false;
+            await _editDescriptionInput.FocusAsync();
+        }
     }
 
     private async Task ResolveBrowserTimeZoneAsync()
@@ -878,6 +966,71 @@
 
     // Also reached when the dialog closes itself - the overlay, Escape, or its own close button.
     private void OnAccessDialogOpenChanged(bool open) => _showAccessDialog = open;
+
+    private void OpenEditDescriptionDialog(Namespace forNamespace)
+    {
+        _editDescriptionNamespaceName = forNamespace.Name;
+        _editDescriptionModel = new EditDescriptionModel { Description = forNamespace.Description };
+        _editDescriptionErrorMessage = null;
+        _showEditDescriptionDialog = true;
+        _shouldFocusEditDescription = true;
+    }
+
+    private void CloseEditDescriptionDialog() => OnEditDescriptionDialogOpenChanged(false);
+
+    // Also reached when the dialog closes itself - the overlay, Escape, or its own close button.
+    private void OnEditDescriptionDialogOpenChanged(bool open)
+    {
+        _showEditDescriptionDialog = open;
+        if (!open)
+        {
+            _editDescriptionErrorMessage = null;
+        }
+    }
+
+    private async Task SaveDescriptionAsync()
+    {
+        // Same re-entrancy guard as CreateNamespaceAsync.
+        if (_isSavingDescription || _editDescriptionNamespaceName is null)
+        {
+            return;
+        }
+
+        _isSavingDescription = true;
+        _editDescriptionErrorMessage = null;
+        try
+        {
+            var user = await GetUserAsync();
+
+            // A cleared field removes the description (NULL) rather than storing an empty one -
+            // the same thing a namespace created without one carries.
+            var description = string.IsNullOrWhiteSpace(_editDescriptionModel.Description)
+                ? null
+                : _editDescriptionModel.Description;
+
+            await NamespaceAppService.UpdateDescriptionAsync(
+                _editDescriptionNamespaceName,
+                description,
+                user,
+                CancellationToken.None
+            );
+
+            await ReloadAsync();
+            CloseEditDescriptionDialog();
+        }
+        catch (NamespaceNotFoundException ex)
+        {
+            _editDescriptionErrorMessage = ex.Message;
+        }
+        catch (ForbiddenException ex)
+        {
+            _editDescriptionErrorMessage = ex.Message;
+        }
+        finally
+        {
+            _isSavingDescription = false;
+        }
+    }
 
     private void OnExpandedNamespacesChanged(HashSet<string> expanded) =>
         _expandedNamespaces = expanded;
@@ -1079,5 +1232,10 @@
         public bool AllowsMultiplePseudonyms { get; set; }
         public string? ParentName { get; set; }
         public bool EnsureParentPseudonymExists { get; set; }
+    }
+
+    private sealed class EditDescriptionModel
+    {
+        public string? Description { get; set; }
     }
 }

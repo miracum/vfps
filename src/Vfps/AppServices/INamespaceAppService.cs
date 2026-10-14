@@ -70,6 +70,18 @@ public interface INamespaceAppService
     );
 
     /// <summary>
+    /// Replaces a namespace's description, the one part of a namespace that can change after
+    /// creation. Null removes the description. Requires admin access, like creating and deleting.
+    /// </summary>
+    /// <exception cref="NamespaceNotFoundException">No namespace named <paramref name="namespaceName"/> exists.</exception>
+    Task<Namespace> UpdateDescriptionAsync(
+        string namespaceName,
+        string? description,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Lists the direct children of a namespace - those whose <see cref="Namespace.ParentName"/>
     /// is <paramref name="namespaceName"/>. Non-recursive: callers wanting a full subtree call
     /// this once per level. Requires read access to the parent namespace; the returned children
@@ -99,8 +111,8 @@ public interface INamespaceAppService
 }
 
 /// <summary>
-/// Thrown when creating a namespace whose name already exists. Namespaces are immutable by
-/// design (see the existing gRPC API) - callers must delete and re-create instead.
+/// Thrown when creating a namespace whose name already exists. Apart from its description, a
+/// namespace is immutable by design - callers must delete and re-create instead.
 /// </summary>
 public class NamespaceAlreadyExistsException(string namespaceName)
     : Exception($"A namespace named '{namespaceName}' already exists.")

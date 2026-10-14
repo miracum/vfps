@@ -81,4 +81,24 @@ public class CachingNamespaceRepositoryTests : ServiceTests.ServiceTestBase
         var afterDelete = await sut.FindAsync("existingNamespace", CancellationToken.None);
         afterDelete.Should().BeNull();
     }
+
+    [Fact]
+    public async Task UpdateDescriptionAsync_WithPreviouslyCachedHit_ShouldEvictItSoFindAsyncSeesTheNewDescription()
+    {
+        var sut = CreateSut();
+
+        var beforeUpdate = await sut.FindAsync("existingNamespace", CancellationToken.None);
+        beforeUpdate!.Description.Should().Be("existing namespace description");
+
+        var updated = await sut.UpdateDescriptionAsync(
+            "existingNamespace",
+            "updated description",
+            DateTimeOffset.UtcNow,
+            CancellationToken.None
+        );
+
+        updated.Should().BeTrue();
+        var afterUpdate = await sut.FindAsync("existingNamespace", CancellationToken.None);
+        afterUpdate!.Description.Should().Be("updated description");
+    }
 }

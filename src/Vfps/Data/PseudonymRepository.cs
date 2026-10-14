@@ -46,23 +46,21 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
         ],
     };
 
-    private static readonly Histogram<double> UpsertDuration =
-        Program.Meter.CreateHistogram(
-            "vfps.upsert.duration.seconds",
-            unit: "s",
-            description: "Histogram of the durations for upserting a pseudonym into the backend database.",
-            tags: null,
-            advice: DurationAdvice
-        );
+    private static readonly Histogram<double> UpsertDuration = Program.Meter.CreateHistogram(
+        "vfps.upsert.duration.seconds",
+        unit: "s",
+        description: "Histogram of the durations for upserting a pseudonym into the backend database.",
+        tags: null,
+        advice: DurationAdvice
+    );
 
-    private static readonly Histogram<double> BatchUpsertDuration =
-        Program.Meter.CreateHistogram(
-            "vfps.batch.upsert.duration.seconds",
-            unit: "s",
-            description: "Histogram of the durations for upserting a batch of pseudonyms into the backend database in a single round trip.",
-            tags: null,
-            advice: DurationAdvice
-        );
+    private static readonly Histogram<double> BatchUpsertDuration = Program.Meter.CreateHistogram(
+        "vfps.batch.upsert.duration.seconds",
+        unit: "s",
+        description: "Histogram of the durations for upserting a batch of pseudonyms into the backend database in a single round trip.",
+        tags: null,
+        advice: DurationAdvice
+    );
 
     // we can't yet use FlexLabs.Upsert and avoid manual SQL due to
     // support for returning the upserted entity missing: https://github.com/artiomchi/FlexLabs.Upsert/issues/29

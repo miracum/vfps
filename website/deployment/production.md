@@ -109,9 +109,9 @@ application's, and are easy to miss:
   front if the arithmetic doesn't fit.
 - **Caches are per-replica.** `Pseudonymization__Caching__*` is an in-process `MemoryCache`, so a
   namespace deleted via one replica can still be served from another replica's cache until the
-  entry expires (`Pseudonymization__Caching__AbsoluteExpiration`, one hour by default). Namespaces
-  are immutable once created, so this only affects deletion; shorten the expiration if that window
-  matters to you.
+  entry expires (`Pseudonymization__Caching__AbsoluteExpiration`, one hour by default). Apart from
+  their description, namespaces are immutable once created, so this only affects deletion and a
+  stale description on display; shorten the expiration if that window matters to you.
 - **Give the pod time to drain.** On `SIGTERM` the process stops accepting new work and finishes
   what's in flight, bounded by `ShutdownTimeout`. Kubernetes removes the pod from Service endpoints
   asynchronously, so without a `preStop` delay some requests are still routed to a pod that has
