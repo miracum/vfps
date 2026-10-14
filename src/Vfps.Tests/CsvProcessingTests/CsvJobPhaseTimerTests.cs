@@ -11,12 +11,16 @@ public class CsvJobPhaseTimerTests
 
     /// <summary>
     /// Collects this app's own meter for the duration of the callback. The counter is static (one
-    /// instrument for the whole process, as every other metric in this app is), so the listener
-    /// rather than the instrument is what scopes a test to its own measurements.
+    /// instrument for the whole process, as every other metric in this app is) and a listener sees
+    /// every measurement in the process, including those of CSV job tests running in parallel in
+    /// other classes. Measurements are therefore only kept when recorded on the calling thread:
+    /// <paramref name="act"/> is synchronous and a counter invokes the callback on the thread that
+    /// adds to it, so that is exactly this test's own.
     /// </summary>
     private static List<(string Phase, string Direction, double Value)> Collect(Action act)
     {
         var measurements = new List<(string, string, double)>();
+        var callingThreadId = Environment.CurrentManagedThreadId;
 
         using var listener = new MeterListener();
         listener.InstrumentPublished = (instrument, l) =>
@@ -29,6 +33,11 @@ public class CsvJobPhaseTimerTests
         listener.SetMeasurementEventCallback<double>(
             (_, value, tags, _) =>
             {
+                if (Environment.CurrentManagedThreadId != callingThreadId)
+                {
+                    return;
+                }
+
                 string? phase = null;
                 string? direction = null;
                 foreach (var tag in tags)
