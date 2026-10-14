@@ -70,6 +70,27 @@ public interface INamespaceAppService
     );
 
     /// <summary>
+    /// Replaces a namespace's description and original value validation regex, the only parts of
+    /// a namespace that can change after creation. Null removes either. Requires admin access,
+    /// like creating and deleting.
+    ///
+    /// A changed regex only governs original values new to the namespace: values that already
+    /// have a pseudonym stay resolvable even if they no longer match (see
+    /// <see cref="IPseudonymAppService.ResolveAsync"/>).
+    /// </summary>
+    /// <exception cref="NamespaceNotFoundException">No namespace named <paramref name="namespaceName"/> exists.</exception>
+    /// <exception cref="ArgumentException">
+    /// <paramref name="originalValueValidationRegex"/> is set but not a valid regular expression.
+    /// </exception>
+    Task<Namespace> UpdateAsync(
+        string namespaceName,
+        string? description,
+        string? originalValueValidationRegex,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Lists the direct children of a namespace - those whose <see cref="Namespace.ParentName"/>
     /// is <paramref name="namespaceName"/>. Non-recursive: callers wanting a full subtree call
     /// this once per level. Requires read access to the parent namespace; the returned children
@@ -99,8 +120,9 @@ public interface INamespaceAppService
 }
 
 /// <summary>
-/// Thrown when creating a namespace whose name already exists. Namespaces are immutable by
-/// design (see the existing gRPC API) - callers must delete and re-create instead.
+/// Thrown when creating a namespace whose name already exists. Apart from its description and
+/// validation regex, a namespace is immutable by design - callers must delete and re-create
+/// instead.
 /// </summary>
 public class NamespaceAlreadyExistsException(string namespaceName)
     : Exception($"A namespace named '{namespaceName}' already exists.")

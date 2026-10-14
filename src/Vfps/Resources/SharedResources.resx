@@ -740,7 +740,7 @@
     <value>Counting pseudonyms…</value>
   </data>
   <data name="App.Namespaces.CreateDescription" xml:space="preserve">
-    <value>Namespaces are immutable once created - delete and re-create instead of editing.</value>
+    <value>Apart from the description and the validation regex, a namespace cannot be changed once created - delete and re-create it instead.</value>
   </data>
   <data name="App.Namespaces.CreateErrorTitle" xml:space="preserve">
     <value>Could not create namespace</value>
@@ -963,5 +963,20 @@
   </data>
   <data name="App.ServiceAccounts.TokensTitle" xml:space="preserve">
     <value>Tokens</value>
+  </data>
+  <data name="App.Common.Save" xml:space="preserve">
+    <value>Save</value>
+  </data>
+  <data name="App.Namespaces.EditAction" xml:space="preserve">
+    <value>Edit</value>
+  </data>
+  <data name="App.Namespaces.EditTitle" xml:space="preserve">
+    <value>Edit '{0}'</value>
+  </data>
+  <data name="App.Namespaces.EditDescription" xml:space="preserve">
+    <value>Only the description and the original value validation regex can be changed after a namespace was created. Leave a field empty to remove it. A changed pattern only applies to original values new to the namespace: values that already have a pseudonym keep resolving to it.</value>
+  </data>
+  <data name="App.Namespaces.EditErrorTitle" xml:space="preserve">
+    <value>Could not update the namespace</value>
   </data>
 </root>

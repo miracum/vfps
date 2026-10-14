@@ -1,7 +1,6 @@
 @page "/namespaces"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
-@using System.Text.RegularExpressions
 @using Microsoft.Extensions.Options
 @using Vfps.Config
 @using Vfps.Data.Models
@@ -208,90 +207,11 @@
                         <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
                             <BbLabel For="validationRegex" Class="text-right bb:pt-2">@Localizer["App.Namespaces.ValidationRegex"]</BbLabel>
                             <div class="col-span-3">
-                                @* Immediate rather than on-blur: the whole point of the checker
-                                   below is to react while the pattern is being typed. Each
-                                   keystroke is a circuit round trip, but only to compile a
-                                   pattern and match one short sample against it - see
-                                   OnValidationRegexChanged. *@
-                                <BbInput
+                                <ValidationRegexInput
                                     @bind-Value="_newNamespace.OriginalValueValidationRegex"
-                                    @bind-Value:after="OnValidationRegexChanged"
-                                    UpdateTiming="UpdateTiming.Immediate"
+                                    @bind-Sample="_validationRegexSample"
                                     Id="validationRegex"
                                 />
-                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
-                                    @Localizer["App.Namespaces.ValidationRegexHelp"]
-                                </p>
-
-                                @* Nothing to say about an empty field: no pattern means no
-                                   validation, which is the default and not a mistake. *@
-                                @if (!string.IsNullOrEmpty(_newNamespace.OriginalValueValidationRegex))
-                                {
-                                    @if (_validationRegexError is not null)
-                                    {
-                                        <p
-                                            id="validationRegexError"
-                                            class="bb:mt-2 bb:flex bb:items-start bb:gap-1 bb:text-xs bb:text-destructive"
-                                        >
-                                            <LucideIcon Name="x" Size="14" Class="bb:shrink-0" />
-                                            @* The regex parser's own message, which names the
-                                               offending construct and its offset - far more use
-                                               than a generic "invalid pattern". Not localized:
-                                               it comes from the .NET runtime. *@
-                                            <span class="bb:font-mono">@_validationRegexError</span>
-                                        </p>
-                                    }
-                                    else
-                                    {
-                                        <div class="bb:mt-2 bb:space-y-2">
-                                            <p
-                                                id="validationRegexValid"
-                                                class="bb:flex bb:items-center bb:gap-1 bb:text-xs regex-check-ok"
-                                            >
-                                                <LucideIcon Name="check" Size="14" Class="bb:shrink-0" />
-                                                @Localizer["App.Namespaces.ValidationRegexValid"]
-                                            </p>
-                                            @* A pattern that compiles still isn't necessarily the
-                                               one that was meant - most often because it is
-                                               unanchored and so matches a substring. Trying a
-                                               real value against it is the only way to see that
-                                               before the namespace exists, and this runs the
-                                               exact check the server will (see
-                                               OriginalValueValidation.IsMatch). *@
-                                            @* AriaLabel because this input has no visible label:
-                                               the placeholder carries it, and that disappears the
-                                               moment anything is typed. The comment sits out here
-                                               rather than between the attributes below - a Razor
-                                               comment inside a component's attribute list is
-                                               passed through as a literal attribute name and
-                                               takes the whole circuit down when the browser
-                                               rejects it. *@
-                                            <div class="bb:flex bb:flex-wrap bb:items-center bb:gap-2">
-                                                <BbInput
-                                                    @bind-Value="_validationRegexSample"
-                                                    @bind-Value:after="UpdateValidationRegexSampleMatch"
-                                                    UpdateTiming="UpdateTiming.Immediate"
-                                                    Id="validationRegexSample"
-                                                    Class="bb:w-64"
-                                                    Placeholder="@Localizer["App.Namespaces.ValidationRegexSamplePlaceholder"]"
-                                                    AriaLabel="@Localizer["App.Namespaces.ValidationRegexSamplePlaceholder"]"
-                                                />
-                                                @if (_validationRegexSampleMatches is { } matches)
-                                                {
-                                                    <span
-                                                        id="validationRegexSampleResult"
-                                                        class="@(matches ? "bb:flex bb:items-center bb:gap-1 bb:text-xs regex-check-ok" : "bb:flex bb:items-center bb:gap-1 bb:text-xs bb:text-destructive")"
-                                                    >
-                                                        <LucideIcon Name="@(matches ? "check" : "x")" Size="14" Class="bb:shrink-0" />
-                                                        @(matches
-                                                            ? Localizer["App.Namespaces.ValidationRegexSampleAccepted"].Value
-                                                            : Localizer["App.Namespaces.ValidationRegexSampleRejected"].Value)
-                                                    </span>
-                                                }
-                                            </div>
-                                        </div>
-                                    }
-                                }
                             </div>
                         </div>
                         <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
@@ -388,6 +308,81 @@
         </BbDialog>
     }
 
+    @* Only rendered once a namespace has been picked, for the same reason as the access dialog.
+       Wider than that one would need for the description alone: the regex checker's sample box
+       sits beside its verdict. *@
+    @if (_editNamespaceName is not null)
+    {
+        <BbDialog Open="_showEditDialog" OpenChanged="OnEditDialogOpenChanged">
+            <BbDialogContent style="max-width: 42rem;">
+                <BbDialogHeader>
+                    <BbDialogTitle>
+                        @Localizer["App.Namespaces.EditTitle", _editNamespaceName]
+                    </BbDialogTitle>
+                    <BbDialogDescription>
+                        @Localizer["App.Namespaces.EditDescription"]
+                    </BbDialogDescription>
+                </BbDialogHeader>
+
+                @* In here rather than with the page's other alerts, for the same reason as the
+                   create dialog's error: the overlay would hide it. *@
+                @if (_editErrorMessage is not null)
+                {
+                    <BbAlert Variant="AlertVariant.Danger">
+                        <BbAlertTitle>@Localizer["App.Namespaces.EditErrorTitle"]</BbAlertTitle>
+                        <BbAlertDescription>@_editErrorMessage</BbAlertDescription>
+                    </BbAlert>
+                }
+
+                <EditForm
+                    Model="_editModel"
+                    FormName="edit-namespace"
+                    OnValidSubmit="SaveEditAsync"
+                >
+                    <div class="bb:grid bb:gap-4 bb:py-4">
+                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
+                            <BbLabel For="editDescription" Class="text-right">@Localizer["App.Common.Description"]</BbLabel>
+                            <div class="col-span-3">
+                                <BbInput
+                                    @ref="_editDescriptionInput"
+                                    @bind-Value="_editModel.Description"
+                                    Id="editDescription"
+                                />
+                            </div>
+                        </div>
+                        <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
+                            <BbLabel For="editValidationRegex" Class="text-right bb:pt-2">@Localizer["App.Namespaces.ValidationRegex"]</BbLabel>
+                            <div class="col-span-3">
+                                <ValidationRegexInput
+                                    @bind-Value="_editModel.OriginalValueValidationRegex"
+                                    @bind-Sample="_editValidationRegexSample"
+                                    Id="editValidationRegex"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <BbDialogFooter>
+                        <BbButton
+                            id="cancelEditNamespaceButton"
+                            Type="ButtonType.Button"
+                            Variant="ButtonVariant.Outline"
+                            OnClick="CloseEditDialog"
+                        >
+                            @Localizer["App.Common.Cancel"]
+                        </BbButton>
+                        <BbButton
+                            id="saveNamespaceButton"
+                            Type="ButtonType.Submit"
+                            Loading="_isSavingEdit"
+                        >
+                            @Localizer["App.Common.Save"]
+                        </BbButton>
+                    </BbDialogFooter>
+                </EditForm>
+            </BbDialogContent>
+        </BbDialog>
+    }
+
     <BbCard>
         <BbCardHeader>
             <BbCardTitle>@Localizer["App.Namespaces.HierarchyTitle"]</BbCardTitle>
@@ -468,6 +463,17 @@
                                 >
                                     @Localizer["App.Common.Browse"]
                                 </BbButton>
+                                @if (_isAdmin)
+                                {
+                                    <BbButton
+                                        id="editNamespaceButton"
+                                        Variant="ButtonVariant.Outline"
+                                        Size="ButtonSize.Small"
+                                        OnClick="() => OpenEditDialog(selected)"
+                                    >
+                                        @Localizer["App.Namespaces.EditAction"]
+                                    </BbButton>
+                                }
                                 @if (CanConfigureAccess)
                                 {
                                     <BbButton
@@ -514,15 +520,10 @@
         .FullRandomBase62Encoded.ToString();
     private string? _errorMessage;
 
-    // Live feedback for the validation-regex field. Recomputed only when the pattern or the
-    // sample value actually changes, rather than from a computed property the renderer would
-    // re-evaluate on every render - checking means compiling the pattern and running it, which is
-    // cheap but not free, and neither input changes without going through the handlers below.
-    private string? _validationRegexError;
-    private string _validationRegexSample = string.Empty;
-
-    // Null when there is nothing to report: no usable pattern, or no sample typed yet.
-    private bool? _validationRegexSampleMatches;
+    // The value tried against the create form's validation regex. Kept here rather than in
+    // ValidationRegexInput, which is torn down along with the dialog's content when it closes -
+    // see that component for why the sample has to survive that.
+    private string? _validationRegexSample;
 
     private string? _deleteErrorMessage;
     private bool _isCreating;
@@ -541,6 +542,19 @@
     // without its contents disappearing first.
     private string? _accessNamespaceName;
     private bool _showAccessDialog;
+
+    // Same keep-after-close reasoning as the access dialog above. The description and the
+    // validation regex are the only parts of a namespace that can be edited after creation, so
+    // this is the whole edit form. Unlike the create form, nothing typed here is kept once the
+    // dialog closes: reopening starts again from what is stored.
+    private string? _editNamespaceName;
+    private bool _showEditDialog;
+    private EditNamespaceModel _editModel = new();
+    private string? _editValidationRegexSample;
+    private string? _editErrorMessage;
+    private bool _isSavingEdit;
+    private BbInput? _editDescriptionInput;
+    private bool _shouldFocusEditDescription;
 
     // The create form is opened from the header button rather than sitting on the page
     // permanently, so the hierarchy is what greets you instead. Focusing the name field on the
@@ -721,6 +735,12 @@
             _shouldFocusCreateName = false;
             await _createNameInput.FocusAsync();
         }
+
+        if (_shouldFocusEditDescription && _editDescriptionInput is not null)
+        {
+            _shouldFocusEditDescription = false;
+            await _editDescriptionInput.FocusAsync();
+        }
     }
 
     private async Task ResolveBrowserTimeZoneAsync()
@@ -753,16 +773,14 @@
         _shouldFocusCreateName = open;
 
         // The form deliberately keeps what was typed when the dialog is dismissed - see the
-        // duplicate-name flow, which relies on it - so the checker is recomputed from whatever
-        // the pattern field currently holds rather than blanked. Blanking would leave a retained
-        // pattern sitting there with no verdict beside it, looking unchecked. A successful create
-        // blanks the model before closing, which is the case the sample is dropped for.
+        // duplicate-name flow, which relies on it - and the checker recomputes its verdict from
+        // whatever the pattern field holds, so a retained pattern reopens with its verdict beside
+        // it. A successful create blanks the model before closing, which is the case the sample
+        // is dropped for.
         if (string.IsNullOrEmpty(_newNamespace.OriginalValueValidationRegex))
         {
-            _validationRegexSample = string.Empty;
+            _validationRegexSample = null;
         }
-
-        OnValidationRegexChanged();
 
         if (!open)
         {
@@ -771,52 +789,6 @@
     }
 
     private void CloseCreateForm() => OnCreateDialogOpenChanged(false);
-
-    /// <summary>
-    /// Runs on every keystroke in the validation-regex field. Both halves of the verdict are
-    /// deliberately the server's own (see <see cref="OriginalValueValidation"/>) rather than a
-    /// browser-side check: JavaScript's regex flavour is not .NET's, so a pattern accepted here
-    /// but rejected on submit - or, far worse, one that matches different values in each - would
-    /// be exactly the kind of thing this field is meant to rule out.
-    /// </summary>
-    private void OnValidationRegexChanged()
-    {
-        _validationRegexError = OriginalValueValidation.DescribePatternError(
-            _newNamespace.OriginalValueValidationRegex
-        );
-        UpdateValidationRegexSampleMatch();
-    }
-
-    private void UpdateValidationRegexSampleMatch()
-    {
-        var pattern = _newNamespace.OriginalValueValidationRegex;
-        if (
-            _validationRegexError is not null
-            || string.IsNullOrEmpty(pattern)
-            || _validationRegexSample.Length == 0
-        )
-        {
-            _validationRegexSampleMatches = null;
-            return;
-        }
-
-        try
-        {
-            _validationRegexSampleMatches = OriginalValueValidation.IsMatch(
-                pattern,
-                _validationRegexSample
-            );
-        }
-        catch (RegexMatchTimeoutException)
-        {
-            // A pattern can compile fine and still backtrack catastrophically on a particular
-            // input. That's worth surfacing as loudly as a syntax error: the same timeout applies
-            // to every pseudonym created in the namespace afterwards, where it would fail the
-            // caller's request rather than merely this box.
-            _validationRegexSampleMatches = null;
-            _validationRegexError = Localizer["App.Namespaces.ValidationRegexTimeout"];
-        }
-    }
 
     private async Task OnHierarchySelectionChanged(string? selectedName)
     {
@@ -878,6 +850,79 @@
 
     // Also reached when the dialog closes itself - the overlay, Escape, or its own close button.
     private void OnAccessDialogOpenChanged(bool open) => _showAccessDialog = open;
+
+    private void OpenEditDialog(Namespace forNamespace)
+    {
+        _editNamespaceName = forNamespace.Name;
+        _editModel = new EditNamespaceModel
+        {
+            Description = forNamespace.Description,
+            OriginalValueValidationRegex = forNamespace.OriginalValueValidationRegex,
+        };
+        _editValidationRegexSample = null;
+        _editErrorMessage = null;
+        _showEditDialog = true;
+        _shouldFocusEditDescription = true;
+    }
+
+    private void CloseEditDialog() => OnEditDialogOpenChanged(false);
+
+    // Also reached when the dialog closes itself - the overlay, Escape, or its own close button.
+    private void OnEditDialogOpenChanged(bool open)
+    {
+        _showEditDialog = open;
+        if (!open)
+        {
+            _editErrorMessage = null;
+        }
+    }
+
+    private async Task SaveEditAsync()
+    {
+        // Same re-entrancy guard as CreateNamespaceAsync.
+        if (_isSavingEdit || _editNamespaceName is null)
+        {
+            return;
+        }
+
+        _isSavingEdit = true;
+        _editErrorMessage = null;
+        try
+        {
+            var user = await GetUserAsync();
+
+            // A cleared field removes the value (NULL) rather than storing an empty one - the
+            // same thing a namespace created without it carries.
+            await NamespaceAppService.UpdateAsync(
+                _editNamespaceName,
+                NullIfBlank(_editModel.Description),
+                NullIfBlank(_editModel.OriginalValueValidationRegex),
+                user,
+                CancellationToken.None
+            );
+
+            await ReloadAsync();
+            CloseEditDialog();
+        }
+        catch (NamespaceNotFoundException ex)
+        {
+            _editErrorMessage = ex.Message;
+        }
+        catch (ArgumentException ex)
+        {
+            // An unusable pattern. The checker beside the field already says so as it is typed,
+            // so this is only reached by saving without looking.
+            _editErrorMessage = ex.Message;
+        }
+        catch (ForbiddenException ex)
+        {
+            _editErrorMessage = ex.Message;
+        }
+        finally
+        {
+            _isSavingEdit = false;
+        }
+    }
 
     private void OnExpandedNamespacesChanged(HashSet<string> expanded) =>
         _expandedNamespaces = expanded;
@@ -1079,5 +1124,14 @@
         public bool AllowsMultiplePseudonyms { get; set; }
         public string? ParentName { get; set; }
         public bool EnsureParentPseudonymExists { get; set; }
+    }
+
+    private static string? NullIfBlank(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value;
+
+    private sealed class EditNamespaceModel
+    {
+        public string? Description { get; set; }
+        public string? OriginalValueValidationRegex { get; set; }
     }
 }

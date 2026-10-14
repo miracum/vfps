@@ -107,6 +107,76 @@ public class PseudonymAppServiceTests : ServiceTestBase
         await act.Should().ThrowAsync<OriginalValueValidationException>();
     }
 
+    // The validation regex can be edited after a namespace was created. A value stored under the
+    // earlier pattern must stay reachable: "existingNamespace" holds "an original value" (see
+    // ServiceTestBase), which a digits-only pattern added afterwards would reject.
+    private static Data.Models.Namespace ExistingNamespaceWithTightenedRegex() =>
+        new()
+        {
+            Name = "existingNamespace",
+            PseudonymLength = 32,
+            PseudonymGenerationMethod = Protos.PseudonymGenerationMethod.Unspecified,
+            OriginalValueValidationRegex = "^[0-9]+$",
+        };
+
+    [Fact]
+    public async Task CreateTrustedAsync_WithAStoredValueNoLongerMatchingAnEditedRegex_ShouldReturnTheStoredPseudonym()
+    {
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(ContextFactory),
+            new PseudonymRepository(ContextFactory)
+        );
+
+        var created = await sut.CreateTrustedAsync(
+            ExistingNamespaceWithTightenedRegex(),
+            "an original value",
+            1,
+            CancellationToken.None
+        );
+
+        created.Should().ContainSingle().Which.PseudonymValue.Should().Be("existingPseudonym");
+    }
+
+    [Fact]
+    public async Task CreateTrustedBatchAsync_WithAStoredValueNoLongerMatchingAnEditedRegex_ShouldReturnTheStoredPseudonym()
+    {
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(ContextFactory),
+            new PseudonymRepository(ContextFactory)
+        );
+        var @namespace = ExistingNamespaceWithTightenedRegex();
+
+        var created = await sut.CreateTrustedBatchAsync(
+            [(@namespace, "an original value"), (@namespace, "12345")],
+            CancellationToken.None
+        );
+
+        created[("existingNamespace", "an original value")]
+            .PseudonymValue.Should()
+            .Be("existingPseudonym");
+        created.Should().ContainKey(("existingNamespace", "12345"));
+    }
+
+    [Fact]
+    public async Task CreateTrustedBatchAsync_WithAStoredAndANewValueNotMatchingAnEditedRegex_ShouldThrowAndStoreNothing()
+    {
+        var sut = CreatePseudonymAppService(
+            new NamespaceRepository(ContextFactory),
+            new PseudonymRepository(ContextFactory)
+        );
+        var @namespace = ExistingNamespaceWithTightenedRegex();
+        var countBefore = InMemoryPseudonymContext.Pseudonyms.Count();
+
+        var act = () =>
+            sut.CreateTrustedBatchAsync(
+                [(@namespace, "an original value"), (@namespace, "not-a-number")],
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<OriginalValueValidationException>();
+        InMemoryPseudonymContext.Pseudonyms.Count().Should().Be(countBefore);
+    }
+
     // "existingNamespace" already contains the pseudonym value "existingPseudonym" (see
     // ServiceTestBase) - that's the parent value a child namespace chains from here. The row has
     // to actually exist, since pseudonyms.namespace_name is a foreign key; the returned instance
@@ -1314,6 +1384,24 @@ public class PseudonymAppServiceTests : ServiceTestBase
 
         results[0].Outcome.Should().Be(PseudonymImportOutcome.InvalidOriginalValue);
         results[1].Outcome.Should().Be(PseudonymImportOutcome.Imported);
+    }
+
+    [Fact]
+    public async Task ImportTrustedBatchAsync_WithAStoredValueNoLongerMatchingAnEditedRegex_ShouldOnlyRefuseNewValues()
+    {
+        var sut = CreateImportSut();
+
+        var results = await sut.ImportTrustedBatchAsync(
+            ExistingNamespaceWithTightenedRegex(),
+            [
+                new PseudonymImportEntry("an original value", "existingPseudonym"),
+                new PseudonymImportEntry("not-a-number", "regex-psn-3"),
+            ],
+            CancellationToken.None
+        );
+
+        results[0].Outcome.Should().Be(PseudonymImportOutcome.AlreadyPresent);
+        results[1].Outcome.Should().Be(PseudonymImportOutcome.InvalidOriginalValue);
     }
 
     [Fact]

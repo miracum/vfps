@@ -39,7 +39,7 @@ public interface IPseudonymAppService
     /// </exception>
     /// <exception cref="OriginalValueValidationException">
     /// <paramref name="originalValue"/> does not match the namespace's
-    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
+    /// <see cref="Namespace.OriginalValueValidationRegex"/> and has no pseudonym stored yet.
     /// </exception>
     Task<IReadOnlyList<Pseudonym>> CreateAsync(
         string namespaceName,
@@ -70,7 +70,7 @@ public interface IPseudonymAppService
     /// </exception>
     /// <exception cref="OriginalValueValidationException">
     /// <paramref name="originalValue"/> does not match the namespace's
-    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
+    /// <see cref="Namespace.OriginalValueValidationRegex"/> and has no pseudonym stored yet.
     /// </exception>
     /// <exception cref="ParentPseudonymNotFoundException">
     /// The namespace validates against its parent and <paramref name="originalValue"/> isn't a
@@ -101,10 +101,11 @@ public interface IPseudonymAppService
     /// it an existence oracle over the namespace's original values ("was this subject ever in this
     /// cohort?"), which is why it is gated on write rather than on read access.
     ///
-    /// <paramref name="originalValue"/> is validated against the namespace's
-    /// <see cref="Namespace.OriginalValueValidationRegex"/> before the lookup, so an invalid value
-    /// is rejected identically whether or not a pseudonym happens to exist for it - the same
-    /// reason <see cref="CreateAsync"/> validates ahead of its own grow-to-N short circuit.
+    /// A value with nothing stored is validated against the namespace's
+    /// <see cref="Namespace.OriginalValueValidationRegex"/>, so one that could never be stored is
+    /// rejected as invalid rather than reported as absent. A stored value is returned even if it
+    /// no longer matches: the pattern can be edited after creation, and only governs values new
+    /// to the namespace.
     /// </summary>
     /// <returns>
     /// Every pseudonym stored for <paramref name="originalValue"/>, ordered by sequence number -
@@ -116,7 +117,8 @@ public interface IPseudonymAppService
     /// <paramref name="user"/> has no write access to it.
     /// </exception>
     /// <exception cref="OriginalValueValidationException">
-    /// <paramref name="originalValue"/> does not match the namespace's validation pattern.
+    /// <paramref name="originalValue"/> does not match the namespace's validation pattern and has
+    /// no pseudonym stored.
     /// </exception>
     Task<IReadOnlyList<Pseudonym>> ResolveAsync(
         string namespaceName,
@@ -164,7 +166,7 @@ public interface IPseudonymAppService
     /// </exception>
     /// <exception cref="OriginalValueValidationException">
     /// <paramref name="originalValue"/> does not match the namespace's
-    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
+    /// <see cref="Namespace.OriginalValueValidationRegex"/> and has no pseudonym stored yet.
     /// </exception>
     Task<IReadOnlyList<Pseudonym>> CreateTrustedAsync(
         Namespace @namespace,
@@ -191,7 +193,7 @@ public interface IPseudonymAppService
     /// <exception cref="ArgumentException">Any request's original value is blank.</exception>
     /// <exception cref="OriginalValueValidationException">
     /// Any request's original value does not match its namespace's
-    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
+    /// <see cref="Namespace.OriginalValueValidationRegex"/> and has no pseudonym stored yet.
     /// </exception>
     Task<
         IReadOnlyDictionary<(string Namespace, string OriginalValue), Pseudonym>
@@ -345,7 +347,7 @@ public enum PseudonymImportOutcome
 
     /// <summary>
     /// The original value doesn't match the namespace's
-    /// <see cref="Namespace.OriginalValueValidationRegex"/>.
+    /// <see cref="Namespace.OriginalValueValidationRegex"/> and isn't stored in it yet.
     /// </summary>
     InvalidOriginalValue,
 

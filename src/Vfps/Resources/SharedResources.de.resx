@@ -740,7 +740,7 @@
     <value>Pseudonyme werden gezählt…</value>
   </data>
   <data name="App.Namespaces.CreateDescription" xml:space="preserve">
-    <value>Namespaces sind nach dem Erstellen unveränderlich - löschen und neu erstellen statt bearbeiten.</value>
+    <value>Bis auf die Beschreibung und den regulären Ausdruck zur Validierung lässt sich ein Namespace nach dem Erstellen nicht mehr ändern - stattdessen löschen und neu erstellen.</value>
   </data>
   <data name="App.Namespaces.CreateErrorTitle" xml:space="preserve">
     <value>Namespace konnte nicht erstellt werden</value>
@@ -963,5 +963,20 @@
   </data>
   <data name="App.ServiceAccounts.TokensTitle" xml:space="preserve">
     <value>Token</value>
+  </data>
+  <data name="App.Common.Save" xml:space="preserve">
+    <value>Speichern</value>
+  </data>
+  <data name="App.Namespaces.EditAction" xml:space="preserve">
+    <value>Bearbeiten</value>
+  </data>
+  <data name="App.Namespaces.EditTitle" xml:space="preserve">
+    <value>'{0}' bearbeiten</value>
+  </data>
+  <data name="App.Namespaces.EditDescription" xml:space="preserve">
+    <value>Nach dem Erstellen lassen sich nur noch die Beschreibung und der reguläre Ausdruck zur Validierung der Ursprungswerte ändern. Ein leeres Feld entfernt den Wert. Ein geänderter Ausdruck gilt nur für Ursprungswerte, die neu in den Namespace kommen: Werte, die bereits ein Pseudonym haben, lassen sich weiterhin auflösen.</value>
+  </data>
+  <data name="App.Namespaces.EditErrorTitle" xml:space="preserve">
+    <value>Namespace konnte nicht aktualisiert werden</value>
   </data>
 </root>

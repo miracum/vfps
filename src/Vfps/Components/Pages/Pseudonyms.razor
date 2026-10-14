@@ -706,7 +706,7 @@
         }
         catch (MultiplePseudonymsNotAllowedException ex)
         {
-            // Shouldn't happen in practice - namespaces are immutable once created, so
+            // Shouldn't happen in practice - a namespace's settings can't change once created, so
             // _allowsMultiplePseudonyms (fetched once in OnInitializedAsync) can't have gone
             // stale relative to this namespace's actual setting - but the count input is the
             // only thing gating this, so it's still handled rather than left to crash the page.

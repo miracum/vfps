@@ -2,8 +2,13 @@
 
 A namespace is an independent mapping between original values and their pseudonyms. Each one
 fixes, at creation, how its pseudonyms are generated: the generation method, the pseudonym length,
-an optional prefix and suffix, and an optional regular expression every original value has to
-match. Namespaces are immutable once created.
+and an optional prefix and suffix. None of that can change once the namespace is created.
+
+A namespace can also carry an optional regular expression every original value has to match before
+a pseudonym is generated for it. Unlike the rest, the pattern can be edited afterwards from the
+admin UI, along with the namespace's description. A changed pattern only applies to original values
+that are new to the namespace: a value that already has a pseudonym keeps resolving to it, and
+creating it again returns the stored pseudonym, even if the value no longer matches.
 
 ## Pseudonym generation methods
 
