@@ -238,9 +238,10 @@ public class NamespaceAppService(
     }
 
     /// <inheritdoc/>
-    public async Task<Namespace> UpdateDescriptionAsync(
+    public async Task<Namespace> UpdateAsync(
         string namespaceName,
         string? description,
+        string? originalValueValidationRegex,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
     )
@@ -252,10 +253,24 @@ public class NamespaceAppService(
             throw new ForbiddenException("Editing a namespace requires admin access.");
         }
 
+        // The same check as CreateAsync's, for the same reason.
+        var patternError = OriginalValueValidation.DescribePatternError(
+            originalValueValidationRegex
+        );
+        if (patternError is not null)
+        {
+            throw new ArgumentException(
+                $"The original value validation regex '{originalValueValidationRegex}' "
+                    + $"is not a valid regular expression: {patternError}",
+                nameof(originalValueValidationRegex)
+            );
+        }
+
         if (
-            !await namespaceRepository.UpdateDescriptionAsync(
+            !await namespaceRepository.UpdateAsync(
                 namespaceName,
                 description,
+                originalValueValidationRegex,
                 DateTimeOffset.UtcNow,
                 cancellationToken
             )

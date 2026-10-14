@@ -138,9 +138,9 @@ public class PseudonymResolveTests : ServiceTestBase
     [Fact]
     public async Task ResolveAsync_WithNonMatchingValidationRegex_ShouldThrowRatherThanReportAbsent()
     {
-        // A value the namespace could never have stored is rejected as invalid, not reported as
-        // merely absent - the same ordering CreateAsync uses, so the two answer identically on a
-        // value neither of them would accept.
+        // A value the namespace could not store as things stand is rejected as invalid, not
+        // reported as merely absent - so Resolve and Create answer identically on a value neither
+        // of them would accept.
         var @namespace = InMemoryPseudonymContext.Namespaces.Single(n =>
             n.Name == "emptyNamespace"
         );
@@ -225,5 +225,30 @@ public class PseudonymResolveTests : ServiceTestBase
         var resolved = await sut.ResolveTrustedBatchAsync([], CancellationToken.None);
 
         resolved.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task ResolveAsync_WithAStoredValueNoLongerMatchingAnEditedRegex_ShouldStillResolveIt()
+    {
+        // The pattern can be edited after the namespace was created; it only governs values new
+        // to the namespace, so one stored under the earlier pattern stays resolvable.
+        var @namespace = InMemoryPseudonymContext.Namespaces.Single(n =>
+            n.Name == "existingNamespace"
+        );
+        @namespace.OriginalValueValidationRegex = "^[0-9]+$";
+        InMemoryPseudonymContext.Namespaces.Update(@namespace);
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+
+        var sut = CreateSut();
+
+        var resolved = await sut.ResolveAsync(
+            "existingNamespace",
+            "an original value",
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        resolved.Should().ContainSingle().Which.PseudonymValue.Should().Be("existingPseudonym");
     }
 }

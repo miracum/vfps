@@ -60,7 +60,9 @@ message Namespace {
   // a suffix to append to each generated pseudonym
   optional string pseudonym_suffix = 7;
   // an optional regular expression used to validate an original value before a pseudonym is
-  // generated for it. If set, values that don't match are rejected with a client error.
+  // generated for it. If set, values that don't match are rejected with a client error. Can be
+  // changed after creation (from the admin UI); a changed pattern only applies to original values
+  // new to the namespace - values that already have a pseudonym keep resolving to it.
   optional string original_value_validation_regex = 8;
   // when true, a single pseudonym Create call for this namespace may store more than one
   // distinct pseudonym for the same original value.

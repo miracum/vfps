@@ -1,0 +1,164 @@
+@using System.Text.RegularExpressions
+
+@*
+    The original value validation regex field together with its live checker: whether the pattern
+    compiles, and whether a sample value would be accepted. Shared by the namespace create and
+    edit dialogs. The element ids are all derived from Id, so "validationRegex" yields
+    #validationRegex, #validationRegexError, #validationRegexValid, #validationRegexSample and
+    #validationRegexSampleResult.
+
+    The sample is a parameter rather than state of its own: the create dialog keeps what was typed
+    when it is dismissed, and its content - this component included - is torn down while it is
+    closed, so the sample has to live with the page for the verdict to survive reopening it.
+*@
+
+@* Immediate rather than on-blur: the whole point of the checker below is to react while the
+   pattern is being typed. Each keystroke is a circuit round trip, but only to compile a pattern
+   and match one short sample against it - see Recheck. *@
+<BbInput
+    Value="@Value"
+    ValueChanged="OnValueChangedAsync"
+    UpdateTiming="UpdateTiming.Immediate"
+    Id="@Id"
+/>
+<p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
+    @Localizer["App.Namespaces.ValidationRegexHelp"]
+</p>
+
+@* Nothing to say about an empty field: no pattern means no validation, which is the default and
+   not a mistake. *@
+@if (!string.IsNullOrEmpty(Value))
+{
+    @if (_error is not null)
+    {
+        <p
+            id="@($"{Id}Error")"
+            class="bb:mt-2 bb:flex bb:items-start bb:gap-1 bb:text-xs bb:text-destructive"
+        >
+            <LucideIcon Name="x" Size="14" Class="bb:shrink-0" />
+            @* The regex parser's own message, which names the offending construct and its offset -
+               far more use than a generic "invalid pattern". Not localized: it comes from the .NET
+               runtime. *@
+            <span class="bb:font-mono">@_error</span>
+        </p>
+    }
+    else
+    {
+        <div class="bb:mt-2 bb:space-y-2">
+            <p
+                id="@($"{Id}Valid")"
+                class="bb:flex bb:items-center bb:gap-1 bb:text-xs regex-check-ok"
+            >
+                <LucideIcon Name="check" Size="14" Class="bb:shrink-0" />
+                @Localizer["App.Namespaces.ValidationRegexValid"]
+            </p>
+            @* A pattern that compiles still isn't necessarily the one that was meant - most often
+               because it is unanchored and so matches a substring. Trying a real value against it
+               is the only way to see that before it is saved, and this runs the exact check the
+               server will (see OriginalValueValidation.IsMatch). *@
+            @* AriaLabel because this input has no visible label: the placeholder carries it, and
+               that disappears the moment anything is typed. The comment sits out here rather than
+               between the attributes below - a Razor comment inside a component's attribute list
+               is passed through as a literal attribute name and takes the whole circuit down when
+               the browser rejects it. *@
+            <div class="bb:flex bb:flex-wrap bb:items-center bb:gap-2">
+                <BbInput
+                    Value="@Sample"
+                    ValueChanged="OnSampleChangedAsync"
+                    UpdateTiming="UpdateTiming.Immediate"
+                    Id="@($"{Id}Sample")"
+                    Class="bb:w-64"
+                    Placeholder="@Localizer["App.Namespaces.ValidationRegexSamplePlaceholder"]"
+                    AriaLabel="@Localizer["App.Namespaces.ValidationRegexSamplePlaceholder"]"
+                />
+                @if (_sampleMatches is { } matches)
+                {
+                    <span
+                        id="@($"{Id}SampleResult")"
+                        class="@(matches ? "bb:flex bb:items-center bb:gap-1 bb:text-xs regex-check-ok" : "bb:flex bb:items-center bb:gap-1 bb:text-xs bb:text-destructive")"
+                    >
+                        <LucideIcon Name="@(matches ? "check" : "x")" Size="14" Class="bb:shrink-0" />
+                        @(matches
+                            ? Localizer["App.Namespaces.ValidationRegexSampleAccepted"].Value
+                            : Localizer["App.Namespaces.ValidationRegexSampleRejected"].Value)
+                    </span>
+                }
+            </div>
+        </div>
+    }
+}
+
+@code {
+    [Inject]
+    private IStringLocalizer<SharedResources> Localizer { get; set; } = null!;
+
+    /// <summary>The input's id, and the prefix of every other element id this renders.</summary>
+    [Parameter, EditorRequired]
+    public string Id { get; set; } = null!;
+
+    [Parameter]
+    public string? Value { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> ValueChanged { get; set; }
+
+    /// <summary>The value being tried against the pattern. See the note at the top of this file.</summary>
+    [Parameter]
+    public string? Sample { get; set; }
+
+    [Parameter]
+    public EventCallback<string?> SampleChanged { get; set; }
+
+    // The verdict, recomputed only when the pattern or the sample actually changed rather than
+    // on every render - checking means compiling the pattern and running it, which is cheap but
+    // not free, and this component re-renders whenever anything else in its dialog does.
+    private string? _error;
+
+    // Null when there is nothing to report: no usable pattern, or no sample typed yet.
+    private bool? _sampleMatches;
+    private (string? Pattern, string? Sample)? _checked;
+
+    protected override void OnParametersSet()
+    {
+        if (_checked != (Value, Sample))
+        {
+            _checked = (Value, Sample);
+            Recheck();
+        }
+    }
+
+    private Task OnValueChangedAsync(string? value) => ValueChanged.InvokeAsync(value);
+
+    private Task OnSampleChangedAsync(string? sample) => SampleChanged.InvokeAsync(sample);
+
+    /// <summary>
+    /// Both halves of the verdict are deliberately the server's own (see
+    /// <see cref="OriginalValueValidation"/>) rather than a browser-side check: JavaScript's regex
+    /// flavour is not .NET's, so a pattern accepted here but rejected on submit - or, far worse,
+    /// one that matches different values in each - would be exactly the kind of thing this field
+    /// is meant to rule out.
+    /// </summary>
+    private void Recheck()
+    {
+        _error = OriginalValueValidation.DescribePatternError(Value);
+        _sampleMatches = null;
+
+        if (_error is not null || string.IsNullOrEmpty(Value) || string.IsNullOrEmpty(Sample))
+        {
+            return;
+        }
+
+        try
+        {
+            _sampleMatches = OriginalValueValidation.IsMatch(Value, Sample);
+        }
+        catch (RegexMatchTimeoutException)
+        {
+            // A pattern can compile fine and still backtrack catastrophically on a particular
+            // input. That's worth surfacing as loudly as a syntax error: the same timeout applies
+            // to every pseudonym created in the namespace afterwards, where it would fail the
+            // caller's request rather than merely this box.
+            _error = Localizer["App.Namespaces.ValidationRegexTimeout"];
+        }
+    }
+}

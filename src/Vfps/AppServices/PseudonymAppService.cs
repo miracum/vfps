@@ -79,12 +79,21 @@ public class PseudonymAppService(
             );
         }
 
-        // Ahead of the lookup, so a value this namespace could never have stored is rejected as
-        // invalid rather than reported as merely absent - the same ordering, and the same reason,
-        // as the validation in CreateTrustedAsync.
-        ValidateOriginalValue(@namespace, originalValue);
+        var stored = await FindStoredAsync(@namespace, originalValue, cancellationToken);
 
-        return await FindStoredAsync(@namespace, originalValue, cancellationToken);
+        // A value with nothing stored that doesn't match the pattern is rejected as invalid
+        // rather than reported as merely absent - it could never be stored as things stand. One
+        // that is stored is returned regardless: the pattern can be edited after the namespace
+        // was created, and only governs values new to it (see ValidateOriginalValueAsync).
+        if (stored.Count == 0 && !MatchesOriginalValueValidation(@namespace, originalValue))
+        {
+            throw new OriginalValueValidationException(
+                @namespace.Name,
+                @namespace.OriginalValueValidationRegex!
+            );
+        }
+
+        return stored;
     }
 
     // Bounded retries against concurrent appends for the same original value, each of which can
@@ -131,7 +140,7 @@ public class PseudonymAppService(
             throw new MultiplePseudonymsNotAllowedException(@namespace.Name);
         }
 
-        ValidateOriginalValue(@namespace, originalValue);
+        await ValidateOriginalValueAsync(@namespace, originalValue, cancellationToken);
         await ValidateParentAsync(@namespace, [originalValue], cancellationToken);
 
         var stored = await pseudonymRepository.FindAllByOriginalValueAsync(
@@ -203,9 +212,9 @@ public class PseudonymAppService(
             throw new MultiplePseudonymsNotAllowedException(@namespace.Name);
         }
 
-        ValidateOriginalValue(@namespace, originalValue);
+        await ValidateOriginalValueAsync(@namespace, originalValue, cancellationToken);
 
-        // Checked before anything is looked up or stored, so an invalid original value is
+        // Checked before anything is looked up or stored, so a value missing from the parent is
         // rejected the same way whether or not a pseudonym for it happens to exist already.
         await ValidateParentAsync(@namespace, [originalValue], cancellationToken);
 
@@ -443,6 +452,8 @@ public class PseudonymAppService(
             );
         }
 
+        await ValidateOriginalValuesAsync(requests, cancellationToken);
+
         // Dedupe up front - a CSV chunk routinely repeats the same value (e.g. a patient ID
         // column), and there's no reason to generate a candidate pseudonym or send a duplicate
         // row over the wire more than once per chunk. The first candidate generated for a given
@@ -488,8 +499,6 @@ public class PseudonymAppService(
                 {
                     continue;
                 }
-
-                ValidateOriginalValue(@namespace, originalValue);
 
                 if (
                     PseudonymizationMethodsLookup.IsValueDependent(
@@ -640,6 +649,12 @@ public class PseudonymAppService(
             cancellationToken
         );
 
+        // Captured before the loop below adds this batch's own values to the dictionary: only a
+        // value that was already stored is exempt from the validation regex.
+        var alreadyStoredOriginalValues = storedPseudonymValuesByOriginal.Keys.ToHashSet(
+            StringComparer.Ordinal
+        );
+
         var outcomes = new PseudonymImportOutcome?[entries.Count];
         var candidates = new List<Data.Models.Pseudonym>();
         var candidateEntryIndexes = new List<int>();
@@ -655,7 +670,10 @@ public class PseudonymAppService(
                 continue;
             }
 
-            if (!MatchesOriginalValueValidation(@namespace, originalValue))
+            if (
+                !alreadyStoredOriginalValues.Contains(originalValue)
+                && !MatchesOriginalValueValidation(@namespace, originalValue)
+            )
             {
                 outcomes[i] = PseudonymImportOutcome.InvalidOriginalValue;
                 continue;
@@ -1021,12 +1039,27 @@ public class PseudonymAppService(
         return first is null ? [] : [first];
     }
 
-    private static void ValidateOriginalValue(
+    /// <summary>
+    /// Enforces the namespace's <see cref="Data.Models.Namespace.OriginalValueValidationRegex"/>
+    /// on a value about to be pseudonymized. The pattern governs which values are admitted into
+    /// the namespace, not which ones already in it stay reachable: it can be edited after the
+    /// namespace was created, and a value stored under an earlier pattern must keep resolving to
+    /// its pseudonym rather than start failing validation. So a value that doesn't match is only
+    /// rejected when nothing is stored for it - a lookup paid only on that mismatch path.
+    /// </summary>
+    private async Task ValidateOriginalValueAsync(
         Data.Models.Namespace @namespace,
-        string originalValue
+        string originalValue,
+        CancellationToken cancellationToken
     )
     {
-        if (!MatchesOriginalValueValidation(@namespace, originalValue))
+        if (MatchesOriginalValueValidation(@namespace, originalValue))
+        {
+            return;
+        }
+
+        var stored = await FindStoredAsync(@namespace, originalValue, cancellationToken);
+        if (stored.Count == 0)
         {
             throw new OriginalValueValidationException(
                 @namespace.Name,
@@ -1036,9 +1069,58 @@ public class PseudonymAppService(
     }
 
     /// <summary>
-    /// The same check as <see cref="ValidateOriginalValue"/> without the exception - the import
-    /// path reports a rejected value as one row's outcome rather than failing the whole batch, so
-    /// it can't use exceptions for what is an expected, per-row result there.
+    /// <see cref="ValidateOriginalValueAsync"/> for a whole batch: one lookup per namespace for
+    /// just the values that don't match its pattern, rather than one per value. Throws for the
+    /// first value, in request order, that neither matches nor is already stored. Blank values are
+    /// skipped so they still fail with CreateTrustedBatchAsync's own blank-value check.
+    /// </summary>
+    private async Task ValidateOriginalValuesAsync(
+        IReadOnlyList<(Data.Models.Namespace Namespace, string OriginalValue)> requests,
+        CancellationToken cancellationToken
+    )
+    {
+        var mismatches = requests
+            .Where(r =>
+                !string.IsNullOrWhiteSpace(r.OriginalValue)
+                && !MatchesOriginalValueValidation(r.Namespace, r.OriginalValue)
+            )
+            .ToList();
+
+        if (mismatches.Count == 0)
+        {
+            return;
+        }
+
+        var storedByNamespace = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        foreach (var group in mismatches.GroupBy(r => r.Namespace.Name, StringComparer.Ordinal))
+        {
+            var stored = await pseudonymRepository.FindAllByOriginalValuesAsync(
+                group.Key,
+                [.. group.Select(r => r.OriginalValue).Distinct(StringComparer.Ordinal)],
+                cancellationToken
+            );
+            storedByNamespace[group.Key] = stored
+                .Select(p => p.OriginalValue)
+                .ToHashSet(StringComparer.Ordinal);
+        }
+
+        foreach (var (@namespace, originalValue) in mismatches)
+        {
+            if (!storedByNamespace[@namespace.Name].Contains(originalValue))
+            {
+                throw new OriginalValueValidationException(
+                    @namespace.Name,
+                    @namespace.OriginalValueValidationRegex!
+                );
+            }
+        }
+    }
+
+    /// <summary>
+    /// The pattern check of <see cref="ValidateOriginalValueAsync"/> on its own, without the
+    /// stored-value exemption or the exception - callers that already know what's stored (Resolve,
+    /// the import path) apply the exemption themselves, and the import path reports a rejected
+    /// value as one row's outcome rather than failing the whole batch.
     /// </summary>
     private static bool MatchesOriginalValueValidation(
         Data.Models.Namespace @namespace,

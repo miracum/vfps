@@ -8,18 +8,18 @@ namespace Vfps.AppServices;
 /// <see cref="Namespace.OriginalValueValidationRegex"/> means: whether a pattern is usable at all,
 /// and whether a given original value passes it.
 ///
-/// Shared by <see cref="PseudonymAppService"/> (which enforces it on every pseudonym created),
-/// <see cref="NamespaceAppService"/> (which rejects an unusable pattern when the namespace is
-/// created, rather than letting it fail lazily on every create afterwards) and the admin UI's live
-/// pattern checker - so what the UI tells an admin their pattern will do is, by construction, what
+/// Shared by <see cref="PseudonymAppService"/> (which enforces it on every original value new to a
+/// namespace), <see cref="NamespaceAppService"/> (which rejects an unusable pattern when the
+/// namespace is created or edited, rather than letting it fail lazily on every create afterwards)
+/// and the admin UI's live pattern checker - so what the UI tells an admin their pattern will do is, by construction, what
 /// the server actually does with it.
 /// </summary>
 public static class OriginalValueValidation
 {
     /// <summary>
     /// A short, fixed timeout guards against a catastrophically backtracking pattern turning a
-    /// single pseudonym request into a denial of service - the pattern is admin-supplied at
-    /// namespace creation, not attacker-controlled, but this is cheap insurance regardless. It
+    /// single pseudonym request into a denial of service - the pattern is admin-supplied, not
+    /// attacker-controlled, but this is cheap insurance regardless. It
     /// applies to the admin UI's own try-it-out box too, which is what lets that box warn about
     /// such a pattern *before* the namespace exists.
     /// </summary>

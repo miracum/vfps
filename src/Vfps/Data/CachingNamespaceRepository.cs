@@ -43,9 +43,9 @@ public class CachingNamespaceRepository(
         // CreateAsync) would otherwise poison this key for the full cache lifetime, making a
         // namespace that visibly exists (GetAllAsync isn't cached) invisible to every
         // single-namespace lookup - which is exactly what Create/List/Browse use - until
-        // expiry. A hit goes stale from a deletion or a description edit - which is why
-        // DeleteAsync and UpdateDescriptionAsync below explicitly evict this key rather than
-        // relying on it to expire naturally. Everything else about a namespace is immutable.
+        // expiry. A hit goes stale from a deletion or an edit - which is why DeleteAsync and
+        // UpdateAsync below explicitly evict this key rather than relying on it to expire
+        // naturally.
         if (found is not null)
         {
             memoryCache.Set(
@@ -103,23 +103,26 @@ public class CachingNamespaceRepository(
     }
 
     /// <inheritdoc/>
-    public async Task<bool> UpdateDescriptionAsync(
+    public async Task<bool> UpdateAsync(
         string namespaceName,
         string? description,
+        string? originalValueValidationRegex,
         DateTimeOffset lastUpdatedAt,
         CancellationToken cancellationToken
     )
     {
-        var updated = await NamespaceRepository.UpdateDescriptionAsync(
+        var updated = await NamespaceRepository.UpdateAsync(
             namespaceName,
             description,
+            originalValueValidationRegex,
             lastUpdatedAt,
             cancellationToken
         );
 
-        // Same reasoning as DeleteAsync. Only this replica's entry can be evicted; another
-        // replica keeps serving the old description until its own entry expires - harmless, since
-        // nothing but display reads it.
+        // Same reasoning as DeleteAsync. Only this replica's entry can be evicted: another
+        // replica keeps validating against the previous pattern until its own entry expires
+        // (Pseudonymization:Caching:AbsoluteExpiration) - see the per-replica cache note in the
+        // production deployment docs.
         memoryCache.Remove($"namespaces.{namespaceName}");
 
         return updated;

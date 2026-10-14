@@ -227,26 +227,62 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         var details = Page.Locator("#namespaceDetails");
         var input = Page.Locator("#editDescription");
 
-        await Page.ClickAsync("#editNamespaceDescriptionButton");
+        await Page.ClickAsync("#editNamespaceButton");
         // Focused, so the new text can be typed straight away - and used as the settle signal
         // the same way OpenCreateDialogAsync uses the name field's focus.
         await Expect(input).ToBeFocusedAsync();
         await Expect(input).ToHaveValueAsync("the original description");
 
         await input.FillAsync("the edited description");
-        await Page.ClickAsync("#saveDescriptionButton");
+        await Page.ClickAsync("#saveNamespaceButton");
 
         await Expect(input).ToHaveCountAsync(0);
         await Expect(details).ToContainTextAsync("the edited description");
         await Expect(details).Not.ToContainTextAsync("the original description");
 
-        await Page.ClickAsync("#editNamespaceDescriptionButton");
+        await Page.ClickAsync("#editNamespaceButton");
         await Expect(input).ToBeFocusedAsync();
         await input.FillAsync("");
-        await Page.ClickAsync("#saveDescriptionButton");
+        await Page.ClickAsync("#saveNamespaceButton");
 
         await Expect(input).ToHaveCountAsync(0);
         await Expect(details).Not.ToContainTextAsync("the edited description");
+    }
+
+    [Fact]
+    public async Task EditValidationRegex_ChecksThePatternAsItIsTyped_ThenShowsTheSavedPattern()
+    {
+        var name = UniqueName();
+
+        await GotoAsync("/ui/namespaces");
+        await CreateNamespaceAsync(name);
+        await SelectNamespaceAsync(name);
+
+        await Page.ClickAsync("#editNamespaceButton");
+        await Expect(Page.Locator("#editDescription")).ToBeFocusedAsync();
+
+        // The same checker as the create form's, under the edit dialog's own ids.
+        var regex = Page.Locator("#editValidationRegex");
+        await regex.PressSequentiallyAsync("(unterminated");
+        await Expect(Page.Locator("#editValidationRegexError")).ToContainTextAsync("Not enough )");
+
+        await regex.ClearAsync();
+        await regex.PressSequentiallyAsync("^[0-9]+$");
+        await Expect(Page.Locator("#editValidationRegexValid")).ToBeVisibleAsync();
+        await Page.FillAsync("#editValidationRegexSample", "12a45");
+        await Expect(Page.Locator("#editValidationRegexSampleResult"))
+            .ToContainTextAsync("Would be rejected");
+
+        await Page.ClickAsync("#saveNamespaceButton");
+
+        await Expect(Page.Locator("#editDescription")).ToHaveCountAsync(0);
+        await Expect(Page.Locator("#namespaceDetails")).ToContainTextAsync("^[0-9]+$");
+
+        // Reopening starts from what is stored, with the checker's verdict beside it.
+        await Page.ClickAsync("#editNamespaceButton");
+        await Expect(regex).ToHaveValueAsync("^[0-9]+$");
+        await Expect(Page.Locator("#editValidationRegexValid")).ToBeVisibleAsync();
+        await Expect(Page.Locator("#editValidationRegexSampleResult")).ToHaveCountAsync(0);
     }
 
     [Fact]

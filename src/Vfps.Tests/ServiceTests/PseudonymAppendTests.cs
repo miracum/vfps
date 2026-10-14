@@ -249,4 +249,36 @@ public class PseudonymAppendTests : ServiceTestBase
         await act.Should().ThrowAsync<OriginalValueValidationException>();
         StoredFor("multiPsnNamespace", "not-a-number").Should().BeEmpty();
     }
+
+    [Fact]
+    public async Task AppendAsync_WithAStoredValueNoLongerMatchingAnEditedRegex_ShouldAppend()
+    {
+        // The value entered the namespace before the pattern was tightened, so it is already
+        // admitted - appending another pseudonym for it stays possible.
+        var sut = CreateSut();
+        await sut.AppendAsync(
+            "multiPsnNamespace",
+            "not-a-number",
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        var @namespace = InMemoryPseudonymContext.Namespaces.Single(n =>
+            n.Name == "multiPsnNamespace"
+        );
+        @namespace.OriginalValueValidationRegex = "^[0-9]+$";
+        InMemoryPseudonymContext.Namespaces.Update(@namespace);
+        await InMemoryPseudonymContext.SaveChangesAsync(TestContext.Current.CancellationToken);
+        InMemoryPseudonymContext.ChangeTracker.Clear();
+
+        var appended = await sut.AppendAsync(
+            "multiPsnNamespace",
+            "not-a-number",
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        appended.SequenceNumber.Should().Be(1);
+        StoredFor("multiPsnNamespace", "not-a-number").Should().HaveCount(2);
+    }
 }

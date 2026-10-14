@@ -83,16 +83,17 @@ public class CachingNamespaceRepositoryTests : ServiceTests.ServiceTestBase
     }
 
     [Fact]
-    public async Task UpdateDescriptionAsync_WithPreviouslyCachedHit_ShouldEvictItSoFindAsyncSeesTheNewDescription()
+    public async Task UpdateAsync_WithPreviouslyCachedHit_ShouldEvictItSoFindAsyncSeesTheEdit()
     {
         var sut = CreateSut();
 
         var beforeUpdate = await sut.FindAsync("existingNamespace", CancellationToken.None);
         beforeUpdate!.Description.Should().Be("existing namespace description");
 
-        var updated = await sut.UpdateDescriptionAsync(
+        var updated = await sut.UpdateAsync(
             "existingNamespace",
             "updated description",
+            "^[0-9]+$",
             DateTimeOffset.UtcNow,
             CancellationToken.None
         );
@@ -100,5 +101,6 @@ public class CachingNamespaceRepositoryTests : ServiceTests.ServiceTestBase
         updated.Should().BeTrue();
         var afterUpdate = await sut.FindAsync("existingNamespace", CancellationToken.None);
         afterUpdate!.Description.Should().Be("updated description");
+        afterUpdate.OriginalValueValidationRegex.Should().Be("^[0-9]+$");
     }
 }

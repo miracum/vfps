@@ -77,9 +77,10 @@ public class NamespaceRepository(IDbContextFactory<PseudonymContext> contextFact
     }
 
     /// <inheritdoc/>
-    public async Task<bool> UpdateDescriptionAsync(
+    public async Task<bool> UpdateAsync(
         string namespaceName,
         string? description,
+        string? originalValueValidationRegex,
         DateTimeOffset lastUpdatedAt,
         CancellationToken cancellationToken
     )
@@ -91,6 +92,10 @@ public class NamespaceRepository(IDbContextFactory<PseudonymContext> contextFact
                 setters =>
                     setters
                         .SetProperty(n => n.Description, description)
+                        .SetProperty(
+                            n => n.OriginalValueValidationRegex,
+                            originalValueValidationRegex
+                        )
                         .SetProperty(n => n.LastUpdatedAt, lastUpdatedAt),
                 cancellationToken
             );

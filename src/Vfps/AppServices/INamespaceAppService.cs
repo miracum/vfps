@@ -70,13 +70,22 @@ public interface INamespaceAppService
     );
 
     /// <summary>
-    /// Replaces a namespace's description, the one part of a namespace that can change after
-    /// creation. Null removes the description. Requires admin access, like creating and deleting.
+    /// Replaces a namespace's description and original value validation regex, the only parts of
+    /// a namespace that can change after creation. Null removes either. Requires admin access,
+    /// like creating and deleting.
+    ///
+    /// A changed regex only governs original values new to the namespace: values that already
+    /// have a pseudonym stay resolvable even if they no longer match (see
+    /// <see cref="IPseudonymAppService.ResolveAsync"/>).
     /// </summary>
     /// <exception cref="NamespaceNotFoundException">No namespace named <paramref name="namespaceName"/> exists.</exception>
-    Task<Namespace> UpdateDescriptionAsync(
+    /// <exception cref="ArgumentException">
+    /// <paramref name="originalValueValidationRegex"/> is set but not a valid regular expression.
+    /// </exception>
+    Task<Namespace> UpdateAsync(
         string namespaceName,
         string? description,
+        string? originalValueValidationRegex,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
     );
@@ -111,8 +120,9 @@ public interface INamespaceAppService
 }
 
 /// <summary>
-/// Thrown when creating a namespace whose name already exists. Apart from its description, a
-/// namespace is immutable by design - callers must delete and re-create instead.
+/// Thrown when creating a namespace whose name already exists. Apart from its description and
+/// validation regex, a namespace is immutable by design - callers must delete and re-create
+/// instead.
 /// </summary>
 public class NamespaceAlreadyExistsException(string namespaceName)
     : Exception($"A namespace named '{namespaceName}' already exists.")

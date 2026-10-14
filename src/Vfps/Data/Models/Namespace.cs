@@ -15,7 +15,9 @@ public class Namespace : TracksCreationAndUpdates
 
     /// <summary>
     /// An optional regular expression original values must match before a pseudonym is generated
-    /// for them. Null/blank means no validation is performed.
+    /// for them. Null/blank means no validation is performed. Editable after creation, which is
+    /// why it only governs values new to the namespace: one already stored stays resolvable even
+    /// if it no longer matches (see PseudonymAppService.ValidateOriginalValueAsync).
     /// </summary>
     public string? OriginalValueValidationRegex { get; set; } = string.Empty;
 
@@ -31,8 +33,8 @@ public class Namespace : TracksCreationAndUpdates
     /// The name of this namespace's parent, if it is a child in a pseudonymization hierarchy -
     /// i.e. its original values are pseudonym values produced by that parent namespace. Null
     /// means this namespace is a root. Set at creation and never changed afterwards, like every
-    /// other field here except <see cref="Description"/>; that also makes hierarchy cycles
-    /// impossible, since a namespace can only ever point at one that already existed.
+    /// other field here except <see cref="Description"/> and
+    /// <see cref="OriginalValueValidationRegex"/>; that also makes hierarchy cycles impossible, since a namespace can only ever point at one that already existed.
     /// </summary>
     public string? ParentName { get; set; }
 
