@@ -43,21 +43,6 @@ To stop the stack and delete everything it stored:
 docker compose -p vfps-getting-started down --volumes
 ```
 
-## Using the REST API
-
-Every gRPC operation is also available as a JSON-transcoded REST endpoint. To create a new
-namespace and a pseudonym inside it:
-
-```sh
-curl -X POST http://localhost:8080/v1/namespaces \
-  -H "Content-Type: application/json" \
-  -d '{"name": "test", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}'
-
-curl -X POST http://localhost:8080/v1/namespaces/test/pseudonyms \
-  -H "Content-Type: application/json" \
-  -d '{"originalValue": "to be pseudonymized"}'
-```
-
 ## Using gRPC
 
 You can use the JSON-transcoded REST API described via OpenAPI or interact with the service using gRPC.
