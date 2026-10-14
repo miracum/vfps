@@ -205,7 +205,7 @@ public class NamespaceServiceTests : ServiceTestBase
 
         var created = await sut.Create(
             new NamespaceServiceCreateRequest { Name = name, PseudonymLength = 16 },
-            TestServerCallContext.Create()
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
         );
 
         created.Namespace.HasDescription.Should().BeFalse();
@@ -228,7 +228,7 @@ public class NamespaceServiceTests : ServiceTestBase
                 PseudonymLength = 16,
                 Description = "",
             },
-            TestServerCallContext.Create()
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
         );
 
         created.Namespace.HasDescription.Should().BeTrue();
