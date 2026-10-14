@@ -1,7 +1,7 @@
 # gRPC API
 
 vfps's API is defined in Protocol Buffers, and every operation is served over gRPC as well as the
-JSON-transcoded [REST API](getting-started.md#using-the-rest-api). The definitions are in
+JSON-transcoded REST API. The definitions are in
 [`src/Vfps/Protos/vfps/api/v1`](https://github.com/miracum/vfps/tree/master/src/Vfps/Protos/vfps/api/v1):
 
 | Service                        | RPCs                                                |
