@@ -346,17 +346,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#using-the-rest-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Using the REST API
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#using-grpc" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1021,17 +1010,6 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#using-the-rest-api" class="md-nav__link">
-    <span class="md-ellipsis">
-      <span class="md-typeset">
-        Using the REST API
-      </span>
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#using-grpc" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1087,36 +1065,35 @@
 
 <h1 id="getting-started">Getting started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h1>
 <h2 id="run-it">Run it<a class="headerlink" href="#run-it" title="Permanent link">&para;</a></h2>
-<div class="admonition warning">
-<p class="admonition-title">Warning</p>
+<div class="admonition info">
+<p class="admonition-title">Info</p>
 <p>This stack is for trying vfps out, not for keeping data: it uses a well-known database
 password, stores everything in an anonymous volume, and has authentication turned off. See
 <a href="../deployment/production/">Production deployment</a> to run vfps for real.</p>
 </div>
 <p>With <a href="https://docs.docker.com/compose/install/">Docker Compose</a> 2.34 or later, start vfps and a
-PostgreSQL database straight as an OCI artifact:</p>
+PostgreSQL database straight from an OCI artifact:</p>
 <!-- x-release-please-start-version -->
 
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>oci://ghcr.io/miracum/vfps/compose/getting-started:v1.23.2<span class="w"> </span>up
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-f<span class="w"> </span>oci://ghcr.io/miracum/vfps/compose/getting-started:v1.24.0<span class="w"> </span>up
 </span></code></pre></div>
 <!-- x-release-please-end -->
 
-<p>Visit <a href="http://localhost:8080/swagger/">http://localhost:8080/swagger/</a> to view the OpenAPI specification of the Vfps API, and
-<a href="http://localhost:8080/ui">http://localhost:8080/ui</a> for the <a href="../admin-ui/">admin UI</a>. Both ports are only bound to
-<code>127.0.0.1</code>.</p>
-<p>To stop the stack and delete everything it stored:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-p<span class="w"> </span>vfps-getting-started<span class="w"> </span>down<span class="w"> </span>--volumes
+<p>Then create a namespace and a first pseudonym through the REST API:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8080/v1/namespaces<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"name": "test", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}'</span>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8080/v1/namespaces/test/pseudonyms<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-1-7"><a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"originalValue": "to be pseudonymized"}'</span>
 </span></code></pre></div>
-<h2 id="using-the-rest-api">Using the REST API<a class="headerlink" href="#using-the-rest-api" title="Permanent link">&para;</a></h2>
-<p>Every gRPC operation is also available as a JSON-transcoded REST endpoint. To create a new
-namespace and a pseudonym inside it:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8080/v1/namespaces<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"name": "test", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}'</span>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8080/v1/namespaces/test/pseudonyms<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: application/json"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"originalValue": "to be pseudonymized"}'</span>
+<p>Visit <a href="http://localhost:8080/ui/namespaces/test/pseudonyms">http://localhost:8080/ui/namespaces/test/pseudonyms</a> to see the generated
+pseudonym in the <a href="../admin-ui/">admin UI</a>:</p>
+<p><img alt="View of the test namespace" src="../img/ui/ui-getting-started-light.png#only-light" />
+<img alt="View of the test namespace" src="../img/ui/ui-getting-started-dark.png#only-dark" /></p>
+<p>To stop the stack and delete everything it stored:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>docker<span class="w"> </span>compose<span class="w"> </span>-p<span class="w"> </span>vfps-getting-started<span class="w"> </span>down<span class="w"> </span>--volumes
 </span></code></pre></div>
 <h2 id="using-grpc">Using gRPC<a class="headerlink" href="#using-grpc" title="Permanent link">&para;</a></h2>
 <p>You can use the JSON-transcoded REST API described via OpenAPI or interact with the service using gRPC.

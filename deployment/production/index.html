@@ -1225,8 +1225,10 @@ application's, and are easy to miss:</p>
 <li><strong>Caches are per-replica.</strong> <code>Pseudonymization__Caching__*</code> is an in-process <code>MemoryCache</code>, so a
   namespace deleted via one replica can still be served from another replica's cache until the
   entry expires (<code>Pseudonymization__Caching__AbsoluteExpiration</code>, one hour by default). Namespaces
-  are immutable once created, so this only affects deletion; shorten the expiration if that window
-  matters to you.</li>
+  are mostly immutable once created, so this affects deletion and edits: after a namespace's
+  validation regex is changed, other replicas keep validating new original values against the
+  previous pattern until their entry expires. Shorten the expiration if that window matters to
+  you. Namespace caching (<code>Pseudonymization__Caching__Namespaces__IsEnabled</code>) is off by default.</li>
 <li><strong>Give the pod time to drain.</strong> On <code>SIGTERM</code> the process stops accepting new work and finishes
   what's in flight, bounded by <code>ShutdownTimeout</code>. Kubernetes removes the pod from Service endpoints
   asynchronously, so without a <code>preStop</code> delay some requests are still routed to a pod that has
