@@ -12,7 +12,7 @@ hide:
 
 ![vfps](img/vfps-lockup-morph-loop.svg)
 
-<p class="vfps-tagline">A very fast and resource-efficient pseudonymization service for research data,
+<p class="vfps-tagline">A very fast and resource-efficient pseudonymization service,
 with gRPC, REST and FHIR APIs, an admin UI, and highly available deployments.</p>
 
 [Get started](getting-started.md){ .md-button .md-button--primary }
@@ -95,34 +95,3 @@ with gRPC, REST and FHIR APIs, an admin UI, and highly available deployments.</p
 </div>
 
 <!-- prettier-ignore-end -->
-
-## Try it in a minute
-
-<!-- x-release-please-start-version -->
-
-```sh
-docker compose -f oci://ghcr.io/miracum/vfps/compose/getting-started:v1.23.2 up
-```
-
-<!-- x-release-please-end -->
-
-Then create a namespace and a first pseudonym through the REST API:
-
-```sh
-curl -X POST http://localhost:8080/v1/namespaces \
-  -H "Content-Type: application/json" \
-  -d '{"name": "test", "pseudonymGenerationMethod": "PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED", "pseudonymLength": 32}'
-
-curl -X POST http://localhost:8080/v1/namespaces/test/pseudonyms \
-  -H "Content-Type: application/json" \
-  -d '{"originalValue": "to be pseudonymized"}'
-```
-
-[Continue with the getting started guide](getting-started.md).
-
-## Supply chain you can verify
-
-Every released container image is signed with [cosign](https://github.com/sigstore/cosign) and
-ships with [SLSA Level 3](https://slsa.dev) build provenance, and the repository is continuously
-assessed by the [OpenSSF Scorecard](https://scorecard.dev/viewer/?uri=github.com/miracum/vfps).
-See [Security](security.md) for how to verify an image before deploying it.

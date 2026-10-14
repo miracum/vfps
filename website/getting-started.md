@@ -2,14 +2,14 @@
 
 ## Run it
 
-!!! warning
+!!! info
 
     This stack is for trying vfps out, not for keeping data: it uses a well-known database
     password, stores everything in an anonymous volume, and has authentication turned off. See
     [Production deployment](deployment/production.md) to run vfps for real.
 
 With [Docker Compose](https://docs.docker.com/compose/install/) 2.34 or later, start vfps and a
-PostgreSQL database straight as an OCI artifact:
+PostgreSQL database straight from an OCI artifact:
 
 <!-- x-release-please-start-version -->
 
@@ -19,20 +19,7 @@ docker compose -f oci://ghcr.io/miracum/vfps/compose/getting-started:v1.23.2 up
 
 <!-- x-release-please-end -->
 
-Visit <http://localhost:8080/swagger/> to view the OpenAPI specification of the Vfps API, and
-<http://localhost:8080/ui> for the [admin UI](admin-ui.md). Both ports are only bound to
-`127.0.0.1`.
-
-To stop the stack and delete everything it stored:
-
-```sh
-docker compose -p vfps-getting-started down --volumes
-```
-
-## Using the REST API
-
-Every gRPC operation is also available as a JSON-transcoded REST endpoint. To create a new
-namespace and a pseudonym inside it:
+Then create a namespace and a first pseudonym through the REST API:
 
 ```sh
 curl -X POST http://localhost:8080/v1/namespaces \
@@ -42,6 +29,18 @@ curl -X POST http://localhost:8080/v1/namespaces \
 curl -X POST http://localhost:8080/v1/namespaces/test/pseudonyms \
   -H "Content-Type: application/json" \
   -d '{"originalValue": "to be pseudonymized"}'
+```
+
+Visit <http://localhost:8080/ui/namespaces/test/pseudonyms> to see the generated
+pseudonym in the [admin UI](admin-ui.md):
+
+![View of the test namespace](img/ui/ui-getting-started-light.png#only-light)
+![View of the test namespace](img/ui/ui-getting-started-dark.png#only-dark)
+
+To stop the stack and delete everything it stored:
+
+```sh
+docker compose -p vfps-getting-started down --volumes
 ```
 
 ## Using gRPC
