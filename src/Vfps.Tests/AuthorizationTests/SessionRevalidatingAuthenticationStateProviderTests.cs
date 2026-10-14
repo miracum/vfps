@@ -60,7 +60,10 @@ public class SessionRevalidatingAuthenticationStateProviderTests
         // A circuit connecting with a principal whose sign-in is already older than the limit.
         sut.SetAuthenticationState(Task.FromResult(SignedInAt(DateTimeOffset.UtcNow.AddHours(-1))));
 
-        var completed = await Task.WhenAny(signedOut.Task, Task.Delay(TimeSpan.FromSeconds(15)));
+        var completed = await Task.WhenAny(
+            signedOut.Task,
+            Task.Delay(TimeSpan.FromSeconds(15), TestContext.Current.CancellationToken)
+        );
 
         completed.Should().Be(signedOut.Task, "the revalidation loop should have signed it out");
         (await signedOut.Task).User.Identity?.IsAuthenticated.Should().NotBe(true);
@@ -84,7 +87,10 @@ public class SessionRevalidatingAuthenticationStateProviderTests
 
         // Several revalidation intervals' worth of grace - long enough that a loop wrongly
         // deciding this session was stale would have done it by now.
-        var completed = await Task.WhenAny(signedOut.Task, Task.Delay(Interval * 10));
+        var completed = await Task.WhenAny(
+            signedOut.Task,
+            Task.Delay(Interval * 10, TestContext.Current.CancellationToken)
+        );
 
         completed.Should().NotBe(signedOut.Task);
         var state = await sut.GetAuthenticationStateAsync();
