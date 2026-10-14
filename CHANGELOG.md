@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.24.0](https://github.com/miracum/vfps/compare/v1.23.2...v1.24.0) (2026-10-14)
+
+
+### Features
+
+* support editing a namespace after creation ([#413](https://github.com/miracum/vfps/issues/413)) ([7c8cdfd](https://github.com/miracum/vfps/commit/7c8cdfd3536e46749cfc158f5e939dfb11b8ee45))
+
+
+### Documentation
+
+* added a screenshot to the getting started guide ([#415](https://github.com/miracum/vfps/issues/415)) ([1394ca5](https://github.com/miracum/vfps/commit/1394ca5d08d620aa7379015972e6753e85a89d8d))
+
 ## [1.23.2](https://github.com/miracum/vfps/compare/v1.23.1...v1.23.2) (2026-10-13)
 
 
