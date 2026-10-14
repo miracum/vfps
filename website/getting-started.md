@@ -14,7 +14,7 @@ PostgreSQL database straight from an OCI artifact:
 <!-- x-release-please-start-version -->
 
 ```sh
-docker compose -f oci://ghcr.io/miracum/vfps/compose/getting-started:v1.24.0 up
+docker compose -f oci://ghcr.io/miracum/vfps/compose/getting-started:v1.24.1 up
 ```
 
 <!-- x-release-please-end -->

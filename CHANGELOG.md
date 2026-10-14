@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.24.1](https://github.com/miracum/vfps/compare/v1.24.0...v1.24.1) (2026-10-14)
+
+
+### Miscellaneous Chores
+
+* **deps:** update all non-major dependencies ([#419](https://github.com/miracum/vfps/issues/419)) ([aee1772](https://github.com/miracum/vfps/commit/aee177238f39218b28e7fb17480ce556087ae1f6))
+* **deps:** update dotnet sdk and runtime ([#417](https://github.com/miracum/vfps/issues/417)) ([3dd391a](https://github.com/miracum/vfps/commit/3dd391a629646b17a784b0ca02beb8af3655f843))
+* **deps:** update github-actions ([#418](https://github.com/miracum/vfps/issues/418)) ([f4bd46b](https://github.com/miracum/vfps/commit/f4bd46bbfc84a3f0ab5d239d999cf0475d694d16))
+
 ## [1.24.0](https://github.com/miracum/vfps/compare/v1.23.2...v1.24.0) (2026-10-14)
 
 
