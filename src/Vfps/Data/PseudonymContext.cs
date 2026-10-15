@@ -122,6 +122,18 @@ public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbCo
             )
             .IsCreatedConcurrently();
 
+        // Backs Append's request_id (AIP-155): a retried call finds the pseudonym its first attempt
+        // stored, and two concurrent attempts with the same id can't both store one. Partial, as
+        // the column is NULL for every pseudonym not stored by an Append that carried an id - the
+        // overwhelming majority - which keeps the index tiny on a table that isn't.
+        modelBuilder
+            .Entity<Pseudonym>()
+            .HasIndex(p => new { p.NamespaceName, p.AppendRequestId })
+            .HasDatabaseName("ix_pseudonyms_namespace_name_append_request_id")
+            .HasFilter("append_request_id IS NOT NULL")
+            .IsUnique()
+            .IsCreatedConcurrently();
+
         // Reverse lookup (pseudonym_value -> original_value) has no supporting index today -
         // without this, PseudonymAppService's future reverse-lookup path (and the existing Get
         // RPC) would scan the whole namespace partition of the primary key index.

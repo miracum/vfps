@@ -417,3 +417,6 @@ ha-chaos-artifacts/
 # documentation site build output and its Python environment (zensical.toml, pyproject.toml)
 /site/
 /.venv/
+
+# generated from the .proto files by scripts/generate-api-reference.sh
+/website/api-reference.md

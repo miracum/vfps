@@ -42,6 +42,7 @@ public class PseudonymAppendTests : ServiceTestBase
         var appended = await sut.AppendAsync(
             "multiPsnNamespace",
             "fresh",
+            null,
             new ClaimsPrincipal(),
             CancellationToken.None
         );
@@ -70,6 +71,7 @@ public class PseudonymAppendTests : ServiceTestBase
         var appended = await sut.AppendAsync(
             "multiPsnNamespace",
             "grown",
+            null,
             new ClaimsPrincipal(),
             CancellationToken.None
         );
@@ -93,6 +95,7 @@ public class PseudonymAppendTests : ServiceTestBase
                 await sut.AppendAsync(
                     "multiPsnNamespace",
                     "repeated",
+                    null,
                     new ClaimsPrincipal(),
                     CancellationToken.None
                 )
@@ -112,12 +115,14 @@ public class PseudonymAppendTests : ServiceTestBase
         await sut.AppendAsync(
             "multiPsnNamespace",
             "mixed",
+            null,
             new ClaimsPrincipal(),
             CancellationToken.None
         );
         await sut.AppendAsync(
             "multiPsnNamespace",
             "mixed",
+            null,
             new ClaimsPrincipal(),
             CancellationToken.None
         );
@@ -144,6 +149,7 @@ public class PseudonymAppendTests : ServiceTestBase
             sut.AppendAsync(
                 "existingNamespace",
                 "an original value",
+                null,
                 new ClaimsPrincipal(),
                 CancellationToken.None
             );
@@ -164,6 +170,7 @@ public class PseudonymAppendTests : ServiceTestBase
             sut.AppendAsync(
                 "multiPsnNamespace",
                 "forbidden",
+                null,
                 UserWithRoles("reader"),
                 CancellationToken.None
             );
@@ -182,6 +189,7 @@ public class PseudonymAppendTests : ServiceTestBase
         var appended = await sut.AppendAsync(
             "multiPsnNamespace",
             "allowed",
+            null,
             UserWithRoles("writer"),
             CancellationToken.None
         );
@@ -198,6 +206,7 @@ public class PseudonymAppendTests : ServiceTestBase
             sut.AppendAsync(
                 "noSuchNamespace",
                 "an original value",
+                null,
                 new ClaimsPrincipal(),
                 CancellationToken.None
             );
@@ -218,6 +227,7 @@ public class PseudonymAppendTests : ServiceTestBase
             sut.AppendAsync(
                 "multiPsnNamespace",
                 blankValue,
+                null,
                 new ClaimsPrincipal(),
                 CancellationToken.None
             );
@@ -242,6 +252,7 @@ public class PseudonymAppendTests : ServiceTestBase
             sut.AppendAsync(
                 "multiPsnNamespace",
                 "not-a-number",
+                null,
                 new ClaimsPrincipal(),
                 CancellationToken.None
             );
@@ -259,6 +270,7 @@ public class PseudonymAppendTests : ServiceTestBase
         await sut.AppendAsync(
             "multiPsnNamespace",
             "not-a-number",
+            null,
             new ClaimsPrincipal(),
             CancellationToken.None
         );
@@ -274,11 +286,115 @@ public class PseudonymAppendTests : ServiceTestBase
         var appended = await sut.AppendAsync(
             "multiPsnNamespace",
             "not-a-number",
+            null,
             new ClaimsPrincipal(),
             CancellationToken.None
         );
 
         appended.SequenceNumber.Should().Be(1);
         StoredFor("multiPsnNamespace", "not-a-number").Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task AppendAsync_RetriedWithTheSameRequestId_ShouldReturnTheFirstPseudonymAndStoreNothing()
+    {
+        var sut = CreateSut();
+        var requestId = Guid.NewGuid();
+
+        var first = await sut.AppendAsync(
+            "multiPsnNamespace",
+            "retried",
+            requestId,
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+        var retried = await sut.AppendAsync(
+            "multiPsnNamespace",
+            "retried",
+            requestId,
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        retried.PseudonymValue.Should().Be(first.PseudonymValue);
+        retried.SequenceNumber.Should().Be(first.SequenceNumber);
+        StoredFor("multiPsnNamespace", "retried").Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task AppendAsync_WithADifferentRequestId_ShouldAppendAgain()
+    {
+        var sut = CreateSut();
+
+        foreach (var _ in Enumerable.Range(0, 2))
+        {
+            await sut.AppendAsync(
+                "multiPsnNamespace",
+                "distinct-requests",
+                Guid.NewGuid(),
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+        }
+
+        StoredFor("multiPsnNamespace", "distinct-requests").Should().HaveCount(2);
+    }
+
+    [Fact]
+    public async Task AppendAsync_ReusingARequestIdForAnotherValue_ShouldThrowWithoutRevealingAnything()
+    {
+        var sut = CreateSut();
+        var requestId = Guid.NewGuid();
+        var first = await sut.AppendAsync(
+            "multiPsnNamespace",
+            "first-value",
+            requestId,
+            new ClaimsPrincipal(),
+            CancellationToken.None
+        );
+
+        var act = () =>
+            sut.AppendAsync(
+                "multiPsnNamespace",
+                "second-value",
+                requestId,
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+
+        var thrown = await act.Should().ThrowAsync<AppendRequestIdConflictException>();
+        thrown.Which.Message.Should().NotContain("first-value");
+        thrown.Which.Message.Should().NotContain(first.PseudonymValue);
+        StoredFor("multiPsnNamespace", "second-value").Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task AppendAsync_RetriedWithoutWriteAccess_ShouldStillBeForbidden()
+    {
+        // The retry lookup must not become a way around the permission check.
+        var requestId = Guid.NewGuid();
+        await CreateSut()
+            .AppendAsync(
+                "multiPsnNamespace",
+                "guarded",
+                requestId,
+                new ClaimsPrincipal(),
+                CancellationToken.None
+            );
+        var restricted = CreateSut(
+            new AuthorizationConfig { IsEnabled = true, AdminRoles = ["admin"] },
+            Grants.ForRole("multiPsnNamespace", "reader", read: true)
+        );
+
+        var act = () =>
+            restricted.AppendAsync(
+                "multiPsnNamespace",
+                "guarded",
+                requestId,
+                UserWithRoles("reader"),
+                CancellationToken.None
+            );
+
+        await act.Should().ThrowAsync<ForbiddenException>();
     }
 }

@@ -8,6 +8,10 @@ on:
       - zensical.toml
       - pyproject.toml
       - uv.lock
+      - scripts/generate-api-reference.sh
+      - scripts/api-reference.md.tmpl
+      # the API reference page is generated from these
+      - src/Vfps/Protos/**
       - .github/workflows/docs.yaml
   release:
     types: [published]
@@ -34,6 +38,11 @@ jobs:
           # this workflow publishes on release, so it must not restore anything a pull request
           # run could have written
           enable-cache: false
+
+      # The API reference page is generated from the .proto files and not committed, so the site can
+      # only be built after this.
+      - name: Generate the API reference
+        run: ./scripts/generate-api-reference.sh
 
       # --strict fails the build on broken links between pages.
       - name: Build site

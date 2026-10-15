@@ -1,0 +1,63 @@
+{{- /*
+  Template for protoc-gen-doc (https://github.com/pseudomuto/protoc-gen-doc) that renders
+  website/api-reference.md. Run by scripts/generate-api-reference.sh.
+
+  Comments are written in Markdown, except that angle brackets are escaped: a few comments describe
+  a byte layout as <this><that>, which would otherwise be swallowed as an HTML tag.
+
+  Table cells are kept to one line, because a blank line inside a comment would otherwise end the
+  table: paragraphs are joined with <br><br> and wrapped lines with a space.
+*/ -}}
+{{- define "text" -}}
+{{- . | replace "<" "&lt;" | replace ">" "&gt;" -}}
+{{- end -}}
+{{- define "cell" -}}
+{{- $escaped := . | replace "<" "&lt;" | replace ">" "&gt;" | replace "|" "\\|" -}}
+{{- regexReplaceAll "\n\n+" $escaped "<br><br>" | replace "\n" " " -}}
+{{- end -}}
+# API reference
+
+This page is generated from vfps's `.proto` files, which define the API. Every RPC is served over
+gRPC and, where a REST route is listed, as JSON over HTTP. In JSON, field names are written in
+camelCase (`original_value` becomes `originalValue`) and enum values by name. See the
+[gRPC API](grpc.md) guide for how to call them, and the
+[latest release](https://github.com/miracum/vfps/releases/latest) for the `.proto` files as a
+versioned download.
+{{range .Files}}{{range .Services}}{{$service := .Name}}
+## {{.Name}}
+
+{{template "text" .Description}}
+{{range .Methods}}
+### {{$service}}.{{.Name}}
+
+{{with .Option "google.api.http"}}{{range .Rules}}`{{.Method}} {{.Pattern}}`
+
+{{end}}{{end -}}
+{{template "text" .Description}}
+
+Request: [`{{.RequestLongType}}`](#{{.RequestLongType | lower}}) · Response: [`{{.ResponseLongType}}`](#{{.ResponseLongType | lower}})
+{{end}}{{end}}{{end}}
+## Messages
+{{range .Files}}{{range .Messages}}
+### {{.LongName}}
+
+{{template "text" .Description}}
+{{if .HasFields}}
+| Field | Type | Description |
+| ----- | ---- | ----------- |
+{{range .Fields -}}
+| `{{.Name}}` | {{if .Label}}{{.Label}} {{end}}{{if hasPrefix "vfps.api.v1." .FullType}}[`{{.LongType}}`](#{{.LongType | lower | replace "." ""}}){{else}}`{{.LongType}}`{{end}} | {{template "cell" .Description}} |
+{{end}}{{else}}
+This message has no fields.
+{{end}}{{end}}{{end}}
+## Enums
+{{range .Files}}{{range .Enums}}
+### {{.LongName}}
+
+{{template "text" .Description}}
+
+| Value | Number | Description |
+| ----- | ------ | ----------- |
+{{range .Values -}}
+| `{{.Name}}` | {{.Number}} | {{template "cell" .Description}} |
+{{end}}{{end}}{{end}}

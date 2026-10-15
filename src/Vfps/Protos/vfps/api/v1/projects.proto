@@ -3,6 +3,7 @@ syntax = "proto3";
 package vfps.api.v1;
 
 import "google/api/annotations.proto";
+import "google/protobuf/field_mask.proto";
 import "vfps/api/v1/meta.proto";
 
 option csharp_namespace = "Vfps.Protos";
@@ -27,16 +28,22 @@ service ProjectService {
     option (google.api.http) = {get: "/v1/projects/{name}"};
   }
 
-  // list all projects
-  rpc GetAll(ProjectServiceGetAllRequest) returns (ProjectServiceGetAllResponse) {
+  // list all projects the caller can see
+  rpc List(ProjectServiceListRequest) returns (ProjectServiceListResponse) {
     option (google.api.http) = {get: "/v1/projects"};
   }
 
-  // replace a project's description. Requires admin access.
+  // update a project's description, the only part of a project that can change: its name is its
+  // identity, and its namespaces are changed with AddNamespace and RemoveNamespace. Requires admin
+  // access.
+  //
+  // A partial update following AIP-134 (https://google.aip.dev/134), exactly like
+  // NamespaceService.Update: update_mask names the fields to change, and a field named there but
+  // absent from the request is cleared.
   rpc Update(ProjectServiceUpdateRequest) returns (ProjectServiceUpdateResponse) {
     option (google.api.http) = {
-      put: "/v1/projects/{name}"
-      body: "*"
+      patch: "/v1/projects/{project.name}"
+      body: "project"
     };
   }
 
@@ -49,13 +56,13 @@ service ProjectService {
   // add a namespace to a project. Succeeds without changes if it is already part of it.
   // Requires admin access.
   rpc AddNamespace(ProjectServiceAddNamespaceRequest) returns (ProjectServiceAddNamespaceResponse) {
-    option (google.api.http) = {put: "/v1/projects/{name}/namespaces/{namespace_name}"};
+    option (google.api.http) = {put: "/v1/projects/{name}/namespaces/{namespace}"};
   }
 
   // remove a namespace from a project. Succeeds without changes if it isn't part of it.
   // Requires admin access.
   rpc RemoveNamespace(ProjectServiceRemoveNamespaceRequest) returns (ProjectServiceRemoveNamespaceResponse) {
-    option (google.api.http) = {delete: "/v1/projects/{name}/namespaces/{namespace_name}"};
+    option (google.api.http) = {delete: "/v1/projects/{name}/namespaces/{namespace}"};
   }
 }
 
@@ -98,21 +105,22 @@ message ProjectServiceGetResponse {
 }
 
 // request to list all projects
-message ProjectServiceGetAllRequest {}
+message ProjectServiceListRequest {}
 
-// response to list all projects
-message ProjectServiceGetAllResponse {
+// response listing all projects
+message ProjectServiceListResponse {
   // the projects the caller can see: all of them for an admin, otherwise those with at least
   // one namespace the caller can read
   repeated Project projects = 1;
 }
 
-// request to replace a project's description
+// request to update a project
 message ProjectServiceUpdateRequest {
-  // the name of the project to update
-  string name = 1;
-  // the new description. Omit it to remove the description.
-  optional string description = 2;
+  // the project to update, identified by its name, carrying the new values of the fields to
+  // change
+  Project project = 1;
+  // the fields to change - only description can be. See Update.
+  google.protobuf.FieldMask update_mask = 2;
 }
 
 // response for updating a project
@@ -135,7 +143,7 @@ message ProjectServiceAddNamespaceRequest {
   // the name of the project
   string name = 1;
   // the name of the namespace to add
-  string namespace_name = 2;
+  string namespace = 2;
 }
 
 // response after adding a namespace to a project
@@ -146,7 +154,7 @@ message ProjectServiceRemoveNamespaceRequest {
   // the name of the project
   string name = 1;
   // the name of the namespace to remove
-  string namespace_name = 2;
+  string namespace = 2;
 }
 
 // response after removing a namespace from a project

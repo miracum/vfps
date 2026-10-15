@@ -102,15 +102,15 @@ public class NamespaceServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async Task GetAll_WithOneNullColumnRow_ShouldStillReturnEveryNamespace()
+    public async Task List_WithOneNullColumnRow_ShouldStillReturnEveryNamespace()
     {
-        // The part that made this worth more than one bad response: GetAll projects the whole
+        // The part that made this worth more than one bad response: List projects the whole
         // list, so the throwing row took every other namespace down with it - a single namespace
         // created without a description was enough to make listing them fail for everyone.
         var name = await AddNamespaceWithNullColumnsAsync();
 
-        var response = await sut.GetAll(
-            new NamespaceServiceGetAllRequest(),
+        var response = await sut.List(
+            new NamespaceServiceListRequest(),
             TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
         );
 
@@ -294,11 +294,11 @@ public class NamespaceServiceTests : ServiceTestBase
     }
 
     [Fact]
-    public async Task GetAll_ShouldReturnAllNamespace()
+    public async Task List_ShouldReturnAllNamespaces()
     {
-        var request = new NamespaceServiceGetAllRequest();
+        var request = new NamespaceServiceListRequest();
 
-        var response = await sut.GetAll(
+        var response = await sut.List(
             request,
             TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
         );
@@ -475,5 +475,196 @@ public class NamespaceServiceTests : ServiceTestBase
 
         var result = await act.Should().ThrowAsync<RpcException>();
         result.Which.StatusCode.Should().Be(StatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetAll_WhichIsDeprecated_ShouldStillReturnWhatListReturns()
+    {
+        var context = TestServerCallContext.Create(
+            cancellationToken: TestContext.Current.CancellationToken
+        );
+
+#pragma warning disable CS0612 // kept for existing gRPC clients, which is what this pins down
+        var deprecated = await sut.GetAll(new NamespaceServiceGetAllRequest(), context);
+#pragma warning restore CS0612
+        var listed = await sut.List(new NamespaceServiceListRequest(), context);
+
+        deprecated.Namespaces.Should().BeEquivalentTo(listed.Namespaces);
+    }
+
+    private static ServerCallContext Context() =>
+        TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken);
+
+    private async Task<Namespace> GetAsync(string name) =>
+        (await sut.Get(new NamespaceServiceGetRequest { Name = name }, Context())).Namespace;
+
+    private async Task SetDescriptionAndRegexAsync(string description, string regex) =>
+        await sut.Update(
+            new NamespaceServiceUpdateRequest
+            {
+                Namespace = new Namespace
+                {
+                    Name = "existingNamespace",
+                    Description = description,
+                    OriginalValueValidationRegex = regex,
+                },
+                UpdateMask = new Google.Protobuf.WellKnownTypes.FieldMask { Paths = { "*" } },
+            },
+            Context()
+        );
+
+    [Fact]
+    public async Task Update_WithAMask_ShouldChangeOnlyTheNamedFields()
+    {
+        await SetDescriptionAndRegexAsync("before", "^[0-9]+$");
+
+        var response = await sut.Update(
+            new NamespaceServiceUpdateRequest
+            {
+                // The regex is set here too, but not named in the mask - so it must not change.
+                Namespace = new Namespace
+                {
+                    Name = "existingNamespace",
+                    Description = "after",
+                    OriginalValueValidationRegex = "^[a-z]+$",
+                },
+                UpdateMask = new Google.Protobuf.WellKnownTypes.FieldMask
+                {
+                    Paths = { "description" },
+                },
+            },
+            Context()
+        );
+
+        response.Namespace.Description.Should().Be("after");
+        response.Namespace.OriginalValueValidationRegex.Should().Be("^[0-9]+$");
+        (await GetAsync("existingNamespace")).Description.Should().Be("after");
+    }
+
+    [Fact]
+    public async Task Update_WithAMaskNamingAnAbsentField_ShouldClearIt()
+    {
+        await SetDescriptionAndRegexAsync("before", "^[0-9]+$");
+
+        var response = await sut.Update(
+            new NamespaceServiceUpdateRequest
+            {
+                Namespace = new Namespace { Name = "existingNamespace" },
+                UpdateMask = new Google.Protobuf.WellKnownTypes.FieldMask
+                {
+                    Paths = { "original_value_validation_regex" },
+                },
+            },
+            Context()
+        );
+
+        response.Namespace.HasOriginalValueValidationRegex.Should().BeFalse();
+        response.Namespace.Description.Should().Be("before");
+    }
+
+    [Fact]
+    public async Task Update_WithoutAMask_ShouldChangeOnlyTheFieldsThatAreSet()
+    {
+        await SetDescriptionAndRegexAsync("before", "^[0-9]+$");
+
+        var response = await sut.Update(
+            new NamespaceServiceUpdateRequest
+            {
+                Namespace = new Namespace { Name = "existingNamespace", Description = "after" },
+            },
+            Context()
+        );
+
+        response.Namespace.Description.Should().Be("after");
+        response.Namespace.OriginalValueValidationRegex.Should().Be("^[0-9]+$");
+    }
+
+    [Theory]
+    [InlineData("pseudonym_length")]
+    [InlineData("name")]
+    [InlineData("no_such_field")]
+    public async Task Update_WithAMaskNamingAFieldThatCantChange_ShouldThrowInvalidArgument(
+        string path
+    )
+    {
+        var act = () =>
+            sut.Update(
+                new NamespaceServiceUpdateRequest
+                {
+                    Namespace = new Namespace { Name = "existingNamespace", PseudonymLength = 8 },
+                    UpdateMask = new Google.Protobuf.WellKnownTypes.FieldMask { Paths = { path } },
+                },
+                Context()
+            );
+
+        (await act.Should().ThrowAsync<RpcException>())
+            .Which.StatusCode.Should()
+            .Be(StatusCode.InvalidArgument);
+        (await GetAsync("existingNamespace")).PseudonymLength.Should().Be(32);
+    }
+
+    [Fact]
+    public async Task Update_WithAnInvalidRegex_ShouldThrowInvalidArgument()
+    {
+        var act = () =>
+            sut.Update(
+                new NamespaceServiceUpdateRequest
+                {
+                    Namespace = new Namespace
+                    {
+                        Name = "existingNamespace",
+                        OriginalValueValidationRegex = "(unterminated",
+                    },
+                },
+                Context()
+            );
+
+        (await act.Should().ThrowAsync<RpcException>())
+            .Which.StatusCode.Should()
+            .Be(StatusCode.InvalidArgument);
+    }
+
+    [Fact]
+    public async Task Update_WithAnUnknownNamespace_ShouldThrowNotFound()
+    {
+        var act = () =>
+            sut.Update(
+                new NamespaceServiceUpdateRequest
+                {
+                    Namespace = new Namespace { Name = "no-such-namespace", Description = "x" },
+                },
+                Context()
+            );
+
+        (await act.Should().ThrowAsync<RpcException>())
+            .Which.StatusCode.Should()
+            .Be(StatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Update_WithALowerCamelCaseMask_ShouldReadItLikeSnakeCase()
+    {
+        // What a REST caller sends: ?updateMask=originalValueValidationRegex arrives verbatim,
+        // in the JSON mapping's lowerCamelCase rather than the proto field's snake_case.
+        await SetDescriptionAndRegexAsync("kept", "^[0-9]+$");
+
+        var response = await sut.Update(
+            new NamespaceServiceUpdateRequest
+            {
+                Namespace = new Namespace
+                {
+                    Name = "existingNamespace",
+                    OriginalValueValidationRegex = "^[a-z]+$",
+                },
+                UpdateMask = new Google.Protobuf.WellKnownTypes.FieldMask
+                {
+                    Paths = { "originalValueValidationRegex" },
+                },
+            },
+            Context()
+        );
+
+        response.Namespace.OriginalValueValidationRegex.Should().Be("^[a-z]+$");
+        response.Namespace.Description.Should().Be("kept");
     }
 }

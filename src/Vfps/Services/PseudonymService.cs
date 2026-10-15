@@ -89,12 +89,30 @@ public class PseudonymService(IPseudonymAppService pseudonymAppService)
         ServerCallContext context
     )
     {
+        // Unset and empty are the same thing in proto3: no request id, so no retry protection.
+        Guid? requestId = null;
+        if (request.RequestId.Length > 0)
+        {
+            if (!Guid.TryParse(request.RequestId, out var parsed))
+            {
+                throw new RpcException(
+                    new Status(
+                        StatusCode.InvalidArgument,
+                        "request_id must be a UUID, e.g. 0b9a5e8c-6f0e-4f53-9c66-0f3c1e2a7d41."
+                    )
+                );
+            }
+
+            requestId = parsed;
+        }
+
         Data.Models.Pseudonym appended;
         try
         {
             appended = await pseudonymAppService.AppendAsync(
                 request.Namespace,
                 request.OriginalValue,
+                requestId,
                 context.GetUser(),
                 context.CancellationToken
             );
@@ -136,6 +154,11 @@ public class PseudonymService(IPseudonymAppService pseudonymAppService)
         {
             throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
         }
+        catch (AppendRequestIdConflictException ex)
+        {
+            // A client bug - the same id for two different requests - that retrying won't fix.
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
         catch (PseudonymUpsertFailedException ex)
         {
             var metadata = new Metadata { { "Namespace", request.Namespace } };
@@ -144,6 +167,70 @@ public class PseudonymService(IPseudonymAppService pseudonymAppService)
         }
 
         return new PseudonymServiceAppendResponse { Pseudonym = ToProto(appended) };
+    }
+
+    /// <inheritdoc/>
+    public override async Task<PseudonymServiceImportResponse> Import(
+        PseudonymServiceImportRequest request,
+        ServerCallContext context
+    )
+    {
+        Data.Models.Pseudonym imported;
+        try
+        {
+            imported = await pseudonymAppService.ImportAsync(
+                request.Namespace,
+                request.OriginalValue,
+                request.PseudonymValue,
+                context.GetUser(),
+                context.CancellationToken
+            );
+        }
+        catch (NamespaceNotFoundException)
+        {
+            var metadata = new Metadata { { "Namespace", request.Namespace } };
+
+            throw new RpcException(
+                new Status(
+                    StatusCode.NotFound,
+                    "The requested pseudonym namespace does not exist."
+                ),
+                metadata
+            );
+        }
+        catch (ForbiddenException ex)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
+        }
+        catch (ArgumentException ex)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
+        catch (OriginalValueValidationException ex)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
+        catch (NamespaceNotExternalException ex)
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
+        }
+        catch (ParentPseudonymNotFoundException ex)
+        {
+            // FailedPrecondition for the same reason as in Create.
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
+        }
+        catch (PseudonymConflictException ex)
+        {
+            throw new RpcException(new Status(StatusCode.AlreadyExists, ex.Message));
+        }
+        catch (PseudonymUpsertFailedException ex)
+        {
+            var metadata = new Metadata { { "Namespace", request.Namespace } };
+
+            throw new RpcException(new Status(StatusCode.Internal, ex.Message), metadata);
+        }
+
+        return new PseudonymServiceImportResponse { Pseudonym = ToProto(imported) };
     }
 
     /// <inheritdoc/>

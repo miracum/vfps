@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using EntityFramework.Exceptions.Common;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.WebUtilities;
@@ -106,6 +107,7 @@ public class PseudonymAppService(
     public async Task<Data.Models.Pseudonym> AppendAsync(
         string namespaceName,
         string originalValue,
+        Guid? requestId,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
     )
@@ -129,6 +131,8 @@ public class PseudonymAppService(
             );
         }
 
+        EnsureGeneratesPseudonyms(@namespace);
+
         // The value-dependent check is the same belt-and-braces guard CreateTrustedAsync has:
         // namespace creation already refuses to pair such a method with AllowsMultiplePseudonyms,
         // and a value-dependent method could only ever "append" the pseudonym already stored.
@@ -138,6 +142,18 @@ public class PseudonymAppService(
         )
         {
             throw new MultiplePseudonymsNotAllowedException(@namespace.Name);
+        }
+
+        // A retry of a call that already went through. Checked before validating the value:
+        // the earlier call validated it, and the value now has a pseudonym, which is all the
+        // validations below would have it need.
+        if (
+            requestId is { } id
+            && await FindAppendedByRequestIdAsync(@namespace, originalValue, id, cancellationToken)
+                is { } earlier
+        )
+        {
+            return earlier;
         }
 
         await ValidateOriginalValueAsync(@namespace, originalValue, cancellationToken);
@@ -160,13 +176,29 @@ public class PseudonymAppService(
                     stored.Select(p => p.PseudonymValue).ToHashSet(StringComparer.Ordinal)
                 ),
                 SequenceNumber = stored.Count == 0 ? 0 : stored.Max(p => p.SequenceNumber) + 1,
+                AppendRequestId = requestId,
             };
 
-            stored = await pseudonymRepository.CreateSetIfNotExistAsync(
-                @namespace,
-                [candidate],
-                cancellationToken
-            );
+            try
+            {
+                stored = await pseudonymRepository.CreateSetIfNotExistAsync(
+                    @namespace,
+                    [candidate],
+                    cancellationToken
+                );
+            }
+            catch (UniqueConstraintException) when (requestId is not null)
+            {
+                // Another attempt with the same request id - a retry racing the call it retries -
+                // stored its pseudonym between the check above and this insert, and the unique
+                // index turned this one away. Answer with what that attempt stored.
+                return await FindAppendedByRequestIdAsync(
+                        @namespace,
+                        originalValue,
+                        requestId.Value,
+                        cancellationToken
+                    ) ?? throw new PseudonymUpsertFailedException(@namespace.Name);
+            }
 
             // Matched on the value as well as the sequence number: a concurrent append that won
             // the same sequence number stored a row there too, just not this one.
@@ -181,6 +213,35 @@ public class PseudonymAppService(
         }
 
         throw new PseudonymUpsertFailedException(@namespace.Name);
+    }
+
+    /// <summary>
+    /// The pseudonym an earlier Append with <paramref name="requestId"/> stored, if there was
+    /// one - provided it was for the same original value. One stored for another value is a
+    /// client error, and is reported without revealing anything about it.
+    /// </summary>
+    private async Task<Data.Models.Pseudonym?> FindAppendedByRequestIdAsync(
+        Data.Models.Namespace @namespace,
+        string originalValue,
+        Guid requestId,
+        CancellationToken cancellationToken
+    )
+    {
+        var earlier = await pseudonymRepository.FindByAppendRequestIdAsync(
+            @namespace.Name,
+            requestId,
+            cancellationToken
+        );
+
+        if (
+            earlier is not null
+            && !string.Equals(earlier.OriginalValue, originalValue, StringComparison.Ordinal)
+        )
+        {
+            throw new AppendRequestIdConflictException(@namespace.Name, requestId);
+        }
+
+        return earlier;
     }
 
     /// <inheritdoc/>
@@ -198,6 +259,8 @@ public class PseudonymAppService(
                 nameof(originalValue)
             );
         }
+
+        EnsureGeneratesPseudonyms(@namespace);
 
         if (count is < 1 or > MaxCount)
         {
@@ -494,6 +557,8 @@ public class PseudonymAppService(
                     );
                 }
 
+                EnsureGeneratesPseudonyms(@namespace);
+
                 var key = (@namespace.Name, originalValue);
                 if (distinctByKey.ContainsKey(key) || deferredKeys.Contains(key))
                 {
@@ -551,6 +616,85 @@ public class PseudonymAppService(
         }
 
         return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<Data.Models.Pseudonym> ImportAsync(
+        string namespaceName,
+        string originalValue,
+        string pseudonymValue,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!await permissionChecker.HasWriteAccessAsync(user, namespaceName, cancellationToken))
+        {
+            throw new ForbiddenException(
+                $"Write access to namespace '{namespaceName}' is required."
+            );
+        }
+
+        var @namespace =
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            ?? throw new NamespaceNotFoundException(namespaceName);
+
+        if (!PseudonymizationMethodsLookup.IsExternal(@namespace.PseudonymGenerationMethod))
+        {
+            throw new NamespaceNotExternalException(@namespace.Name);
+        }
+
+        // Checked here rather than left to ImportTrustedBatchAsync, which treats a blank value as
+        // a caller bug and throws the same ArgumentException - but this is the API boundary, so
+        // the parameter name in the message should be the one the caller can act on.
+        if (string.IsNullOrWhiteSpace(originalValue))
+        {
+            throw new ArgumentException(
+                "The original value must not be blank.",
+                nameof(originalValue)
+            );
+        }
+
+        if (string.IsNullOrWhiteSpace(pseudonymValue))
+        {
+            throw new ArgumentException(
+                "The pseudonym value must not be blank.",
+                nameof(pseudonymValue)
+            );
+        }
+
+        var result = (
+            await ImportTrustedBatchAsync(
+                @namespace,
+                [new PseudonymImportEntry(originalValue, pseudonymValue)],
+                cancellationToken
+            )
+        )[0];
+
+        switch (result.Outcome)
+        {
+            case PseudonymImportOutcome.Imported:
+            case PseudonymImportOutcome.AlreadyPresent:
+                break;
+            case PseudonymImportOutcome.InvalidOriginalValue:
+                throw new OriginalValueValidationException(
+                    @namespace.Name,
+                    @namespace.OriginalValueValidationRegex!
+                );
+            case PseudonymImportOutcome.ParentValueMissing:
+                throw new ParentPseudonymNotFoundException(@namespace.Name, @namespace.ParentName!);
+            default:
+                throw new PseudonymConflictException(@namespace.Name, result.Outcome);
+        }
+
+        var stored = await pseudonymRepository.FindAllByOriginalValueAsync(
+            @namespace.Name,
+            originalValue,
+            cancellationToken
+        );
+
+        return stored.FirstOrDefault(p =>
+                string.Equals(p.PseudonymValue, pseudonymValue, StringComparison.Ordinal)
+            ) ?? throw new PseudonymUpsertFailedException(@namespace.Name);
     }
 
     /// <inheritdoc/>
@@ -1190,6 +1334,20 @@ public class PseudonymAppService(
         return originalValues
             .Where(value => !existing.Contains(value))
             .ToHashSet(StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Create and Append generate pseudonyms, which an External namespace must never contain
+    /// next to the third-party ones it exists to hold.
+    /// </summary>
+    private static void EnsureGeneratesPseudonyms(Data.Models.Namespace @namespace)
+    {
+        if (PseudonymizationMethodsLookup.IsExternal(@namespace.PseudonymGenerationMethod))
+        {
+            throw new PseudonymGenerationMethodNotSupportedException(
+                @namespace.PseudonymGenerationMethod
+            );
+        }
     }
 
     private static PseudonymPageCursor? DecodeCursor(string? pageToken)

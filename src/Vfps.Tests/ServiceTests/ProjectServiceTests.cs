@@ -36,7 +36,7 @@ public class ProjectServiceTests : ServiceTestBase
             new ProjectServiceAddNamespaceRequest
             {
                 Name = "study",
-                NamespaceName = "existingNamespace",
+                Namespace = "existingNamespace",
             },
             Context()
         );
@@ -74,12 +74,103 @@ public class ProjectServiceTests : ServiceTestBase
 
         var act = () =>
             sut.AddNamespace(
-                new ProjectServiceAddNamespaceRequest { Name = "study", NamespaceName = "nope" },
+                new ProjectServiceAddNamespaceRequest { Name = "study", Namespace = "nope" },
                 Context()
             );
 
         (await act.Should().ThrowAsync<RpcException>())
             .Which.StatusCode.Should()
             .Be(StatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task List_ShouldReturnTheProjects()
+    {
+        await sut.Create(new ProjectServiceCreateRequest { Name = "study" }, Context());
+
+        var response = await sut.List(new ProjectServiceListRequest(), Context());
+
+        response.Projects.Select(p => p.Name).Should().Equal("study");
+    }
+
+    [Fact]
+    public async Task Update_WithADescriptionMask_ShouldReplaceIt_AndClearItWhenAbsent()
+    {
+        await sut.Create(
+            new ProjectServiceCreateRequest { Name = "study", Description = "before" },
+            Context()
+        );
+
+        var changed = await sut.Update(
+            new ProjectServiceUpdateRequest
+            {
+                Project = new Project { Name = "study", Description = "after" },
+                UpdateMask = new Google.Protobuf.WellKnownTypes.FieldMask
+                {
+                    Paths = { "description" },
+                },
+            },
+            Context()
+        );
+        changed.Project.Description.Should().Be("after");
+
+        // Named in the mask but absent from the request: cleared.
+        var cleared = await sut.Update(
+            new ProjectServiceUpdateRequest
+            {
+                Project = new Project { Name = "study" },
+                UpdateMask = new Google.Protobuf.WellKnownTypes.FieldMask
+                {
+                    Paths = { "description" },
+                },
+            },
+            Context()
+        );
+        cleared.Project.HasDescription.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Update_WithoutAMaskOrAnyFieldSet_ShouldKeepTheDescription()
+    {
+        // The trap the old PUT had: an update that says nothing about the description must not
+        // wipe it.
+        await sut.Create(
+            new ProjectServiceCreateRequest { Name = "study", Description = "kept" },
+            Context()
+        );
+
+        var response = await sut.Update(
+            new ProjectServiceUpdateRequest { Project = new Project { Name = "study" } },
+            Context()
+        );
+
+        response.Project.Description.Should().Be("kept");
+    }
+
+    [Fact]
+    public async Task Update_WithAMaskNamingTheNamespaces_ShouldThrowInvalidArgument()
+    {
+        await sut.Create(new ProjectServiceCreateRequest { Name = "study" }, Context());
+
+        var act = () =>
+            sut.Update(
+                new ProjectServiceUpdateRequest
+                {
+                    Project = new Project
+                    {
+                        Name = "study",
+                        NamespaceNames = { "existingNamespace" },
+                    },
+                    UpdateMask = new Google.Protobuf.WellKnownTypes.FieldMask
+                    {
+                        Paths = { "namespace_names" },
+                    },
+                },
+                Context()
+            );
+
+        (await act.Should().ThrowAsync<RpcException>())
+            .Which.StatusCode.Should()
+            .Be(StatusCode.InvalidArgument);
     }
 }

@@ -1,0 +1,78 @@
+name: release-protos
+
+# Attaches the API's .proto files to every GitHub release as a versioned archive, so clients can
+# generate code for their own language without cloning the repository. The files are the ones the
+# server of that exact release was built from.
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to (re-)attach the archive to, e.g. v1.25.0
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  protos:
+    name: protos
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write # to upload the archive to the release
+      id-token: write # for keyless OIDC-based attestations
+      attestations: write # to publish the build provenance attestation
+      artifact-metadata: write # required by actions/attest-build-provenance
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
+          persist-credentials: false
+
+      # The archive is rooted at src/Vfps/Protos, the same root the server compiles from and the
+      # buf module is defined at, so a single include path resolves every import. It carries the
+      # google/api/*.proto files the HTTP annotations import, which makes it self-contained, and
+      # buf.yaml, so it can be used as a buf module as it is.
+      #
+      # Reproducible: sorted entries, fixed ownership, and the release commit's timestamp rather
+      # than the time the job ran, so rebuilding the same tag yields a byte-identical archive.
+      - name: Build the archive
+        id: archive
+        run: |
+          set -euo pipefail
+
+          name="vfps-protos-${TAG}"
+          mkdir -p dist
+          tar \
+            --create \
+            --file - \
+            --directory src/Vfps/Protos \
+            --sort=name \
+            --owner=0 --group=0 --numeric-owner \
+            --mtime="@$(git log -1 --format=%ct)" \
+            --transform "s,^\./,${name}/," \
+            --transform "s,^\.$,${name}," \
+            . \
+            | gzip --no-name --best > "dist/${name}.tar.gz"
+
+          (cd dist && sha256sum "${name}.tar.gz" > "${name}.tar.gz.sha256")
+
+          tar --list --gzip --file "dist/${name}.tar.gz"
+          cat "dist/${name}.tar.gz.sha256"
+          echo "path=dist/${name}.tar.gz" >> "${GITHUB_OUTPUT}"
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: ${{ steps.archive.outputs.path }}
+
+      # --clobber so that re-running this for the same tag replaces the assets instead of failing.
+      - name: Upload to the release
+        run: gh release upload "${TAG}" dist/* --clobber --repo "${GITHUB_REPOSITORY}"

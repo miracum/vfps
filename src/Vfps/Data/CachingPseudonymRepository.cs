@@ -46,6 +46,22 @@ public class CachingPseudonymRepository(
     }
 
     /// <inheritdoc/>
+    public async Task<Pseudonym?> FindByAppendRequestIdAsync(
+        string namespaceName,
+        Guid requestId,
+        CancellationToken cancellationToken
+    )
+    {
+        // Not cached: only a retried Append asks, and a miss must never be remembered - the
+        // very next call may be the one that stores the row.
+        return await Repository.FindByAppendRequestIdAsync(
+            namespaceName,
+            requestId,
+            cancellationToken
+        );
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Pseudonym>> CreateIfNotExistBatchAsync(
         IReadOnlyList<Pseudonym> pseudonyms,
         CancellationToken cancellationToken

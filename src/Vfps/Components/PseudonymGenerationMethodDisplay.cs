@@ -42,6 +42,7 @@ public static class PseudonymGenerationMethodDisplay
             // Named for what makes it unlike every other entry: it is the only deterministic
             // one, so the same original value always yields the same pseudonym.
             Protos.PseudonymGenerationMethod.Voprf => "Deterministic (VOPRF server)",
+            Protos.PseudonymGenerationMethod.External => "External (imported via API)",
             _ => method.ToString(),
         };
 }
