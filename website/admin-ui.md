@@ -23,9 +23,9 @@ timeout, so a pattern that is valid but catastrophically slow is flagged too. Ed
 later only affects original values that are new to the namespace: values that already have a
 pseudonym stay resolvable even if they no longer match.
 
-A namespace's **projects** are shown as a badge next to it in the hierarchy and in its details, and
-the hierarchy can be filtered to the namespaces of one project (or of none). Admins choose a
-namespace's projects when creating it and can change them from the edit form.
+A namespace's **projects** are listed in its details, and the hierarchy can be filtered to the
+namespaces of one project (or of none). Admins choose a namespace's projects when creating it and
+can change them from the edit form.
 
 ## Projects
 
