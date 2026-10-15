@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1792015793534,
+  "lastUpdate": 1792072030309,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -14754,6 +14754,66 @@ window.BENCHMARK_DATA = {
             "value": 893.2425434748332,
             "unit": "ns",
             "range": "± 1.6218134534966486"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6329d434d2973ce670ee90ba12d25a00f990a2e8",
+          "message": "feat: added projects to group multiple namespaces (#421)\n\n* docs: always run the test stack with s3/keycloak/jaeger enabled\n\n* feat: added projects to group multiple namespaces\n\n* fix: dont show project pills in namespace list",
+          "timestamp": "2026-10-15T15:43:46+02:00",
+          "tree_id": "fb728183b2c58413d53bfe3bbcd5b3d8514fd4fa",
+          "url": "https://github.com/miracum/vfps/commit/6329d434d2973ce670ee90ba12d25a00f990a2e8"
+        },
+        "date": 1792072029609,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 836.8810570790217,
+            "unit": "ns",
+            "range": "± 3.400155213904563"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 734.0540384145884,
+            "unit": "ns",
+            "range": "± 1.3179197761668646"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 753.3817061015537,
+            "unit": "ns",
+            "range": "± 1.2054767631535404"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 816.5363967602069,
+            "unit": "ns",
+            "range": "± 1.5300006037795364"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 872.2092363493783,
+            "unit": "ns",
+            "range": "± 0.7883157139172804"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 831.1334430830819,
+            "unit": "ns",
+            "range": "± 0.6788490881261798"
           }
         ]
       }
