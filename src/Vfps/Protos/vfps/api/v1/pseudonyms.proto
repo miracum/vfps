@@ -30,6 +30,24 @@ service PseudonymService {
     };
   }
 
+  // store a pseudonym that was created outside vfps for an original value, verbatim. Only valid
+  // for a namespace using PSEUDONYM_GENERATION_METHOD_EXTERNAL - FAILED_PRECONDITION otherwise.
+  // Requires the same write access Create does.
+  //
+  // Idempotent for the exact same pair: re-sending an already stored (original_value,
+  // pseudonym_value) succeeds and returns the stored pseudonym. Nothing is ever overwritten.
+  // ALREADY_EXISTS is returned when the pair conflicts with what is stored - the original value
+  // already has a different pseudonym (and the namespace doesn't allow multiple), or the
+  // pseudonym value already belongs to a different original value. The error never says which
+  // original value holds a pseudonym, as that would be a reverse lookup, which write access
+  // doesn't grant.
+  rpc Import(PseudonymServiceImportRequest) returns (PseudonymServiceImportResponse) {
+    option (google.api.http) = {
+      post: "/v1/namespaces/{namespace}/pseudonyms:import"
+      body: "*"
+    };
+  }
+
   // resolve the pseudonym already stored for an original value, creating nothing. Returns
   // NOT_FOUND when the namespace holds none - the difference from Create, which would generate
   // one. Requires the same write access Create does: this is the same forward mapping, and a
@@ -154,6 +172,24 @@ message PseudonymServiceAppendRequest {
 message PseudonymServiceAppendResponse {
   // the pseudonym this call stored - only the new one, not the full set. Its sequence_number is
   // one past the highest already stored for the original value.
+  Pseudonym pseudonym = 1;
+}
+
+// request to store an externally created pseudonym for an original value
+message PseudonymServiceImportRequest {
+  // the namespace to store the pseudonym in. Must use PSEUDONYM_GENERATION_METHOD_EXTERNAL.
+  string namespace = 1;
+  // the original value the pseudonym was created for. Must not be blank, and must match the
+  // namespace's original value validation regex, if it has one.
+  string original_value = 2;
+  // the pseudonym to store, exactly as given - the namespace's prefix and suffix are not
+  // applied. Must not be blank.
+  string pseudonym_value = 3;
+}
+
+// response for importing an external pseudonym
+message PseudonymServiceImportResponse {
+  // the stored pseudonym - the one this call created, or the identical one that was already there.
   Pseudonym pseudonym = 1;
 }
 

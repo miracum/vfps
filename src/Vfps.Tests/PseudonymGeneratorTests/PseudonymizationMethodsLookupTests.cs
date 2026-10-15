@@ -13,7 +13,10 @@ public class PseudonymizationMethodsLookupTests
     /// </summary>
     private static IEnumerable<PseudonymGenerationMethod> IndependentMethods =>
         Enum.GetValues<PseudonymGenerationMethod>()
-            .Where(method => !PseudonymizationMethodsLookup.IsValueDependent(method));
+            .Where(method =>
+                !PseudonymizationMethodsLookup.IsValueDependent(method)
+                && !PseudonymizationMethodsLookup.IsExternal(method)
+            );
 
     // Enumerates the enum itself rather than listing methods individually - a hardcoded list
     // here would have exactly the same "forgot to add the new one" failure mode this test is
@@ -176,5 +179,16 @@ public class PseudonymizationMethodsLookupTests
     )
     {
         sut.GetFixedPseudonymLength(method).Should().BeNull();
+    }
+
+    [Fact]
+    public void External_ShouldBeSupportedWithoutAGeneratorOrAFixedLength()
+    {
+        sut.IsSupported(PseudonymGenerationMethod.External).Should().BeTrue();
+        sut.GetFixedPseudonymLength(PseudonymGenerationMethod.External).Should().BeNull();
+
+        var act = () => sut.Generate(PseudonymGenerationMethod.External, 32u);
+
+        act.Should().Throw<PseudonymGenerationMethodNotSupportedException>();
     }
 }

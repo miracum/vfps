@@ -129,6 +129,8 @@ public class PseudonymAppService(
             );
         }
 
+        EnsureGeneratesPseudonyms(@namespace);
+
         // The value-dependent check is the same belt-and-braces guard CreateTrustedAsync has:
         // namespace creation already refuses to pair such a method with AllowsMultiplePseudonyms,
         // and a value-dependent method could only ever "append" the pseudonym already stored.
@@ -198,6 +200,8 @@ public class PseudonymAppService(
                 nameof(originalValue)
             );
         }
+
+        EnsureGeneratesPseudonyms(@namespace);
 
         if (count is < 1 or > MaxCount)
         {
@@ -494,6 +498,8 @@ public class PseudonymAppService(
                     );
                 }
 
+                EnsureGeneratesPseudonyms(@namespace);
+
                 var key = (@namespace.Name, originalValue);
                 if (distinctByKey.ContainsKey(key) || deferredKeys.Contains(key))
                 {
@@ -551,6 +557,85 @@ public class PseudonymAppService(
         }
 
         return result;
+    }
+
+    /// <inheritdoc/>
+    public async Task<Data.Models.Pseudonym> ImportAsync(
+        string namespaceName,
+        string originalValue,
+        string pseudonymValue,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        if (!await permissionChecker.HasWriteAccessAsync(user, namespaceName, cancellationToken))
+        {
+            throw new ForbiddenException(
+                $"Write access to namespace '{namespaceName}' is required."
+            );
+        }
+
+        var @namespace =
+            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            ?? throw new NamespaceNotFoundException(namespaceName);
+
+        if (!PseudonymizationMethodsLookup.IsExternal(@namespace.PseudonymGenerationMethod))
+        {
+            throw new NamespaceNotExternalException(@namespace.Name);
+        }
+
+        // Checked here rather than left to ImportTrustedBatchAsync, which treats a blank value as
+        // a caller bug and throws the same ArgumentException - but this is the API boundary, so
+        // the parameter name in the message should be the one the caller can act on.
+        if (string.IsNullOrWhiteSpace(originalValue))
+        {
+            throw new ArgumentException(
+                "The original value must not be blank.",
+                nameof(originalValue)
+            );
+        }
+
+        if (string.IsNullOrWhiteSpace(pseudonymValue))
+        {
+            throw new ArgumentException(
+                "The pseudonym value must not be blank.",
+                nameof(pseudonymValue)
+            );
+        }
+
+        var result = (
+            await ImportTrustedBatchAsync(
+                @namespace,
+                [new PseudonymImportEntry(originalValue, pseudonymValue)],
+                cancellationToken
+            )
+        )[0];
+
+        switch (result.Outcome)
+        {
+            case PseudonymImportOutcome.Imported:
+            case PseudonymImportOutcome.AlreadyPresent:
+                break;
+            case PseudonymImportOutcome.InvalidOriginalValue:
+                throw new OriginalValueValidationException(
+                    @namespace.Name,
+                    @namespace.OriginalValueValidationRegex!
+                );
+            case PseudonymImportOutcome.ParentValueMissing:
+                throw new ParentPseudonymNotFoundException(@namespace.Name, @namespace.ParentName!);
+            default:
+                throw new PseudonymConflictException(@namespace.Name, result.Outcome);
+        }
+
+        var stored = await pseudonymRepository.FindAllByOriginalValueAsync(
+            @namespace.Name,
+            originalValue,
+            cancellationToken
+        );
+
+        return stored.FirstOrDefault(p =>
+                string.Equals(p.PseudonymValue, pseudonymValue, StringComparison.Ordinal)
+            ) ?? throw new PseudonymUpsertFailedException(@namespace.Name);
     }
 
     /// <inheritdoc/>
@@ -1190,6 +1275,20 @@ public class PseudonymAppService(
         return originalValues
             .Where(value => !existing.Contains(value))
             .ToHashSet(StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Create and Append generate pseudonyms, which an External namespace must never contain
+    /// next to the third-party ones it exists to hold.
+    /// </summary>
+    private static void EnsureGeneratesPseudonyms(Data.Models.Namespace @namespace)
+    {
+        if (PseudonymizationMethodsLookup.IsExternal(@namespace.PseudonymGenerationMethod))
+        {
+            throw new PseudonymGenerationMethodNotSupportedException(
+                @namespace.PseudonymGenerationMethod
+            );
+        }
     }
 
     private static PseudonymPageCursor? DecodeCursor(string? pageToken)

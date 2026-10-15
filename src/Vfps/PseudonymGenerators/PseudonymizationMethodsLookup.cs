@@ -70,11 +70,24 @@ public class PseudonymizationMethodsLookup
         ValueDependentMethods.Contains(method);
 
     /// <summary>
-    /// Whether <paramref name="method"/> can be used to create new pseudonyms right now. False
-    /// for a method that has been removed, and for VOPRF when no server is configured.
+    /// Whether <paramref name="method"/> generates nothing because its pseudonyms are created
+    /// outside vfps and stored verbatim - see <see cref="PseudonymGenerationMethod.External"/>.
+    /// </summary>
+    public static bool IsExternal(PseudonymGenerationMethod method) =>
+        method == PseudonymGenerationMethod.External;
+
+    /// <summary>
+    /// Whether <paramref name="method"/> can be used for a namespace right now. False for a
+    /// method that has been removed, and for VOPRF when no server is configured. True for
+    /// <see cref="PseudonymGenerationMethod.External"/>, which has no generator but needs none.
     /// </summary>
     public bool IsSupported(PseudonymGenerationMethod method) =>
-        IsValueDependent(method) ? valueDependentGenerator is not null : lookup.ContainsKey(method);
+        IsExternal(method)
+        || (
+            IsValueDependent(method)
+                ? valueDependentGenerator is not null
+                : lookup.ContainsKey(method)
+        );
 
     /// <summary>
     /// The generator for a value-dependent <paramref name="method"/>.
@@ -112,7 +125,7 @@ public class PseudonymizationMethodsLookup
     /// </remarks>
     public uint? GetFixedPseudonymLength(PseudonymGenerationMethod method)
     {
-        if (!IsSupported(method))
+        if (!IsSupported(method) || IsExternal(method))
         {
             return null;
         }
@@ -141,7 +154,10 @@ public class PseudonymizationMethodsLookup
 /// </summary>
 public class PseudonymGenerationMethodNotSupportedException(PseudonymGenerationMethod method)
     : Exception(
-        $"The pseudonym generation method '{method}' is no longer supported for creating new pseudonyms."
+        PseudonymizationMethodsLookup.IsExternal(method)
+            ? "Pseudonyms in a namespace using the 'External' generation method are created "
+                + "outside vfps and can only be added by importing them."
+            : $"The pseudonym generation method '{method}' is no longer supported for creating new pseudonyms."
     )
 {
     public PseudonymGenerationMethod Method { get; } = method;

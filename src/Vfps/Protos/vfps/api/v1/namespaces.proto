@@ -124,6 +124,15 @@ enum PseudonymGenerationMethod {
   // Requires a configured VOPRF server; namespace creation fails with FAILED_PRECONDITION
   // otherwise.
   PSEUDONYM_GENERATION_METHOD_VOPRF = 8;
+  // The namespace generates nothing: its pseudonyms are created outside vfps (by a third party)
+  // and stored verbatim through PseudonymService.Import, which is the only RPC that writes to
+  // such a namespace - Create and Append return FAILED_PRECONDITION, so a pseudonym vfps
+  // generated can never end up next to an external one. Resolve, Get and List work as usual.
+  //
+  // pseudonym_length, pseudonym_prefix and pseudonym_suffix are ignored: imported values are
+  // stored exactly as given. allows_multiple_pseudonyms is honored - without it a second,
+  // different pseudonym for the same original value is rejected.
+  PSEUDONYM_GENERATION_METHOD_EXTERNAL = 9;
 }
 
 // request to create a new namespace

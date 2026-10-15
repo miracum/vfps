@@ -147,6 +147,70 @@ public class PseudonymService(IPseudonymAppService pseudonymAppService)
     }
 
     /// <inheritdoc/>
+    public override async Task<PseudonymServiceImportResponse> Import(
+        PseudonymServiceImportRequest request,
+        ServerCallContext context
+    )
+    {
+        Data.Models.Pseudonym imported;
+        try
+        {
+            imported = await pseudonymAppService.ImportAsync(
+                request.Namespace,
+                request.OriginalValue,
+                request.PseudonymValue,
+                context.GetUser(),
+                context.CancellationToken
+            );
+        }
+        catch (NamespaceNotFoundException)
+        {
+            var metadata = new Metadata { { "Namespace", request.Namespace } };
+
+            throw new RpcException(
+                new Status(
+                    StatusCode.NotFound,
+                    "The requested pseudonym namespace does not exist."
+                ),
+                metadata
+            );
+        }
+        catch (ForbiddenException ex)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
+        }
+        catch (ArgumentException ex)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
+        catch (OriginalValueValidationException ex)
+        {
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
+        catch (NamespaceNotExternalException ex)
+        {
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
+        }
+        catch (ParentPseudonymNotFoundException ex)
+        {
+            // FailedPrecondition for the same reason as in Create.
+            throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
+        }
+        catch (PseudonymConflictException ex)
+        {
+            throw new RpcException(new Status(StatusCode.AlreadyExists, ex.Message));
+        }
+        catch (PseudonymUpsertFailedException ex)
+        {
+            var metadata = new Metadata { { "Namespace", request.Namespace } };
+
+            throw new RpcException(new Status(StatusCode.Internal, ex.Message), metadata);
+        }
+
+        return new PseudonymServiceImportResponse { Pseudonym = ToProto(imported) };
+    }
+
+    /// <inheritdoc/>
     public override async Task<PseudonymServiceResolveResponse> Resolve(
         PseudonymServiceResolveRequest request,
         ServerCallContext context

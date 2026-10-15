@@ -39,7 +39,13 @@ public class NamespaceAppService(
             throw new ArgumentException("A namespace name is required.", nameof(namespaceToCreate));
         }
 
-        if (namespaceToCreate.PseudonymLength <= 0)
+        // An external namespace stores its pseudonyms verbatim, so there is no length to speak of.
+        if (
+            namespaceToCreate.PseudonymLength <= 0
+            && !PseudonymGenerators.PseudonymizationMethodsLookup.IsExternal(
+                namespaceToCreate.PseudonymGenerationMethod
+            )
+        )
         {
             throw new ArgumentOutOfRangeException(
                 nameof(namespaceToCreate),

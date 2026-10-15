@@ -203,6 +203,39 @@ public interface IPseudonymAppService
     );
 
     /// <summary>
+    /// Stores one pseudonym created outside vfps for <paramref name="originalValue"/>, verbatim,
+    /// in a namespace using <see cref="Protos.PseudonymGenerationMethod.External"/> - the single-pair,
+    /// permission-checked, fail-on-conflict counterpart to <see cref="ImportTrustedBatchAsync"/>,
+    /// which it delegates to. Requires write access to the namespace, like
+    /// <see cref="CreateAsync"/>.
+    ///
+    /// Idempotent for the exact same pair: importing what is already stored succeeds and returns
+    /// the stored row. Nothing is ever overwritten.
+    /// </summary>
+    /// <returns>The stored pseudonym, including its original value.</returns>
+    /// <exception cref="Authorization.ForbiddenException">The caller has no write access to the namespace.</exception>
+    /// <exception cref="NamespaceNotFoundException">The namespace does not exist.</exception>
+    /// <exception cref="NamespaceNotExternalException">The namespace doesn't use the External method.</exception>
+    /// <exception cref="ArgumentException">The original or pseudonym value is blank.</exception>
+    /// <exception cref="OriginalValueValidationException">
+    /// The original value doesn't match the namespace's validation regex and has nothing stored yet.
+    /// </exception>
+    /// <exception cref="ParentPseudonymNotFoundException">
+    /// The namespace requires its original values to exist in its parent and this one doesn't.
+    /// </exception>
+    /// <exception cref="PseudonymConflictException">
+    /// The pair collides with what is stored: the original value already has a different
+    /// pseudonym, or the pseudonym value already belongs to a different original value.
+    /// </exception>
+    Task<Pseudonym> ImportAsync(
+        string namespaceName,
+        string originalValue,
+        string pseudonymValue,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Stores already-known original/pseudonym pairs verbatim in <paramref name="namespace"/>,
     /// generating nothing - the bulk-import counterpart to
     /// <see cref="CreateTrustedBatchAsync"/>, and the only way a pseudonym value chosen outside
@@ -439,6 +472,37 @@ public class ParentPseudonymNotFoundException(string namespaceName, string paren
 {
     public string NamespaceName { get; } = namespaceName;
     public string ParentNamespaceName { get; } = parentNamespaceName;
+}
+
+/// <summary>
+/// Thrown when an externally created pseudonym is imported into a namespace that doesn't use
+/// <see cref="Protos.PseudonymGenerationMethod.External"/>, where it would sit next to pseudonyms vfps
+/// generated itself.
+/// </summary>
+public class NamespaceNotExternalException(string namespaceName)
+    : Exception(
+        $"Namespace '{namespaceName}' does not use the 'External' pseudonym generation method, "
+            + "so pseudonyms can't be imported into it."
+    )
+{
+    public string NamespaceName { get; } = namespaceName;
+}
+
+/// <summary>
+/// Thrown when importing a pseudonym would contradict what a namespace already stores. The message
+/// deliberately doesn't say which original value holds a conflicting pseudonym - that would be a
+/// reverse lookup, which the write access an import needs doesn't grant.
+/// </summary>
+public class PseudonymConflictException(string namespaceName, PseudonymImportOutcome outcome)
+    : Exception(
+        outcome == PseudonymImportOutcome.PseudonymValueConflict
+            ? $"The pseudonym value is already in use for a different original value in namespace '{namespaceName}'."
+            : $"The original value already has a different pseudonym in namespace '{namespaceName}', "
+                + "which doesn't allow multiple pseudonyms per original value."
+    )
+{
+    public string NamespaceName { get; } = namespaceName;
+    public PseudonymImportOutcome Outcome { get; } = outcome;
 }
 
 /// <summary>
