@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.25.0](https://github.com/miracum/vfps/compare/v1.24.1...v1.25.0) (2026-10-15)
+
+
+### Features
+
+* added projects to group multiple namespaces ([#421](https://github.com/miracum/vfps/issues/421)) ([6329d43](https://github.com/miracum/vfps/commit/6329d434d2973ce670ee90ba12d25a00f990a2e8))
+* support for importing existing pseudonyms ([#423](https://github.com/miracum/vfps/issues/423)) ([bdca57c](https://github.com/miracum/vfps/commit/bdca57cab31c0494a7b488a96b182929a06accf6))
+
+
+### Bug Fixes
+
+* regex e2e test race condition ([#424](https://github.com/miracum/vfps/issues/424)) ([fc6512e](https://github.com/miracum/vfps/commit/fc6512e576fb75098200078a84184b416668e671))
+
 ## [1.24.1](https://github.com/miracum/vfps/compare/v1.24.0...v1.24.1) (2026-10-14)
 
 
