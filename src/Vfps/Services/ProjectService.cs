@@ -73,8 +73,8 @@ public class ProjectService(IProjectAppService projectAppService)
     }
 
     /// <inheritdoc/>
-    public override async Task<ProjectServiceGetAllResponse> GetAll(
-        ProjectServiceGetAllRequest request,
+    public override async Task<ProjectServiceListResponse> List(
+        ProjectServiceListRequest request,
         ServerCallContext context
     )
     {
@@ -83,7 +83,7 @@ public class ProjectService(IProjectAppService projectAppService)
             context.CancellationToken
         );
 
-        var response = new ProjectServiceGetAllResponse();
+        var response = new ProjectServiceListResponse();
         response.Projects.AddRange(projects.Select(ToProto));
 
         return response;
@@ -95,11 +95,31 @@ public class ProjectService(IProjectAppService projectAppService)
         ServerCallContext context
     )
     {
+        var changes = request.Project ?? new Project();
+        if (string.IsNullOrEmpty(changes.Name))
+        {
+            throw new RpcException(
+                new Status(StatusCode.InvalidArgument, "project.name is required.")
+            );
+        }
+
+        var paths = UpdateMasks.Resolve(request.UpdateMask, changes, UpdatableFields);
+
         try
         {
+            // Whatever the mask leaves out keeps its stored value. Read first even when the mask
+            // covers everything, so a missing project is NOT_FOUND before anything else.
+            var current = await projectAppService.GetAsync(
+                changes.Name,
+                context.GetUser(),
+                context.CancellationToken
+            );
+
             var updated = await projectAppService.UpdateAsync(
-                request.Name,
-                request.HasDescription ? request.Description : null,
+                changes.Name,
+                paths.Contains("description")
+                    ? (changes.HasDescription ? changes.Description : null)
+                    : current.Description,
                 context.GetUser(),
                 context.CancellationToken
             );
@@ -144,7 +164,7 @@ public class ProjectService(IProjectAppService projectAppService)
         {
             await projectAppService.AddNamespaceAsync(
                 request.Name,
-                request.NamespaceName,
+                request.Namespace,
                 context.GetUser(),
                 context.CancellationToken
             );
@@ -167,7 +187,7 @@ public class ProjectService(IProjectAppService projectAppService)
         {
             await projectAppService.RemoveNamespaceAsync(
                 request.Name,
-                request.NamespaceName,
+                request.Namespace,
                 context.GetUser(),
                 context.CancellationToken
             );
@@ -204,6 +224,10 @@ public class ProjectService(IProjectAppService projectAppService)
 
         return rpcException is not null;
     }
+
+    // What Update can change - see UpdateMasks. A project's name is its identity, and its
+    // namespaces change through AddNamespace and RemoveNamespace.
+    private static readonly string[] UpdatableFields = ["description"];
 
     private static Project ToProto(Data.Models.Project project)
     {

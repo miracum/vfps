@@ -58,8 +58,19 @@ public interface IPseudonymAppService
     /// The non-idempotent counterpart to <see cref="CreateAsync"/>'s grow-to-N: every successful
     /// call adds a pseudonym, which is why it is a separate operation rather than a mode of
     /// <see cref="CreateAsync"/> - a caller retrying a create must never end up appending.
+    ///
+    /// <paramref name="requestId"/> makes it safe to retry anyway (AIP-155): a client-chosen id
+    /// identifying the request across retries, scoped to the namespace. A call carrying the id of
+    /// an earlier successful call in the same namespace stores nothing and returns the pseudonym
+    /// that call stored. Without one (null), every call appends.
     /// </summary>
-    /// <returns>The pseudonym this call stored.</returns>
+    /// <returns>
+    /// The pseudonym this call stored - or, for a retry, the one the original call stored.
+    /// </returns>
+    /// <exception cref="AppendRequestIdConflictException">
+    /// <paramref name="requestId"/> was already used in this namespace by an Append for a
+    /// different original value.
+    /// </exception>
     /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
     /// <exception cref="NamespaceNotFoundException">The namespace does not exist.</exception>
     /// <exception cref="Authorization.ForbiddenException">
@@ -83,6 +94,7 @@ public interface IPseudonymAppService
     Task<Pseudonym> AppendAsync(
         string namespaceName,
         string originalValue,
+        Guid? requestId,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
     );
@@ -503,6 +515,23 @@ public class PseudonymConflictException(string namespaceName, PseudonymImportOut
 {
     public string NamespaceName { get; } = namespaceName;
     public PseudonymImportOutcome Outcome { get; } = outcome;
+}
+
+/// <summary>
+/// Thrown when an Append reuses a request id that an earlier Append in the same namespace used
+/// for a different original value. Deliberately says nothing about which value that was or what
+/// was stored for it: answering with the earlier call's pseudonym would hand out the pseudonym of
+/// a value the caller never named.
+/// </summary>
+public class AppendRequestIdConflictException(string namespaceName, Guid requestId)
+    : Exception(
+        $"The request id '{requestId}' was already used in namespace '{namespaceName}' for a "
+            + "different request. Use a new request id for every distinct Append, and the same "
+            + "one only to retry it."
+    )
+{
+    public string NamespaceName { get; } = namespaceName;
+    public Guid RequestId { get; } = requestId;
 }
 
 /// <summary>

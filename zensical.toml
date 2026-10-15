@@ -1,5 +1,6 @@
 # Documentation site, published to https://miracum.github.io/vfps/ by .github/workflows/docs.yaml.
-# Preview locally with `uv run zensical serve`.
+# Preview locally with `uv run zensical serve`, after generating the API reference page (which is not
+# committed) with `scripts/generate-api-reference.sh`, which needs Docker.
 #
 # The site's sources live in website/. Design and working notes for contributors are in
 # website/development/, and are referenced from code by that path.
@@ -26,6 +27,7 @@ nav = [
     { "Admin UI" = "admin-ui.md" },
     { "Access control" = "access-control.md" },
     { "gRPC API" = "grpc.md" },
+    { "API reference" = "api-reference.md" },
     { "CSV jobs" = "csv-jobs.md" },
   ] },
   { "Operations" = [

@@ -283,6 +283,10 @@ namespace Vfps.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("sequence_number");
 
+                    b.Property<Guid?>("AppendRequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("append_request_id");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -298,6 +302,12 @@ namespace Vfps.Migrations
 
                     b.HasKey("NamespaceName", "OriginalValue", "SequenceNumber")
                         .HasName("pk_pseudonyms");
+
+                    b.HasIndex("NamespaceName", "AppendRequestId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_pseudonyms_namespace_name_append_request_id")
+                        .HasFilter("append_request_id IS NOT NULL")
+                        .HasAnnotation("Npgsql:CreatedConcurrently", true);
 
                     b.HasIndex("NamespaceName", "PseudonymValue")
                         .HasDatabaseName("ix_pseudonyms_namespace_name_pseudonym_value")

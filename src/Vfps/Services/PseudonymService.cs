@@ -89,12 +89,30 @@ public class PseudonymService(IPseudonymAppService pseudonymAppService)
         ServerCallContext context
     )
     {
+        // Unset and empty are the same thing in proto3: no request id, so no retry protection.
+        Guid? requestId = null;
+        if (request.RequestId.Length > 0)
+        {
+            if (!Guid.TryParse(request.RequestId, out var parsed))
+            {
+                throw new RpcException(
+                    new Status(
+                        StatusCode.InvalidArgument,
+                        "request_id must be a UUID, e.g. 0b9a5e8c-6f0e-4f53-9c66-0f3c1e2a7d41."
+                    )
+                );
+            }
+
+            requestId = parsed;
+        }
+
         Data.Models.Pseudonym appended;
         try
         {
             appended = await pseudonymAppService.AppendAsync(
                 request.Namespace,
                 request.OriginalValue,
+                requestId,
                 context.GetUser(),
                 context.CancellationToken
             );
@@ -135,6 +153,11 @@ public class PseudonymService(IPseudonymAppService pseudonymAppService)
         catch (PseudonymGenerationMethodNotSupportedException ex)
         {
             throw new RpcException(new Status(StatusCode.FailedPrecondition, ex.Message));
+        }
+        catch (AppendRequestIdConflictException ex)
+        {
+            // A client bug - the same id for two different requests - that retrying won't fix.
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
         }
         catch (PseudonymUpsertFailedException ex)
         {

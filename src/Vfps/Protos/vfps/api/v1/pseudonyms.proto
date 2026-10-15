@@ -20,9 +20,11 @@ service PseudonymService {
 
   // store one additional, newly generated pseudonym for an original value, appended after every
   // pseudonym already stored for it. Only valid for a namespace with allows_multiple_pseudonyms
-  // set - FAILED_PRECONDITION otherwise. Unlike Create this is not idempotent: every successful
-  // call stores another pseudonym, so a retried call that had in fact succeeded leaves one more
-  // than intended. Requires the same write access Create does.
+  // set - FAILED_PRECONDITION otherwise. Requires the same write access Create does.
+  //
+  // Unlike Create this is not idempotent by itself: every successful call stores another
+  // pseudonym. Set request_id to make it safe to retry (AIP-155): a call repeating the request_id
+  // of an earlier successful one stores nothing and returns the pseudonym that call stored.
   rpc Append(PseudonymServiceAppendRequest) returns (PseudonymServiceAppendResponse) {
     option (google.api.http) = {
       post: "/v1/namespaces/{namespace}/pseudonyms:append"
@@ -64,7 +66,9 @@ service PseudonymService {
     };
   }
 
-  // get information about the given pseudonym. Including its original value.
+  // reverse lookup: reveal the original value behind a pseudonym. The one operation that
+  // de-pseudonymizes, so it requires its own reverse-lookup permission - neither read nor write
+  // access grants it. The pseudonym value is in the URL; an original value never is.
   rpc Get(PseudonymServiceGetRequest) returns (PseudonymServiceGetResponse) {
     option (google.api.http) = {get: "/v1/namespaces/{namespace}/pseudonyms/{pseudonym_value}"};
   }
@@ -166,12 +170,20 @@ message PseudonymServiceAppendRequest {
   // the original value to store another pseudonym for. If none is stored for it yet, the
   // appended pseudonym is its first (sequence_number 0).
   string original_value = 2;
+  // an optional UUID identifying this request across retries, following AIP-155
+  // (https://google.aip.dev/155). Generate a new one for every distinct append and send the same
+  // one only when retrying it: a call whose request_id was already used successfully in this
+  // namespace stores nothing and returns the pseudonym the earlier call stored. Reusing it for a
+  // different original_value is an INVALID_ARGUMENT, as is a value that isn't a UUID. Without a
+  // request_id every call appends.
+  string request_id = 3;
 }
 
 // response for appending a pseudonym
 message PseudonymServiceAppendResponse {
   // the pseudonym this call stored - only the new one, not the full set. Its sequence_number is
-  // one past the highest already stored for the original value.
+  // one past the highest already stored for the original value. For a retried request_id, the
+  // pseudonym the original call stored.
   Pseudonym pseudonym = 1;
 }
 
@@ -219,8 +231,9 @@ message Pseudonym {
   Meta meta = 1;
   // the namespace of the pseudonym
   string namespace = 2;
-  // the original value that was pseudonymized. Only ever populated by Create and the dedicated
-  // reverse-lookup operation - List never sets this, by design.
+  // the original value that was pseudonymized. Set in every response that is about a specific
+  // original value the caller named or is entitled to see - Create, Append, Import, Resolve and
+  // the reverse lookup (Get). List never sets it, by design.
   optional string original_value = 3;
   // the pseudonym created for the original value
   string pseudonym_value = 4;

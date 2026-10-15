@@ -196,8 +196,8 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
     }
 
     /// <inheritdoc/>
-    public override async Task<NamespaceServiceGetAllResponse> GetAll(
-        NamespaceServiceGetAllRequest request,
+    public override async Task<NamespaceServiceListResponse> List(
+        NamespaceServiceListRequest request,
         ServerCallContext context
     )
     {
@@ -206,10 +206,101 @@ public class NamespaceService(INamespaceAppService namespaceAppService)
             context.CancellationToken
         );
 
-        var response = new NamespaceServiceGetAllResponse();
+        var response = new NamespaceServiceListResponse();
         response.Namespaces.AddRange(namespaces.Select(ToProto));
 
         return response;
+    }
+
+    /// <inheritdoc/>
+    [Obsolete("Superseded by List, which returns the same namespaces.")]
+    public override async Task<NamespaceServiceGetAllResponse> GetAll(
+        NamespaceServiceGetAllRequest request,
+        ServerCallContext context
+    )
+    {
+        var listed = await List(new NamespaceServiceListRequest(), context);
+
+        var response = new NamespaceServiceGetAllResponse();
+        response.Namespaces.AddRange(listed.Namespaces);
+
+        return response;
+    }
+
+    // What Update can change - see UpdateMasks. Everything else is fixed at creation.
+    private static readonly string[] UpdatableFields =
+    [
+        "description",
+        "original_value_validation_regex",
+    ];
+
+    /// <inheritdoc/>
+    public override async Task<NamespaceServiceUpdateResponse> Update(
+        NamespaceServiceUpdateRequest request,
+        ServerCallContext context
+    )
+    {
+        var changes = request.Namespace ?? new Namespace();
+        if (string.IsNullOrEmpty(changes.Name))
+        {
+            throw new RpcException(
+                new Status(StatusCode.InvalidArgument, "namespace.name is required.")
+            );
+        }
+
+        var paths = UpdateMasks.Resolve(request.UpdateMask, changes, UpdatableFields);
+
+        Data.Models.Namespace updated;
+        try
+        {
+            // Whatever the mask leaves out keeps its stored value - the app service replaces both
+            // fields, as the admin UI's edit form does. Read first even when the mask covers
+            // everything, so a missing namespace is NOT_FOUND before anything else.
+            var current = await namespaceAppService.GetAsync(
+                changes.Name,
+                context.GetUser(),
+                context.CancellationToken
+            );
+
+            updated = await namespaceAppService.UpdateAsync(
+                changes.Name,
+                paths.Contains("description")
+                    ? (changes.HasDescription ? changes.Description : null)
+                    : current.Description,
+                paths.Contains("original_value_validation_regex")
+                    ? (
+                        changes.HasOriginalValueValidationRegex
+                            ? changes.OriginalValueValidationRegex
+                            : null
+                    )
+                    : current.OriginalValueValidationRegex,
+                context.GetUser(),
+                context.CancellationToken
+            );
+        }
+        catch (NamespaceNotFoundException)
+        {
+            var metadata = new Metadata { { "Namespace", changes.Name } };
+
+            throw new RpcException(
+                new Status(
+                    StatusCode.NotFound,
+                    "The requested pseudonym namespace does not exist."
+                ),
+                metadata
+            );
+        }
+        catch (ForbiddenException ex)
+        {
+            throw new RpcException(new Status(StatusCode.PermissionDenied, ex.Message));
+        }
+        catch (ArgumentException ex)
+        {
+            // An invalid validation regex.
+            throw new RpcException(new Status(StatusCode.InvalidArgument, ex.Message));
+        }
+
+        return new NamespaceServiceUpdateResponse { Namespace = ToProto(updated) };
     }
 
     /// <summary>

@@ -3,6 +3,7 @@ syntax = "proto3";
 package vfps.api.v1;
 
 import "google/api/annotations.proto";
+import "google/protobuf/field_mask.proto";
 import "vfps/api/v1/meta.proto";
 
 option csharp_namespace = "Vfps.Protos";
@@ -22,9 +23,31 @@ service NamespaceService {
     option (google.api.http) = {get: "/v1/namespaces/{name}"};
   }
 
-  // list all namespaces
-  rpc GetAll(NamespaceServiceGetAllRequest) returns (NamespaceServiceGetAllResponse) {
+  // list all namespaces the caller can read
+  rpc List(NamespaceServiceListRequest) returns (NamespaceServiceListResponse) {
     option (google.api.http) = {get: "/v1/namespaces"};
+  }
+
+  // deprecated: use List, which returns the same namespaces. Kept for existing gRPC clients only -
+  // the REST route GET /v1/namespaces now belongs to List and answers with the same JSON.
+  rpc GetAll(NamespaceServiceGetAllRequest) returns (NamespaceServiceGetAllResponse) {
+    option deprecated = true;
+  }
+
+  // update the parts of a namespace that can change after creation: its description and its
+  // original value validation regex. Every other field shapes how pseudonyms are generated or how
+  // the namespace relates to others, and is fixed at creation. Requires admin access.
+  //
+  // A partial update following AIP-134 (https://google.aip.dev/134): update_mask names the fields
+  // to change, and a field named there but absent from the request is cleared. Without an
+  // update_mask, every updatable field that is set in the request is changed and the rest are
+  // kept; "*" replaces every updatable field. Naming a field that can't change is INVALID_ARGUMENT.
+  // A changed regex only applies to original values new to the namespace.
+  rpc Update(NamespaceServiceUpdateRequest) returns (NamespaceServiceUpdateResponse) {
+    option (google.api.http) = {
+      patch: "/v1/namespaces/{namespace.name}"
+      body: "namespace"
+    };
   }
 
   // delete a namespace and all pseudonyms it contains
@@ -194,12 +217,36 @@ message NamespaceServiceDeleteRequest {
 message NamespaceServiceDeleteResponse {}
 
 // request to list all namespaces
+message NamespaceServiceListRequest {}
+
+// response listing all namespaces
+message NamespaceServiceListResponse {
+  // every namespace the caller can read
+  repeated Namespace namespaces = 1;
+}
+
+// request of the deprecated GetAll - see NamespaceServiceListRequest
 message NamespaceServiceGetAllRequest {}
 
-// response to list all namespaces
+// response of the deprecated GetAll - see NamespaceServiceListResponse
 message NamespaceServiceGetAllResponse {
-  // the list of all namespaces
+  // every namespace the caller can read
   repeated Namespace namespaces = 1;
+}
+
+// request to update a namespace
+message NamespaceServiceUpdateRequest {
+  // the namespace to update, identified by its name, carrying the new values of the fields to
+  // change
+  Namespace namespace = 1;
+  // the fields to change: description and/or original_value_validation_regex. See Update.
+  google.protobuf.FieldMask update_mask = 2;
+}
+
+// response for updating a namespace
+message NamespaceServiceUpdateResponse {
+  // the namespace as stored after the update
+  Namespace namespace = 1;
 }
 
 // request to list the direct children of a namespace

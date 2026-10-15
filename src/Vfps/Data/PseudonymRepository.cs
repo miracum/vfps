@@ -2,7 +2,9 @@ using System.Data.Common;
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Text;
+using EntityFramework.Exceptions.Common;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Vfps.Data.Models;
 
 namespace Vfps.Data;
@@ -84,8 +86,8 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
 
     private readonly string SqliteInsertCommand =
         @"
-        INSERT INTO pseudonyms (namespace_name, original_value, pseudonym_value, sequence_number, created_at, last_updated_at)
-        VALUES ({0}, {1}, {2}, {3}, time('now'), time('now'))
+        INSERT INTO pseudonyms (namespace_name, original_value, pseudonym_value, sequence_number, append_request_id, created_at, last_updated_at)
+        VALUES ({0}, {1}, {2}, {3}, {4}, time('now'), time('now'))
         ON CONFLICT (namespace_name, original_value, sequence_number)
         DO UPDATE SET original_value=excluded.original_value
         WHERE original_value IS excluded.original_value
@@ -105,14 +107,27 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
             var stopwatch = Stopwatch.StartNew();
             try
             {
-                var pseudonyms = await context
-                    .Pseudonyms.FromSqlRaw(
-                        upsertCommand,
+                object[] parameters = context.Database.IsNpgsql()
+                    ?
+                    [
                         pseudonym.NamespaceName,
                         pseudonym.OriginalValue,
                         pseudonym.PseudonymValue,
-                        pseudonym.SequenceNumber
-                    )
+                        pseudonym.SequenceNumber,
+                    ]
+                    :
+                    [
+                        pseudonym.NamespaceName,
+                        pseudonym.OriginalValue,
+                        pseudonym.PseudonymValue,
+                        pseudonym.SequenceNumber,
+                        // In the text form EF itself stores a Guid in on SQLite - a raw Guid
+                        // parameter would be written as a blob no query through the model matches.
+                        (object?)pseudonym.AppendRequestId?.ToString("D").ToUpperInvariant()
+                            ?? DBNull.Value,
+                    ];
+                var pseudonyms = await context
+                    .Pseudonyms.FromSqlRaw(upsertCommand, parameters)
                     .AsNoTracking()
                     .ToListAsync();
                 upsertedPseudonym = pseudonyms.FirstOrDefault();
@@ -261,8 +276,15 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
         string inputFilter = ""
     )
     {
+        // Only an Append that carries a request id stores one - and then it is the only candidate.
+        // Every other caller gets exactly the statement it always did, rather than a fifth column
+        // of NULLs (which would also need an explicit type: an untyped NULL parameter in VALUES
+        // doesn't infer to uuid).
+        var withRequestIds = pseudonyms.Any(p => p.AppendRequestId is not null);
+        var columnsPerRow = withRequestIds ? 5 : 4;
+
         var values = new StringBuilder();
-        parameters = new object[pseudonyms.Count * 4];
+        parameters = new object[pseudonyms.Count * columnsPerRow];
         for (var i = 0; i < pseudonyms.Count; i++)
         {
             if (i > 0)
@@ -270,7 +292,7 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
                 values.Append(", ");
             }
 
-            var baseIndex = i * 4;
+            var baseIndex = i * columnsPerRow;
             values
                 .Append('(')
                 .Append('{')
@@ -281,29 +303,60 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
                 .Append(baseIndex + 2)
                 .Append("}, {")
                 .Append(baseIndex + 3)
-                .Append("})");
+                .Append('}');
 
             parameters[baseIndex] = pseudonyms[i].NamespaceName;
             parameters[baseIndex + 1] = pseudonyms[i].OriginalValue;
             parameters[baseIndex + 2] = pseudonyms[i].PseudonymValue;
             parameters[baseIndex + 3] = pseudonyms[i].SequenceNumber;
+
+            if (withRequestIds)
+            {
+                values.Append(", {").Append(baseIndex + 4).Append('}');
+                parameters[baseIndex + 4] =
+                    pseudonyms[i].AppendRequestId
+                    ?? throw new ArgumentException(
+                        "Either every candidate carries an append request id or none does.",
+                        nameof(pseudonyms)
+                    );
+            }
+
+            values.Append(')');
         }
+
+        var requestIdColumn = withRequestIds ? ", append_request_id" : "";
 
         return $"""
             WITH
-                input (namespace_name, original_value, pseudonym_value, sequence_number) AS (
+                input (namespace_name, original_value, pseudonym_value, sequence_number{requestIdColumn}) AS (
                     VALUES {values}
                 ),
                 inserted AS (
                     INSERT INTO
-                        pseudonyms (namespace_name, original_value, pseudonym_value, sequence_number, created_at, last_updated_at)
-                    SELECT namespace_name, original_value, pseudonym_value, sequence_number, NOW(), NOW()
+                        pseudonyms (namespace_name, original_value, pseudonym_value, sequence_number{requestIdColumn}, created_at, last_updated_at)
+                    SELECT namespace_name, original_value, pseudonym_value, sequence_number{requestIdColumn}, NOW(), NOW()
                     FROM input
                     {inputFilter}
                     ON CONFLICT (namespace_name, original_value, sequence_number) DO NOTHING
                     RETURNING *
                 )
             """;
+    }
+
+    /// <inheritdoc/>
+    public async Task<Pseudonym?> FindByAppendRequestIdAsync(
+        string namespaceName,
+        Guid requestId,
+        CancellationToken cancellationToken
+    )
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return await context
+            .Pseudonyms.AsNoTracking()
+            .FirstOrDefaultAsync(
+                p => p.NamespaceName == namespaceName && p.AppendRequestId == requestId,
+                cancellationToken
+            );
     }
 
     /// <inheritdoc/>
@@ -658,6 +711,15 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
                     .Pseudonyms.FromSqlRaw(sql, parameters)
                     .AsNoTracking()
                     .ToListAsync(cancellationToken);
+            }
+            catch (PostgresException ex) when (ex.SqlState == PostgresErrorCodes.UniqueViolation)
+            {
+                // The ON CONFLICT only covers the primary key, so the one other unique index a
+                // candidate can hit - the append request id's - aborts the statement instead, and
+                // nothing was stored. Raised as the same exception SaveChanges produces (and the
+                // SQLite path throws), so callers handle one type whatever the provider. The
+                // exception processor only translates SaveChanges, not a raw query like this one.
+                throw new UniqueConstraintException(ex.MessageText, ex);
             }
             finally
             {

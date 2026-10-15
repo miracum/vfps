@@ -314,6 +314,7 @@ public class PseudonymImportTests : ServiceTestBase
             sut.AppendAsync(
                 ExternalMulti,
                 "patient-1",
+                null,
                 new ClaimsPrincipal(),
                 CancellationToken.None
             );

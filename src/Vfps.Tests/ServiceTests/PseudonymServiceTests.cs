@@ -479,4 +479,73 @@ public class PseudonymServiceTests : ServiceTestBase
 
         allPseudonyms.Should().HaveCount(pseudonymsToCreateCount);
     }
+
+    [Fact]
+    public async Task Append_RetriedWithTheSameRequestId_ShouldReturnTheSamePseudonym()
+    {
+        var request = new PseudonymServiceAppendRequest
+        {
+            Namespace = "multiPsnNamespace",
+            OriginalValue = "grpc-retried",
+            RequestId = Guid.NewGuid().ToString(),
+        };
+
+        var first = await sut.Append(request, TestServerCallContext.Create());
+        var retried = await sut.Append(request, TestServerCallContext.Create());
+
+        retried.Pseudonym.PseudonymValue.Should().Be(first.Pseudonym.PseudonymValue);
+    }
+
+    [Theory]
+    [InlineData("not-a-uuid")]
+    [InlineData("12345")]
+    public async Task Append_WithARequestIdThatIsNotAUuid_ShouldThrowInvalidArgument(
+        string requestId
+    )
+    {
+        var act = () =>
+            sut.Append(
+                new PseudonymServiceAppendRequest
+                {
+                    Namespace = "multiPsnNamespace",
+                    OriginalValue = "bad-request-id",
+                    RequestId = requestId,
+                },
+                TestServerCallContext.Create()
+            );
+
+        (await act.Should().ThrowAsync<RpcException>())
+            .Which.StatusCode.Should()
+            .Be(StatusCode.InvalidArgument);
+    }
+
+    [Fact]
+    public async Task Append_ReusingARequestIdForAnotherValue_ShouldThrowInvalidArgument()
+    {
+        var requestId = Guid.NewGuid().ToString();
+        await sut.Append(
+            new PseudonymServiceAppendRequest
+            {
+                Namespace = "multiPsnNamespace",
+                OriginalValue = "one",
+                RequestId = requestId,
+            },
+            TestServerCallContext.Create()
+        );
+
+        var act = () =>
+            sut.Append(
+                new PseudonymServiceAppendRequest
+                {
+                    Namespace = "multiPsnNamespace",
+                    OriginalValue = "another",
+                    RequestId = requestId,
+                },
+                TestServerCallContext.Create()
+            );
+
+        (await act.Should().ThrowAsync<RpcException>())
+            .Which.StatusCode.Should()
+            .Be(StatusCode.InvalidArgument);
+    }
 }

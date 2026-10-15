@@ -8,6 +8,14 @@
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+dotnet-version:\\s*[\"'](?<currentValue>[^\"']+)[\"']"
       ]
+    },
+    {
+      "customType": "regex",
+      "description": "The protoc-gen-doc image the API reference page is generated with.",
+      "managerFilePatterns": ["/^scripts/.*\\.sh$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\s+\\w+_IMAGE=\"[^:\"]+:(?<currentValue>[^@\"]+)@(?<currentDigest>sha256:[a-f0-9]+)\""
+      ]
     }
   ],
   "packageRules": [

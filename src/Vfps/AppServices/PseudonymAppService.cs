@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using EntityFramework.Exceptions.Common;
 using Google.Protobuf;
 using Google.Protobuf.WellKnownTypes;
 using Microsoft.AspNetCore.WebUtilities;
@@ -106,6 +107,7 @@ public class PseudonymAppService(
     public async Task<Data.Models.Pseudonym> AppendAsync(
         string namespaceName,
         string originalValue,
+        Guid? requestId,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
     )
@@ -142,6 +144,18 @@ public class PseudonymAppService(
             throw new MultiplePseudonymsNotAllowedException(@namespace.Name);
         }
 
+        // A retry of a call that already went through. Checked before validating the value:
+        // the earlier call validated it, and the value now has a pseudonym, which is all the
+        // validations below would have it need.
+        if (
+            requestId is { } id
+            && await FindAppendedByRequestIdAsync(@namespace, originalValue, id, cancellationToken)
+                is { } earlier
+        )
+        {
+            return earlier;
+        }
+
         await ValidateOriginalValueAsync(@namespace, originalValue, cancellationToken);
         await ValidateParentAsync(@namespace, [originalValue], cancellationToken);
 
@@ -162,13 +176,29 @@ public class PseudonymAppService(
                     stored.Select(p => p.PseudonymValue).ToHashSet(StringComparer.Ordinal)
                 ),
                 SequenceNumber = stored.Count == 0 ? 0 : stored.Max(p => p.SequenceNumber) + 1,
+                AppendRequestId = requestId,
             };
 
-            stored = await pseudonymRepository.CreateSetIfNotExistAsync(
-                @namespace,
-                [candidate],
-                cancellationToken
-            );
+            try
+            {
+                stored = await pseudonymRepository.CreateSetIfNotExistAsync(
+                    @namespace,
+                    [candidate],
+                    cancellationToken
+                );
+            }
+            catch (UniqueConstraintException) when (requestId is not null)
+            {
+                // Another attempt with the same request id - a retry racing the call it retries -
+                // stored its pseudonym between the check above and this insert, and the unique
+                // index turned this one away. Answer with what that attempt stored.
+                return await FindAppendedByRequestIdAsync(
+                        @namespace,
+                        originalValue,
+                        requestId.Value,
+                        cancellationToken
+                    ) ?? throw new PseudonymUpsertFailedException(@namespace.Name);
+            }
 
             // Matched on the value as well as the sequence number: a concurrent append that won
             // the same sequence number stored a row there too, just not this one.
@@ -183,6 +213,35 @@ public class PseudonymAppService(
         }
 
         throw new PseudonymUpsertFailedException(@namespace.Name);
+    }
+
+    /// <summary>
+    /// The pseudonym an earlier Append with <paramref name="requestId"/> stored, if there was
+    /// one - provided it was for the same original value. One stored for another value is a
+    /// client error, and is reported without revealing anything about it.
+    /// </summary>
+    private async Task<Data.Models.Pseudonym?> FindAppendedByRequestIdAsync(
+        Data.Models.Namespace @namespace,
+        string originalValue,
+        Guid requestId,
+        CancellationToken cancellationToken
+    )
+    {
+        var earlier = await pseudonymRepository.FindByAppendRequestIdAsync(
+            @namespace.Name,
+            requestId,
+            cancellationToken
+        );
+
+        if (
+            earlier is not null
+            && !string.Equals(earlier.OriginalValue, originalValue, StringComparison.Ordinal)
+        )
+        {
+            throw new AppendRequestIdConflictException(@namespace.Name, requestId);
+        }
+
+        return earlier;
     }
 
     /// <inheritdoc/>

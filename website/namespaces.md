@@ -5,8 +5,9 @@ fixes, at creation, how its pseudonyms are generated: the generation method, the
 and an optional prefix and suffix. None of that can change once the namespace is created.
 
 A namespace can also carry an optional regular expression every original value has to match before
-a pseudonym is generated for it. Unlike the rest, the pattern can be edited afterwards from the
-admin UI, along with the namespace's description. A changed pattern only applies to original values
+a pseudonym is generated for it. Unlike the rest, the pattern can be edited afterwards, along with
+the namespace's description - from the admin UI, or with `NamespaceService.Update` (see
+[Updating a namespace or project](grpc.md#updating-a-namespace-or-project)). A changed pattern only applies to original values
 that are new to the namespace: a value that already has a pseudonym keeps resolving to it, and
 creating it again returns the stored pseudonym, even if the value no longer matches.
 
@@ -102,9 +103,23 @@ grpcurl \
 ```
 
 Over REST, this is `POST /v1/namespaces/{namespace}/pseudonyms:append`. `Append` is not
-idempotent, so retrying a call that actually succeeded stores an extra pseudonym. It requires the
-same write access as `Create`, and it fails with `FAILED_PRECONDITION` on a namespace that doesn't
-allow multiple pseudonyms. It is only available through the gRPC and REST APIs.
+idempotent by itself, so retrying a call that actually succeeded stores an extra pseudonym. To
+retry safely, send a `requestId` (a UUID, generated once per append and reused only for its
+retries): a call repeating the `requestId` of one that already succeeded returns that call's
+pseudonym instead of storing another. See [Retrying safely](grpc.md#retrying-safely).
+
+```sh
+REQUEST_ID=$(uuidgen)
+grpcurl \
+  -plaintext \
+  -d "{\"namespace\": \"multi-psn-example\", \"originalValue\": \"to be pseudonymized\", \"requestId\": \"$REQUEST_ID\"}" \
+  127.0.0.1:8081 \
+  vfps.api.v1.PseudonymService/Append
+```
+
+`Append` requires the same write access as `Create`, and it fails with `FAILED_PRECONDITION` on a
+namespace that doesn't allow multiple pseudonyms. It is only available through the gRPC and REST
+APIs.
 
 ## Multi-level namespaces
 

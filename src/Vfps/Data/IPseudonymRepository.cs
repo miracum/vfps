@@ -38,6 +38,17 @@ public interface IPseudonymRepository
     );
 
     /// <summary>
+    /// The pseudonym an Append call carrying <paramref name="requestId"/> stored in
+    /// <paramref name="namespaceName"/>, or null if no such call succeeded there. Request ids are
+    /// scoped to a namespace. See <see cref="Models.Pseudonym.AppendRequestId"/>.
+    /// </summary>
+    Task<Pseudonym?> FindByAppendRequestIdAsync(
+        string namespaceName,
+        Guid requestId,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// The first (sequence number 0) pseudonym stored for <paramref name="originalValue"/>, or
     /// null if there is none. Unlike the full set <see cref="FindAllByOriginalValueAsync"/>
     /// returns, this row never changes once stored - a multi-psn namespace only ever adds later
