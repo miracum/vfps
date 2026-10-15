@@ -104,3 +104,50 @@ level to walk a whole tree.
 The parent link is set at creation and can't be changed afterwards, like every other namespace
 field, which also makes hierarchy cycles impossible. A namespace that still has children can't be
 deleted; delete the children first. Deleting a pseudonym level doesn't cascade to any other level.
+
+## Projects
+
+A project is a named group of namespaces that belong together - e.g. the patient ID and the
+encounter ID namespaces of one study. It is how the admin UI shows, filters and lists them as a
+unit. A namespace can be part of any number of projects, or none, and can be added to or removed
+from a project at any time.
+
+Projects are for organization only:
+
+- They grant nothing. Access is still configured per namespace, so a project never widens or
+  narrows who can read or write. Someone who can read only some of a project's namespaces sees
+  just those, and doesn't see the project at all if they can read none of them (admins see every
+  project, empty ones included).
+- They are unrelated to the [parent/child hierarchy](#multi-level-namespaces), which says that one
+  namespace's original values are another's pseudonyms. Namespaces in a project don't have to be
+  related that way, and a project can mix namespaces from different hierarchies.
+- Deleting a project doesn't touch its namespaces or their pseudonyms - they just stop being part
+  of it. Deleting a namespace likewise removes it from its projects and leaves them in place.
+
+Creating, editing and deleting projects and changing their namespaces requires admin access, like
+managing the namespaces themselves. Only a project's description can be edited; its name is its
+identity.
+
+The `ProjectService` is available over gRPC and REST.
+
+### Creating projects at startup
+
+Like namespaces, projects can be created at startup from the `Init:v1:Projects` configuration
+section, listing the namespaces to put into each one. Projects are created after the namespaces, so
+a project can name a namespace declared in the same configuration. An existing project isn't
+overridden, but its listed namespaces are still added to it, and a namespace that doesn't exist is
+logged and skipped.
+
+```yaml
+Init:
+  v1:
+    Namespaces:
+      - Name: patient-ids
+        PseudonymLength: 16
+      - Name: encounter-ids
+        PseudonymLength: 16
+    Projects:
+      - Name: study-a
+        Description: Patient and encounter IDs of study A
+        Namespaces: [patient-ids, encounter-ids]
+```

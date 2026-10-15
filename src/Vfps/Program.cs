@@ -319,6 +319,10 @@ if (isNamespaceCachingEnabled || isPseudonymCachingEnabled)
 builder.Services.AddScoped<INamespaceAppService, NamespaceAppService>();
 builder.Services.AddScoped<IPseudonymAppService, PseudonymAppService>();
 
+// Projects only group namespaces, so unlike the namespace repository there is nothing to cache.
+builder.Services.AddSingleton<IProjectRepository, ProjectRepository>();
+builder.Services.AddScoped<IProjectAppService, ProjectAppService>();
+
 builder.Services.AddHostedService<InitNamespacesBackgroundService>();
 
 // The per-namespace pseudonym count is too expensive to recompute on every replica, so one
@@ -893,6 +897,7 @@ app.UseRouting();
 // Configure the HTTP request pipeline.
 var pseudonymEndpoints = app.MapGrpcService<PseudonymService>();
 var namespaceEndpoints = app.MapGrpcService<NamespaceService>();
+var projectEndpoints = app.MapGrpcService<ProjectService>();
 
 // Served in every environment, not just Development: it lets grpcurl, ghz and GUI clients find the
 // API without a copy of the .proto files - and always the API this server actually runs, rather
@@ -911,6 +916,7 @@ if (authConfig.IsEnabled)
     // the policy's own comment for why it is bearer-only and what that gate is for.
     pseudonymEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
     namespaceEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
+    projectEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
     reflectionEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
 }
 

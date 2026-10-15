@@ -17,7 +17,7 @@ namespace Vfps.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.11")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -224,6 +224,49 @@ namespace Vfps.Migrations
                         .HasFilter("namespace_name IS NOT NULL");
 
                     b.ToTable("namespace_access_grants", (string)null);
+                });
+
+            modelBuilder.Entity("Vfps.Data.Models.Project", b =>
+                {
+                    b.Property<string>("Name")
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<DateTimeOffset>("LastUpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_updated_at");
+
+                    b.HasKey("Name")
+                        .HasName("pk_projects");
+
+                    b.ToTable("projects", (string)null);
+                });
+
+            modelBuilder.Entity("Vfps.Data.Models.ProjectNamespace", b =>
+                {
+                    b.Property<string>("ProjectName")
+                        .HasColumnType("text")
+                        .HasColumnName("project_name");
+
+                    b.Property<string>("NamespaceName")
+                        .HasColumnType("text")
+                        .HasColumnName("namespace_name");
+
+                    b.HasKey("ProjectName", "NamespaceName")
+                        .HasName("pk_project_namespaces");
+
+                    b.HasIndex("NamespaceName")
+                        .HasDatabaseName("ix_project_namespaces_namespace_name");
+
+                    b.ToTable("project_namespaces", (string)null);
                 });
 
             modelBuilder.Entity("Vfps.Data.Models.Pseudonym", b =>
@@ -450,6 +493,23 @@ namespace Vfps.Migrations
                     b.Navigation("Namespace");
                 });
 
+            modelBuilder.Entity("Vfps.Data.Models.ProjectNamespace", b =>
+                {
+                    b.HasOne("Vfps.Data.Models.Namespace", null)
+                        .WithMany()
+                        .HasForeignKey("NamespaceName")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_project_namespaces_namespaces_namespace_name");
+
+                    b.HasOne("Vfps.Data.Models.Project", null)
+                        .WithMany("Memberships")
+                        .HasForeignKey("ProjectName")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_project_namespaces_projects_project_name");
+                });
+
             modelBuilder.Entity("Vfps.Data.Models.Pseudonym", b =>
                 {
                     b.HasOne("Vfps.Data.Models.Namespace", null)
@@ -477,6 +537,11 @@ namespace Vfps.Migrations
                     b.Navigation("Children");
 
                     b.Navigation("Pseudonyms");
+                });
+
+            modelBuilder.Entity("Vfps.Data.Models.Project", b =>
+                {
+                    b.Navigation("Memberships");
                 });
 
             modelBuilder.Entity("Vfps.Data.Models.ServiceAccount", b =>

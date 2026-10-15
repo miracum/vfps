@@ -87,6 +87,22 @@
             }
         </div>
         <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
+            <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.ProjectsColumn"]</span>
+            <span class="bb:flex bb:flex-wrap bb:justify-end bb:gap-1">
+                @if (ProjectNames.Count == 0)
+                {
+                    @NotSet
+                }
+                else
+                {
+                    @foreach (var projectName in ProjectNames)
+                    {
+                        <BbBadge Variant="BadgeVariant.Secondary">@projectName</BbBadge>
+                    }
+                }
+            </span>
+        </div>
+        <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
             <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.ParentColumn"]</span>
             <span class="text-right">
                 @if (string.IsNullOrEmpty(Namespace.ParentName))
@@ -132,6 +148,13 @@
     /// </summary>
     [Parameter]
     public long? PseudonymCount { get; set; }
+
+    /// <summary>
+    /// The names of the projects the namespace is in, as far as the caller can see them. Passed in
+    /// rather than looked up here: the page has already loaded every project to build its filter.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<string> ProjectNames { get; set; } = [];
 
     /// <summary>Whether the caller is still fetching PseudonymCount - shows a spinner in its place.</summary>
     [Parameter]

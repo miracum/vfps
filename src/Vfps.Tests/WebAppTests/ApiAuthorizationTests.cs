@@ -45,6 +45,9 @@ public class ApiAuthorizationTests(AuthorizationEnabledTestFactory factory)
             { HttpMethod.Get, "/v1/namespaces" },
             { HttpMethod.Get, "/v1/namespaces/existingNamespace" },
             { HttpMethod.Get, "/v1/namespaces/existingNamespace/children" },
+            { HttpMethod.Get, "/v1/projects" },
+            { HttpMethod.Get, "/v1/projects/some-project" },
+            { HttpMethod.Put, "/v1/projects/some-project/namespaces/existingNamespace" },
             { HttpMethod.Get, "/v1/namespaces/existingNamespace/pseudonyms" },
             { HttpMethod.Post, "/v1/namespaces/existingNamespace/pseudonyms" },
             { HttpMethod.Post, "/v1/namespaces/existingNamespace/pseudonyms:resolve" },
@@ -197,7 +200,13 @@ public class ApiAuthorizationDisabledTests(
             TestContext.Current.CancellationToken
         );
 
-        services.Should().Contain(["vfps.api.v1.PseudonymService", "vfps.api.v1.NamespaceService"]);
+        services
+            .Should()
+            .Contain([
+                "vfps.api.v1.PseudonymService",
+                "vfps.api.v1.NamespaceService",
+                "vfps.api.v1.ProjectService",
+            ]);
     }
 
     /// <summary>

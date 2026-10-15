@@ -1,0 +1,153 @@
+syntax = "proto3";
+
+package vfps.api.v1;
+
+import "google/api/annotations.proto";
+import "vfps/api/v1/meta.proto";
+
+option csharp_namespace = "Vfps.Protos";
+
+// service for managing projects: named groups of namespaces that belong together, e.g. the
+// namespaces holding the patient-id and encounter-id pseudonyms of one study.
+//
+// Projects only group namespaces for organization. They carry no access rules of their own -
+// access is still granted per namespace - and a caller only ever sees the namespaces of a
+// project that they can read. A namespace can be part of any number of projects.
+service ProjectService {
+  // create a new, empty project. Requires admin access.
+  rpc Create(ProjectServiceCreateRequest) returns (ProjectServiceCreateResponse) {
+    option (google.api.http) = {
+      post: "/v1/projects"
+      body: "*"
+    };
+  }
+
+  // get a project and the names of the namespaces in it
+  rpc Get(ProjectServiceGetRequest) returns (ProjectServiceGetResponse) {
+    option (google.api.http) = {get: "/v1/projects/{name}"};
+  }
+
+  // list all projects
+  rpc GetAll(ProjectServiceGetAllRequest) returns (ProjectServiceGetAllResponse) {
+    option (google.api.http) = {get: "/v1/projects"};
+  }
+
+  // replace a project's description. Requires admin access.
+  rpc Update(ProjectServiceUpdateRequest) returns (ProjectServiceUpdateResponse) {
+    option (google.api.http) = {
+      put: "/v1/projects/{name}"
+      body: "*"
+    };
+  }
+
+  // delete a project. The namespaces in it, and their pseudonyms, are not affected. Requires
+  // admin access.
+  rpc Delete(ProjectServiceDeleteRequest) returns (ProjectServiceDeleteResponse) {
+    option (google.api.http) = {delete: "/v1/projects/{name}"};
+  }
+
+  // add a namespace to a project. Succeeds without changes if it is already part of it.
+  // Requires admin access.
+  rpc AddNamespace(ProjectServiceAddNamespaceRequest) returns (ProjectServiceAddNamespaceResponse) {
+    option (google.api.http) = {put: "/v1/projects/{name}/namespaces/{namespace_name}"};
+  }
+
+  // remove a namespace from a project. Succeeds without changes if it isn't part of it.
+  // Requires admin access.
+  rpc RemoveNamespace(ProjectServiceRemoveNamespaceRequest) returns (ProjectServiceRemoveNamespaceResponse) {
+    option (google.api.http) = {delete: "/v1/projects/{name}/namespaces/{namespace_name}"};
+  }
+}
+
+// describes a project
+message Project {
+  // metadata about this entity
+  Meta meta = 1;
+  // the name of the project
+  string name = 2;
+  // a description for the project. Absent when the project has none.
+  optional string description = 3;
+  // the names of the namespaces in this project that the caller can read
+  repeated string namespace_names = 4;
+}
+
+// request to create a project
+message ProjectServiceCreateRequest {
+  // the name of the project to create. If a project with the same name already exists, an error is thrown
+  string name = 1;
+  // a description for the project. Omit it to store none at all.
+  optional string description = 2;
+}
+
+// response for creating a project
+message ProjectServiceCreateResponse {
+  // the created project
+  Project project = 1;
+}
+
+// request to get a project
+message ProjectServiceGetRequest {
+  // the name of the project
+  string name = 1;
+}
+
+// response for getting a project
+message ProjectServiceGetResponse {
+  // the found project
+  Project project = 1;
+}
+
+// request to list all projects
+message ProjectServiceGetAllRequest {}
+
+// response to list all projects
+message ProjectServiceGetAllResponse {
+  // the projects the caller can see: all of them for an admin, otherwise those with at least
+  // one namespace the caller can read
+  repeated Project projects = 1;
+}
+
+// request to replace a project's description
+message ProjectServiceUpdateRequest {
+  // the name of the project to update
+  string name = 1;
+  // the new description. Omit it to remove the description.
+  optional string description = 2;
+}
+
+// response for updating a project
+message ProjectServiceUpdateResponse {
+  // the updated project
+  Project project = 1;
+}
+
+// request to delete a project
+message ProjectServiceDeleteRequest {
+  // the name of the project to delete
+  string name = 1;
+}
+
+// response after deleting the project
+message ProjectServiceDeleteResponse {}
+
+// request to add a namespace to a project
+message ProjectServiceAddNamespaceRequest {
+  // the name of the project
+  string name = 1;
+  // the name of the namespace to add
+  string namespace_name = 2;
+}
+
+// response after adding a namespace to a project
+message ProjectServiceAddNamespaceResponse {}
+
+// request to remove a namespace from a project
+message ProjectServiceRemoveNamespaceRequest {
+  // the name of the project
+  string name = 1;
+  // the name of the namespace to remove
+  string namespace_name = 2;
+}
+
+// response after removing a namespace from a project
+message ProjectServiceRemoveNamespaceResponse {}
