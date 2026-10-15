@@ -1,0 +1,4044 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="A very fast and resource-efficient pseudonymization service.">
+      
+      
+        <meta name="author" content="The Vfps developers">
+      
+      
+        <link rel="canonical" href="https://miracum.github.io/vfps/api-reference/">
+      
+      
+        <link rel="prev" href="../grpc/">
+      
+      
+        <link rel="next" href="../csv-jobs/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/logo.svg">
+      <meta name="generator" content="zensical-0.0.67">
+    
+    
+      
+        <title>API reference - vfps</title>
+      
+    
+    
+      
+        
+      
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.4ae390e2.min.css">
+      
+        
+          
+        
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.96d1a7e4.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,500,500i,700,700i%7CJetBrains+Mono:400,400i,700,700i&amp;display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/extra.css">
+    
+    <script>__md_scope=new URL("..",location),__md_scope.pathname.endsWith("/")||(__md_scope=new URL(__md_scope.pathname+"/",location)),__md_hash=e=>[...e].reduce(((e,t)=>(e<<5)-e+t.charCodeAt(0)),0),__md_get=(e,t=localStorage,_=__md_scope)=>JSON.parse(t.getItem(_.pathname+"."+e)),__md_set=(e,t,_=localStorage,a=__md_scope)=>{try{_.setItem(a.pathname+"."+e,JSON.stringify(t))}catch(e){}},document.documentElement.setAttribute("data-platform",navigator.platform)</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#api-reference" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="./.." title="vfps" class="md-header__button md-logo" aria-label="vfps" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="vfps">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer" aria-label="Navigation">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-menu" viewBox="0 0 24 24"><path d="M4 5h16M4 12h16M4 19h16"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            vfps
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              API reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun-moon" viewBox="0 0 24 24"><path d="M12 2v2M14.837 16.385a6 6 0 1 1-7.223-7.222c.624-.147.97.66.715 1.248a4 4 0 0 0 5.26 5.259c.589-.255 1.396.09 1.248.715M16 12a4 4 0 0 0-4-4M19 5l-1.256 1.256M20 12h2"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_2" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="custom"  aria-label="Switch to system preference"  type="radio" name="__palette" id="__palette_2">
+    
+      <label class="md-header__button md-icon" title="Switch to system preference" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-moon" viewBox="0 0 24 24"><path d="M20.985 12.486a9 9 0 1 1-9.473-9.472c.405-.022.617.46.402.803a6 6 0 0 0 8.268 8.268c.344-.215.825-.004.803.401"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search" aria-label="Search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-search" viewBox="0 0 24 24"><path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog" aria-label="Search">
+  <button type="button" class="md-search__button">
+    Search
+  </button>
+</div>
+      
+    
+    <div class="md-header__source">
+      
+        <a href="https://github.com/miracum/vfps" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    miracum/vfps
+  </div>
+</a>
+      
+    </div>
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="./.." title="vfps" class="md-nav__button md-logo" aria-label="vfps" data-md-component="logo">
+      
+  <img src="../assets/logo.svg" alt="vfps">
+
+    </a>
+    vfps
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/miracum/vfps" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    miracum/vfps
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="./.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Home
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Getting started
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Guides
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
+            <label class="md-nav__title" for="__nav_3">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Guides
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../namespaces/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Namespaces
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../voprf/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  VOPRF pseudonyms
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../admin-ui/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Admin UI
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../access-control/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Access control
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../grpc/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  gRPC API
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  API reference
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="././" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  API reference
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#namespaceservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="NamespaceService">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicecreate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.Create
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceserviceget" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.Get
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicelist" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.List
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicegetall" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.GetAll
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceserviceupdate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.Update
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicedelete" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.Delete
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicelistchildren" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.ListChildren
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#projectservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ProjectService">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#projectservicecreate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.Create
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceget" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.Get
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicelist" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.List
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceupdate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.Update
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicedelete" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.Delete
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceaddnamespace" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.AddNamespace
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceremovenamespace" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.RemoveNamespace
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pseudonymservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PseudonymService">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicecreate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService.Create
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceappend" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService.Append
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceimport" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService.Import
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceresolve" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService.Resolve
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceget" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService.Get
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicelist" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService.List
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Messages
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Messages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#meta" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Meta
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespace" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Namespace
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicecreaterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceCreateRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicecreateresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceCreateResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicedeleterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceDeleteRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicedeleteresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceDeleteResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicegetallrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceGetAllRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicegetallresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceGetAllResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicegetrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceGetRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicegetresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceGetResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicelistchildrenrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceListChildrenRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicelistchildrenresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceListChildrenResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicelistrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceListRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicelistresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceListResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceserviceupdaterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceUpdateRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceserviceupdateresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceUpdateResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#project" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Project
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceaddnamespacerequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceAddNamespaceRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceaddnamespaceresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceAddNamespaceResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicecreaterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceCreateRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicecreateresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceCreateResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicedeleterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceDeleteRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicedeleteresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceDeleteResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicegetrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceGetRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicegetresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceGetResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicelistrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceListRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicelistresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceListResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceremovenamespacerequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceRemoveNamespaceRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceremovenamespaceresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceRemoveNamespaceResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceupdaterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceUpdateRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceupdateresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceUpdateResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonym" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pseudonym
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymlistpaginationtoken" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymListPaginationToken
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceappendrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceAppendRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceappendresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceAppendResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicecreaterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceCreateRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicecreateresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceCreateResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicegetrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceGetRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicegetresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceGetResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceimportrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceImportRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceimportresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceImportResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicelistrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceListRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicelistresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceListResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceresolverequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceResolveRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceresolveresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceResolveResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enums" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Enums
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Enums">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parentvalidationmode" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ParentValidationMode
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymgenerationmethod" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymGenerationMethod
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../csv-jobs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  CSV jobs
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Operations
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_4">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Operations
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/production/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Production deployment
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/postgresql-tls/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  PostgreSQL TLS
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/data-protection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Data Protection key ring
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Configuration reference
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../observability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Observability
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../benchmarks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Performance
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../security/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Security
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  Development
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        
+          <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+            <label class="md-nav__title" for="__nav_7">
+              <span class="md-nav__icon md-icon"></span>
+              
+  
+  Development
+
+            </label>
+            <ul class="md-nav__list" data-md-scrollfix>
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../development/ha-chaos-testing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  HA chaos testing
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+            </ul>
+          </nav>
+        
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  
+                    
+                    
+                    
+                      
+                    
+                    
+                      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+                      <div class="md-sidebar-button__wrapper">
+                        <label class="md-sidebar-button" for="__toc"></label>
+                      </div>
+                    
+                  
+                  <div class="md-sidebar__inner">
+                    
+
+
+<nav class="md-nav md-nav--secondary" aria-label="On this page">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      On this page
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#namespaceservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="NamespaceService">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicecreate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.Create
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceserviceget" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.Get
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicelist" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.List
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicegetall" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.GetAll
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceserviceupdate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.Update
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicedelete" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.Delete
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicelistchildren" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceService.ListChildren
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#projectservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="ProjectService">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#projectservicecreate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.Create
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceget" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.Get
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicelist" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.List
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceupdate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.Update
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicedelete" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.Delete
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceaddnamespace" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.AddNamespace
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceremovenamespace" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectService.RemoveNamespace
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#pseudonymservice" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="PseudonymService">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicecreate" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService.Create
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceappend" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService.Append
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceimport" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService.Import
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceresolve" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService.Resolve
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceget" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService.Get
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicelist" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymService.List
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#messages" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Messages
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Messages">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#meta" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Meta
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespace" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Namespace
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicecreaterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceCreateRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicecreateresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceCreateResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicedeleterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceDeleteRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicedeleteresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceDeleteResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicegetallrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceGetAllRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicegetallresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceGetAllResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicegetrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceGetRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicegetresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceGetResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicelistchildrenrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceListChildrenRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicelistchildrenresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceListChildrenResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicelistrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceListRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceservicelistresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceListResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceserviceupdaterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceUpdateRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#namespaceserviceupdateresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        NamespaceServiceUpdateResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#project" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Project
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceaddnamespacerequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceAddNamespaceRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceaddnamespaceresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceAddNamespaceResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicecreaterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceCreateRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicecreateresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceCreateResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicedeleterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceDeleteRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicedeleteresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceDeleteResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicegetrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceGetRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicegetresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceGetResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicelistrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceListRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectservicelistresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceListResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceremovenamespacerequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceRemoveNamespaceRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceremovenamespaceresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceRemoveNamespaceResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceupdaterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceUpdateRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#projectserviceupdateresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ProjectServiceUpdateResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonym" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Pseudonym
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymlistpaginationtoken" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymListPaginationToken
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceappendrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceAppendRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceappendresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceAppendResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicecreaterequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceCreateRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicecreateresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceCreateResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicegetrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceGetRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicegetresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceGetResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceimportrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceImportRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceimportresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceImportResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicelistrequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceListRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymservicelistresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceListResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceresolverequest" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceResolveRequest
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymserviceresolveresponse" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymServiceResolveResponse
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#enums" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Enums
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Enums">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#parentvalidationmode" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        ParentValidationMode
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pseudonymgenerationmethod" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        PseudonymGenerationMethod
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+                
+
+
+
+  
+
+
+  <nav class="md-path" aria-label="Navigation" >
+    <ol class="md-path__list">
+      
+        
+  
+  
+    <li class="md-path__item">
+      <a href="./.." class="md-path__link">
+        
+  
+  <span class="md-ellipsis">
+    Home
+  </span>
+
+      </a>
+    </li>
+  
+
+      
+      
+        
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+    
+      <li class="md-path__item">
+        <a href="../namespaces/" class="md-path__link">
+          
+  
+  <span class="md-ellipsis">
+    Guides
+  </span>
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ol>
+  </nav>
+
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+  
+    <a href="https://github.com/miracum/vfps/edit/master/website/api-reference.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
+    </a>
+  
+  
+
+
+<h1 id="api-reference">API reference<a class="headerlink" href="#api-reference" title="Permanent link">&para;</a></h1>
+<p>This page is generated from vfps's <code>.proto</code> files, which define the API. Every RPC is served over
+gRPC and, where a REST route is listed, as JSON over HTTP. In JSON, field names are written in
+camelCase (<code>original_value</code> becomes <code>originalValue</code>) and enum values by name. See the
+<a href="../grpc/">gRPC API</a> guide for how to call them, and the
+<a href="https://github.com/miracum/vfps/releases/latest">latest release</a> for the <code>.proto</code> files as a
+versioned download.</p>
+<h2 id="namespaceservice">NamespaceService<a class="headerlink" href="#namespaceservice" title="Permanent link">&para;</a></h2>
+<p>service for managing pseudonym namespaces</p>
+<h3 id="namespaceservicecreate">NamespaceService.Create<a class="headerlink" href="#namespaceservicecreate" title="Permanent link">&para;</a></h3>
+<p><code>POST /v1/namespaces</code></p>
+<p>create a new namespace for pseudonyms</p>
+<p>Request: <a href="#namespaceservicecreaterequest"><code>NamespaceServiceCreateRequest</code></a> · Response: <a href="#namespaceservicecreateresponse"><code>NamespaceServiceCreateResponse</code></a></p>
+<h3 id="namespaceserviceget">NamespaceService.Get<a class="headerlink" href="#namespaceserviceget" title="Permanent link">&para;</a></h3>
+<p><code>GET /v1/namespaces/{name}</code></p>
+<p>get information about a namespace</p>
+<p>Request: <a href="#namespaceservicegetrequest"><code>NamespaceServiceGetRequest</code></a> · Response: <a href="#namespaceservicegetresponse"><code>NamespaceServiceGetResponse</code></a></p>
+<h3 id="namespaceservicelist">NamespaceService.List<a class="headerlink" href="#namespaceservicelist" title="Permanent link">&para;</a></h3>
+<p><code>GET /v1/namespaces</code></p>
+<p>list all namespaces the caller can read</p>
+<p>Request: <a href="#namespaceservicelistrequest"><code>NamespaceServiceListRequest</code></a> · Response: <a href="#namespaceservicelistresponse"><code>NamespaceServiceListResponse</code></a></p>
+<h3 id="namespaceservicegetall">NamespaceService.GetAll<a class="headerlink" href="#namespaceservicegetall" title="Permanent link">&para;</a></h3>
+<p>deprecated: use List, which returns the same namespaces. Kept for existing gRPC clients only -
+the REST route GET /v1/namespaces now belongs to List and answers with the same JSON.</p>
+<p>Request: <a href="#namespaceservicegetallrequest"><code>NamespaceServiceGetAllRequest</code></a> · Response: <a href="#namespaceservicegetallresponse"><code>NamespaceServiceGetAllResponse</code></a></p>
+<h3 id="namespaceserviceupdate">NamespaceService.Update<a class="headerlink" href="#namespaceserviceupdate" title="Permanent link">&para;</a></h3>
+<p><code>PATCH /v1/namespaces/{namespace.name}</code></p>
+<p>update the parts of a namespace that can change after creation: its description and its
+original value validation regex. Every other field shapes how pseudonyms are generated or how
+the namespace relates to others, and is fixed at creation. Requires admin access.</p>
+<p>A partial update following AIP-134 (<a href="https://google.aip.dev/134">https://google.aip.dev/134</a>): update_mask names the fields
+to change, and a field named there but absent from the request is cleared. Without an
+update_mask, every updatable field that is set in the request is changed and the rest are
+kept; "*" replaces every updatable field. Naming a field that can't change is INVALID_ARGUMENT.
+A changed regex only applies to original values new to the namespace.</p>
+<p>Request: <a href="#namespaceserviceupdaterequest"><code>NamespaceServiceUpdateRequest</code></a> · Response: <a href="#namespaceserviceupdateresponse"><code>NamespaceServiceUpdateResponse</code></a></p>
+<h3 id="namespaceservicedelete">NamespaceService.Delete<a class="headerlink" href="#namespaceservicedelete" title="Permanent link">&para;</a></h3>
+<p><code>DELETE /v1/namespaces/{name}</code></p>
+<p>delete a namespace and all pseudonyms it contains</p>
+<p>Request: <a href="#namespaceservicedeleterequest"><code>NamespaceServiceDeleteRequest</code></a> · Response: <a href="#namespaceservicedeleteresponse"><code>NamespaceServiceDeleteResponse</code></a></p>
+<h3 id="namespaceservicelistchildren">NamespaceService.ListChildren<a class="headerlink" href="#namespaceservicelistchildren" title="Permanent link">&para;</a></h3>
+<p><code>GET /v1/namespaces/{name}/children</code></p>
+<p>list the direct children of a namespace. Non-recursive: callers wanting a full
+subtree call this once per level.</p>
+<p>Request: <a href="#namespaceservicelistchildrenrequest"><code>NamespaceServiceListChildrenRequest</code></a> · Response: <a href="#namespaceservicelistchildrenresponse"><code>NamespaceServiceListChildrenResponse</code></a></p>
+<h2 id="projectservice">ProjectService<a class="headerlink" href="#projectservice" title="Permanent link">&para;</a></h2>
+<p>service for managing projects: named groups of namespaces that belong together, e.g. the
+namespaces holding the patient-id and encounter-id pseudonyms of one study.</p>
+<p>Projects only group namespaces for organization. They carry no access rules of their own -
+access is still granted per namespace - and a caller only ever sees the namespaces of a
+project that they can read. A namespace can be part of any number of projects.</p>
+<h3 id="projectservicecreate">ProjectService.Create<a class="headerlink" href="#projectservicecreate" title="Permanent link">&para;</a></h3>
+<p><code>POST /v1/projects</code></p>
+<p>create a new, empty project. Requires admin access.</p>
+<p>Request: <a href="#projectservicecreaterequest"><code>ProjectServiceCreateRequest</code></a> · Response: <a href="#projectservicecreateresponse"><code>ProjectServiceCreateResponse</code></a></p>
+<h3 id="projectserviceget">ProjectService.Get<a class="headerlink" href="#projectserviceget" title="Permanent link">&para;</a></h3>
+<p><code>GET /v1/projects/{name}</code></p>
+<p>get a project and the names of the namespaces in it</p>
+<p>Request: <a href="#projectservicegetrequest"><code>ProjectServiceGetRequest</code></a> · Response: <a href="#projectservicegetresponse"><code>ProjectServiceGetResponse</code></a></p>
+<h3 id="projectservicelist">ProjectService.List<a class="headerlink" href="#projectservicelist" title="Permanent link">&para;</a></h3>
+<p><code>GET /v1/projects</code></p>
+<p>list all projects the caller can see</p>
+<p>Request: <a href="#projectservicelistrequest"><code>ProjectServiceListRequest</code></a> · Response: <a href="#projectservicelistresponse"><code>ProjectServiceListResponse</code></a></p>
+<h3 id="projectserviceupdate">ProjectService.Update<a class="headerlink" href="#projectserviceupdate" title="Permanent link">&para;</a></h3>
+<p><code>PATCH /v1/projects/{project.name}</code></p>
+<p>update a project's description, the only part of a project that can change: its name is its
+identity, and its namespaces are changed with AddNamespace and RemoveNamespace. Requires admin
+access.</p>
+<p>A partial update following AIP-134 (<a href="https://google.aip.dev/134">https://google.aip.dev/134</a>), exactly like
+NamespaceService.Update: update_mask names the fields to change, and a field named there but
+absent from the request is cleared.</p>
+<p>Request: <a href="#projectserviceupdaterequest"><code>ProjectServiceUpdateRequest</code></a> · Response: <a href="#projectserviceupdateresponse"><code>ProjectServiceUpdateResponse</code></a></p>
+<h3 id="projectservicedelete">ProjectService.Delete<a class="headerlink" href="#projectservicedelete" title="Permanent link">&para;</a></h3>
+<p><code>DELETE /v1/projects/{name}</code></p>
+<p>delete a project. The namespaces in it, and their pseudonyms, are not affected. Requires
+admin access.</p>
+<p>Request: <a href="#projectservicedeleterequest"><code>ProjectServiceDeleteRequest</code></a> · Response: <a href="#projectservicedeleteresponse"><code>ProjectServiceDeleteResponse</code></a></p>
+<h3 id="projectserviceaddnamespace">ProjectService.AddNamespace<a class="headerlink" href="#projectserviceaddnamespace" title="Permanent link">&para;</a></h3>
+<p><code>PUT /v1/projects/{name}/namespaces/{namespace}</code></p>
+<p>add a namespace to a project. Succeeds without changes if it is already part of it.
+Requires admin access.</p>
+<p>Request: <a href="#projectserviceaddnamespacerequest"><code>ProjectServiceAddNamespaceRequest</code></a> · Response: <a href="#projectserviceaddnamespaceresponse"><code>ProjectServiceAddNamespaceResponse</code></a></p>
+<h3 id="projectserviceremovenamespace">ProjectService.RemoveNamespace<a class="headerlink" href="#projectserviceremovenamespace" title="Permanent link">&para;</a></h3>
+<p><code>DELETE /v1/projects/{name}/namespaces/{namespace}</code></p>
+<p>remove a namespace from a project. Succeeds without changes if it isn't part of it.
+Requires admin access.</p>
+<p>Request: <a href="#projectserviceremovenamespacerequest"><code>ProjectServiceRemoveNamespaceRequest</code></a> · Response: <a href="#projectserviceremovenamespaceresponse"><code>ProjectServiceRemoveNamespaceResponse</code></a></p>
+<h2 id="pseudonymservice">PseudonymService<a class="headerlink" href="#pseudonymservice" title="Permanent link">&para;</a></h2>
+<p>service to manage pseudonyms</p>
+<h3 id="pseudonymservicecreate">PseudonymService.Create<a class="headerlink" href="#pseudonymservicecreate" title="Permanent link">&para;</a></h3>
+<p><code>POST /v1/namespaces/{namespace}/pseudonyms</code></p>
+<p>create a new pseudonym in the given namespace for an original value</p>
+<p>Request: <a href="#pseudonymservicecreaterequest"><code>PseudonymServiceCreateRequest</code></a> · Response: <a href="#pseudonymservicecreateresponse"><code>PseudonymServiceCreateResponse</code></a></p>
+<h3 id="pseudonymserviceappend">PseudonymService.Append<a class="headerlink" href="#pseudonymserviceappend" title="Permanent link">&para;</a></h3>
+<p><code>POST /v1/namespaces/{namespace}/pseudonyms:append</code></p>
+<p>store one additional, newly generated pseudonym for an original value, appended after every
+pseudonym already stored for it. Only valid for a namespace with allows_multiple_pseudonyms
+set - FAILED_PRECONDITION otherwise. Requires the same write access Create does.</p>
+<p>Unlike Create this is not idempotent by itself: every successful call stores another
+pseudonym. Set request_id to make it safe to retry (AIP-155): a call repeating the request_id
+of an earlier successful one stores nothing and returns the pseudonym that call stored.</p>
+<p>Request: <a href="#pseudonymserviceappendrequest"><code>PseudonymServiceAppendRequest</code></a> · Response: <a href="#pseudonymserviceappendresponse"><code>PseudonymServiceAppendResponse</code></a></p>
+<h3 id="pseudonymserviceimport">PseudonymService.Import<a class="headerlink" href="#pseudonymserviceimport" title="Permanent link">&para;</a></h3>
+<p><code>POST /v1/namespaces/{namespace}/pseudonyms:import</code></p>
+<p>store a pseudonym that was created outside vfps for an original value, verbatim. Only valid
+for a namespace using PSEUDONYM_GENERATION_METHOD_EXTERNAL - FAILED_PRECONDITION otherwise.
+Requires the same write access Create does.</p>
+<p>Idempotent for the exact same pair: re-sending an already stored (original_value,
+pseudonym_value) succeeds and returns the stored pseudonym. Nothing is ever overwritten.
+ALREADY_EXISTS is returned when the pair conflicts with what is stored - the original value
+already has a different pseudonym (and the namespace doesn't allow multiple), or the
+pseudonym value already belongs to a different original value. The error never says which
+original value holds a pseudonym, as that would be a reverse lookup, which write access
+doesn't grant.</p>
+<p>Request: <a href="#pseudonymserviceimportrequest"><code>PseudonymServiceImportRequest</code></a> · Response: <a href="#pseudonymserviceimportresponse"><code>PseudonymServiceImportResponse</code></a></p>
+<h3 id="pseudonymserviceresolve">PseudonymService.Resolve<a class="headerlink" href="#pseudonymserviceresolve" title="Permanent link">&para;</a></h3>
+<p><code>POST /v1/namespaces/{namespace}/pseudonyms:resolve</code></p>
+<p>resolve the pseudonym already stored for an original value, creating nothing. Returns
+NOT_FOUND when the namespace holds none - the difference from Create, which would generate
+one. Requires the same write access Create does: this is the same forward mapping, and a
+caller who may create a pseudonym for a value may already learn it that way.</p>
+<p>POST with the original value in the body, deliberately, even though this reads rather than
+writes: a GET would put the original value in the request path, where it would be recorded by
+every access log, proxy and browser history between the caller and this service. No operation
+on this API takes an original value in a URL.</p>
+<p>Request: <a href="#pseudonymserviceresolverequest"><code>PseudonymServiceResolveRequest</code></a> · Response: <a href="#pseudonymserviceresolveresponse"><code>PseudonymServiceResolveResponse</code></a></p>
+<h3 id="pseudonymserviceget">PseudonymService.Get<a class="headerlink" href="#pseudonymserviceget" title="Permanent link">&para;</a></h3>
+<p><code>GET /v1/namespaces/{namespace}/pseudonyms/{pseudonym_value}</code></p>
+<p>reverse lookup: reveal the original value behind a pseudonym. The one operation that
+de-pseudonymizes, so it requires its own reverse-lookup permission - neither read nor write
+access grants it. The pseudonym value is in the URL; an original value never is.</p>
+<p>Request: <a href="#pseudonymservicegetrequest"><code>PseudonymServiceGetRequest</code></a> · Response: <a href="#pseudonymservicegetresponse"><code>PseudonymServiceGetResponse</code></a></p>
+<h3 id="pseudonymservicelist">PseudonymService.List<a class="headerlink" href="#pseudonymservicelist" title="Permanent link">&para;</a></h3>
+<p><code>GET /v1/namespaces/{namespace}/pseudonyms</code></p>
+<p>list all pseudonyms in the given namespace. Unlike Get, this never returns original_value -
+reverse lookup of a specific pseudonym is a separate, single-record operation by design.</p>
+<p>Request: <a href="#pseudonymservicelistrequest"><code>PseudonymServiceListRequest</code></a> · Response: <a href="#pseudonymservicelistresponse"><code>PseudonymServiceListResponse</code></a></p>
+<h2 id="messages">Messages<a class="headerlink" href="#messages" title="Permanent link">&para;</a></h2>
+<h3 id="meta">Meta<a class="headerlink" href="#meta" title="Permanent link">&para;</a></h3>
+<p>metadata about an entity</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>created_at</code></td>
+<td><code>google.protobuf.Timestamp</code></td>
+<td>time when the entity was created</td>
+</tr>
+<tr>
+<td><code>last_updated_at</code></td>
+<td><code>google.protobuf.Timestamp</code></td>
+<td>time when the entity was last updated</td>
+</tr>
+</tbody>
+</table>
+<h3 id="namespace">Namespace<a class="headerlink" href="#namespace" title="Permanent link">&para;</a></h3>
+<p>describes a pseudonym namespace</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>meta</code></td>
+<td><a href="#meta"><code>Meta</code></a></td>
+<td>metadata about this entity</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>the name of the namespace</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>optional <code>string</code></td>
+<td>a description for the namespace. Absent when the namespace has none - stored as NULL rather than as an empty string, which is what a namespace created without one carries. <code>optional</code> like every other nullable-backed field here, so that "never given a description" and "given an empty one" stay distinguishable rather than both arriving as "".</td>
+</tr>
+<tr>
+<td><code>pseudonym_generation_method</code></td>
+<td><a href="#pseudonymgenerationmethod"><code>PseudonymGenerationMethod</code></a></td>
+<td>the method to use when generating pseudonyms in the namespace</td>
+</tr>
+<tr>
+<td><code>pseudonym_length</code></td>
+<td><code>uint32</code></td>
+<td>the length of the pseudonym. Note that the total length depends on the generation method and excludes the prefix and suffix.</td>
+</tr>
+<tr>
+<td><code>pseudonym_prefix</code></td>
+<td>optional <code>string</code></td>
+<td>a prefix to prepend to each generated pseudonym</td>
+</tr>
+<tr>
+<td><code>pseudonym_suffix</code></td>
+<td>optional <code>string</code></td>
+<td>a suffix to append to each generated pseudonym</td>
+</tr>
+<tr>
+<td><code>original_value_validation_regex</code></td>
+<td>optional <code>string</code></td>
+<td>an optional regular expression used to validate an original value before a pseudonym is generated for it. If set, values that don't match are rejected with a client error. Can be changed after creation (from the admin UI); a changed pattern only applies to original values new to the namespace - values that already have a pseudonym keep resolving to it.</td>
+</tr>
+<tr>
+<td><code>allows_multiple_pseudonyms</code></td>
+<td><code>bool</code></td>
+<td>when true, a single pseudonym Create call for this namespace may store more than one distinct pseudonym for the same original value.</td>
+</tr>
+<tr>
+<td><code>parent_name</code></td>
+<td>optional <code>string</code></td>
+<td>the name of this namespace's parent, if any. Absent means this namespace is a pseudonymization root: its original values are not pseudonyms of another namespace.</td>
+</tr>
+<tr>
+<td><code>parent_validation_mode</code></td>
+<td><a href="#parentvalidationmode"><code>ParentValidationMode</code></a></td>
+<td>how original values are validated against the parent namespace. Only meaningful when parent_name is set.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="namespaceservicecreaterequest">NamespaceServiceCreateRequest<a class="headerlink" href="#namespaceservicecreaterequest" title="Permanent link">&para;</a></h3>
+<p>request to create a new namespace</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>the name of the namespace to create. If a namespace with the same name alreay exists, an error is thrown</td>
+</tr>
+<tr>
+<td><code>pseudonym_generation_method</code></td>
+<td><a href="#pseudonymgenerationmethod"><code>PseudonymGenerationMethod</code></a></td>
+<td>method to use when generating pseudonyms in this namespace</td>
+</tr>
+<tr>
+<td><code>pseudonym_length</code></td>
+<td><code>uint32</code></td>
+<td>the length of the pseudonym. Note that the total length depends on the generation method and excludes the prefix and suffix.</td>
+</tr>
+<tr>
+<td><code>pseudonym_prefix</code></td>
+<td>optional <code>string</code></td>
+<td>a prefix to prepend to each generated pseudonym</td>
+</tr>
+<tr>
+<td><code>pseudonym_suffix</code></td>
+<td>optional <code>string</code></td>
+<td>a suffix to append to each generated pseudonym</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>optional <code>string</code></td>
+<td>a description for the namespace. Omit it to store none at all; sending an empty string stores an empty description, and the two read back differently.</td>
+</tr>
+<tr>
+<td><code>original_value_validation_regex</code></td>
+<td>optional <code>string</code></td>
+<td>an optional regular expression used to validate an original value before a pseudonym is generated for it. If set, values that don't match are rejected with a client error.</td>
+</tr>
+<tr>
+<td><code>allows_multiple_pseudonyms</code></td>
+<td><code>bool</code></td>
+<td>when true, a single pseudonym Create call for this namespace may store more than one distinct pseudonym for the same original value.</td>
+</tr>
+<tr>
+<td><code>parent_name</code></td>
+<td>optional <code>string</code></td>
+<td>the name of an existing namespace to set as this namespace's parent, making this a child namespace whose original values are pseudonyms of that parent. The parent must already exist. Immutable once the namespace is created.</td>
+</tr>
+<tr>
+<td><code>parent_validation_mode</code></td>
+<td><a href="#parentvalidationmode"><code>ParentValidationMode</code></a></td>
+<td>how original values are validated against the parent namespace. Requires parent_name to be set.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="namespaceservicecreateresponse">NamespaceServiceCreateResponse<a class="headerlink" href="#namespaceservicecreateresponse" title="Permanent link">&para;</a></h3>
+<p>response for creating a namespace entity</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespace</code></td>
+<td><a href="#namespace"><code>Namespace</code></a></td>
+<td>the created namespace</td>
+</tr>
+</tbody>
+</table>
+<h3 id="namespaceservicedeleterequest">NamespaceServiceDeleteRequest<a class="headerlink" href="#namespaceservicedeleterequest" title="Permanent link">&para;</a></h3>
+<p>request to delete a namespace and all pseudonyms it contains</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>the name of the namespace to delete</td>
+</tr>
+</tbody>
+</table>
+<h3 id="namespaceservicedeleteresponse">NamespaceServiceDeleteResponse<a class="headerlink" href="#namespaceservicedeleteresponse" title="Permanent link">&para;</a></h3>
+<p>response after deleting the namespace</p>
+<p>This message has no fields.</p>
+<h3 id="namespaceservicegetallrequest">NamespaceServiceGetAllRequest<a class="headerlink" href="#namespaceservicegetallrequest" title="Permanent link">&para;</a></h3>
+<p>request of the deprecated GetAll - see NamespaceServiceListRequest</p>
+<p>This message has no fields.</p>
+<h3 id="namespaceservicegetallresponse">NamespaceServiceGetAllResponse<a class="headerlink" href="#namespaceservicegetallresponse" title="Permanent link">&para;</a></h3>
+<p>response of the deprecated GetAll - see NamespaceServiceListResponse</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespaces</code></td>
+<td>repeated <a href="#namespace"><code>Namespace</code></a></td>
+<td>every namespace the caller can read</td>
+</tr>
+</tbody>
+</table>
+<h3 id="namespaceservicegetrequest">NamespaceServiceGetRequest<a class="headerlink" href="#namespaceservicegetrequest" title="Permanent link">&para;</a></h3>
+<p>request to get information about a namespace</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>the name of the namespace</td>
+</tr>
+</tbody>
+</table>
+<h3 id="namespaceservicegetresponse">NamespaceServiceGetResponse<a class="headerlink" href="#namespaceservicegetresponse" title="Permanent link">&para;</a></h3>
+<p>response for getting a namespace entity</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespace</code></td>
+<td><a href="#namespace"><code>Namespace</code></a></td>
+<td>the found namespace</td>
+</tr>
+</tbody>
+</table>
+<h3 id="namespaceservicelistchildrenrequest">NamespaceServiceListChildrenRequest<a class="headerlink" href="#namespaceservicelistchildrenrequest" title="Permanent link">&para;</a></h3>
+<p>request to list the direct children of a namespace</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>the name of the namespace whose direct children to list</td>
+</tr>
+</tbody>
+</table>
+<h3 id="namespaceservicelistchildrenresponse">NamespaceServiceListChildrenResponse<a class="headerlink" href="#namespaceservicelistchildrenresponse" title="Permanent link">&para;</a></h3>
+<p>response listing the direct children of a namespace</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespaces</code></td>
+<td>repeated <a href="#namespace"><code>Namespace</code></a></td>
+<td>the direct children of the requested namespace</td>
+</tr>
+</tbody>
+</table>
+<h3 id="namespaceservicelistrequest">NamespaceServiceListRequest<a class="headerlink" href="#namespaceservicelistrequest" title="Permanent link">&para;</a></h3>
+<p>request to list all namespaces</p>
+<p>This message has no fields.</p>
+<h3 id="namespaceservicelistresponse">NamespaceServiceListResponse<a class="headerlink" href="#namespaceservicelistresponse" title="Permanent link">&para;</a></h3>
+<p>response listing all namespaces</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespaces</code></td>
+<td>repeated <a href="#namespace"><code>Namespace</code></a></td>
+<td>every namespace the caller can read</td>
+</tr>
+</tbody>
+</table>
+<h3 id="namespaceserviceupdaterequest">NamespaceServiceUpdateRequest<a class="headerlink" href="#namespaceserviceupdaterequest" title="Permanent link">&para;</a></h3>
+<p>request to update a namespace</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespace</code></td>
+<td><a href="#namespace"><code>Namespace</code></a></td>
+<td>the namespace to update, identified by its name, carrying the new values of the fields to change</td>
+</tr>
+<tr>
+<td><code>update_mask</code></td>
+<td><code>google.protobuf.FieldMask</code></td>
+<td>the fields to change: description and/or original_value_validation_regex. See Update.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="namespaceserviceupdateresponse">NamespaceServiceUpdateResponse<a class="headerlink" href="#namespaceserviceupdateresponse" title="Permanent link">&para;</a></h3>
+<p>response for updating a namespace</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespace</code></td>
+<td><a href="#namespace"><code>Namespace</code></a></td>
+<td>the namespace as stored after the update</td>
+</tr>
+</tbody>
+</table>
+<h3 id="project">Project<a class="headerlink" href="#project" title="Permanent link">&para;</a></h3>
+<p>describes a project</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>meta</code></td>
+<td><a href="#meta"><code>Meta</code></a></td>
+<td>metadata about this entity</td>
+</tr>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>the name of the project</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>optional <code>string</code></td>
+<td>a description for the project. Absent when the project has none.</td>
+</tr>
+<tr>
+<td><code>namespace_names</code></td>
+<td>repeated <code>string</code></td>
+<td>the names of the namespaces in this project that the caller can read</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectserviceaddnamespacerequest">ProjectServiceAddNamespaceRequest<a class="headerlink" href="#projectserviceaddnamespacerequest" title="Permanent link">&para;</a></h3>
+<p>request to add a namespace to a project</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>the name of the project</td>
+</tr>
+<tr>
+<td><code>namespace</code></td>
+<td><code>string</code></td>
+<td>the name of the namespace to add</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectserviceaddnamespaceresponse">ProjectServiceAddNamespaceResponse<a class="headerlink" href="#projectserviceaddnamespaceresponse" title="Permanent link">&para;</a></h3>
+<p>response after adding a namespace to a project</p>
+<p>This message has no fields.</p>
+<h3 id="projectservicecreaterequest">ProjectServiceCreateRequest<a class="headerlink" href="#projectservicecreaterequest" title="Permanent link">&para;</a></h3>
+<p>request to create a project</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>the name of the project to create. If a project with the same name already exists, an error is thrown</td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>optional <code>string</code></td>
+<td>a description for the project. Omit it to store none at all.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectservicecreateresponse">ProjectServiceCreateResponse<a class="headerlink" href="#projectservicecreateresponse" title="Permanent link">&para;</a></h3>
+<p>response for creating a project</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td><a href="#project"><code>Project</code></a></td>
+<td>the created project</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectservicedeleterequest">ProjectServiceDeleteRequest<a class="headerlink" href="#projectservicedeleterequest" title="Permanent link">&para;</a></h3>
+<p>request to delete a project</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>the name of the project to delete</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectservicedeleteresponse">ProjectServiceDeleteResponse<a class="headerlink" href="#projectservicedeleteresponse" title="Permanent link">&para;</a></h3>
+<p>response after deleting the project</p>
+<p>This message has no fields.</p>
+<h3 id="projectservicegetrequest">ProjectServiceGetRequest<a class="headerlink" href="#projectservicegetrequest" title="Permanent link">&para;</a></h3>
+<p>request to get a project</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>the name of the project</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectservicegetresponse">ProjectServiceGetResponse<a class="headerlink" href="#projectservicegetresponse" title="Permanent link">&para;</a></h3>
+<p>response for getting a project</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td><a href="#project"><code>Project</code></a></td>
+<td>the found project</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectservicelistrequest">ProjectServiceListRequest<a class="headerlink" href="#projectservicelistrequest" title="Permanent link">&para;</a></h3>
+<p>request to list all projects</p>
+<p>This message has no fields.</p>
+<h3 id="projectservicelistresponse">ProjectServiceListResponse<a class="headerlink" href="#projectservicelistresponse" title="Permanent link">&para;</a></h3>
+<p>response listing all projects</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>projects</code></td>
+<td>repeated <a href="#project"><code>Project</code></a></td>
+<td>the projects the caller can see: all of them for an admin, otherwise those with at least one namespace the caller can read</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectserviceremovenamespacerequest">ProjectServiceRemoveNamespaceRequest<a class="headerlink" href="#projectserviceremovenamespacerequest" title="Permanent link">&para;</a></h3>
+<p>request to remove a namespace from a project</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>name</code></td>
+<td><code>string</code></td>
+<td>the name of the project</td>
+</tr>
+<tr>
+<td><code>namespace</code></td>
+<td><code>string</code></td>
+<td>the name of the namespace to remove</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectserviceremovenamespaceresponse">ProjectServiceRemoveNamespaceResponse<a class="headerlink" href="#projectserviceremovenamespaceresponse" title="Permanent link">&para;</a></h3>
+<p>response after removing a namespace from a project</p>
+<p>This message has no fields.</p>
+<h3 id="projectserviceupdaterequest">ProjectServiceUpdateRequest<a class="headerlink" href="#projectserviceupdaterequest" title="Permanent link">&para;</a></h3>
+<p>request to update a project</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td><a href="#project"><code>Project</code></a></td>
+<td>the project to update, identified by its name, carrying the new values of the fields to change</td>
+</tr>
+<tr>
+<td><code>update_mask</code></td>
+<td><code>google.protobuf.FieldMask</code></td>
+<td>the fields to change - only description can be. See Update.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="projectserviceupdateresponse">ProjectServiceUpdateResponse<a class="headerlink" href="#projectserviceupdateresponse" title="Permanent link">&para;</a></h3>
+<p>response for updating a project</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>project</code></td>
+<td><a href="#project"><code>Project</code></a></td>
+<td>the updated project</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonym">Pseudonym<a class="headerlink" href="#pseudonym" title="Permanent link">&para;</a></h3>
+<p>the pseudonym entity</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>meta</code></td>
+<td><a href="#meta"><code>Meta</code></a></td>
+<td>metadata about the pseudonym</td>
+</tr>
+<tr>
+<td><code>namespace</code></td>
+<td><code>string</code></td>
+<td>the namespace of the pseudonym</td>
+</tr>
+<tr>
+<td><code>original_value</code></td>
+<td>optional <code>string</code></td>
+<td>the original value that was pseudonymized. Set in every response that is about a specific original value the caller named or is entitled to see - Create, Append, Import, Resolve and the reverse lookup (Get). List never sets it, by design.</td>
+</tr>
+<tr>
+<td><code>pseudonym_value</code></td>
+<td><code>string</code></td>
+<td>the pseudonym created for the original value</td>
+</tr>
+<tr>
+<td><code>sequence_number</code></td>
+<td><code>int64</code></td>
+<td>this pseudonym's position (starting at 0) among possibly multiple pseudonyms stored for the same original value in a multi-psn namespace. Always 0 otherwise.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymlistpaginationtoken">PseudonymListPaginationToken<a class="headerlink" href="#pseudonymlistpaginationtoken" title="Permanent link">&para;</a></h3>
+<p>contents of the PseudonymServiceList pagination token: the position of the last-seen
+pseudonym in the (created_at desc, original_value desc) ordering, used for keyset/seek
+pagination rather than an offset - this scales to hundreds of millions of rows per
+namespace, where an offset-based token would degrade linearly with page depth.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>created_at</code></td>
+<td><code>google.protobuf.Timestamp</code></td>
+<td>created_at of the last-seen pseudonym in the previous page</td>
+</tr>
+<tr>
+<td><code>original_value</code></td>
+<td><code>string</code></td>
+<td>original_value of the last-seen pseudonym in the previous page - tie-breaker for pseudonyms sharing the same created_at</td>
+</tr>
+<tr>
+<td><code>sequence_number</code></td>
+<td><code>int64</code></td>
+<td>sequence_number of the last-seen pseudonym in the previous page - final tie-breaker for pseudonyms sharing the same (created_at, original_value), which a multi-psn namespace (see Namespace.allows_multiple_pseudonyms) can otherwise produce</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymserviceappendrequest">PseudonymServiceAppendRequest<a class="headerlink" href="#pseudonymserviceappendrequest" title="Permanent link">&para;</a></h3>
+<p>request to store one additional pseudonym for an original value</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespace</code></td>
+<td><code>string</code></td>
+<td>the namespace to append the pseudonym in. Must allow multiple pseudonyms per original value.</td>
+</tr>
+<tr>
+<td><code>original_value</code></td>
+<td><code>string</code></td>
+<td>the original value to store another pseudonym for. If none is stored for it yet, the appended pseudonym is its first (sequence_number 0).</td>
+</tr>
+<tr>
+<td><code>request_id</code></td>
+<td><code>string</code></td>
+<td>an optional UUID identifying this request across retries, following AIP-155 (<a href="https://google.aip.dev/155">https://google.aip.dev/155</a>). Generate a new one for every distinct append and send the same one only when retrying it: a call whose request_id was already used successfully in this namespace stores nothing and returns the pseudonym the earlier call stored. Reusing it for a different original_value is an INVALID_ARGUMENT, as is a value that isn't a UUID. Without a request_id every call appends.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymserviceappendresponse">PseudonymServiceAppendResponse<a class="headerlink" href="#pseudonymserviceappendresponse" title="Permanent link">&para;</a></h3>
+<p>response for appending a pseudonym</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pseudonym</code></td>
+<td><a href="#pseudonym"><code>Pseudonym</code></a></td>
+<td>the pseudonym this call stored - only the new one, not the full set. Its sequence_number is one past the highest already stored for the original value. For a retried request_id, the pseudonym the original call stored.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymservicecreaterequest">PseudonymServiceCreateRequest<a class="headerlink" href="#pseudonymservicecreaterequest" title="Permanent link">&para;</a></h3>
+<p>request to pseudonymize and store a given value</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespace</code></td>
+<td><code>string</code></td>
+<td>the namespace in which the pseudonym should be created</td>
+</tr>
+<tr>
+<td><code>original_value</code></td>
+<td><code>string</code></td>
+<td>the original value to be pseudonymized</td>
+</tr>
+<tr>
+<td><code>count</code></td>
+<td>optional <code>int64</code></td>
+<td>how many distinct pseudonyms to store for this original value. Only valid to set above 1 when the target namespace has allows_multiple_pseudonyms set - unset (or 1) preserves today's single-pseudonym behavior for every other namespace. If fewer than this many pseudonyms already exist for the original value, exactly the missing ones are generated and added; if this many or more already exist, the existing set is returned unchanged. At most 10000.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymservicecreateresponse">PseudonymServiceCreateResponse<a class="headerlink" href="#pseudonymservicecreateresponse" title="Permanent link">&para;</a></h3>
+<p>response for creating a pseudonym entity</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pseudonym</code></td>
+<td><a href="#pseudonym"><code>Pseudonym</code></a></td>
+<td>the created pseudonym. For a multi-psn namespace this is always the first (sequence_number 0) pseudonym of the full set below, kept for backwards compatibility with callers that only read this field.</td>
+</tr>
+<tr>
+<td><code>pseudonyms</code></td>
+<td>repeated <a href="#pseudonym"><code>Pseudonym</code></a></td>
+<td>every pseudonym stored for the requested original value after this call - length 1 unless the target namespace allows multiple pseudonyms per original value.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymservicegetrequest">PseudonymServiceGetRequest<a class="headerlink" href="#pseudonymservicegetrequest" title="Permanent link">&para;</a></h3>
+<p>message to fetch details for a given pseudonym</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespace</code></td>
+<td><code>string</code></td>
+<td>the namespace the pseudonym is a part of</td>
+</tr>
+<tr>
+<td><code>pseudonym_value</code></td>
+<td><code>string</code></td>
+<td>the actual pseudonym</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymservicegetresponse">PseudonymServiceGetResponse<a class="headerlink" href="#pseudonymservicegetresponse" title="Permanent link">&para;</a></h3>
+<p>response for getting a pseudonym entity</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pseudonym</code></td>
+<td><a href="#pseudonym"><code>Pseudonym</code></a></td>
+<td>the found pseudonym</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymserviceimportrequest">PseudonymServiceImportRequest<a class="headerlink" href="#pseudonymserviceimportrequest" title="Permanent link">&para;</a></h3>
+<p>request to store an externally created pseudonym for an original value</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespace</code></td>
+<td><code>string</code></td>
+<td>the namespace to store the pseudonym in. Must use PSEUDONYM_GENERATION_METHOD_EXTERNAL.</td>
+</tr>
+<tr>
+<td><code>original_value</code></td>
+<td><code>string</code></td>
+<td>the original value the pseudonym was created for. Must not be blank, and must match the namespace's original value validation regex, if it has one.</td>
+</tr>
+<tr>
+<td><code>pseudonym_value</code></td>
+<td><code>string</code></td>
+<td>the pseudonym to store, exactly as given - the namespace's prefix and suffix are not applied. Must not be blank.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymserviceimportresponse">PseudonymServiceImportResponse<a class="headerlink" href="#pseudonymserviceimportresponse" title="Permanent link">&para;</a></h3>
+<p>response for importing an external pseudonym</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pseudonym</code></td>
+<td><a href="#pseudonym"><code>Pseudonym</code></a></td>
+<td>the stored pseudonym - the one this call created, or the identical one that was already there.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymservicelistrequest">PseudonymServiceListRequest<a class="headerlink" href="#pseudonymservicelistrequest" title="Permanent link">&para;</a></h3>
+<p>request to list all pseudonyms in a namespace</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespace</code></td>
+<td><code>string</code></td>
+<td>the namespace to list the containing pseudonyms of</td>
+</tr>
+<tr>
+<td><code>page_size</code></td>
+<td><code>int32</code></td>
+<td>specify the maximum number of results to be returned by the server. If the page_size is 0, the server will decide the number of results to be returned.</td>
+</tr>
+<tr>
+<td><code>page_token</code></td>
+<td><code>string</code></td>
+<td>an opaque pagination token. Use this field to request a specific page of the list results.</td>
+</tr>
+<tr>
+<td><code>include_total_size</code></td>
+<td><code>bool</code></td>
+<td>include the total number of pseudonyms in the namespace as part of the response</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymservicelistresponse">PseudonymServiceListResponse<a class="headerlink" href="#pseudonymservicelistresponse" title="Permanent link">&para;</a></h3>
+<p>response listing all pseudonyms in a namespace</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespace</code></td>
+<td><code>string</code></td>
+<td>the namespace containing the pseudonyms</td>
+</tr>
+<tr>
+<td><code>total_size</code></td>
+<td>optional <code>int64</code></td>
+<td>if <code>include_total_size</code> is set to <code>true</code> in the request, this is the total number of pseudonyms in the namespace</td>
+</tr>
+<tr>
+<td><code>next_page_token</code></td>
+<td><code>string</code></td>
+<td>an opaque pagination token. Use this field to request the next page of results by setting the request's <code>page_token</code> to this value.</td>
+</tr>
+<tr>
+<td><code>pseudonyms</code></td>
+<td>repeated <a href="#pseudonym"><code>Pseudonym</code></a></td>
+<td>list of pseudonyms in the namespace</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymserviceresolverequest">PseudonymServiceResolveRequest<a class="headerlink" href="#pseudonymserviceresolverequest" title="Permanent link">&para;</a></h3>
+<p>request to resolve the pseudonym already stored for an original value</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>namespace</code></td>
+<td><code>string</code></td>
+<td>the namespace to look the original value up in</td>
+</tr>
+<tr>
+<td><code>original_value</code></td>
+<td><code>string</code></td>
+<td>the original value whose pseudonym is wanted. Nothing is stored for it - if this namespace holds no pseudonym for it, the call returns NOT_FOUND rather than creating one.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymserviceresolveresponse">PseudonymServiceResolveResponse<a class="headerlink" href="#pseudonymserviceresolveresponse" title="Permanent link">&para;</a></h3>
+<p>response for resolving an original value's existing pseudonym</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>pseudonym</code></td>
+<td><a href="#pseudonym"><code>Pseudonym</code></a></td>
+<td>the pseudonym found. For a multi-psn namespace this is the first (sequence_number 0) pseudonym of the full set below, mirroring PseudonymServiceCreateResponse.</td>
+</tr>
+<tr>
+<td><code>pseudonyms</code></td>
+<td>repeated <a href="#pseudonym"><code>Pseudonym</code></a></td>
+<td>every pseudonym stored for the requested original value - length 1 unless the namespace allows multiple pseudonyms per original value. Never empty: an original value with none returns NOT_FOUND instead.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="enums">Enums<a class="headerlink" href="#enums" title="Permanent link">&para;</a></h2>
+<h3 id="parentvalidationmode">ParentValidationMode<a class="headerlink" href="#parentvalidationmode" title="Permanent link">&para;</a></h3>
+<p>how original values in a child namespace are validated against its parent namespace</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Number</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PARENT_VALIDATION_MODE_UNSPECIFIED</code></td>
+<td>0</td>
+<td>unspecified performs no validation against the parent namespace</td>
+</tr>
+<tr>
+<td><code>PARENT_VALIDATION_MODE_ENSURE_EXISTS</code></td>
+<td>1</td>
+<td>the original value must already exist as a pseudonym value in the parent namespace, otherwise the request is rejected</td>
+</tr>
+</tbody>
+</table>
+<h3 id="pseudonymgenerationmethod">PseudonymGenerationMethod<a class="headerlink" href="#pseudonymgenerationmethod" title="Permanent link">&para;</a></h3>
+<p>method used to generate the pseudonyms in the namespace</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Number</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PSEUDONYM_GENERATION_METHOD_UNSPECIFIED</code></td>
+<td>0</td>
+<td>unspecified defaults to PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED</td>
+</tr>
+<tr>
+<td><code>PSEUDONYM_GENERATION_METHOD_SECURE_RANDOM_BASE64URL_ENCODED</code></td>
+<td>1</td>
+<td>generate pseudonyms in the following format: &lt;hashed machine name&gt;&lt;ms ticks since system start&gt;&lt;cryptographically-secure pseudonym_length random bytes&gt; where: &lt;hashed machine name&gt;: the first 4 bytes of the SHA256-hashed machine name (host name). &lt;ms ticks since system start&gt;: the 4 least significant bytes of the 64-bit millisecond tick                                count since the system started. &lt;cryptographically-secure pseudonym_length random bytes&gt;: pseudonym_length random bytes. all bytes are concatenated and encoded using URL-safe BASE64.</td>
+</tr>
+<tr>
+<td><code>PSEUDONYM_GENERATION_METHOD_UUID4</code></td>
+<td>3</td>
+<td>The method creates a Version 4 Universally Unique Identifier (UUID) as described in RFC 4122, Sec. 4.4.</td>
+</tr>
+<tr>
+<td><code>PSEUDONYM_GENERATION_METHOD_UUID7</code></td>
+<td>4</td>
+<td>The method creates a Version 7 Universally Unique Identifier (UUID) as described in RFC 9562.</td>
+</tr>
+<tr>
+<td><code>PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_HEX_ENCODED</code></td>
+<td>5</td>
+<td>A fully cryptographically-safe randomly generated string encoded as hex.</td>
+</tr>
+<tr>
+<td><code>PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_BASE62_ENCODED</code></td>
+<td>6</td>
+<td>A fully cryptographically-safe randomly generated string encoded as Base62.</td>
+</tr>
+<tr>
+<td><code>PSEUDONYM_GENERATION_METHOD_FULL_RANDOM_BASE32_ENCODED</code></td>
+<td>7</td>
+<td>A fully cryptographically-safe randomly generated string encoded as Base32, using the alphabet defined in RFC 4648, section 6 (<a href="https://datatracker.ietf.org/doc/html/rfc4648#section-6">https://datatracker.ietf.org/doc/html/rfc4648#section-6</a>).</td>
+</tr>
+<tr>
+<td><code>PSEUDONYM_GENERATION_METHOD_VOPRF</code></td>
+<td>8</td>
+<td>Derived from the original value by a verifiable oblivious pseudorandom function (RFC 9497), evaluated by a separate key-holding service that never sees the value.<br><br>Unlike every other method here this one is deterministic: the same original value always yields the same pseudonym, which is what lets two deployments holding the same key agree on pseudonyms without ever exchanging the values behind them. The consequences are that a namespace using it cannot allow multiple pseudonyms per original value (there is only one pseudonym to be had), and that its pseudonym length is fixed by the VOPRF client's configuration rather than chosen per namespace.<br><br>Requires a configured VOPRF server; namespace creation fails with FAILED_PRECONDITION otherwise.</td>
+</tr>
+<tr>
+<td><code>PSEUDONYM_GENERATION_METHOD_EXTERNAL</code></td>
+<td>9</td>
+<td>The namespace generates nothing: its pseudonyms are created outside vfps (by a third party) and stored verbatim through PseudonymService.Import, which is the only RPC that writes to such a namespace - Create and Append return FAILED_PRECONDITION, so a pseudonym vfps generated can never end up next to an external one. Resolve, Get and List work as usual.<br><br>pseudonym_length, pseudonym_prefix and pseudonym_suffix are ignored: imported values are stored exactly as given. allows_multiple_pseudonyms is honored - without it a second, different pseudonym for the same original value is rejected.</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+  <script>var tabs=__md_get("__tabs");if(Array.isArray(tabs))e:for(var set of document.querySelectorAll(".tabbed-set")){var labels=set.querySelector(".tabbed-labels");for(var tab of tabs)for(var label of labels.getElementsByTagName("label"))if(label.innerText.trim()===tab){var input=document.getElementById(label.htmlFor);input.checked=!0;continue e}}</script>
+
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-circle-arrow-up" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m16 12-4-4-4 4M12 16V8"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+    
+      
+      <nav class="md-footer__inner md-grid" aria-label="Footer" >
+        
+          
+          <a href="../grpc/" class="md-footer__link md-footer__link--prev" aria-label="Previous: gRPC API">
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-left" viewBox="0 0 24 24"><path d="m12 19-7-7 7-7M19 12H5"/></svg>
+            </div>
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Previous
+              </span>
+              <div class="md-ellipsis">
+                gRPC API
+              </div>
+            </div>
+          </a>
+        
+        
+          
+          <a href="../csv-jobs/" class="md-footer__link md-footer__link--next" aria-label="Next: CSV jobs">
+            <div class="md-footer__title">
+              <span class="md-footer__direction">
+                Next
+              </span>
+              <div class="md-ellipsis">
+                CSV jobs
+              </div>
+            </div>
+            <div class="md-footer__button md-icon">
+              
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </div>
+          </a>
+        
+      </nav>
+    
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+    <div class="md-copyright__highlight">
+      Copyright &copy; The Vfps developers. Licensed under the Apache License 2.0.
+    </div>
+  
+  
+    Made with
+    <a href="https://zensical.org/" target="_blank" rel="noopener">
+      Zensical
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/miracum/vfps" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.3.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2026 Fonticons, Inc.--><path fill="currentColor" d="M216.5 362.5c-66-8-112.5-55.5-112.5-117 0-25 9-52 24-70-6.5-16.5-5.5-51.5 2-66 20-2.5 47 8 63 22.5 19-6 39-9 63.5-9s44.5 3 62.5 8.5c15.5-14 43-24.5 63-22 7 13.5 8 48.5 1.5 65.5 16 19 24.5 44.5 24.5 70.5 0 61.5-46.5 108-113.5 116.5 17 11 28.5 35 28.5 62.5v52c0 15 12.5 23.5 27.5 17.5C441 459.5 512 369 512 257 512 115.5 397 0 255.5 0S0 115.5 0 257c0 111 70.5 203 165.5 237.5 13.5 5 26.5-4 26.5-17.5v-40c-7 3-16 5-24 5-33 0-52.5-18-66.5-51.5-5.5-13.5-11.5-21.5-23-23-6-.5-8-3-8-6 0-6 10-10.5 20-10.5 14.5 0 27 9 40 27.5 10 14.5 20.5 21 33 21s20.5-4.5 32-16c8.5-8.5 15-16 21-21"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog" role="status" aria-atomic="true">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      
+      
+        
+        
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["announce.dismiss","content.action.edit","content.code.annotate","content.code.copy","content.code.select","content.footnote.tooltips","content.tabs.link","content.tooltips","navigation.footer","navigation.indexes","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.sections","navigation.top","navigation.tracking","search.highlight","toc.follow"],"redirect":null,"search":"../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.67a597eb.min.js"></script>
+      
+    
+  </body>
+</html>

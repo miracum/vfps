@@ -18,7 +18,7 @@
         <link rel="prev" href="../access-control/">
       
       
-        <link rel="next" href="../csv-jobs/">
+        <link rel="next" href="../api-reference/">
       
       
         
@@ -318,6 +318,8 @@
       
         
       
+        
+      
     
     
     
@@ -536,6 +538,56 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#getting-the-proto-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Getting the <code>.proto</code> files
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        API conventions
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API conventions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#retrying-safely" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Retrying safely
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-a-namespace-or-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Updating a namespace or project
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#server-reflection" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -611,6 +663,33 @@
   
 </nav>
       
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  API reference
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -1040,6 +1119,56 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#getting-the-proto-files" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Getting the <code>.proto</code> files
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-conventions" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        API conventions
+      </span>
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API conventions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#retrying-safely" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Retrying safely
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-a-namespace-or-project" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Updating a namespace or project
+      </span>
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#server-reflection" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1167,6 +1296,8 @@
       
         
       
+        
+      
     
     
     
@@ -1205,41 +1336,129 @@
 <h1 id="grpc-api">gRPC API<a class="headerlink" href="#grpc-api" title="Permanent link">&para;</a></h1>
 <p>vfps's API is defined in Protocol Buffers, and every operation is served over gRPC as well as the
 JSON-transcoded REST API. The definitions are in
-<a href="https://github.com/miracum/vfps/tree/master/src/Vfps/Protos/vfps/api/v1"><code>src/Vfps/Protos/vfps/api/v1</code></a>:</p>
+<a href="https://github.com/miracum/vfps/tree/master/src/Vfps/Protos/vfps/api/v1"><code>src/Vfps/Protos/vfps/api/v1</code></a>.</p>
+<p>The <a href="../api-reference/">API reference</a> lists every RPC, REST route, message and enum, generated from
+these files.</p>
+<h2 id="getting-the-proto-files">Getting the <code>.proto</code> files<a class="headerlink" href="#getting-the-proto-files" title="Permanent link">&para;</a></h2>
+<p>Every <a href="https://github.com/miracum/vfps/releases">release</a> has the <code>.proto</code> files attached as
+<code>vfps-protos-&lt;tag&gt;.tar.gz</code>, together with a <code>.sha256</code> checksum and a build provenance attestation
+(<code>gh attestation verify &lt;file&gt; --repo miracum/vfps</code>). The archive is rooted at the include path,
+so one <code>-I</code> resolves every import, and it contains the <code>google/api</code> files the REST annotations
+need. Use it to generate a client for your language, e.g. with <code>protoc</code> or <code>buf generate</code>.</p>
+<h2 id="api-conventions">API conventions<a class="headerlink" href="#api-conventions" title="Permanent link">&para;</a></h2>
+<p>The API follows Google's <a href="https://google.aip.dev/">API Improvement Proposals</a> where they apply:
+<code>List</code> and <code>Get</code> for reads, <code>Create</code>, <code>Update</code> and <code>Delete</code> for the standard writes, and
+<a href="https://google.aip.dev/136">custom methods</a> with a <code>:verb</code> suffix (<code>:append</code>, <code>:import</code>,
+<code>:resolve</code>) for the operations on pseudonyms that don't fit those. No operation takes an original
+value in a URL: one that needs an original value takes it in the request body, which is why
+<code>Resolve</code> is a <code>POST</code> even though it only reads - a URL ends up in access logs, proxies and browser
+histories.</p>
+<p><code>PseudonymService.Get</code> is the <strong>reverse lookup</strong>: it reveals the original value behind a pseudonym.
+It is the one operation that de-pseudonymizes, so it needs its own reverse-lookup permission -
+neither read nor write access grants it.</p>
+<h3 id="retrying-safely">Retrying safely<a class="headerlink" href="#retrying-safely" title="Permanent link">&para;</a></h3>
+<p>Whether a call can be retried after a timeout or a dropped connection - when the caller can't tell
+whether it went through - depends on the operation:</p>
 <table>
 <thead>
 <tr>
-<th>Service</th>
-<th>RPCs</th>
+<th>RPC</th>
+<th>REST</th>
+<th>Safe to retry</th>
+<th>When it already exists</th>
 </tr>
 </thead>
 <tbody>
 <tr>
-<td><code>vfps.api.v1.NamespaceService</code></td>
-<td><code>Create</code>, <code>Get</code>, <code>GetAll</code>, <code>Delete</code>, <code>ListChildren</code></td>
+<td><code>NamespaceService.Create</code>, <code>ProjectService.Create</code></td>
+<td><code>POST /v1/namespaces</code>, <code>POST /v1/projects</code></td>
+<td>No</td>
+<td><code>ALREADY_EXISTS</code></td>
 </tr>
 <tr>
-<td><code>vfps.api.v1.PseudonymService</code></td>
-<td><code>Create</code>, <code>Append</code>, <code>Resolve</code>, <code>Get</code>, <code>List</code></td>
+<td><code>NamespaceService.Update</code>, <code>ProjectService.Update</code></td>
+<td><code>PATCH /v1/namespaces/{name}</code>, <code>PATCH /v1/projects/{name}</code></td>
+<td>Yes</td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>NamespaceService.Delete</code>, <code>ProjectService.Delete</code></td>
+<td><code>DELETE /v1/namespaces/{name}</code>, <code>DELETE /v1/projects/{name}</code></td>
+<td>Yes - a repeat is <code>NOT_FOUND</code></td>
+<td>-</td>
+</tr>
+<tr>
+<td><code>ProjectService.AddNamespace</code>, <code>RemoveNamespace</code></td>
+<td><code>PUT</code>, <code>DELETE /v1/projects/{name}/namespaces/{namespace}</code></td>
+<td>Yes</td>
+<td>Succeeds without changes</td>
+</tr>
+<tr>
+<td><code>PseudonymService.Create</code></td>
+<td><code>POST /v1/namespaces/{namespace}/pseudonyms</code></td>
+<td>Yes - get-or-create</td>
+<td>Returns the stored pseudonym(s)</td>
+</tr>
+<tr>
+<td><code>PseudonymService.Append</code></td>
+<td><code>POST …/pseudonyms:append</code></td>
+<td><strong>Only with a <code>requestId</code></strong></td>
+<td>Without one, stores another pseudonym on every call</td>
+</tr>
+<tr>
+<td><code>PseudonymService.Import</code></td>
+<td><code>POST …/pseudonyms:import</code></td>
+<td>Yes, for the same pair</td>
+<td><code>ALREADY_EXISTS</code> if the pair conflicts with what's stored</td>
+</tr>
+<tr>
+<td><code>PseudonymService.Resolve</code></td>
+<td><code>POST …/pseudonyms:resolve</code></td>
+<td>Yes (read-only)</td>
+<td><code>NOT_FOUND</code> if none is stored</td>
+</tr>
+<tr>
+<td><code>Get</code>, <code>List</code>, <code>ListChildren</code></td>
+<td><code>GET</code></td>
+<td>Yes (read-only)</td>
+<td>-</td>
 </tr>
 </tbody>
 </table>
-<p>Plaintext gRPC is served on port <strong>8081</strong>, which accepts HTTP/2 only - the <code>HttpGrpc</code> endpoint in
-<code>Kestrel__Endpoints</code>, and the <code>grpc</code> port of the Helm chart's Service. Port 8080 serves the REST API
-and the admin UI.</p>
+<p>Pseudonym writes are keyed by the original value, and are idempotent - writing
+the same thing twice returns what the first call stored. <code>Append</code> is the one exception, since
+storing another pseudonym is its whole point. It follows
+<a href="https://google.aip.dev/155">AIP-155</a> instead: give each append a <code>requestId</code>, a UUID generated once
+for that append and sent again only when retrying it. A call repeating the <code>requestId</code> of one that
+already succeeded in the namespace stores nothing and returns the pseudonym that call stored.
+Reusing a <code>requestId</code> for a different original value, or sending one that isn't a UUID, is
+<code>INVALID_ARGUMENT</code>. See <a href="../namespaces/#appending-a-pseudonym">Appending a pseudonym</a> for an example.</p>
+<h3 id="updating-a-namespace-or-project">Updating a namespace or project<a class="headerlink" href="#updating-a-namespace-or-project" title="Permanent link">&para;</a></h3>
+<p><code>Update</code> is a partial update following <a href="https://google.aip.dev/134">AIP-134</a>: the request carries
+the resource with the new values, and <code>updateMask</code> names the fields to change. A field named in the
+mask but absent from the request is cleared; one not named is kept. Without a mask, every updatable
+field that is set in the request is changed, and <code>*</code> replaces every updatable field. Naming a field
+that can't change is <code>INVALID_ARGUMENT</code>.</p>
+<p>Only a namespace's <code>description</code> and <code>originalValueValidationRegex</code>, and a project's <code>description</code>,
+can change. A project's namespaces change through <code>AddNamespace</code> and <code>RemoveNamespace</code>. Over REST
+the mask is a query parameter:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>PATCH<span class="w"> </span><span class="s1">'http://127.0.0.1:8080/v1/namespaces/test?updateMask=description'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">'content-type: application/json'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"description": "Patient IDs of study A"}'</span>
+</span></code></pre></div>
 <h2 id="server-reflection">Server reflection<a class="headerlink" href="#server-reflection" title="Permanent link">&para;</a></h2>
 <p>The server offers gRPC server reflection, so clients such as
 <a href="https://github.com/fullstorydev/grpcurl">grpcurl</a>, <a href="https://ghz.sh/">ghz</a>, grpcui or Postman need
 no copy of the <code>.proto</code> files - and always see the API the server actually runs. To explore it:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>list
-</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>describe<span class="w"> </span>vfps.api.v1.PseudonymService
-</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>describe<span class="w"> </span>vfps.api.v1.PseudonymServiceCreateRequest
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>list
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>describe<span class="w"> </span>vfps.api.v1.PseudonymService
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span>describe<span class="w"> </span>vfps.api.v1.PseudonymServiceCreateRequest
 </span></code></pre></div>
 <p>And to call it:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"namespace": "test", "originalValue": "to be pseudonymized"}'</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Create
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"namespace": "test", "originalValue": "to be pseudonymized"}'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Create
 </span></code></pre></div>
 <h2 id="authenticating">Authenticating<a class="headerlink" href="#authenticating" title="Permanent link">&para;</a></h2>
 <p>With <a href="../access-control/">access control</a> turned on, every call needs a bearer token - from the
@@ -1247,14 +1466,14 @@ identity provider, or a <a href="../access-control/#access-tokens">vfps access t
 UI's <em>Access tokens</em> page, which also shows these calls ready to copy. Reflection is part of the API
 and takes the same token, so without one even <code>list</code> fails. grpcurl's <code>-H</code> sends the header with
 reflection and the call alike:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">VFPS_TOKEN</span><span class="o">=</span><span class="s2">"vfps_pat_..."</span>
-</span><span id="__span-2-2"><a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">VFPS_NAMESPACE</span><span class="o">=</span><span class="s2">"..."</span>
-</span><span id="__span-2-3"><a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
-</span><span id="__span-2-4"><a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-5"><a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"authorization: Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-6"><a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">"{\"namespace\": \"</span><span class="nv">$VFPS_NAMESPACE</span><span class="s2">\", \"originalValue\": \"to be pseudonymized\"}"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-7"><a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-2-8"><a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Create
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">VFPS_TOKEN</span><span class="o">=</span><span class="s2">"vfps_pat_..."</span>
+</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">VFPS_NAMESPACE</span><span class="o">=</span><span class="s2">"..."</span>
+</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"authorization: Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">"{\"namespace\": \"</span><span class="nv">$VFPS_NAMESPACE</span><span class="s2">\", \"originalValue\": \"to be pseudonymized\"}"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-7"><a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">  </span><span class="m">127</span>.0.0.1:8081<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-3-8"><a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Create
 </span></code></pre></div>
 <p>A call without a valid token fails with <code>Unauthenticated</code>; one with a token that holds no grant on
 the namespace, with <code>PermissionDenied</code>.</p>
@@ -1276,12 +1495,12 @@ the default branch. The image runs as <code>nobody</code> (UID 65534). Releases 
 binds port 8081 on <code>127.0.0.1</code> - share the host's network so <code>localhost</code> reaches it:</p>
 <!-- x-release-please-start-version -->
 
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-3-1"><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--network<span class="o">=</span>host<span class="w"> </span>ghcr.io/miracum/vfps/grpc-utils:v1.24.1<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-2"><a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-3"><a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"authorization: Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-4"><a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">"{\"namespace\": \"</span><span class="nv">$VFPS_NAMESPACE</span><span class="s2">\", \"originalValue\": \"to be pseudonymized\"}"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-5"><a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span>localhost:8081<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-3-6"><a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Create
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--network<span class="o">=</span>host<span class="w"> </span>ghcr.io/miracum/vfps/grpc-utils:v1.25.0<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"authorization: Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">"{\"namespace\": \"</span><span class="nv">$VFPS_NAMESPACE</span><span class="s2">\", \"originalValue\": \"to be pseudonymized\"}"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">  </span>localhost:8081<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-4-6"><a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span>vfps.api.v1.PseudonymService/Create
 </span></code></pre></div>
 <!-- x-release-please-end -->
 
@@ -1294,11 +1513,11 @@ it only once host networking is enabled in its settings.</p>
 from the image in vfps's namespace and call the chart's Service, which is named after the release:</p>
 <!-- x-release-please-start-version -->
 
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>kubectl<span class="w"> </span>run<span class="w"> </span>--namespace<span class="o">=</span>vfps<span class="w"> </span>--rm<span class="w"> </span>-i<span class="w"> </span>--tty<span class="w"> </span>--restart<span class="o">=</span>Never<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>--image<span class="o">=</span>ghcr.io/miracum/vfps/grpc-utils:v1.24.1<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>vfps-grpc-utils<span class="w"> </span>--<span class="w"> </span>bash
-</span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>
-</span><span id="__span-4-5"><a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>nobody@vfps-grpc-utils:/$<span class="w"> </span>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span>vfps:8081<span class="w"> </span>list
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>run<span class="w"> </span>--namespace<span class="o">=</span>vfps<span class="w"> </span>--rm<span class="w"> </span>-i<span class="w"> </span>--tty<span class="w"> </span>--restart<span class="o">=</span>Never<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--image<span class="o">=</span>ghcr.io/miracum/vfps/grpc-utils:v1.25.0<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>vfps-grpc-utils<span class="w"> </span>--<span class="w"> </span>bash
+</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
+</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>nobody@vfps-grpc-utils:/$<span class="w"> </span>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span>vfps:8081<span class="w"> </span>list
 </span></code></pre></div>
 <!-- x-release-please-end -->
 
@@ -1308,18 +1527,18 @@ labelled <code>&lt;release&gt;-client: "true"</code> may reach vfps - add <code>
 <h2 id="load-testing">Load testing<a class="headerlink" href="#load-testing" title="Permanent link">&para;</a></h2>
 <p>ghz uses reflection too. For example, from the pod above, a minute of pseudonym creation against the
 chart's headless Service, which lets ghz spread the load across every replica:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>ghz<span class="w"> </span>--duration<span class="o">=</span>1m<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--connections<span class="o">=</span><span class="m">3</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>--lb-strategy<span class="o">=</span>round_robin<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span>--insecure<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span>--call<span class="o">=</span>vfps.api.v1.PseudonymService/Create<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-6"><a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"originalValue": "{{ randomString 32 }}", "namespace": "test"}'</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-7"><a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span>dns:///vfps-headless:8081
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>ghz<span class="w"> </span>--duration<span class="o">=</span>1m<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span>--connections<span class="o">=</span><span class="m">3</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-3"><a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span>--lb-strategy<span class="o">=</span>round_robin<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-4"><a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span>--insecure<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-5"><a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span>--call<span class="o">=</span>vfps.api.v1.PseudonymService/Create<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-6"><a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{"originalValue": "{{ randomString 32 }}", "namespace": "test"}'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-6-7"><a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">  </span>dns:///vfps-headless:8081
 </span></code></pre></div>
 <p>Unlike grpcurl, ghz keeps the metadata for its calls and for reflection apart - with access control
 on, pass the token to both:</p>
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-6-1"><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>--metadata<span class="o">=</span><span class="s2">"{\"authorization\": \"Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">\"}"</span><span class="w"> </span><span class="se">\</span>
-</span><span id="__span-6-2"><a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>--reflect-metadata<span class="o">=</span><span class="s2">"{\"authorization\": \"Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">\"}"</span>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-7-1"><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>--metadata<span class="o">=</span><span class="s2">"{\"authorization\": \"Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">\"}"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-7-2"><a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>--reflect-metadata<span class="o">=</span><span class="s2">"{\"authorization\": \"Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">\"}"</span>
 </span></code></pre></div>
 <p>See <a href="../benchmarks/">Performance</a> for measured numbers.</p>
 
@@ -1378,13 +1597,13 @@ on, pass the token to both:</p>
         
         
           
-          <a href="../csv-jobs/" class="md-footer__link md-footer__link--next" aria-label="Next: CSV jobs">
+          <a href="../api-reference/" class="md-footer__link md-footer__link--next" aria-label="Next: API reference">
             <div class="md-footer__title">
               <span class="md-footer__direction">
                 Next
               </span>
               <div class="md-ellipsis">
-                CSV jobs
+                API reference
               </div>
             </div>
             <div class="md-footer__button md-icon">

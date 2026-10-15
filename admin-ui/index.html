@@ -318,6 +318,8 @@
       
         
       
+        
+      
     
     
     
@@ -493,6 +495,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Projects
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#access-control-and-tokens" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -565,6 +578,33 @@
     
   
   gRPC API
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  API reference
 
     
   </span>
@@ -1012,6 +1052,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#projects" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Projects
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#access-control-and-tokens" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1089,6 +1140,8 @@
       
         
       
+        
+      
     
     
     
@@ -1142,6 +1195,13 @@ rejected. Both run the exact check the server performs on every pseudonym create
 timeout, so a pattern that is valid but catastrophically slow is flagged too. Editing the pattern
 later only affects original values that are new to the namespace: values that already have a
 pseudonym stay resolvable even if they no longer match.</p>
+<p>A namespace's <strong>projects</strong> are listed in its details, and the hierarchy can be filtered to the
+namespaces of one project (or of none). Admins choose a namespace's projects when creating it and
+can change them from the edit form.</p>
+<h2 id="projects">Projects<a class="headerlink" href="#projects" title="Permanent link">&para;</a></h2>
+<p>The <strong>Projects</strong> page lists every project with its namespaces. Admins create, edit and delete
+projects here, and choose which namespaces each one contains. A project only groups
+namespaces - it doesn't change who has access to them. See <a href="../namespaces/#projects">Projects</a>.</p>
 <h2 id="access-control-and-tokens">Access control and tokens<a class="headerlink" href="#access-control-and-tokens" title="Permanent link">&para;</a></h2>
 <p><img alt="Access token page" src="../img/ui/ui-access-tokens-light.png#only-light" />
 <img alt="Access token page" src="../img/ui/ui-access-tokens-dark.png#only-dark" /></p>
