@@ -82,21 +82,11 @@ All settings are listed in the [configuration reference](https://miracum.github.
 
 ### Build & run
 
-Start an empty PostgreSQL database, Keycloak, and SeaweedFS for development (optionally add `-d` to run in the background):
+Start an empty PostgreSQL database, Keycloak, Jaeger, and SeaweedFS for development (optionally add `-d` to run in the background):
 
 ```sh
-docker compose -f compose.yaml --profile=keycloak --profile=s3 up
+docker compose -f compose.yaml up
 ```
-
-To additionally start an instance of [Jaeger Tracing](https://www.jaegertracing.io/), you can specify the `jaeger`
-profile:
-
-```sh
-docker compose -f compose.yaml --profile=jaeger up
-```
-
-Then set `Tracing__IsEnabled=true` and `Tracing__Otlp__Endpoint=http://localhost:4317` (already the default in
-`appsettings.Development.json`) and view traces at <http://localhost:16686>.
 
 Restore dependencies and run in Debug mode:
 
@@ -107,7 +97,7 @@ dotnet run -c Debug --project=src/Vfps
 
 Open <https://localhost:8080/ui> to see the admin UI, and
 <https://localhost:8080/swagger> to see the OpenAPI UI for the JSON-transcoded
-gRPC services. You can use [grpcurl](https://github.com/fullstorydev/grpcurl)
+gRPC services and view traces at <http://localhost:16686>. You can use [grpcurl](https://github.com/fullstorydev/grpcurl)
 to interact with the API:
 
 > **Note**
