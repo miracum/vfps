@@ -12,13 +12,16 @@
     closed, so the sample has to live with the page for the verdict to survive reopening it.
 *@
 
-@* Immediate rather than on-blur: the whole point of the checker below is to react while the
-   pattern is being typed. Each keystroke is a circuit round trip, but only to compile a pattern
-   and match one short sample against it - see Recheck. *@
+@* Debounced rather than on-blur: the whole point of the checker below is to react while the
+   pattern is being typed, and a short pause is all that takes. Not Immediate, which sends every
+   keystroke over the circuit and re-renders the field from the server's value each time: on a slow
+   connection (or a CPU-starved server) a render for an earlier keystroke can arrive after later
+   ones and overwrite what was typed with a shorter pattern, which then stays wrong. One update
+   per pause leaves far less in flight to go stale. *@
 <BbInput
     Value="@Value"
     ValueChanged="OnValueChangedAsync"
-    UpdateTiming="UpdateTiming.Immediate"
+    UpdateTiming="UpdateTiming.Debounced"
     Id="@Id"
 />
 <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
@@ -65,7 +68,7 @@
                 <BbInput
                     Value="@Sample"
                     ValueChanged="OnSampleChangedAsync"
-                    UpdateTiming="UpdateTiming.Immediate"
+                    UpdateTiming="UpdateTiming.Debounced"
                     Id="@($"{Id}Sample")"
                     Class="bb:w-64"
                     Placeholder="@Localizer["App.Namespaces.ValidationRegexSamplePlaceholder"]"
