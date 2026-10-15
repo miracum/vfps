@@ -14,7 +14,33 @@
 
 <BbTreeItem Value="@Node.Name" Icon="@Icon" IsLeaf="@(Children.Count == 0)">
     <LabelTemplate>
-        <span data-namespace-label class="bb:truncate">@Node.Name</span>
+        <span data-namespace-label class="bb:truncate" style="flex-shrink: 0; max-width: 100%;">@Node.Name</span>
+        @if (ProjectNamesByNamespace is not null && ProjectNamesByNamespace.TryGetValue(Node.Name, out var projectNames) && projectNames.Count > 0)
+        {
+            @* The badges give way before the name does: flex-shrink is weighted by size, so a huge
+               factor here makes this the element that absorbs a tight row, and overflow:hidden
+               clips it. Without that, a namespace in many projects squeezed its own name to
+               nothing and the badges ran out of the row. Only a few are shown for the same reason;
+               the tooltip and the details panel carry the full list. *@
+            <span
+                class="bb:ml-1"
+                style="display: inline-flex; gap: 0.25rem; min-width: 0; overflow: hidden; flex: 0 1000 auto;"
+                title="@string.Join(", ", projectNames)"
+            >
+                @foreach (var projectName in projectNames.Take(MaxProjectBadges))
+                {
+                    <BbBadge Variant="BadgeVariant.Outline" style="max-width: 9rem; font-weight: 400;" data-project-badge>
+                        <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@projectName</span>
+                    </BbBadge>
+                }
+                @if (projectNames.Count > MaxProjectBadges)
+                {
+                    <BbBadge Variant="BadgeVariant.Secondary" style="white-space: nowrap; font-weight: 400;" data-project-overflow>
+                        +@(projectNames.Count - MaxProjectBadges)
+                    </BbBadge>
+                }
+            </span>
+        }
     </LabelTemplate>
     <ChildContent>
         @foreach (var child in Children)
@@ -23,6 +49,7 @@
                 Node="child"
                 ChildrenByParent="ChildrenByParent"
                 VisibleNames="VisibleNames"
+                ProjectNamesByNamespace="ProjectNamesByNamespace"
                 Depth="Depth + 1"
                 Ancestry="NodeAncestry"
             />
@@ -46,6 +73,13 @@
     [Parameter]
     public IReadOnlySet<string>? VisibleNames { get; set; }
 
+    /// <summary>
+    /// The projects each namespace is in, shown as a small badge per project beside its name.
+    /// Null, or a namespace absent from it, means none.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyDictionary<string, List<string>>? ProjectNamesByNamespace { get; set; }
+
     [Parameter]
     public int Depth { get; set; }
 
@@ -57,6 +91,9 @@
     /// </summary>
     [Parameter]
     public IReadOnlySet<string> Ancestry { get; set; } = new HashSet<string>(StringComparer.Ordinal);
+
+    // How many project badges a node shows before collapsing the rest into a "+N".
+    private const int MaxProjectBadges = 2;
 
     private string Icon => Depth == 0 ? "database" : "corner-down-right";
 

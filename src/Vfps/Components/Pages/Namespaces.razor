@@ -6,6 +6,7 @@
 @using Vfps.Data.Models
 @using Vfps.PseudonymGenerators
 @inject INamespaceAppService NamespaceAppService
+@inject IProjectAppService ProjectAppService
 @inject IPseudonymAppService PseudonymAppService
 @inject NavigationManager NavigationManager
 @inject PseudonymizationMethodsLookup MethodsLookup
@@ -43,6 +44,17 @@
         <BbAlert Variant="AlertVariant.Danger">
             <BbAlertTitle>@Localizer["App.Namespaces.DeleteErrorTitle"]</BbAlertTitle>
             <BbAlertDescription>@_deleteErrorMessage</BbAlertDescription>
+        </BbAlert>
+    }
+
+    @* Set when a namespace was created but could not be put into the projects chosen for it. The
+       namespace itself is fine, which is why this is not the create dialog's error: by the time
+       it is known the dialog has closed. *@
+    @if (_projectsErrorMessage is not null)
+    {
+        <BbAlert Variant="AlertVariant.Danger">
+            <BbAlertTitle>@Localizer["App.Namespaces.ProjectsErrorTitle"]</BbAlertTitle>
+            <BbAlertDescription>@_projectsErrorMessage</BbAlertDescription>
         </BbAlert>
     }
 
@@ -255,6 +267,21 @@
                                 </p>
                             </div>
                         </div>
+                        <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
+                            <BbLabel Class="text-right bb:pt-2">@Localizer["App.Namespaces.Projects"]</BbLabel>
+                            <div class="col-span-3">
+                                <NameChecklist
+                                    Items="ProjectNames"
+                                    Selected="_newNamespaceProjects"
+                                    IdPrefix="newNamespaceProject"
+                                    EmptyText="@Localizer["App.Projects.PickerEmpty"]"
+                                    AriaLabel="@Localizer["App.Namespaces.Projects"]"
+                                />
+                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
+                                    @Localizer["App.Namespaces.ProjectsHelp"]
+                                </p>
+                            </div>
+                        </div>
                     </div>
                     <BbDialogFooter Class="bb:mt-4">
                         <BbButton
@@ -360,6 +387,21 @@
                                 />
                             </div>
                         </div>
+                        <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
+                            <BbLabel Class="text-right bb:pt-2">@Localizer["App.Namespaces.Projects"]</BbLabel>
+                            <div class="col-span-3">
+                                <NameChecklist
+                                    Items="ProjectNames"
+                                    Selected="_editProjects"
+                                    IdPrefix="editNamespaceProject"
+                                    EmptyText="@Localizer["App.Projects.PickerEmpty"]"
+                                    AriaLabel="@Localizer["App.Namespaces.Projects"]"
+                                />
+                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
+                                    @Localizer["App.Namespaces.ProjectsHelp"]
+                                </p>
+                            </div>
+                        </div>
                     </div>
                     <BbDialogFooter>
                         <BbButton
@@ -406,15 +448,36 @@
                            declarative, which is what gives each node its hover card), and the input
                            it renders updates on change - so its box would sit inert until focus left
                            it. Debounced binding here filters as you type. *@
-                        <BbInput
-                            @bind-Value="_treeSearch"
-                            @bind-Value:after="OnTreeSearchChanged"
-                            UpdateTiming="UpdateTiming.Debounced"
-                            Id="namespaceSearch"
-                            Placeholder="@Localizer["App.Namespaces.HierarchySearchPlaceholder"]"
-                            AriaLabel="@Localizer["App.Namespaces.HierarchySearchPlaceholder"]"
-                            Class="bb:mb-2 bb:h-8 bb:text-sm"
-                        />
+                        <div class="bb:mb-2 bb:flex bb:gap-2">
+                            <BbInput
+                                @bind-Value="_treeSearch"
+                                @bind-Value:after="OnTreeSearchChanged"
+                                UpdateTiming="UpdateTiming.Debounced"
+                                Id="namespaceSearch"
+                                Placeholder="@Localizer["App.Namespaces.HierarchySearchPlaceholder"]"
+                                AriaLabel="@Localizer["App.Namespaces.HierarchySearchPlaceholder"]"
+                                Class="bb:h-8 bb:text-sm"
+                            />
+                            @* Only worth having once there is a project to filter by. *@
+                            @if (_projects.Count > 0)
+                            {
+                                <select
+                                    @bind="_projectFilter"
+                                    @bind:after="OnTreeSearchChanged"
+                                    id="namespaceProjectFilter"
+                                    aria-label="@Localizer["App.Namespaces.ProjectFilterLabel"]"
+                                    style="max-width: 45%;"
+                                    class="bb:flex bb:h-8 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-2 bb:text-sm bb:focus-visible:outline-none"
+                                >
+                                    <option value="">@Localizer["App.Namespaces.AllProjects"]</option>
+                                    <option value="@NoProjectFilter">@Localizer["App.Namespaces.NoProject"]</option>
+                                    @foreach (var project in _projects)
+                                    {
+                                        <option value="@(ProjectFilterPrefix + project.Name)">@project.Name</option>
+                                    }
+                                </select>
+                            }
+                        </div>
                         @* SelectionMode has to be set explicitly: the tree defaults to None, which
                            reports no selection at all and would leave SelectedValueChanged silent.
                            ExpandOnClick is deliberately left off so a click only ever selects a
@@ -435,6 +498,7 @@
                                     Node="root"
                                     ChildrenByParent="ChildrenByParent"
                                     VisibleNames="VisibleNamespaceNames"
+                                    ProjectNamesByNamespace="_projectNamesByNamespace"
                                 />
                             }
                         </BbTreeView>
@@ -454,6 +518,7 @@
                                 TimeZone="_browserTimeZone"
                                 PseudonymCount="_selectedNamespacePseudonymCount"
                                 IsPseudonymCountLoading="_isLoadingSelectedNamespacePseudonymCount"
+                                ProjectNames="ProjectNamesOf(selected.Name)"
                             />
                             <div class="bb:mt-4 bb:flex bb:flex-wrap bb:gap-2">
                                 <BbButton
@@ -513,6 +578,46 @@
     private Task<AuthenticationState>? AuthenticationState { get; set; }
 
     private IReadOnlyList<Namespace> _namespaces = [];
+
+    // The projects the caller can see, and which namespaces are in them. The membership map is
+    // derived from the same list on every reload (a project's memberships only ever name
+    // namespaces the caller can read), so the tree, its filter and the details panel all agree.
+    private IReadOnlyList<Project> _projects = [];
+    private Dictionary<string, List<string>> _projectNamesByNamespace = new(StringComparer.Ordinal);
+    private string? _projectsErrorMessage;
+
+    // The project checkboxes of the create and edit dialogs. Plain sets, read on submit.
+    private readonly HashSet<string> _newNamespaceProjects = new(StringComparer.Ordinal);
+    private readonly HashSet<string> _editProjects = new(StringComparer.Ordinal);
+
+    // The tree's project filter: empty for every namespace, NoProjectFilter for those in no
+    // project, otherwise ProjectFilterPrefix followed by a project name. A prefix rather than the
+    // bare name so that no project name can be mistaken for the other two values.
+    private const string NoProjectFilter = "none";
+    private const string ProjectFilterPrefix = "project:";
+    private string _projectFilter = string.Empty;
+
+    private IReadOnlyList<string> ProjectNames =>
+        [.. _projects.Select(p => p.Name).Order(StringComparer.Ordinal)];
+
+    private IReadOnlyList<string> ProjectNamesOf(string namespaceName) =>
+        _projectNamesByNamespace.TryGetValue(namespaceName, out var names) ? names : [];
+
+    private bool MatchesProjectFilter(Namespace candidate)
+    {
+        if (string.IsNullOrEmpty(_projectFilter))
+        {
+            return true;
+        }
+
+        var projects = ProjectNamesOf(candidate.Name);
+        return _projectFilter == NoProjectFilter
+            ? projects.Count == 0
+            : projects.Contains(
+                _projectFilter[ProjectFilterPrefix.Length..],
+                StringComparer.Ordinal
+            );
+    }
     private NewNamespaceModel _newNamespace = new();
     private string _selectedMethod = Vfps
         .Protos
@@ -633,16 +738,17 @@
     }
 
     /// <summary>
-    /// The namespaces the search leaves on screen, or null when nothing is being searched for.
-    /// A namespace survives if its own name matches or one of its descendants does - the same
-    /// rule BbTreeView applies in its data-driven mode, which amounts to keeping every match plus
-    /// the ancestors leading down to it.
+    /// The namespaces the search and the project filter leave on screen, or null when neither is
+    /// in use. A namespace survives if it matches both itself or one of its descendants does - the
+    /// same rule BbTreeView applies in its data-driven mode, which amounts to keeping every match
+    /// plus the ancestors leading down to it.
     /// </summary>
     private IReadOnlySet<string>? VisibleNamespaceNames
     {
         get
         {
-            if (string.IsNullOrWhiteSpace(_treeSearch))
+            var isSearching = !string.IsNullOrWhiteSpace(_treeSearch);
+            if (!isSearching && string.IsNullOrEmpty(_projectFilter))
             {
                 return null;
             }
@@ -652,7 +758,10 @@
 
             foreach (
                 var match in _namespaces.Where(n =>
-                    n.Name.Contains(_treeSearch, StringComparison.OrdinalIgnoreCase)
+                    (
+                        !isSearching
+                        || n.Name.Contains(_treeSearch, StringComparison.OrdinalIgnoreCase)
+                    ) && MatchesProjectFilter(n)
                 )
             )
             {
@@ -859,6 +968,8 @@
             Description = forNamespace.Description,
             OriginalValueValidationRegex = forNamespace.OriginalValueValidationRegex,
         };
+        _editProjects.Clear();
+        _editProjects.UnionWith(ProjectNamesOf(forNamespace.Name));
         _editValidationRegexSample = null;
         _editErrorMessage = null;
         _showEditDialog = true;
@@ -901,12 +1012,30 @@
                 CancellationToken.None
             );
 
+            // Only when the set changed: it is a second write, and most edits are of the
+            // description.
+            if (!_editProjects.SetEquals(ProjectNamesOf(_editNamespaceName)))
+            {
+                await ProjectAppService.SetProjectsOfNamespaceAsync(
+                    _editNamespaceName,
+                    _editProjects,
+                    user,
+                    CancellationToken.None
+                );
+            }
+
             await ReloadAsync();
             CloseEditDialog();
         }
         catch (NamespaceNotFoundException ex)
         {
             _editErrorMessage = ex.Message;
+        }
+        catch (ProjectNotFoundException ex)
+        {
+            // Deleted since the page loaded. The description was saved before this was found out.
+            _editErrorMessage = ex.Message;
+            await ReloadAsync();
         }
         catch (ArgumentException ex)
         {
@@ -929,9 +1058,10 @@
 
     private void OnTreeSearchChanged()
     {
-        // Expand the whole path down to each hit, so a match nested inside a collapsed parent
-        // still shows up. Nothing is collapsed again once the search is cleared: losing the
-        // expansion state the user set up themselves would be the worse of the two.
+        // Also what changing the project filter calls. Expand the whole path down to each hit, so
+        // a match nested inside a collapsed parent still shows up. Nothing is collapsed again once
+        // the search is cleared: losing the expansion state the user set up themselves would be
+        // the worse of the two.
         if (VisibleNamespaceNames is { } visible)
         {
             _expandedNamespaces.UnionWith(visible);
@@ -953,6 +1083,26 @@
     {
         var user = await GetUserAsync();
         _namespaces = await NamespaceAppService.GetAllAsync(user, CancellationToken.None);
+        _projects = await ProjectAppService.GetAllAsync(user, CancellationToken.None);
+        _projectNamesByNamespace = _projects
+            .OrderBy(p => p.Name, StringComparer.Ordinal)
+            .SelectMany(p => p.Memberships.Select(m => (m.NamespaceName, ProjectName: p.Name)))
+            .GroupBy(x => x.NamespaceName, StringComparer.Ordinal)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Select(x => x.ProjectName).ToList(),
+                StringComparer.Ordinal
+            );
+
+        // A filter on a project that has since been deleted would hide everything with no way to
+        // see why.
+        if (
+            _projectFilter.StartsWith(ProjectFilterPrefix, StringComparison.Ordinal)
+            && !_projects.Any(p => ProjectFilterPrefix + p.Name == _projectFilter)
+        )
+        {
+            _projectFilter = string.Empty;
+        }
 
         foreach (var parentName in ChildrenByParent.Keys)
         {
@@ -986,6 +1136,7 @@
 
         _isCreating = true;
         _errorMessage = null;
+        _projectsErrorMessage = null;
         try
         {
             var user = await GetUserAsync();
@@ -1017,7 +1168,33 @@
                 CancellationToken.None
             );
 
+            // A second step, after the namespace exists: the create call has no notion of
+            // projects. Should it fail the namespace is still there, and what is reported is
+            // exactly that - not a failed create, which would invite creating it a second time.
+            if (_newNamespaceProjects.Count > 0)
+            {
+                try
+                {
+                    await ProjectAppService.SetProjectsOfNamespaceAsync(
+                        _newNamespace.Name,
+                        _newNamespaceProjects,
+                        user,
+                        CancellationToken.None
+                    );
+                }
+                catch (Exception ex)
+                    when (ex is ProjectNotFoundException or ForbiddenException)
+                {
+                    _projectsErrorMessage = Localizer[
+                        "App.Namespaces.ProjectsErrorCreated",
+                        _newNamespace.Name,
+                        ex.Message
+                    ];
+                }
+            }
+
             _newNamespace = new NewNamespaceModel();
+            _newNamespaceProjects.Clear();
             await ReloadAsync();
 
             // The namespace is in the tree behind the dialog now, so there's nothing left to look

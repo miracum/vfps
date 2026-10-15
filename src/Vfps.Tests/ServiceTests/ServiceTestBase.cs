@@ -163,6 +163,16 @@ public class ServiceTestBase : IDisposable
             methodsLookup ?? new PseudonymizationMethodsLookup()
         );
 
+    protected ProjectAppService CreateProjectAppService(
+        AuthorizationConfig? config = null,
+        params NamespaceAccessGrant[] grants
+    ) =>
+        new(
+            new ProjectRepository(ContextFactory),
+            new NamespaceRepository(ContextFactory),
+            CreatePermissionChecker(config, grants)
+        );
+
     protected virtual void Dispose(bool disposing)
     {
         if (!disposedValue)

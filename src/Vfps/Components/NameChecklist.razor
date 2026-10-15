@@ -1,0 +1,76 @@
+@*
+    A checkbox list for choosing any number of names from a list - what the namespace dialogs use
+    to pick the projects a namespace belongs to, and the project page to pick a project's
+    namespaces. Both are many-to-many, so this is a set of checkboxes rather than a select.
+
+    Mutates the set it is given rather than raising an event: callers keep that set as plain form
+    state beside the rest of their model and read it when the form is submitted.
+*@
+
+@if (Items.Count == 0)
+{
+    <p class="bb:text-sm bb:text-muted-foreground">@EmptyText</p>
+}
+else
+{
+    @* Scrolls on its own: with a lot of names the list would otherwise grow the dialog it sits
+       in past the viewport, pushing the form's buttons out of reach. *@
+    <div
+        class="bb:flex bb:flex-col bb:gap-2"
+        style="max-height: @MaxHeight; overflow-y: auto; padding-right: 0.5rem;"
+        role="group"
+        aria-label="@AriaLabel"
+    >
+        @foreach (var item in Items)
+        {
+            var name = item;
+            var id = $"{IdPrefix}-{name}";
+            <div class="bb:flex bb:items-center bb:gap-2">
+                <BbCheckbox
+                    Id="@id"
+                    Checked="@Selected.Contains(name)"
+                    CheckedChanged="@((bool isChecked) => Toggle(name, isChecked))"
+                />
+                <BbLabel For="@id" Class="bb:font-normal">@name</BbLabel>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    /// <summary>The names to choose from.</summary>
+    [Parameter, EditorRequired]
+    public IReadOnlyList<string> Items { get; set; } = [];
+
+    /// <summary>The chosen names. Changed in place.</summary>
+    [Parameter, EditorRequired]
+    public ISet<string> Selected { get; set; } = null!;
+
+    /// <summary>Shown instead of the list when there is nothing to choose from.</summary>
+    [Parameter, EditorRequired]
+    public string EmptyText { get; set; } = string.Empty;
+
+    /// <summary>Names the group for a screen reader.</summary>
+    [Parameter, EditorRequired]
+    public string AriaLabel { get; set; } = string.Empty;
+
+    /// <summary>How tall the list can get, as a CSS length, before it scrolls.</summary>
+    [Parameter]
+    public string MaxHeight { get; set; } = "12rem";
+
+    /// <summary>Prefixes each checkbox's id, so two lists on one page don't collide.</summary>
+    [Parameter]
+    public string IdPrefix { get; set; } = "item";
+
+    private void Toggle(string name, bool isChecked)
+    {
+        if (isChecked)
+        {
+            Selected.Add(name);
+        }
+        else
+        {
+            Selected.Remove(name);
+        }
+    }
+}

@@ -5,11 +5,33 @@ namespace Vfps;
 
 public class InitNamespacesBackgroundService(
     INamespaceRepository namespaceRepository,
+    IProjectRepository projectRepository,
     IConfiguration configuration,
     ILogger<InitNamespacesBackgroundService> logger
 ) : BackgroundService
 {
+    /// <summary>
+    /// One entry of the <c>Init:v1:Projects</c> section: a project to create, and the namespaces to
+    /// put into it. Declared on the project's side, rather than as a property of each namespace,
+    /// since a namespace can be in any number of projects.
+    /// </summary>
+    public class InitProject
+    {
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+        public List<string> Namespaces { get; set; } = [];
+    }
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        await InitNamespacesAsync(stoppingToken);
+
+        // After the namespaces, so a project can name one that is created in the very same
+        // section.
+        await InitProjectsAsync(stoppingToken);
+    }
+
+    private async Task InitNamespacesAsync(CancellationToken stoppingToken)
     {
         var namespaces = configuration
             .GetSection("Init:v1:Namespaces")
@@ -73,6 +95,81 @@ public class InitNamespacesBackgroundService(
                     @namespace.Name,
                     @namespace.ParentName
                 );
+            }
+        }
+    }
+
+    private async Task InitProjectsAsync(CancellationToken stoppingToken)
+    {
+        var projects = configuration.GetSection("Init:v1:Projects").Get<List<InitProject>>();
+        if (projects is null || projects.Count == 0)
+        {
+            logger.LogInformation("No projects configured to create during startup.");
+            return;
+        }
+
+        foreach (var project in projects)
+        {
+            if (string.IsNullOrWhiteSpace(project.Name))
+            {
+                logger.LogWarning("Skipping a configured project without a name.");
+                continue;
+            }
+
+            if (await projectRepository.FindAsync(project.Name, stoppingToken) is null)
+            {
+                logger.LogInformation("Attempting to create project {ProjectName}", project.Name);
+
+                var now = DateTimeOffset.UtcNow;
+                try
+                {
+                    await projectRepository.CreateAsync(
+                        new Data.Models.Project
+                        {
+                            Name = project.Name,
+                            Description = project.Description,
+                            CreatedAt = now,
+                            LastUpdatedAt = now,
+                        },
+                        stoppingToken
+                    );
+                }
+                catch (UniqueConstraintException)
+                {
+                    // Created by another replica starting up at the same time.
+                }
+            }
+            else
+            {
+                // Like a namespace, an existing project is not overridden: its description may
+                // have been edited since. Its configured namespaces are still added below - that
+                // is idempotent, and lets a new namespace be put into an existing project.
+                logger.LogInformation(
+                    "A project with the same name {ProjectName} already exists. Will not be overridden.",
+                    project.Name
+                );
+            }
+
+            foreach (var namespaceName in project.Namespaces)
+            {
+                try
+                {
+                    await projectRepository.AddNamespaceAsync(
+                        project.Name,
+                        namespaceName,
+                        stoppingToken
+                    );
+                }
+                catch (ReferenceConstraintException)
+                {
+                    // Logged and skipped like a missing parent above: one bad entry shouldn't
+                    // stop the rest, or startup itself.
+                    logger.LogWarning(
+                        "Project {ProjectName} lists a namespace {NamespaceName} that does not exist. Skipping.",
+                        project.Name,
+                        namespaceName
+                    );
+                }
             }
         }
     }

@@ -979,4 +979,82 @@
   <data name="App.Namespaces.EditErrorTitle" xml:space="preserve">
     <value>Namespace konnte nicht aktualisiert werden</value>
   </data>
+  <data name="App.Nav.Projects" xml:space="preserve">
+    <value>Projekte</value>
+  </data>
+  <data name="App.Namespaces.ProjectsColumn" xml:space="preserve">
+    <value>Projekte</value>
+  </data>
+  <data name="App.Namespaces.Projects" xml:space="preserve">
+    <value>Projekte</value>
+  </data>
+  <data name="App.Namespaces.ProjectsHelp" xml:space="preserve">
+    <value>Die Projekte, zu denen dieser Namespace gehört. Projekte gruppieren Namespaces nur – sie gewähren keinen Zugriff.</value>
+  </data>
+  <data name="App.Namespaces.ProjectsErrorTitle" xml:space="preserve">
+    <value>Der Namespace konnte seinen Projekten nicht hinzugefügt werden</value>
+  </data>
+  <data name="App.Namespaces.ProjectsErrorCreated" xml:space="preserve">
+    <value>Der Namespace '{0}' wurde angelegt, konnte aber den ausgewählten Projekten nicht hinzugefügt werden: {1}</value>
+  </data>
+  <data name="App.Namespaces.ProjectFilterLabel" xml:space="preserve">
+    <value>Nach Projekt filtern</value>
+  </data>
+  <data name="App.Namespaces.AllProjects" xml:space="preserve">
+    <value>Alle Projekte</value>
+  </data>
+  <data name="App.Namespaces.NoProject" xml:space="preserve">
+    <value>Kein Projekt</value>
+  </data>
+  <data name="App.Projects.Description" xml:space="preserve">
+    <value>Projekte fassen Namespaces zusammen, die zusammengehören, zum Beispiel die Namespaces für Patienten-ID und Fall-ID einer Studie. Ein Namespace kann zu mehreren Projekten gehören. Die Gruppierung ändert nichts daran, wer worauf zugreifen darf – das wird weiterhin pro Namespace vergeben.</value>
+  </data>
+  <data name="App.Projects.PickerEmpty" xml:space="preserve">
+    <value>Es gibt noch keine Projekte.</value>
+  </data>
+  <data name="App.Projects.CreateTitle" xml:space="preserve">
+    <value>Projekt anlegen</value>
+  </data>
+  <data name="App.Projects.CreateDescription" xml:space="preserve">
+    <value>Ein Projekt ist zunächst leer. Namespaces können anschließend hinzugefügt werden.</value>
+  </data>
+  <data name="App.Projects.EditTitle" xml:space="preserve">
+    <value>Projekt {0} bearbeiten</value>
+  </data>
+  <data name="App.Projects.EditDescription" xml:space="preserve">
+    <value>Nur die Beschreibung kann geändert werden – der Name identifiziert das Projekt.</value>
+  </data>
+  <data name="App.Projects.ErrorTitle" xml:space="preserve">
+    <value>Das Projekt konnte nicht gespeichert werden</value>
+  </data>
+  <data name="App.Projects.DeleteConfirmTitle" xml:space="preserve">
+    <value>Projekt {0} löschen?</value>
+  </data>
+  <data name="App.Projects.DeleteConfirmBody" xml:space="preserve">
+    <value>Die Namespaces in diesem Projekt und deren Pseudonyme sind nicht betroffen – sie gehören lediglich nicht mehr dazu.</value>
+  </data>
+  <data name="App.Projects.ManageAction" xml:space="preserve">
+    <value>Namespaces</value>
+  </data>
+  <data name="App.Projects.ManageTitle" xml:space="preserve">
+    <value>Namespaces in {0}</value>
+  </data>
+  <data name="App.Projects.ManageDescription" xml:space="preserve">
+    <value>Wählen Sie die Namespaces aus, die zu diesem Projekt gehören.</value>
+  </data>
+  <data name="App.Projects.ManageEmpty" xml:space="preserve">
+    <value>Es gibt noch keine Namespaces.</value>
+  </data>
+  <data name="App.Projects.NamespaceCount" xml:space="preserve">
+    <value>Namespaces</value>
+  </data>
+  <data name="App.Projects.NoNamespaces" xml:space="preserve">
+    <value>Dieses Projekt enthält noch keine Namespaces.</value>
+  </data>
+  <data name="App.Projects.Empty" xml:space="preserve">
+    <value>Es gibt keine Projekte mit Namespaces, auf die Sie zugreifen können.</value>
+  </data>
+  <data name="App.Projects.EmptyAdmin" xml:space="preserve">
+    <value>Es gibt noch keine Projekte. Legen Sie eines an, um Namespaces zu gruppieren.</value>
+  </data>
 </root>

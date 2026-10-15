@@ -1,0 +1,530 @@
+@page "/projects"
+@rendermode InteractiveServer
+@using System.ComponentModel.DataAnnotations
+@using Vfps.Data.Models
+@inject IProjectAppService ProjectAppService
+@inject INamespaceAppService NamespaceAppService
+@inject INamespacePermissionChecker PermissionChecker
+@inject IStringLocalizer<SharedResources> Localizer
+
+@*
+    Projects: named groups of namespaces that belong together, e.g. the patient-id and
+    encounter-id namespaces of one study.
+
+    Grouping only. A project grants nothing - access is still configured per namespace - so a
+    non-admin sees exactly the namespaces of a project that they could already read, and managing
+    projects is admin-only like managing the namespaces themselves. Which projects a single
+    namespace is in is edited from the Namespaces page; what is edited here is a project: its
+    description, and which namespaces it contains.
+*@
+
+<PageTitle>@Localizer["App.Nav.Projects"]</PageTitle>
+
+<div class="bb:mx-auto bb:space-y-6">
+    <div class="bb:flex bb:flex-wrap bb:items-center bb:justify-between bb:gap-2">
+        <div class="bb:flex bb:items-center bb:gap-2">
+            <LucideIcon Name="folder" Size="24" Class="bb:text-primary" />
+            <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Nav.Projects"]</h1>
+        </div>
+        @if (_isAdmin)
+        {
+            <BbButton
+                id="showCreateProjectFormButton"
+                Type="ButtonType.Button"
+                OnClick="OpenCreateDialog"
+                IconPosition="IconPosition.Start"
+            >
+                <Icon>
+                    <LucideIcon Name="plus" Size="16" />
+                </Icon>
+                <ChildContent>
+                    @Localizer["App.Projects.CreateTitle"]
+                </ChildContent>
+            </BbButton>
+        }
+    </div>
+
+    <p class="bb:text-sm bb:text-muted-foreground">@Localizer["App.Projects.Description"]</p>
+
+    @if (_errorMessage is not null)
+    {
+        <BbAlert Variant="AlertVariant.Danger">
+            <BbAlertTitle>@Localizer["App.Projects.ErrorTitle"]</BbAlertTitle>
+            <BbAlertDescription>@_errorMessage</BbAlertDescription>
+        </BbAlert>
+    }
+
+    @* Inline rather than a dialog, like the namespace delete confirmation. No name has to be
+       typed: deleting a project removes nothing but the grouping. *@
+    @if (_pendingDelete is not null)
+    {
+        <BbAlert Variant="AlertVariant.Danger">
+            <BbAlertTitle>@Localizer["App.Projects.DeleteConfirmTitle", _pendingDelete.Name]</BbAlertTitle>
+            <BbAlertDescription>
+                <p class="bb:mb-3">@Localizer["App.Projects.DeleteConfirmBody"]</p>
+                <div class="bb:flex bb:flex-wrap bb:gap-2">
+                    <BbButton
+                        id="confirmDeleteProjectButton"
+                        Variant="ButtonVariant.Destructive"
+                        Loading="_isBusy"
+                        OnClick="ConfirmDeleteAsync"
+                    >
+                        @Localizer["App.Common.Delete"]
+                    </BbButton>
+                    <BbButton Variant="ButtonVariant.Outline" OnClick="CancelDelete">
+                        @Localizer["App.Common.Cancel"]
+                    </BbButton>
+                </div>
+            </BbAlertDescription>
+        </BbAlert>
+    }
+
+    @if (_isAdmin)
+    {
+        @* Create and edit are one dialog: the same two fields, except that a project's name is its
+           identity and can't be changed once it exists. *@
+        <BbDialog Open="_showProjectDialog" OpenChanged="OnProjectDialogOpenChanged">
+            <BbDialogContent style="max-width: 36rem;">
+                <BbDialogHeader>
+                    <BbDialogTitle>
+                        @(_editingProjectName is null
+                            ? Localizer["App.Projects.CreateTitle"]
+                            : Localizer["App.Projects.EditTitle", _editingProjectName])
+                    </BbDialogTitle>
+                    <BbDialogDescription>
+                        @(_editingProjectName is null
+                            ? Localizer["App.Projects.CreateDescription"]
+                            : Localizer["App.Projects.EditDescription"])
+                    </BbDialogDescription>
+                </BbDialogHeader>
+
+                @if (_dialogErrorMessage is not null)
+                {
+                    <BbAlert Variant="AlertVariant.Danger">
+                        <BbAlertTitle>@Localizer["App.Projects.ErrorTitle"]</BbAlertTitle>
+                        <BbAlertDescription>@_dialogErrorMessage</BbAlertDescription>
+                    </BbAlert>
+                }
+
+                <EditForm Model="_projectModel" FormName="project" OnValidSubmit="SaveProjectAsync">
+                    <DataAnnotationsValidator />
+                    <div class="bb:grid bb:gap-4 bb:py-4">
+                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
+                            <BbLabel For="projectName" Class="text-right">@Localizer["App.Common.Name"]</BbLabel>
+                            <div class="col-span-3">
+                                <BbInput
+                                    @bind-Value="_projectModel.Name"
+                                    Id="projectName"
+                                    Required="true"
+                                    Disabled="@(_editingProjectName is not null)"
+                                />
+                            </div>
+                        </div>
+                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
+                            <BbLabel For="projectDescription" Class="text-right">@Localizer["App.Common.Description"]</BbLabel>
+                            <div class="col-span-3">
+                                <BbInput @bind-Value="_projectModel.Description" Id="projectDescription" />
+                            </div>
+                        </div>
+                    </div>
+                    <BbDialogFooter>
+                        <BbButton
+                            id="cancelProjectButton"
+                            Type="ButtonType.Button"
+                            Variant="ButtonVariant.Outline"
+                            OnClick="CloseProjectDialog"
+                        >
+                            @Localizer["App.Common.Cancel"]
+                        </BbButton>
+                        <BbButton id="saveProjectButton" Type="ButtonType.Submit" Loading="_isBusy">
+                            @(_editingProjectName is null ? Localizer["App.Common.Create"] : Localizer["App.Common.Save"])
+                        </BbButton>
+                    </BbDialogFooter>
+                </EditForm>
+            </BbDialogContent>
+        </BbDialog>
+
+        @* Only rendered once a project has been picked, so there is always one to work on. *@
+        @if (_manageProjectName is not null)
+        {
+            <BbDialog Open="_showManageDialog" OpenChanged="OnManageDialogOpenChanged">
+                <BbDialogContent style="max-width: 36rem;">
+                    <BbDialogHeader>
+                        <BbDialogTitle>@Localizer["App.Projects.ManageTitle", _manageProjectName]</BbDialogTitle>
+                        <BbDialogDescription>@Localizer["App.Projects.ManageDescription"]</BbDialogDescription>
+                    </BbDialogHeader>
+
+                    @if (_dialogErrorMessage is not null)
+                    {
+                        <BbAlert Variant="AlertVariant.Danger">
+                            <BbAlertTitle>@Localizer["App.Projects.ErrorTitle"]</BbAlertTitle>
+                            <BbAlertDescription>@_dialogErrorMessage</BbAlertDescription>
+                        </BbAlert>
+                    }
+
+                    <div class="bb:py-4">
+                        <NameChecklist
+                            Items="NamespaceNames"
+                            Selected="_manageSelected"
+                            IdPrefix="projectNamespace"
+                            MaxHeight="50vh"
+                            EmptyText="@Localizer["App.Projects.ManageEmpty"]"
+                            AriaLabel="@Localizer["App.Nav.Namespaces"]"
+                        />
+                    </div>
+                    <BbDialogFooter>
+                        <BbButton
+                            id="cancelManageProjectButton"
+                            Type="ButtonType.Button"
+                            Variant="ButtonVariant.Outline"
+                            OnClick="CloseManageDialog"
+                        >
+                            @Localizer["App.Common.Cancel"]
+                        </BbButton>
+                        <BbButton id="saveManageProjectButton" Loading="_isBusy" OnClick="SaveManageAsync">
+                            @Localizer["App.Common.Save"]
+                        </BbButton>
+                    </BbDialogFooter>
+                </BbDialogContent>
+            </BbDialog>
+        }
+    }
+
+    @if (_projects.Count == 0)
+    {
+        <BbCard>
+            <BbCardContent>
+                <p class="bb:pt-6 bb:text-sm bb:text-muted-foreground">
+                    @(_isAdmin ? Localizer["App.Projects.EmptyAdmin"] : Localizer["App.Projects.Empty"])
+                </p>
+            </BbCardContent>
+        </BbCard>
+    }
+    else
+    {
+        <div class="bb:grid bb:gap-4 bb:md:grid-cols-2">
+            @foreach (var project in _projects)
+            {
+                var members = MembersOf(project);
+                <BbCard Class="bb:h-full" data-project-card="@project.Name">
+                    <BbCardHeader>
+                        <BbCardTitle>@project.Name</BbCardTitle>
+                        @if (!string.IsNullOrWhiteSpace(project.Description))
+                        {
+                            <BbCardDescription>@project.Description</BbCardDescription>
+                        }
+                    </BbCardHeader>
+                    <BbCardContent Class="bb:space-y-3">
+                        <div class="bb:flex bb:gap-6 bb:text-sm">
+                            <div>
+                                <span class="bb:text-muted-foreground">@Localizer["App.Projects.NamespaceCount"]</span>
+                                <span class="bb:ml-1 bb:font-semibold" data-project-namespace-count>@members.Count.ToString("N0")</span>
+                            </div>
+                        </div>
+                        @if (members.Count == 0)
+                        {
+                            <p class="bb:text-sm bb:text-muted-foreground">@Localizer["App.Projects.NoNamespaces"]</p>
+                        }
+                        else
+                        {
+                            <div class="bb:flex bb:flex-wrap bb:gap-1">
+                                @foreach (var namespaceName in members)
+                                {
+                                    <a href="@($"/ui/namespaces/{Uri.EscapeDataString(namespaceName)}/pseudonyms")"
+                                       title="@Localizer["App.Common.Browse"]">
+                                        <BbBadge Variant="BadgeVariant.Secondary">@namespaceName</BbBadge>
+                                    </a>
+                                }
+                            </div>
+                        }
+                        @if (_isAdmin)
+                        {
+                            <div class="bb:flex bb:flex-wrap bb:gap-2 bb:pt-2">
+                                <BbButton
+                                    Variant="ButtonVariant.Outline"
+                                    Size="ButtonSize.Small"
+                                    data-action="manage-namespaces"
+                                    OnClick="() => OpenManageDialog(project)"
+                                >
+                                    @Localizer["App.Projects.ManageAction"]
+                                </BbButton>
+                                <BbButton
+                                    Variant="ButtonVariant.Outline"
+                                    Size="ButtonSize.Small"
+                                    data-action="edit-project"
+                                    OnClick="() => OpenEditDialog(project)"
+                                >
+                                    @Localizer["App.Namespaces.EditAction"]
+                                </BbButton>
+                                <BbButton
+                                    Variant="ButtonVariant.Destructive"
+                                    Size="ButtonSize.Small"
+                                    data-action="delete-project"
+                                    OnClick="() => StartDelete(project)"
+                                >
+                                    @Localizer["App.Common.Delete"]
+                                </BbButton>
+                            </div>
+                        }
+                    </BbCardContent>
+                </BbCard>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    private ClaimsPrincipal _user = new();
+    private bool _isAdmin;
+    private IReadOnlyList<Project> _projects = [];
+    private IReadOnlyList<Namespace> _namespaces = [];
+
+    // Guards every write against a second click arriving before the first one's render, the same
+    // way the namespaces page does.
+    private bool _isBusy;
+    private string? _errorMessage;
+    private string? _dialogErrorMessage;
+
+    // The create/edit dialog. _editingProjectName is null when creating.
+    private bool _showProjectDialog;
+    private string? _editingProjectName;
+    private ProjectModel _projectModel = new();
+
+    // The "manage namespaces" dialog. Kept after it closes so it can animate out with its contents
+    // intact, like the access dialog on the namespaces page.
+    private bool _showManageDialog;
+    private string? _manageProjectName;
+    private readonly HashSet<string> _manageSelected = new(StringComparer.Ordinal);
+    private HashSet<string> _manageOriginal = new(StringComparer.Ordinal);
+
+    private Project? _pendingDelete;
+
+    private IReadOnlyList<string> NamespaceNames =>
+        [.. _namespaces.Select(n => n.Name).Order(StringComparer.Ordinal)];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _user =
+            AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
+        _isAdmin = PermissionChecker.IsAdmin(_user);
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        _projects =
+        [
+            .. (await ProjectAppService.GetAllAsync(_user, CancellationToken.None)).OrderBy(
+                p => p.Name,
+                StringComparer.Ordinal
+            ),
+        ];
+        _namespaces = await NamespaceAppService.GetAllAsync(_user, CancellationToken.None);
+    }
+
+    private static List<string> MembersOf(Project project) =>
+        [.. project.Memberships.Select(m => m.NamespaceName).Order(StringComparer.Ordinal)];
+
+    private void OpenCreateDialog()
+    {
+        _editingProjectName = null;
+        _projectModel = new ProjectModel();
+        _dialogErrorMessage = null;
+        _showProjectDialog = true;
+    }
+
+    private void OpenEditDialog(Project project)
+    {
+        _editingProjectName = project.Name;
+        _projectModel = new ProjectModel { Name = project.Name, Description = project.Description };
+        _dialogErrorMessage = null;
+        _showProjectDialog = true;
+    }
+
+    private void CloseProjectDialog() => OnProjectDialogOpenChanged(false);
+
+    // Also reached when the dialog closes itself - the overlay, Escape, or its own close button.
+    private void OnProjectDialogOpenChanged(bool open)
+    {
+        _showProjectDialog = open;
+        if (!open)
+        {
+            _dialogErrorMessage = null;
+        }
+    }
+
+    private async Task SaveProjectAsync()
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        _dialogErrorMessage = null;
+        try
+        {
+            // A cleared description is removed (NULL) rather than stored empty, like a
+            // namespace's.
+            var description = string.IsNullOrWhiteSpace(_projectModel.Description)
+                ? null
+                : _projectModel.Description;
+
+            if (_editingProjectName is null)
+            {
+                await ProjectAppService.CreateAsync(
+                    new Project { Name = _projectModel.Name, Description = description },
+                    _user,
+                    CancellationToken.None
+                );
+            }
+            else
+            {
+                await ProjectAppService.UpdateAsync(
+                    _editingProjectName,
+                    description,
+                    _user,
+                    CancellationToken.None
+                );
+            }
+
+            await LoadAsync();
+            CloseProjectDialog();
+        }
+        catch (Exception ex)
+            when (ex
+                    is ProjectAlreadyExistsException
+                        or ProjectNotFoundException
+                        or ArgumentException
+                        or ForbiddenException
+            )
+        {
+            _dialogErrorMessage = ex.Message;
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void OpenManageDialog(Project project)
+    {
+        _manageProjectName = project.Name;
+        _manageOriginal = [.. project.Memberships.Select(m => m.NamespaceName)];
+        _manageSelected.Clear();
+        _manageSelected.UnionWith(_manageOriginal);
+        _dialogErrorMessage = null;
+        _showManageDialog = true;
+    }
+
+    private void CloseManageDialog() => OnManageDialogOpenChanged(false);
+
+    private void OnManageDialogOpenChanged(bool open)
+    {
+        _showManageDialog = open;
+        if (!open)
+        {
+            _dialogErrorMessage = null;
+        }
+    }
+
+    private async Task SaveManageAsync()
+    {
+        if (_isBusy || _manageProjectName is null)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        _dialogErrorMessage = null;
+        try
+        {
+            foreach (var added in _manageSelected.Except(_manageOriginal).Order(StringComparer.Ordinal))
+            {
+                await ProjectAppService.AddNamespaceAsync(
+                    _manageProjectName,
+                    added,
+                    _user,
+                    CancellationToken.None
+                );
+            }
+
+            foreach (var removed in _manageOriginal.Except(_manageSelected).Order(StringComparer.Ordinal))
+            {
+                await ProjectAppService.RemoveNamespaceAsync(
+                    _manageProjectName,
+                    removed,
+                    _user,
+                    CancellationToken.None
+                );
+            }
+
+            await LoadAsync();
+            CloseManageDialog();
+        }
+        catch (Exception ex)
+            when (ex
+                    is ProjectNotFoundException
+                        or NamespaceNotFoundException
+                        or ForbiddenException
+            )
+        {
+            // Some of the changes may already have been applied; show what is stored now.
+            _dialogErrorMessage = ex.Message;
+            await LoadAsync();
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private void StartDelete(Project project)
+    {
+        _pendingDelete = project;
+        _errorMessage = null;
+    }
+
+    private void CancelDelete() => _pendingDelete = null;
+
+    private async Task ConfirmDeleteAsync()
+    {
+        if (_isBusy || _pendingDelete is null)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        _errorMessage = null;
+        try
+        {
+            await ProjectAppService.DeleteAsync(
+                _pendingDelete.Name,
+                _user,
+                CancellationToken.None
+            );
+            _pendingDelete = null;
+            await LoadAsync();
+        }
+        catch (Exception ex) when (ex is ProjectNotFoundException or ForbiddenException)
+        {
+            _errorMessage = ex.Message;
+            _pendingDelete = null;
+            await LoadAsync();
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    private sealed class ProjectModel
+    {
+        [Required]
+        public string Name { get; set; } = string.Empty;
+        public string? Description { get; set; }
+    }
+}

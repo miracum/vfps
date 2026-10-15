@@ -31,6 +31,31 @@ public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbCo
 
         modelBuilder.Entity<Namespace>().HasIndex(n => n.ParentName);
 
+        // Project membership is a plain many-to-many join with a composite key. Both sides cascade,
+        // which is safe in a way the parent/child relationship's cascade would not be: it only
+        // ever removes the membership rows, never a namespace (and so never a pseudonym) or a
+        // project. The namespace side has no navigation back - which projects a namespace is in is
+        // answered through IProjectRepository, so the namespace entity (and with it the namespace
+        // cache) stays unaware of projects.
+        modelBuilder
+            .Entity<ProjectNamespace>()
+            .HasKey(m => new { m.ProjectName, m.NamespaceName });
+        modelBuilder
+            .Entity<ProjectNamespace>()
+            .HasOne<Project>()
+            .WithMany(p => p.Memberships)
+            .HasForeignKey(m => m.ProjectName)
+            .OnDelete(DeleteBehavior.Cascade);
+        modelBuilder
+            .Entity<ProjectNamespace>()
+            .HasOne<Namespace>()
+            .WithMany()
+            .HasForeignKey(m => m.NamespaceName)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // The key already serves "which namespaces are in this project"; this serves the reverse.
+        modelBuilder.Entity<ProjectNamespace>().HasIndex(m => m.NamespaceName);
+
         // Cascade (unlike the parent/child relationship above): a namespace's access rules have
         // no meaning once the namespace is gone, and letting them linger would silently re-grant
         // access if a namespace were ever re-created under the same name.
@@ -234,6 +259,8 @@ public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbCo
     public DbSet<PseudonymizationJob> PseudonymizationJobs { get; set; }
     public DbSet<PseudonymCount> PseudonymCounts { get; set; }
     public DbSet<NamespaceAccessGrant> NamespaceAccessGrants { get; set; }
+    public DbSet<Project> Projects { get; set; }
+    public DbSet<ProjectNamespace> ProjectNamespaces { get; set; }
     public DbSet<ServiceAccount> ServiceAccounts { get; set; }
     public DbSet<AccessToken> AccessTokens { get; set; }
 }

@@ -979,4 +979,82 @@
   <data name="App.Namespaces.EditErrorTitle" xml:space="preserve">
     <value>Could not update the namespace</value>
   </data>
+  <data name="App.Nav.Projects" xml:space="preserve">
+    <value>Projects</value>
+  </data>
+  <data name="App.Namespaces.ProjectsColumn" xml:space="preserve">
+    <value>Projects</value>
+  </data>
+  <data name="App.Namespaces.Projects" xml:space="preserve">
+    <value>Projects</value>
+  </data>
+  <data name="App.Namespaces.ProjectsHelp" xml:space="preserve">
+    <value>The projects this namespace belongs to. Projects only group namespaces - they grant no access.</value>
+  </data>
+  <data name="App.Namespaces.ProjectsErrorTitle" xml:space="preserve">
+    <value>The namespace could not be added to its projects</value>
+  </data>
+  <data name="App.Namespaces.ProjectsErrorCreated" xml:space="preserve">
+    <value>The namespace '{0}' was created, but could not be added to the selected projects: {1}</value>
+  </data>
+  <data name="App.Namespaces.ProjectFilterLabel" xml:space="preserve">
+    <value>Filter by project</value>
+  </data>
+  <data name="App.Namespaces.AllProjects" xml:space="preserve">
+    <value>All projects</value>
+  </data>
+  <data name="App.Namespaces.NoProject" xml:space="preserve">
+    <value>No project</value>
+  </data>
+  <data name="App.Projects.Description" xml:space="preserve">
+    <value>Projects group the namespaces that belong together, for example the patient ID and encounter ID namespaces of one study. A namespace can be part of several projects. Grouping does not change who can access what - that is still granted per namespace.</value>
+  </data>
+  <data name="App.Projects.PickerEmpty" xml:space="preserve">
+    <value>There are no projects yet.</value>
+  </data>
+  <data name="App.Projects.CreateTitle" xml:space="preserve">
+    <value>Create project</value>
+  </data>
+  <data name="App.Projects.CreateDescription" xml:space="preserve">
+    <value>A project starts out empty. Add namespaces to it afterwards.</value>
+  </data>
+  <data name="App.Projects.EditTitle" xml:space="preserve">
+    <value>Edit project {0}</value>
+  </data>
+  <data name="App.Projects.EditDescription" xml:space="preserve">
+    <value>Only the description can be changed - the name identifies the project.</value>
+  </data>
+  <data name="App.Projects.ErrorTitle" xml:space="preserve">
+    <value>The project could not be saved</value>
+  </data>
+  <data name="App.Projects.DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete project {0}?</value>
+  </data>
+  <data name="App.Projects.DeleteConfirmBody" xml:space="preserve">
+    <value>The namespaces in this project, and the pseudonyms in them, are not affected - they just stop being part of it.</value>
+  </data>
+  <data name="App.Projects.ManageAction" xml:space="preserve">
+    <value>Namespaces</value>
+  </data>
+  <data name="App.Projects.ManageTitle" xml:space="preserve">
+    <value>Namespaces in {0}</value>
+  </data>
+  <data name="App.Projects.ManageDescription" xml:space="preserve">
+    <value>Choose the namespaces that belong to this project.</value>
+  </data>
+  <data name="App.Projects.ManageEmpty" xml:space="preserve">
+    <value>There are no namespaces yet.</value>
+  </data>
+  <data name="App.Projects.NamespaceCount" xml:space="preserve">
+    <value>Namespaces</value>
+  </data>
+  <data name="App.Projects.NoNamespaces" xml:space="preserve">
+    <value>This project contains no namespaces yet.</value>
+  </data>
+  <data name="App.Projects.Empty" xml:space="preserve">
+    <value>There are no projects with namespaces you can access.</value>
+  </data>
+  <data name="App.Projects.EmptyAdmin" xml:space="preserve">
+    <value>There are no projects yet. Create one to start grouping namespaces.</value>
+  </data>
 </root>
