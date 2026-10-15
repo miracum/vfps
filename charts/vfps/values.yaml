@@ -406,7 +406,7 @@ waitForDatabaseInitContainer:
   image:
     registry: docker.io
     repository: library/postgres
-    tag: 18.4@sha256:a02db8cac496f15b094798a38254f14d6e00741f709360e5e00bb6668ea31636
+    tag: 18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
     pullPolicy: IfNotPresent
 
 # -- container security context applied to init containers and the Helm test pods
@@ -666,7 +666,7 @@ curl:
   image:
     registry: docker.io
     repository: curlimages/curl
-    tag: 8.22.0@sha256:58adaa4e8dca9c988bae2aba4ab3434a0bb2da16bbe3f92dec39ec7785166777
+    tag: 8.23.0@sha256:a134550be58ab783810e613ae96fd253c38f7bdd16d9bf9be350700c7a29ac06
 
 # -- a JSON configuration object which is mounted as `appsettings.Production.json` inside the container.
 # useful to define namespaces to create as part of the application startup.
