@@ -1057,4 +1057,16 @@
   <data name="App.Projects.EmptyAdmin" xml:space="preserve">
     <value>Es gibt noch keine Projekte. Legen Sie eines an, um Namespaces zu gruppieren.</value>
   </data>
+  <data name="App.Projects.BrowseNamespace" xml:space="preserve">
+    <value>Pseudonyme in {0} durchsuchen</value>
+  </data>
+  <data name="App.Projects.BackToProjects" xml:space="preserve">
+    <value>Zurück zu den Projekten</value>
+  </data>
+  <data name="App.Projects.OpenProject" xml:space="preserve">
+    <value>Projekt {0} öffnen</value>
+  </data>
+  <data name="App.Projects.UnavailableTitle" xml:space="preserve">
+    <value>Projekt nicht verfügbar</value>
+  </data>
 </root>

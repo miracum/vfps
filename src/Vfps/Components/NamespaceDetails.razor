@@ -97,7 +97,15 @@
                 {
                     @foreach (var projectName in ProjectNames)
                     {
-                        <BbBadge Variant="BadgeVariant.Secondary">@projectName</BbBadge>
+                        <a href="@Vfps.Components.Pages.Projects.ProjectHref(projectName)"
+                           class="link-pill"
+                           title="@Localizer["App.Projects.OpenProject", projectName]"
+                           data-project-link="@projectName">
+                            <BbBadge Variant="BadgeVariant.Secondary">
+                                @projectName
+                                <LucideIcon Name="link" Size="12" />
+                            </BbBadge>
+                        </a>
                     }
                 }
             </span>

@@ -139,3 +139,34 @@ body {
 h1:focus {
   outline: none;
 }
+
+/*
+ * Badges that are links: the namespace pills on the Projects page, which open that namespace's
+ * pseudonym browser, and the project pills in a namespace's details, which open that project.
+ * Global for the reason given at the top of this file: the badge itself can't be styled from our
+ * markup, so the rules hang off the anchor wrapped around it.
+ */
+.link-pill {
+  text-decoration: none;
+}
+
+.link-pill:hover > *,
+.link-pill:focus-visible > * {
+  text-decoration: underline;
+}
+
+.link-pill svg {
+  margin-left: 0.25rem;
+  flex-shrink: 0;
+}
+
+/* A heading that is a link - a project card's title, which opens the project's own page. */
+.title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.title-link:hover,
+.title-link:focus-visible {
+  text-decoration: underline;
+}
