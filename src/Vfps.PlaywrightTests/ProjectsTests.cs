@@ -240,4 +240,101 @@ public class ProjectsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture
             await Expect(Details).ToContainTextAsync(project);
         }
     }
+
+    [Fact]
+    public async Task NamespacePill_ShowsALinkIcon_AndOpensTheNamespaceBrowser()
+    {
+        var project = UniqueProject();
+        var @namespace = UniqueNamespace();
+        await CreateNamespaceViaApiAsync(@namespace);
+        await CreateProjectViaApiAsync(project, @namespace);
+
+        await GotoAsync("/ui/projects");
+        var pill = ProjectCard(project).Locator($"[data-namespace-link=\"{@namespace}\"]");
+
+        // The icon is what tells the pill apart from a plain label.
+        await Expect(pill.Locator("svg")).ToHaveCountAsync(1);
+
+        await pill.ClickAsync();
+        await Expect(Page)
+            .ToHaveURLAsync(
+                new System.Text.RegularExpressions.Regex($"/ui/namespaces/{@namespace}/pseudonyms$")
+            );
+    }
+
+    [Fact]
+    public async Task ProjectTitle_OpensTheProjectsOwnPage_WhichShowsOnlyThatProject()
+    {
+        var project = UniqueProject();
+        var other = UniqueProject();
+        var @namespace = UniqueNamespace();
+        await CreateNamespaceViaApiAsync(@namespace);
+        await CreateProjectViaApiAsync(project, @namespace);
+        await CreateProjectViaApiAsync(other);
+
+        await GotoAsync("/ui/projects");
+        await Page.ClickAsync($"[data-project-link=\"{project}\"]");
+
+        await Expect(Page)
+            .ToHaveURLAsync(new System.Text.RegularExpressions.Regex($"/ui/projects/{project}$"));
+        await Expect(Page.Locator("h1")).ToHaveTextAsync(project);
+        await Expect(ProjectCard(project)).ToHaveCountAsync(1);
+        await Expect(ProjectCard(other)).ToHaveCountAsync(0);
+        await Expect(ProjectCard(project)).ToContainTextAsync(@namespace);
+    }
+
+    [Fact]
+    public async Task StaticProjectLink_CanBeOpenedDirectly()
+    {
+        var project = UniqueProject();
+        await CreateProjectViaApiAsync(project);
+
+        await GotoAsync($"/ui/projects/{project}");
+
+        await Expect(Page.Locator("h1")).ToHaveTextAsync(project);
+        await Expect(ProjectCard(project)).ToHaveCountAsync(1);
+    }
+
+    [Fact]
+    public async Task StaticProjectLink_ToAnUnknownProject_SaysSo()
+    {
+        await GotoAsync($"/ui/projects/{UniqueProject()}");
+
+        await Expect(Page.Locator("body")).ToContainTextAsync("does not exist");
+        await Expect(Page.Locator("[data-project-card]")).ToHaveCountAsync(0);
+    }
+
+    [Fact]
+    public async Task ProjectPillInNamespaceDetails_OpensTheProject()
+    {
+        var project = UniqueProject();
+        var @namespace = UniqueNamespace();
+        await CreateNamespaceViaApiAsync(@namespace);
+        await CreateProjectViaApiAsync(project, @namespace);
+
+        await GotoAsync("/ui/namespaces");
+        await SelectNamespaceAsync(@namespace);
+        var pill = Details.Locator($"[data-project-link=\"{project}\"]");
+        await Expect(pill.Locator("svg")).ToHaveCountAsync(1);
+        await pill.ClickAsync();
+
+        await Expect(Page)
+            .ToHaveURLAsync(new System.Text.RegularExpressions.Regex($"/ui/projects/{project}$"));
+        await Expect(ProjectCard(project)).ToHaveCountAsync(1);
+    }
+
+    [Fact]
+    public async Task DeletingAProjectFromItsOwnPage_ReturnsToTheList()
+    {
+        var project = UniqueProject();
+        await CreateProjectViaApiAsync(project);
+
+        await GotoAsync($"/ui/projects/{project}");
+        await ProjectCard(project).Locator("[data-action=delete-project]").ClickAsync();
+        await Page.ClickAsync("#confirmDeleteProjectButton");
+
+        await Expect(Page)
+            .ToHaveURLAsync(new System.Text.RegularExpressions.Regex("/ui/projects$"));
+        await Expect(ProjectCard(project)).ToHaveCountAsync(0);
+    }
 }

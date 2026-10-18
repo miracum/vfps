@@ -1,4 +1,5 @@
 @page "/projects"
+@page "/projects/{ProjectName}"
 @rendermode InteractiveServer
 @using System.ComponentModel.DataAnnotations
 @using Vfps.Data.Models
@@ -6,6 +7,7 @@
 @inject INamespaceAppService NamespaceAppService
 @inject INamespacePermissionChecker PermissionChecker
 @inject IStringLocalizer<SharedResources> Localizer
+@inject NavigationManager NavigationManager
 
 @*
     Projects: named groups of namespaces that belong together, e.g. the patient-id and
@@ -16,17 +18,37 @@
     projects is admin-only like managing the namespaces themselves. Which projects a single
     namespace is in is edited from the Namespaces page; what is edited here is a project: its
     description, and which namespaces it contains.
+
+    Two routes, one page: /projects lists every project, /projects/{name} is the static link to a
+    single one - the same card, with the same actions, just without the others around it. One
+    component rather than two so the dialogs behind those actions exist exactly once.
 *@
 
-<PageTitle>@Localizer["App.Nav.Projects"]</PageTitle>
+<PageTitle>@(IsSingleProject ? ProjectName : Localizer["App.Nav.Projects"])</PageTitle>
 
 <div class="bb:mx-auto bb:space-y-6">
     <div class="bb:flex bb:flex-wrap bb:items-center bb:justify-between bb:gap-2">
-        <div class="bb:flex bb:items-center bb:gap-2">
-            <LucideIcon Name="folder" Size="24" Class="bb:text-primary" />
-            <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Nav.Projects"]</h1>
-        </div>
-        @if (_isAdmin)
+        @if (IsSingleProject)
+        {
+            <div>
+                <BbButton Variant="ButtonVariant.Link" Href="/ui/projects" Class="bb:px-0">
+                    <LucideIcon Name="arrow-left" Size="16" />
+                    @Localizer["App.Projects.BackToProjects"]
+                </BbButton>
+                <div class="bb:flex bb:items-center bb:gap-2">
+                    <LucideIcon Name="folder" Size="24" Class="bb:text-primary" />
+                    <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@ProjectName</h1>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="bb:flex bb:items-center bb:gap-2">
+                <LucideIcon Name="folder" Size="24" Class="bb:text-primary" />
+                <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Nav.Projects"]</h1>
+            </div>
+        }
+        @if (_isAdmin && !IsSingleProject)
         {
             <BbButton
                 id="showCreateProjectFormButton"
@@ -44,7 +66,19 @@
         }
     </div>
 
-    <p class="bb:text-sm bb:text-muted-foreground">@Localizer["App.Projects.Description"]</p>
+    @if (!IsSingleProject)
+    {
+        <p class="bb:text-sm bb:text-muted-foreground">@Localizer["App.Projects.Description"]</p>
+    }
+
+    @* A link to a project that is gone, or that the caller can't see. *@
+    @if (_unavailableMessage is not null)
+    {
+        <BbAlert Variant="AlertVariant.Danger">
+            <BbAlertTitle>@Localizer["App.Projects.UnavailableTitle"]</BbAlertTitle>
+            <BbAlertDescription>@_unavailableMessage</BbAlertDescription>
+        </BbAlert>
+    }
 
     @if (_errorMessage is not null)
     {
@@ -190,7 +224,7 @@
         }
     }
 
-    @if (_projects.Count == 0)
+    @if (_projects.Count == 0 && _unavailableMessage is null)
     {
         <BbCard>
             <BbCardContent>
@@ -200,15 +234,25 @@
             </BbCardContent>
         </BbCard>
     }
-    else
+    else if (_projects.Count > 0)
     {
-        <div class="bb:grid bb:gap-4 bb:md:grid-cols-2">
+        <div class="bb:grid bb:gap-4 @(IsSingleProject ? "" : "bb:md:grid-cols-2")">
             @foreach (var project in _projects)
             {
                 var members = MembersOf(project);
                 <BbCard Class="bb:h-full" data-project-card="@project.Name">
                     <BbCardHeader>
-                        <BbCardTitle>@project.Name</BbCardTitle>
+                        @* On the project's own page the name is already the page heading. *@
+                        @if (!IsSingleProject)
+                        {
+                            <BbCardTitle>
+                                @* The project's static link, which is what it can be shared by. *@
+                                <a href="@ProjectHref(project.Name)"
+                                   class="title-link"
+                                   title="@Localizer["App.Projects.OpenProject", project.Name]"
+                                   data-project-link="@project.Name">@project.Name</a>
+                            </BbCardTitle>
+                        }
                         @if (!string.IsNullOrWhiteSpace(project.Description))
                         {
                             <BbCardDescription>@project.Description</BbCardDescription>
@@ -230,9 +274,17 @@
                             <div class="bb:flex bb:flex-wrap bb:gap-1">
                                 @foreach (var namespaceName in members)
                                 {
+                                    @* The trailing link icon and the hover underline (see
+                                       .link-pill in wwwroot/app.css) are what say a pill
+                                       leads somewhere - a plain badge reads as a label. *@
                                     <a href="@($"/ui/namespaces/{Uri.EscapeDataString(namespaceName)}/pseudonyms")"
-                                       title="@Localizer["App.Common.Browse"]">
-                                        <BbBadge Variant="BadgeVariant.Secondary">@namespaceName</BbBadge>
+                                       class="link-pill"
+                                       title="@Localizer["App.Projects.BrowseNamespace", namespaceName]"
+                                       data-namespace-link="@namespaceName">
+                                        <BbBadge Variant="BadgeVariant.Secondary">
+                                            @namespaceName
+                                            <LucideIcon Name="link" Size="12" />
+                                        </BbBadge>
                                     </a>
                                 }
                             </div>
@@ -277,6 +329,22 @@
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationState { get; set; }
 
+    /// <summary>
+    /// Set on the single-project route (/projects/{name}), null on the list.
+    /// </summary>
+    [Parameter]
+    public string? ProjectName { get; set; }
+
+    private bool IsSingleProject => ProjectName is not null;
+
+    /// <summary>The static link to a project's own page.</summary>
+    public static string ProjectHref(string projectName) =>
+        $"/ui/projects/{Uri.EscapeDataString(projectName)}";
+
+    // Why the single project couldn't be shown - it doesn't exist, or the caller can see none of
+    // its namespaces. Null on the list and whenever the project loaded.
+    private string? _unavailableMessage;
+
     private ClaimsPrincipal _user = new();
     private bool _isAdmin;
     private IReadOnlyList<Project> _projects = [];
@@ -310,18 +378,46 @@
         _user =
             AuthenticationState is null ? new ClaimsPrincipal() : (await AuthenticationState).User;
         _isAdmin = PermissionChecker.IsAdmin(_user);
+    }
+
+    // Here rather than in OnInitializedAsync: moving between the list and a single project (or
+    // between two projects) reuses this component and only hands it a new ProjectName.
+    protected override async Task OnParametersSetAsync()
+    {
+        _pendingDelete = null;
+        _errorMessage = null;
         await LoadAsync();
     }
 
     private async Task LoadAsync()
     {
-        _projects =
-        [
-            .. (await ProjectAppService.GetAllAsync(_user, CancellationToken.None)).OrderBy(
-                p => p.Name,
-                StringComparer.Ordinal
-            ),
-        ];
+        _unavailableMessage = null;
+        if (ProjectName is { } projectName)
+        {
+            try
+            {
+                _projects =
+                [
+                    await ProjectAppService.GetAsync(projectName, _user, CancellationToken.None),
+                ];
+            }
+            catch (Exception ex) when (ex is ProjectNotFoundException or ForbiddenException)
+            {
+                _projects = [];
+                _unavailableMessage = ex.Message;
+            }
+        }
+        else
+        {
+            _projects =
+            [
+                .. (await ProjectAppService.GetAllAsync(_user, CancellationToken.None)).OrderBy(
+                    p => p.Name,
+                    StringComparer.Ordinal
+                ),
+            ];
+        }
+
         _namespaces = await NamespaceAppService.GetAllAsync(_user, CancellationToken.None);
     }
 
@@ -507,6 +603,14 @@
                 CancellationToken.None
             );
             _pendingDelete = null;
+
+            // A project's own page has nothing left to show once it is gone.
+            if (IsSingleProject)
+            {
+                NavigationManager.NavigateTo("/ui/projects");
+                return;
+            }
+
             await LoadAsync();
         }
         catch (Exception ex) when (ex is ProjectNotFoundException or ForbiddenException)
