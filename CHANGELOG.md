@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.25.1](https://github.com/miracum/vfps/compare/v1.25.0...v1.25.1) (2026-10-18)
+
+
+### Bug Fixes
+
+* **ui:** projects ui updates ([#425](https://github.com/miracum/vfps/issues/425)) ([3f3ef33](https://github.com/miracum/vfps/commit/3f3ef33237fcd40b6246e1398fd737248f78182e))
+
 ## [1.25.0](https://github.com/miracum/vfps/compare/v1.24.1...v1.25.0) (2026-10-15)
 
 
