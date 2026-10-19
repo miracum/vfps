@@ -1213,7 +1213,7 @@
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.19.0, )",
           "OpenTelemetry.Instrumentation.Http": "[1.19.0, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.19.0, )",
-          "Vfps.Voprf.Client": "[1.24.0, )"
+          "Vfps.Voprf.Client": "[1.25.1, )"
         }
       },
       "vfps.voprf": {
@@ -1226,8 +1226,8 @@
         "type": "Project",
         "dependencies": {
           "Grpc.Net.ClientFactory": "[2.84.0, )",
-          "Vfps.Voprf": "[1.24.0, )",
-          "Vfps.Voprf.Contracts": "[1.24.0, )"
+          "Vfps.Voprf": "[1.25.1, )",
+          "Vfps.Voprf.Contracts": "[1.25.1, )"
         }
       },
       "vfps.voprf.contracts": {
