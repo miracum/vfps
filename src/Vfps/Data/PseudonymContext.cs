@@ -1,5 +1,4 @@
 using System.Text.Json;
-using EntityFramework.Exceptions.PostgreSQL;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
@@ -7,14 +6,12 @@ using Vfps.Data.Models;
 
 namespace Vfps.Data;
 
+// No OnConfiguring: the snake_case naming and exception processing it used to add are applied
+// where the options are built (DatabaseMigrator.ConfigurePseudonymContext, and the tests' own
+// builders) instead. Mutating options in OnConfiguring makes EF rebuild them and look up its
+// internal service provider anew for every context, and rules out DbContext pooling.
 public class PseudonymContext(DbContextOptions<PseudonymContext> options) : DbContext(options)
 {
-    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-    {
-        optionsBuilder.UseExceptionProcessor();
-        optionsBuilder.UseSnakeCaseNamingConvention();
-    }
-
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Self-referencing parent/child hierarchy. DeleteBehavior.Restrict rather than the

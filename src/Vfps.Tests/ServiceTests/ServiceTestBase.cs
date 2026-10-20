@@ -85,6 +85,7 @@ public class ServiceTestBase : IDisposable
             .UseSqlite(_connection)
             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
             .UseExceptionProcessor()
+            .UseSnakeCaseNamingConvention()
             .Options;
 
     /// <summary>

@@ -236,11 +236,18 @@ var shouldRunDatabaseMigrations =
 // handlers, grid data providers and polling loops interleave on it. A DbContext isn't safe for
 // concurrent use, so every repository instead opens a short-lived context from this factory per
 // call - see https://learn.microsoft.com/ef/core/dbcontext-configuration/#use-a-dbcontext-factory.
-// AddDbContextFactory also registers PseudonymContext itself as scoped, which only the health
-// check and the startup migration below resolve. Not pooled: PseudonymContext's OnConfiguring
-// (snake_case naming, exception processing) mutates options post-construction, which DbContext
-// pooling explicitly disallows.
-builder.Services.AddDbContextFactory<PseudonymContext>(ConfigurePseudonymContext);
+// Pooled, since every API request opens at least one of these contexts: a fresh, unpooled context
+// pays for building its internal service scope on each creation, which profiling showed was ~20%
+// of the CPU of a pseudonym Create. Pooling requires that PseudonymContext never mutates its
+// options after construction (so no OnConfiguring) and holds no state of its own beyond what EF
+// resets when a context is returned to the pool.
+builder.Services.AddPooledDbContextFactory<PseudonymContext>(ConfigurePseudonymContext);
+
+// Unlike AddDbContextFactory, the pooled factory doesn't also register PseudonymContext itself as
+// scoped, which the health check and the startup migration below resolve.
+builder.Services.AddScoped(isp =>
+    isp.GetRequiredService<IDbContextFactory<PseudonymContext>>().CreateDbContext()
+);
 
 // The VOPRF pseudonym generator, when a key-holding server is configured for this deployment.
 // Off by default, matching this codebase's optional-feature idiom: with no Voprf:Address the
