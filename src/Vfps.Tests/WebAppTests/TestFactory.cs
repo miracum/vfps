@@ -25,7 +25,9 @@ public class IntegrationTestFactory<TProgram, TDbContext> : WebApplicationFactor
 
             services.RemoveDbContext<TDbContext>();
             // Mirrors Program.cs's registration for PseudonymContext - see the comment there.
-            services.AddDbContextFactory<TDbContext>(options => options.UseSqlite(inMemorySqlite));
+            services.AddDbContextFactory<TDbContext>(options =>
+                options.UseSqlite(inMemorySqlite).UseSnakeCaseNamingConvention()
+            );
             services.EnsureDbCreated<TDbContext>();
             services.RemovePseudonymCountMetricsPublisher();
         });

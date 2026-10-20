@@ -1,3 +1,4 @@
+using EntityFramework.Exceptions.PostgreSQL;
 using Hangfire.PostgreSql;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -218,12 +219,14 @@ internal static class DatabaseMigrator
         switch (backingStore.ToLowerInvariant())
         {
             case "postgresql":
-                options.UseNpgsql(connString, configureNpgsql);
+                options.UseNpgsql(connString, configureNpgsql).UseExceptionProcessor();
                 break;
             default:
                 throw new InvalidOperationException(
                     $"Unsupported backing store specified: {backingStore}"
                 );
         }
+
+        options.UseSnakeCaseNamingConvention();
     }
 }
