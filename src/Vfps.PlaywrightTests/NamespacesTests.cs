@@ -263,13 +263,21 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
 
         // The same checker as the create form's, under the edit dialog's own ids.
         var regex = Page.Locator("#editValidationRegex");
-        await regex.PressSequentiallyAsync("(unterminated");
+        await FillUntilReportedAsync(
+            regex,
+            "(unterminated",
+            Page.Locator("#editValidationRegexError")
+        );
         await Expect(Page.Locator("#editValidationRegexError")).ToContainTextAsync("Not enough )");
 
         await regex.ClearAsync();
-        await regex.PressSequentiallyAsync("^[0-9]+$");
+        await regex.FillAsync("^[0-9]+$");
         await Expect(Page.Locator("#editValidationRegexValid")).ToBeVisibleAsync();
-        await Page.FillAsync("#editValidationRegexSample", "12a45");
+        await FillUntilReportedAsync(
+            Page.Locator("#editValidationRegexSample"),
+            "12a45",
+            Page.Locator("#editValidationRegexSampleResult")
+        );
         await Expect(Page.Locator("#editValidationRegexSampleResult"))
             .ToContainTextAsync("Would be rejected");
 
@@ -350,10 +358,11 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await Expect(Page.Locator("#validationRegexSample")).ToBeVisibleAsync();
         await Expect(Page.Locator("#validationRegexSampleResult")).ToHaveCountAsync(0);
 
-        await Page.FillAsync("#validationRegexSample", "12345");
+        await EnterValidationRegexSampleAsync("12345");
         await Expect(Page.Locator("#validationRegexSampleResult"))
             .ToContainTextAsync("Would be accepted");
 
+        // A plain fill from here on: the verdict above proves the field is already reporting.
         await Page.FillAsync("#validationRegexSample", "12a45");
         await Expect(Page.Locator("#validationRegexSampleResult"))
             .ToContainTextAsync("Would be rejected");
@@ -369,7 +378,7 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await GotoAsync("/ui/namespaces");
         await OpenCreateDialogAsync();
         await EnterValidationRegexAsync("[0-9]+");
-        await Page.FillAsync("#validationRegexSample", "abc123");
+        await EnterValidationRegexSampleAsync("abc123");
 
         await Expect(Page.Locator("#validationRegexSampleResult"))
             .ToContainTextAsync("Would be accepted");
@@ -385,8 +394,7 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await GotoAsync("/ui/namespaces");
         await OpenCreateDialogAsync();
         await EnterValidationRegexAsync("^[0-9]+$");
-        await Page.FillAsync("#validationRegexSample", "12345");
-        await Expect(Page.Locator("#validationRegexSampleResult")).ToBeVisibleAsync();
+        await EnterValidationRegexSampleAsync("12345");
 
         await CloseCreateDialogAsync();
         await OpenCreateDialogAsync();
@@ -406,8 +414,7 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await OpenCreateDialogAsync();
         await Page.FillAsync("#name", UniqueName());
         await EnterValidationRegexAsync("^[0-9]+$");
-        await Page.FillAsync("#validationRegexSample", "12345");
-        await Expect(Page.Locator("#validationRegexSampleResult")).ToBeVisibleAsync();
+        await EnterValidationRegexSampleAsync("12345");
         await SubmitCreateFormAsync();
         await Expect(Page.Locator("#name")).ToHaveCountAsync(0);
 
@@ -422,27 +429,64 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
     }
 
     /// <summary>
-    /// Types a validation-regex pattern into the create dialog and waits for the checker's verdict
-    /// to come back before returning.
-    ///
-    /// Typed character by character rather than set with FillAsync, for the same reason the
-    /// feature exists: the verdict is recomputed per keystroke, over the Blazor circuit. FillAsync
-    /// dispatches exactly one `input` event for the whole string, so that single round trip
-    /// becomes the test's single point of failure - and on a CPU-starved runner, losing it leaves
-    /// every later step waiting on an element the server was never told to render. Typing carries
-    /// the full value on every keystroke, so a dropped intermediate event is corrected by the next
-    /// one, exactly as it would be for someone typing this in.
-    ///
-    /// Waiting for the verdict is the other half: it is what makes the following step act on a
-    /// DOM the round trip has actually reached, rather than racing the render that creates the
-    /// elements it needs.
+    /// Enters a validation-regex pattern into the create dialog and waits for the checker's
+    /// verdict to come back before returning.
     /// </summary>
-    private async Task EnterValidationRegexAsync(string pattern, bool expectValid = true)
-    {
-        await Page.Locator("#validationRegex").PressSequentiallyAsync(pattern);
+    private Task EnterValidationRegexAsync(string pattern, bool expectValid = true) =>
+        FillUntilReportedAsync(
+            Page.Locator("#validationRegex"),
+            pattern,
+            Page.Locator(expectValid ? "#validationRegexValid" : "#validationRegexError")
+        );
 
-        await Expect(Page.Locator(expectValid ? "#validationRegexValid" : "#validationRegexError"))
-            .ToBeVisibleAsync();
+    /// <summary>
+    /// Enters a value to try against the pattern and waits for the would-be-accepted/rejected
+    /// verdict, so callers can assert on its text right away.
+    /// </summary>
+    private Task EnterValidationRegexSampleAsync(string sample) =>
+        FillUntilReportedAsync(
+            Page.Locator("#validationRegexSample"),
+            sample,
+            Page.Locator("#validationRegexSampleResult")
+        );
+
+    /// <summary>
+    /// Fills a debounced BbInput and waits for the server's reaction to it, re-announcing the
+    /// field's value until that reaction shows up.
+    ///
+    /// A BbInput only reports typing once its own OnAfterRenderAsync has attached the JS input
+    /// listener, over a separate interop call - and nothing in the DOM says when that has
+    /// happened. Anything filled in before then sits in the field but never reaches the server,
+    /// and with nothing else typed afterwards no later event ever carries it. None of the
+    /// waits available beforehand rule that out: the create dialog's name-field focus is
+    /// requested from the page's OnAfterRenderAsync, which Blazor runs before its children's, so
+    /// it lands ahead of the regex field's listener rather than after it; and the sample field
+    /// is only rendered by the very verdict that precedes filling it.
+    ///
+    /// Dispatching `input` again is what a further keystroke would do, without changing the
+    /// value: the listener, once attached, reads the field and reports all of it. If the first
+    /// report did get through, the repeat just sends the same value again and changes nothing.
+    /// </summary>
+    private async Task FillUntilReportedAsync(ILocator field, string value, ILocator reaction)
+    {
+        await field.FillAsync(value);
+
+        // Long enough for the 500 ms debounce plus a slow round trip, so a report that is merely
+        // late is not mistaken for one that was never sent.
+        for (var retry = 0; retry < 2; retry++)
+        {
+            try
+            {
+                await Expect(reaction).ToBeVisibleAsync(new() { Timeout = 2_000 });
+                return;
+            }
+            catch (PlaywrightException)
+            {
+                await field.DispatchEventAsync("input");
+            }
+        }
+
+        await Expect(reaction).ToBeVisibleAsync();
     }
 
     /// <summary>
