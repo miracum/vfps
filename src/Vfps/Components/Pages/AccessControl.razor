@@ -26,6 +26,35 @@
                 }
             }
         </div>;
+
+    RenderFragment<IReadOnlyList<(GranteeType Type, string Name)>> GranteeBadges = grantees =>
+        @<div class="bb:flex bb:flex-wrap bb:gap-1">
+            @if (grantees.Count == 0)
+            {
+                <span class="bb:text-xs bb:text-muted-foreground">—</span>
+            }
+            else
+            {
+                @foreach (var grantee in grantees)
+                {
+                    <BbBadge Variant="BadgeVariant.Outline">
+                        @switch (grantee.Type)
+                        {
+                            case GranteeType.ServiceAccount:
+                                <LucideIcon Name="bot" Size="12" />
+                                break;
+                            case GranteeType.Email:
+                                <LucideIcon Name="user" Size="12" />
+                                break;
+                            case GranteeType.Role:
+                                <LucideIcon Name="users" Size="12" />
+                                break;
+                        }
+                        @grantee.Name
+                    </BbBadge>
+                }
+            }
+        </div>;
 }
 
 <div class="bb:mx-auto bb:space-y-6">
@@ -94,17 +123,17 @@
                             <BbDataGridPropertyColumn Property="@(n => n.Name)" Title="@Localizer["App.Nav.Namespaces"]" />
                             <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.Read"]">
                                 <ChildContent Context="n">
-                                    @Badges(GranteesFor(n.Name, g => g.CanRead))
+                                    @GranteeBadges(GranteesFor(n.Name, g => g.CanRead))
                                 </ChildContent>
                             </BbDataGridTemplateColumn>
                             <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.Write"]">
                                 <ChildContent Context="n">
-                                    @Badges(GranteesFor(n.Name, g => g.CanWrite))
+                                    @GranteeBadges(GranteesFor(n.Name, g => g.CanWrite))
                                 </ChildContent>
                             </BbDataGridTemplateColumn>
                             <BbDataGridTemplateColumn Title="@Localizer["App.AccessControl.ReverseLookup"]">
                                 <ChildContent Context="n">
-                                    @Badges(GranteesFor(n.Name, g => g.CanReverseLookup))
+                                    @GranteeBadges(GranteesFor(n.Name, g => g.CanReverseLookup))
                                 </ChildContent>
                             </BbDataGridTemplateColumn>
                         </Columns>
@@ -149,7 +178,7 @@
     /// that apply to every namespace, which is the same union the permission checks themselves
     /// resolve.
     /// </summary>
-    private List<string> GranteesFor(
+    private List<(GranteeType Type, string Name)> GranteesFor(
         string namespaceName,
         Func<NamespaceAccessGrant, bool> hasPermission
     ) =>
@@ -159,8 +188,8 @@
                     (g.NamespaceName is null || g.NamespaceName == namespaceName)
                     && hasPermission(g)
                 )
-                .Select(g => g.Grantee)
-                .Distinct(StringComparer.Ordinal)
-                .OrderBy(g => g, StringComparer.Ordinal),
+                .Select(g => (g.GranteeType, g.Grantee))
+                .Distinct()
+                .OrderBy(g => g.Grantee, StringComparer.Ordinal),
         ];
 }
