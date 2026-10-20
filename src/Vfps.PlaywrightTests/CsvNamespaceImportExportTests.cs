@@ -218,7 +218,7 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
         await GotoAsync("/ui/namespaces");
         await Page.ClickAsync("#showCreateNamespaceFormButton");
         await Expect(Page.Locator("#name")).ToBeVisibleAsync();
-        await Page.FillAsync("#name", name);
+        await FillInputAsync("#name", name);
         await Page.ClickAsync("form:has(#name) button[type=submit]");
         await Expect(Page.Locator($"[role=treeitem][data-value=\"{name}\"]")).ToHaveCountAsync(1);
     }

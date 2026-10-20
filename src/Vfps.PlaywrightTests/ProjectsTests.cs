@@ -62,8 +62,8 @@ public class ProjectsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture
 
         await GotoAsync("/ui/projects");
         await Page.ClickAsync("#showCreateProjectFormButton");
-        await Page.FillAsync("#projectName", name);
-        await Page.FillAsync("#projectDescription", "the study's namespaces");
+        await FillInputAsync("#projectName", name);
+        await FillInputAsync("#projectDescription", "the study's namespaces");
         await Page.ClickAsync("#saveProjectButton");
 
         await Expect(ProjectCard(name)).ToHaveCountAsync(1);
@@ -79,7 +79,7 @@ public class ProjectsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture
 
         await GotoAsync("/ui/projects");
         await Page.ClickAsync("#showCreateProjectFormButton");
-        await Page.FillAsync("#projectName", name);
+        await FillInputAsync("#projectName", name);
         await Page.ClickAsync("#saveProjectButton");
 
         await Expect(Page.Locator("body")).ToContainTextAsync("already exists");
@@ -175,7 +175,7 @@ public class ProjectsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture
         await GotoAsync("/ui/namespaces");
         await Page.ClickAsync("#showCreateNamespaceFormButton");
         await Expect(Page.Locator("#name")).ToBeFocusedAsync();
-        await Page.FillAsync("#name", name);
+        await FillInputAsync("#name", name);
         await Page.ClickAsync($"[id=\"newNamespaceProject-{first}\"]");
         await Page.ClickAsync($"[id=\"newNamespaceProject-{second}\"]");
         await Page.ClickAsync("form:has(#name) button[type=submit]");
