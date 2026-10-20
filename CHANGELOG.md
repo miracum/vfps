@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.26.0](https://github.com/miracum/vfps/compare/v1.25.1...v1.26.0) (2026-10-20)
+
+
+### Features
+
+* **ui:** show icons in the pills indicating the type of access grantee ([#429](https://github.com/miracum/vfps/issues/429)) ([b5e1e22](https://github.com/miracum/vfps/commit/b5e1e2214a75dd82de11d90885409288244ad3d0))
+
+
+### Performance Improvements
+
+* pool db context ([#427](https://github.com/miracum/vfps/issues/427)) ([21a0e86](https://github.com/miracum/vfps/commit/21a0e86f37492e9665f5c2c5c0e7aa620b873e0d))
+
 ## [1.25.1](https://github.com/miracum/vfps/compare/v1.25.0...v1.25.1) (2026-10-18)
 
 
