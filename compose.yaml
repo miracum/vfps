@@ -44,8 +44,9 @@ services:
 
   # Local OIDC provider for testing Authorization:IsEnabled=true. Imports tests/keycloak/vfps-realm.json,
   # which pre-configures the "vfps-web" client and two users: admin/admin (realm role vfps-admin) and
-  # reader/reader (realm role vfps-ns-development-read). Not started by default - requires the
-  # "keycloak" compose profile.
+  # reader/reader (realm role vfps-ns-development-read). vfps-web's access tokens carry the audience
+  # "vfps-api" (Authorization__Audience), so a password-grant token from it also works as a bearer
+  # token for the gRPC/REST API. Not started by default - requires the "keycloak" compose profile.
   keycloak:
     image: quay.io/keycloak/keycloak:26.8@sha256:b0f60d489d51c5d113390bdf5461d4c06e6051be026c05549f2e1e10ec352bcc
     restart: unless-stopped
@@ -143,6 +144,7 @@ services:
       # kics-scan ignore-line
       PGPASSWORD: postgres
       Authorization__Authority: "http://keycloak:8080/realms/vfps"
+      Authorization__Audience: "vfps-api"
       Authorization__ClientId: "vfps-web"
       # kics-scan ignore-line
       Authorization__ClientSecret: "vfps-web-secret"
