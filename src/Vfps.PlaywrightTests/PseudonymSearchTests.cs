@@ -12,7 +12,7 @@ public class PseudonymSearchTests(PlaywrightFixture fixture) : VfpsPageTestBase(
         await Expect(OriginalValue("bob")).ToBeVisibleAsync();
 
         var search = Page.Locator("#pseudonymSearch");
-        await search.FillAsync("bob");
+        await FillInputAsync(search, "bob");
 
         // Well past the 300ms the grid's own search box used to wait after the last keystroke.
         await Task.Delay(1000);
@@ -22,7 +22,7 @@ public class PseudonymSearchTests(PlaywrightFixture fixture) : VfpsPageTestBase(
         await Expect(OriginalValue("alice")).ToHaveCountAsync(0);
         await Expect(OriginalValue("bob")).ToBeVisibleAsync();
 
-        await search.FillAsync("ali");
+        await FillInputAsync(search, "ali");
         await Page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Search" })
             .ClickAsync();
         await Expect(OriginalValue("bob")).ToHaveCountAsync(0);
@@ -38,14 +38,14 @@ public class PseudonymSearchTests(PlaywrightFixture fixture) : VfpsPageTestBase(
 
         await GotoAsync($"/ui/namespaces/{Uri.EscapeDataString(name)}/pseudonyms");
         var search = Page.Locator("#pseudonymSearch");
-        await search.FillAsync("bob");
+        await FillInputAsync(search, "bob");
         await search.PressAsync("Enter");
         // Both halves: while the search runs the grid shows a skeleton and neither is on screen,
         // so "alice is gone" alone would let the next step start before this one has finished.
         await Expect(OriginalValue("alice")).ToHaveCountAsync(0);
         await Expect(OriginalValue("bob")).ToBeVisibleAsync();
 
-        await search.FillAsync("");
+        await FillInputAsync(search, "");
         await search.PressAsync("Enter");
         await Expect(OriginalValue("alice")).ToBeVisibleAsync();
         await Expect(OriginalValue("bob")).ToBeVisibleAsync();
@@ -68,10 +68,10 @@ public class PseudonymSearchTests(PlaywrightFixture fixture) : VfpsPageTestBase(
             var search = Page.Locator("#pseudonymSearch");
             await Expect(OriginalValue("bob")).ToBeVisibleAsync();
 
-            await search.FillAsync("bob");
+            await FillInputAsync(search, "bob");
             await search.PressAsync("Enter");
             await Task.Delay(attempt % 3 * 30);
-            await search.FillAsync("");
+            await FillInputAsync(search, "");
             await search.PressAsync("Enter");
 
             await Expect(OriginalValue("alice")).ToBeVisibleAsync();

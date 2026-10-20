@@ -59,12 +59,12 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         // A create that fails leaves the dialog open, with the name still in the field, so the
         // second attempt below types over it rather than starting from a fresh dialog.
         await OpenCreateDialogAsync();
-        await Page.FillAsync("#name", name);
+        await FillInputAsync("#name", name);
         await SubmitCreateFormAsync();
         await Expect(Page.Locator("body")).ToContainTextAsync($"'{name}'");
         await Expect(Page.Locator("body")).ToContainTextAsync("already exists");
 
-        await Page.FillAsync("#name", otherName);
+        await FillInputAsync("#name", otherName);
         await SubmitCreateFormAsync();
 
         await Expect(TreeNode(otherName)).ToHaveCountAsync(1);
@@ -85,7 +85,7 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
 
         await GotoAsync("/ui/namespaces");
         await OpenCreateDialogAsync();
-        await Page.FillAsync("#name", name);
+        await FillInputAsync("#name", name);
 
         var createButton = Page.Locator(CreateSubmitSelector);
         var clickOptions = new LocatorClickOptions { Force = true };
@@ -185,7 +185,7 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await Expect(confirmation).ToBeInViewportAsync();
         await Expect(confirmation).ToBeFocusedAsync();
 
-        await confirmation.FillAsync(name);
+        await FillInputAsync(confirmation, name);
         await Page.ClickAsync("#confirmDeleteNamespaceButton");
 
         await Expect(TreeNode(name)).ToHaveCountAsync(0);
@@ -233,7 +233,7 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await Expect(input).ToBeFocusedAsync();
         await Expect(input).ToHaveValueAsync("the original description");
 
-        await input.FillAsync("the edited description");
+        await FillInputAsync(input, "the edited description");
         await Page.ClickAsync("#saveNamespaceButton");
 
         await Expect(input).ToHaveCountAsync(0);
@@ -242,7 +242,7 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
 
         await Page.ClickAsync("#editNamespaceButton");
         await Expect(input).ToBeFocusedAsync();
-        await input.FillAsync("");
+        await FillInputAsync(input, "");
         await Page.ClickAsync("#saveNamespaceButton");
 
         await Expect(input).ToHaveCountAsync(0);
@@ -263,13 +263,21 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
 
         // The same checker as the create form's, under the edit dialog's own ids.
         var regex = Page.Locator("#editValidationRegex");
-        await regex.PressSequentiallyAsync("(unterminated");
+        await FillUntilReportedAsync(
+            regex,
+            "(unterminated",
+            Page.Locator("#editValidationRegexError")
+        );
         await Expect(Page.Locator("#editValidationRegexError")).ToContainTextAsync("Not enough )");
 
         await regex.ClearAsync();
-        await regex.PressSequentiallyAsync("^[0-9]+$");
+        await FillInputAsync(regex, "^[0-9]+$");
         await Expect(Page.Locator("#editValidationRegexValid")).ToBeVisibleAsync();
-        await Page.FillAsync("#editValidationRegexSample", "12a45");
+        await FillUntilReportedAsync(
+            Page.Locator("#editValidationRegexSample"),
+            "12a45",
+            Page.Locator("#editValidationRegexSampleResult")
+        );
         await Expect(Page.Locator("#editValidationRegexSampleResult"))
             .ToContainTextAsync("Would be rejected");
 
@@ -299,16 +307,16 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
 
         // Searching for the child keeps the parent too: without the path leading down to it, a
         // nested match would have nothing to hang off.
-        await Page.FillAsync("#namespaceSearch", child);
+        await FillInputAsync("#namespaceSearch", child);
         await Expect(TreeNode(child)).ToHaveCountAsync(1);
         await Expect(TreeNode(parent)).ToHaveCountAsync(1);
         await Expect(TreeNode(unrelated)).ToHaveCountAsync(0);
 
-        await Page.FillAsync("#namespaceSearch", $"no-such-namespace-{UniqueSuffix()}");
+        await FillInputAsync("#namespaceSearch", $"no-such-namespace-{UniqueSuffix()}");
         await Expect(Page.Locator("[role=treeitem]")).ToHaveCountAsync(0);
         await Expect(Page.Locator("body")).ToContainTextAsync("No namespace matches");
 
-        await Page.FillAsync("#namespaceSearch", string.Empty);
+        await FillInputAsync("#namespaceSearch", string.Empty);
         await Expect(TreeNode(unrelated)).ToHaveCountAsync(1);
     }
 
@@ -350,11 +358,12 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await Expect(Page.Locator("#validationRegexSample")).ToBeVisibleAsync();
         await Expect(Page.Locator("#validationRegexSampleResult")).ToHaveCountAsync(0);
 
-        await Page.FillAsync("#validationRegexSample", "12345");
+        await EnterValidationRegexSampleAsync("12345");
         await Expect(Page.Locator("#validationRegexSampleResult"))
             .ToContainTextAsync("Would be accepted");
 
-        await Page.FillAsync("#validationRegexSample", "12a45");
+        // A plain fill from here on: the verdict above proves the field is already reporting.
+        await FillInputAsync("#validationRegexSample", "12a45");
         await Expect(Page.Locator("#validationRegexSampleResult"))
             .ToContainTextAsync("Would be rejected");
     }
@@ -369,7 +378,7 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await GotoAsync("/ui/namespaces");
         await OpenCreateDialogAsync();
         await EnterValidationRegexAsync("[0-9]+");
-        await Page.FillAsync("#validationRegexSample", "abc123");
+        await EnterValidationRegexSampleAsync("abc123");
 
         await Expect(Page.Locator("#validationRegexSampleResult"))
             .ToContainTextAsync("Would be accepted");
@@ -385,8 +394,7 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await GotoAsync("/ui/namespaces");
         await OpenCreateDialogAsync();
         await EnterValidationRegexAsync("^[0-9]+$");
-        await Page.FillAsync("#validationRegexSample", "12345");
-        await Expect(Page.Locator("#validationRegexSampleResult")).ToBeVisibleAsync();
+        await EnterValidationRegexSampleAsync("12345");
 
         await CloseCreateDialogAsync();
         await OpenCreateDialogAsync();
@@ -404,10 +412,9 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         // last namespace's pattern verdict or the value it was tried against.
         await GotoAsync("/ui/namespaces");
         await OpenCreateDialogAsync();
-        await Page.FillAsync("#name", UniqueName());
+        await FillInputAsync("#name", UniqueName());
         await EnterValidationRegexAsync("^[0-9]+$");
-        await Page.FillAsync("#validationRegexSample", "12345");
-        await Expect(Page.Locator("#validationRegexSampleResult")).ToBeVisibleAsync();
+        await EnterValidationRegexSampleAsync("12345");
         await SubmitCreateFormAsync();
         await Expect(Page.Locator("#name")).ToHaveCountAsync(0);
 
@@ -422,27 +429,36 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
     }
 
     /// <summary>
-    /// Types a validation-regex pattern into the create dialog and waits for the checker's verdict
-    /// to come back before returning.
-    ///
-    /// Typed character by character rather than set with FillAsync, for the same reason the
-    /// feature exists: the verdict is recomputed per keystroke, over the Blazor circuit. FillAsync
-    /// dispatches exactly one `input` event for the whole string, so that single round trip
-    /// becomes the test's single point of failure - and on a CPU-starved runner, losing it leaves
-    /// every later step waiting on an element the server was never told to render. Typing carries
-    /// the full value on every keystroke, so a dropped intermediate event is corrected by the next
-    /// one, exactly as it would be for someone typing this in.
-    ///
-    /// Waiting for the verdict is the other half: it is what makes the following step act on a
-    /// DOM the round trip has actually reached, rather than racing the render that creates the
-    /// elements it needs.
+    /// Enters a validation-regex pattern into the create dialog and waits for the checker's
+    /// verdict to come back before returning.
     /// </summary>
-    private async Task EnterValidationRegexAsync(string pattern, bool expectValid = true)
-    {
-        await Page.Locator("#validationRegex").PressSequentiallyAsync(pattern);
+    private Task EnterValidationRegexAsync(string pattern, bool expectValid = true) =>
+        FillUntilReportedAsync(
+            Page.Locator("#validationRegex"),
+            pattern,
+            Page.Locator(expectValid ? "#validationRegexValid" : "#validationRegexError")
+        );
 
-        await Expect(Page.Locator(expectValid ? "#validationRegexValid" : "#validationRegexError"))
-            .ToBeVisibleAsync();
+    /// <summary>
+    /// Enters a value to try against the pattern and waits for the would-be-accepted/rejected
+    /// verdict, so callers can assert on its text right away.
+    /// </summary>
+    private Task EnterValidationRegexSampleAsync(string sample) =>
+        FillUntilReportedAsync(
+            Page.Locator("#validationRegexSample"),
+            sample,
+            Page.Locator("#validationRegexSampleResult")
+        );
+
+    /// <summary>
+    /// Fills a debounced BbInput and waits for the server's reaction to it, so the next step acts
+    /// on a DOM that round trip has actually reached rather than racing the render that creates
+    /// the elements it needs.
+    /// </summary>
+    private async Task FillUntilReportedAsync(ILocator field, string value, ILocator reaction)
+    {
+        await FillInputAsync(field, value);
+        await Expect(reaction).ToBeVisibleAsync();
     }
 
     /// <summary>
@@ -490,11 +506,11 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
     )
     {
         await OpenCreateDialogAsync();
-        await Page.FillAsync("#name", name);
+        await FillInputAsync("#name", name);
 
         if (description is not null)
         {
-            await Page.FillAsync("#description", description);
+            await FillInputAsync("#description", description);
         }
 
         if (parent is not null)
