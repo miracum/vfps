@@ -59,7 +59,7 @@ ENTRYPOINT [ "true" ]
 # links only against libc, so it needs nothing added either - see src/Vfps.Voprf/README.md.
 # ICU is skipped too: InvariantGlobalization is set in the csproj, and nothing here does
 # culture-sensitive text handling.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.13-resolute-chiseled@sha256:1bf4685d7732625077d32572d0d2de6a5c36bee6584f22ec77a17f9070b4412b AS runtime
+FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.14-resolute-chiseled@sha256:0b8cf2aa818144bdbf8f21ae77f9ee781ac67eee102089743c599b62b4fe13be AS runtime
 WORKDIR /opt/vfps-voprf
 EXPOSE 8081/tcp
 # non-root, and nothing here ever writes to disk: the image runs fine with a read-only root
