@@ -250,10 +250,6 @@ a generation that no longer means anything; one setting makes that unreachable.
 
 Kubernetes: `>= 1.21.0`
 
-| Repository                   | Name   | Version |
-| ---------------------------- | ------ | ------- |
-| oci://ghcr.io/miracum/charts | common | 0.1.1   |
-
 ## Values
 
 | Key                                         | Type   | Default               | Description                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
