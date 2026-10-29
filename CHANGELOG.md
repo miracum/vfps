@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.26.1](https://github.com/miracum/vfps/compare/v1.26.0...v1.26.1) (2026-10-29)
+
+
+### Bug Fixes
+
+* **deps:** update all non-major dependencies ([#434](https://github.com/miracum/vfps/issues/434)) ([ce831aa](https://github.com/miracum/vfps/commit/ce831aa402fc20cd2691afa0f68f5ef1bf5bb7ae))
+
+
+### Miscellaneous Chores
+
+* **deps:** lock file maintenance ([#435](https://github.com/miracum/vfps/issues/435)) ([a7ce729](https://github.com/miracum/vfps/commit/a7ce729559e6b4963737a6195c5d5956a3a47160))
+* **deps:** update all digest updates ([#431](https://github.com/miracum/vfps/issues/431)) ([59cc583](https://github.com/miracum/vfps/commit/59cc58337ea9868952b77cb412cc246b070b0fab))
+* **deps:** update dotnet sdk and runtime ([#432](https://github.com/miracum/vfps/issues/432)) ([fd57075](https://github.com/miracum/vfps/commit/fd57075bcbb08cc88aac4bafe42c35d5cb72773f))
+* **deps:** update github-actions ([#433](https://github.com/miracum/vfps/issues/433)) ([f21aea6](https://github.com/miracum/vfps/commit/f21aea60ad05b6e38579cce9846a7d3250c566ca))
+
 ## [1.26.0](https://github.com/miracum/vfps/compare/v1.25.1...v1.26.0) (2026-10-20)
 
 
