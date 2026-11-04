@@ -98,13 +98,13 @@
     <value>One user, granted access regardless of which roles they hold. Only applies to users whose identity provider reports their email address as verified.</value>
   </data>
   <data name="App.AccessControl.GranteeEmailPlaceholder" xml:space="preserve">
-    <value>user@example.org</value>
+    <value>e.g. user@example.org</value>
   </data>
   <data name="App.AccessControl.GranteeRoleHelp" xml:space="preserve">
     <value>An OIDC role or group, exactly as your identity provider emits it.</value>
   </data>
   <data name="App.AccessControl.GranteeRolePlaceholder" xml:space="preserve">
-    <value>vfps-ns-example-read</value>
+    <value>e.g. vfps-ns-example-read</value>
   </data>
   <data name="App.AccessControl.GranteeServiceAccountHelp" xml:space="preserve">
     <value>Matched against the service account an access token authenticates as. A service account is never an admin - it holds exactly the access granted to it here.</value>
@@ -194,7 +194,7 @@
     <value>Name</value>
   </data>
   <data name="App.AccessTokens.NamePlaceholder" xml:space="preserve">
-    <value>nightly ETL run</value>
+    <value>e.g. nightly ETL run</value>
   </data>
   <data name="App.AccessTokens.Never" xml:space="preserve">
     <value>Never</value>
@@ -368,7 +368,7 @@
     <value>Delimiter</value>
   </data>
   <data name="App.CsvJobs.DepseudonymizeWarning" xml:space="preserve">
-    <value>This reveals original values into the output file - requires reverse-lookup access to every namespace used below, same as the reverse lookup on a namespace's pseudonym list.</value>
+    <value>Replaces pseudonyms in the file with the original values they stand for, so the output contains identifying data. Needs reverse-lookup access to every namespace used below.</value>
   </data>
   <data name="App.CsvJobs.Direction" xml:space="preserve">
     <value>Direction</value>
@@ -377,25 +377,25 @@
     <value>De-pseudonymize</value>
   </data>
   <data name="App.CsvJobs.DirectionDepseudonymizeOption" xml:space="preserve">
-    <value>De-pseudonymize - replace pseudonyms with original values</value>
+    <value>De-pseudonymize</value>
   </data>
   <data name="App.CsvJobs.DirectionExport" xml:space="preserve">
     <value>Export</value>
   </data>
   <data name="App.CsvJobs.DirectionExportOption" xml:space="preserve">
-    <value>Export - write a namespace's pseudonyms to a CSV file</value>
+    <value>Export pairs</value>
   </data>
   <data name="App.CsvJobs.DirectionImport" xml:space="preserve">
     <value>Import</value>
   </data>
   <data name="App.CsvJobs.DirectionImportOption" xml:space="preserve">
-    <value>Import - load original/pseudonym pairs into a namespace</value>
+    <value>Import pairs</value>
   </data>
   <data name="App.CsvJobs.DirectionPseudonymize" xml:space="preserve">
     <value>Pseudonymize</value>
   </data>
   <data name="App.CsvJobs.DirectionPseudonymizeOption" xml:space="preserve">
-    <value>Pseudonymize - replace original values with pseudonyms</value>
+    <value>Pseudonymize</value>
   </data>
   <data name="App.CsvJobs.DisabledDescription" xml:space="preserve">
     <value>Set {0} (and the other {1} settings) to enable this feature - it requires S3-compatible object storage.</value>
@@ -419,7 +419,7 @@
     <value>Namespace to export</value>
   </data>
   <data name="App.CsvJobs.ExportWarning" xml:space="preserve">
-    <value>This writes every original value in the namespace to the output file - requires reverse-lookup access to it, same as the reverse lookup on a namespace's pseudonym list.</value>
+    <value>Writes every original value in the namespace, with its pseudonym, to a CSV file - identifying data. Needs reverse-lookup access to the namespace.</value>
   </data>
   <data name="App.CsvJobs.File" xml:space="preserve">
     <value>File</value>
@@ -506,10 +506,10 @@
     <value>Remove mapping</value>
   </data>
   <data name="App.CsvJobs.RetentionNoticePlural" xml:space="preserve">
-    <value>Uploaded input files and their pseudonymized output are automatically deleted from object storage {0} days after upload. Download output you need to keep before then.</value>
+    <value>Uploaded files and their output are deleted automatically {0} days after upload. Download any output you need to keep before then.</value>
   </data>
   <data name="App.CsvJobs.RetentionNoticeSingular" xml:space="preserve">
-    <value>Uploaded input files and their pseudonymized output are automatically deleted from object storage 1 day after upload. Download output you need to keep before then.</value>
+    <value>Uploaded files and their output are deleted automatically 1 day after upload. Download any output you need to keep before then.</value>
   </data>
   <data name="App.CsvJobs.RowsCount" xml:space="preserve">
     <value>{0} rows</value>
@@ -521,7 +521,7 @@
     <value>Select a namespace</value>
   </data>
   <data name="App.CsvJobs.ShowJobDashboard" xml:space="preserve">
-    <value>Show Job Dashboard</value>
+    <value>Job dashboard</value>
   </data>
   <data name="App.CsvJobs.SourceColumn" xml:space="preserve">
     <value>Source column</value>
@@ -812,16 +812,16 @@
     <value>Valid pattern</value>
   </data>
   <data name="App.Nav.AccessControl" xml:space="preserve">
-    <value>Access Control</value>
+    <value>Access control</value>
   </data>
   <data name="App.Nav.AccessTokens" xml:space="preserve">
     <value>Access tokens</value>
   </data>
   <data name="App.Nav.ApiDocs" xml:space="preserve">
-    <value>API Docs</value>
+    <value>API docs</value>
   </data>
   <data name="App.Nav.CsvProcessing" xml:space="preserve">
-    <value>CSV Processing</value>
+    <value>CSV processing</value>
   </data>
   <data name="App.Nav.Namespaces" xml:space="preserve">
     <value>Namespaces</value>
@@ -875,7 +875,7 @@
     <value>Could not load pseudonyms</value>
   </data>
   <data name="App.Pseudonyms.LookUp" xml:space="preserve">
-    <value>Look up</value>
+    <value>Reveal</value>
   </data>
   <data name="App.Pseudonyms.NotFound" xml:space="preserve">
     <value>Not found.</value>
@@ -1134,5 +1134,35 @@
   </data>
   <data name="App.CsvJobs.NoFileError" xml:space="preserve">
     <value>Pick a CSV file to upload.</value>
+  </data>
+  <data name="App.CsvJobs.DirectionHintPseudonymize" xml:space="preserve">
+    <value>Replaces original values in the file with their pseudonyms.</value>
+  </data>
+  <data name="App.CsvJobs.DirectionHintImport" xml:space="preserve">
+    <value>Loads pairs of original values and pseudonyms you already have into a namespace, instead of generating new pseudonyms.</value>
+  </data>
+  <data name="App.CsvJobs.NamespaceLabel" xml:space="preserve">
+    <value>Namespace</value>
+  </data>
+  <data name="App.CsvJobs.EmptyDescription" xml:space="preserve">
+    <value>Start one with New job above.</value>
+  </data>
+  <data name="App.ServiceAccounts.NamePlaceholder" xml:space="preserve">
+    <value>e.g. etl-pipeline</value>
+  </data>
+  <data name="App.Namespaces.DeleteConfirmInputLabel" xml:space="preserve">
+    <value>Namespace name, to confirm</value>
+  </data>
+  <data name="App.Pseudonyms.EmptyTitle" xml:space="preserve">
+    <value>No pseudonyms yet</value>
+  </data>
+  <data name="App.Pseudonyms.EmptyDescription" xml:space="preserve">
+    <value>Create one here, or pseudonymize a whole CSV file on the CSV processing page.</value>
+  </data>
+  <data name="App.Pseudonyms.NoMatchesTitle" xml:space="preserve">
+    <value>Nothing matches '{0}'</value>
+  </data>
+  <data name="App.Pseudonyms.NoMatchesDescription" xml:space="preserve">
+    <value>Check the spelling, or clear the search to see every pseudonym.</value>
   </data>
 </root>

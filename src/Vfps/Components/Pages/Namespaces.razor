@@ -103,12 +103,14 @@
                     </BbAlert>
                 }
 
+                @* No placeholder: one holding the name itself made the field look filled in
+                   already, beside a Delete button that stayed disabled for no visible reason. The
+                   description above says what to type. *@
                 <BbInput
                     @bind-Value="_deleteConfirmationText"
                     UpdateTiming="UpdateTiming.Immediate"
                     Id="confirmDeleteNamespaceName"
-                    Placeholder="@pendingDelete.Name"
-                    AriaLabel="@Localizer["App.Common.Name"]"
+                    AriaLabel="@Localizer["App.Namespaces.DeleteConfirmInputLabel"]"
                     Disabled="@(PendingDeleteChildren.Count > 0)"
                 />
 

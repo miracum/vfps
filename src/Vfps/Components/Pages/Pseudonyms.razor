@@ -294,6 +294,34 @@
                             }
                         </div>
                     </LoadingTemplate>
+                    @* Instead of the grid's own "No results found": an empty namespace and a search
+                       that matched nothing are different situations with different next steps. *@
+                    <EmptyTemplate>
+                        @if (_run.Text is { } searchedFor)
+                        {
+                            <BbEmpty
+                                Size="EmptySize.Small"
+                                Title="@string.Format(Localizer["App.Pseudonyms.NoMatchesTitle"].Value, searchedFor)"
+                                Description="@Localizer["App.Pseudonyms.NoMatchesDescription"]"
+                            >
+                                <Icon>
+                                    <LucideIcon Name="search-x" />
+                                </Icon>
+                            </BbEmpty>
+                        }
+                        else
+                        {
+                            <BbEmpty
+                                Size="EmptySize.Small"
+                                Title="@Localizer["App.Pseudonyms.EmptyTitle"]"
+                                Description="@Localizer["App.Pseudonyms.EmptyDescription"]"
+                            >
+                                <Icon>
+                                    <LucideIcon Name="fingerprint-pattern" />
+                                </Icon>
+                            </BbEmpty>
+                        }
+                    </EmptyTemplate>
                     <Columns>
                         @* A property column with a cell template rather than a template column:
                            the pseudonym stays sortable and filterable like any other property,

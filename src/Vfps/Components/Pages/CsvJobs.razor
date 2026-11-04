@@ -120,6 +120,16 @@ else
                                     @Localizer["App.CsvJobs.DirectionExportOption"]
                                 </option>
                             </select>
+                            @* The options are short names - a full sentence each got cut off in
+                               the select - and what the chosen one does is said here instead. The
+                               two directions that reveal original values say it in their warning
+                               below, so they get no second description here. *@
+                            @if (DirectionHint is { } directionHint)
+                            {
+                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground" id="directionHint">
+                                    @directionHint
+                                </p>
+                            }
                         </BbFieldContent>
                     </BbField>
                     @* Both of these hand back original values in bulk, so both get the same
@@ -231,16 +241,11 @@ else
                 {
                     <div>
                         <h3 class="bb:text-sm bb:font-medium">@Localizer["App.CsvJobs.ColumnMappings"]</h3>
+                        @* Both sentences on one line, with the space between them written out:
+                           split across a @if block, Razor dropped the whitespace and the two ran
+                           together ("...in place).Pick a CSV file"). *@
                         <p class="bb:mt-1 bb:text-sm bb:text-muted-foreground">
-                            @if (_direction == nameof(PseudonymizationJobDirection.Depseudonymize))
-                            {
-                                <text>@Localizer["App.CsvJobs.ColumnMappingsHintDepseudonymize"]</text>
-                            }
-                            else
-                            {
-                                <text>@Localizer["App.CsvJobs.ColumnMappingsHintPseudonymize"]</text>
-                            }
-                            @Localizer["App.CsvJobs.ColumnMappingsHintSuffix"]
+                            @(_direction == nameof(PseudonymizationJobDirection.Depseudonymize) ? Localizer["App.CsvJobs.ColumnMappingsHintDepseudonymize"] : Localizer["App.CsvJobs.ColumnMappingsHintPseudonymize"]) @Localizer["App.CsvJobs.ColumnMappingsHintSuffix"]
                         </p>
 
                         <div class="bb:mt-3 bb:space-y-3">
@@ -274,7 +279,7 @@ else
                                         </BbFieldContent>
                                     </BbField>
                                     <BbField Class="bb:w-40 bb:flex-1">
-                                        <BbFieldLabel For="@row.NamespaceId">@Localizer["App.Nav.Namespaces"]</BbFieldLabel>
+                                        <BbFieldLabel For="@row.NamespaceId">@Localizer["App.CsvJobs.NamespaceLabel"]</BbFieldLabel>
                                         <BbFieldContent>
                                             <select
                                                 @bind="row.Namespace"
@@ -335,7 +340,7 @@ else
                             @if (!ImportsIntoNamespaceColumn)
                             {
                                 <BbField Class="bb:w-40 bb:flex-1">
-                                    <BbFieldLabel For="jobNamespace">@Localizer["App.Nav.Namespaces"]</BbFieldLabel>
+                                    <BbFieldLabel For="jobNamespace">@Localizer["App.CsvJobs.NamespaceLabel"]</BbFieldLabel>
                                     <BbFieldContent>
                                         <select
                                             @bind="_namespaceMapping.Namespace"
@@ -559,6 +564,19 @@ else
                 @* Explicit page size for the same reason as the namespaces grid: with the
                    pager hidden, the grid's default would silently cut the list off at ten. *@
                 <BbDataGrid Items="@_jobs" ShowPagination="false" InitialPageSize="int.MaxValue">
+                    @* The jobs list isn't searched, so the grid's own "No results found" was never
+                       true here - there simply aren't any yet. *@
+                    <EmptyTemplate>
+                        <BbEmpty
+                            Size="EmptySize.Small"
+                            Title="@Localizer["App.Home.NoJobsTitle"]"
+                            Description="@Localizer["App.CsvJobs.EmptyDescription"]"
+                        >
+                            <Icon>
+                                <LucideIcon Name="file-spreadsheet" />
+                            </Icon>
+                        </BbEmpty>
+                    </EmptyTemplate>
                     <Columns>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Id"]">
                             <ChildContent Context="j">
@@ -1066,6 +1084,16 @@ else
     // confirmation there starts the job. Every other direction starts straight away, as before.
     private bool _isReviewing;
     private IReadOnlyList<ColumnMapping> _reviewMappings = [];
+
+    private string? DirectionHint =>
+        SelectedDirection switch
+        {
+            PseudonymizationJobDirection.Pseudonymize =>
+                Localizer["App.CsvJobs.DirectionHintPseudonymize"].Value,
+            PseudonymizationJobDirection.Import =>
+                Localizer["App.CsvJobs.DirectionHintImport"].Value,
+            _ => null,
+        };
 
     private bool IsRevealingDirection =>
         SelectedDirection
