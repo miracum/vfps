@@ -22,7 +22,7 @@
                 type="button"
                 onclick="vfpsToggleDarkMode()"
                 aria-label="@Localizer["App.MainLayout.ToggleDarkMode"]"
-                class="bb:inline-flex bb:h-10 bb:w-10 bb:items-center bb:justify-center bb:rounded-md bb:hover:bg-accent bb:hover:text-accent-foreground"
+                class="bb:inline-flex bb:h-9 bb:w-9 bb:items-center bb:justify-center bb:rounded-md bb:hover:bg-accent bb:hover:text-accent-foreground"
             >
                 <LucideIcon Name="moon" Size="18" Class="theme-icon-light" />
                 <LucideIcon Name="sun" Size="18" Class="theme-icon-dark" />
@@ -133,7 +133,7 @@
         <BbResponsiveNavTrigger />
     </header>
 
-    <main class="bb:flex-1 bb:overflow-auto bb:p-6">
+    <main class="page-main bb:flex-1 bb:p-6">
         @* Without this, an exception a page doesn't handle itself terminates the whole Blazor
            circuit, and the browser is left with a page that no longer reacts to anything. The
            boundary logs it and swaps in the error below instead, with the header still working.
@@ -141,7 +141,9 @@
            circuit as the pages and the boundary sees their errors. *@
         <ErrorBoundary @ref="_errorBoundary">
             <ChildContent>
-                @Body
+                <div class="content-width">
+                    @Body
+                </div>
             </ChildContent>
             <ErrorContent>
                 <BbAlert Variant="AlertVariant.Danger">

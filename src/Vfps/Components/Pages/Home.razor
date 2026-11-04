@@ -105,7 +105,7 @@
                        stacks under the description instead of beside the title. *@
                     <div class="bb:flex bb:items-start bb:justify-between bb:gap-4">
                         <div class="bb:space-y-1.5">
-                            <BbCardTitle As="h2">@Localizer["App.Nav.Namespaces"]</BbCardTitle>
+                            <SectionTitle>@Localizer["App.Nav.Namespaces"]</SectionTitle>
                             <BbCardDescription>@Localizer["App.Home.NamespacesDescription"]</BbCardDescription>
                         </div>
                         <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Small" Class="bb:shrink-0" Href="/ui/namespaces">
@@ -167,7 +167,7 @@
                     <BbCardHeader>
                         <div class="bb:flex bb:items-start bb:justify-between bb:gap-4">
                             <div class="bb:space-y-1.5">
-                                <BbCardTitle As="h2">@Localizer["App.Home.RecentJobsTitle"]</BbCardTitle>
+                                <SectionTitle>@Localizer["App.Home.RecentJobsTitle"]</SectionTitle>
                                 <BbCardDescription>
                                     @(summary.SeesEveryonesJobs
                                         ? Localizer["App.Home.RecentJobsAllUsersDescription"]
@@ -192,7 +192,8 @@
                                     <LucideIcon Name="file-spreadsheet" />
                                 </Icon>
                                 <ChildContent>
-                                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" Href="/ui/csv-jobs">
+                                    @* ?new=1 opens the CSV page's new-job dialog straight away. *@
+                                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" Href="/ui/csv-jobs?new=1">
                                         @Localizer["App.CsvJobs.NewJobTitle"]
                                     </BbButton>
                                 </ChildContent>

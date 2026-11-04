@@ -26,7 +26,7 @@ public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
         await File.WriteAllTextAsync(csvPath, "patient_id,name,notes\n1,Jane Doe,none\n");
         try
         {
-            await GotoAsync("/ui/csv-jobs");
+            await GotoAsync("/ui/csv-jobs?new=1");
 
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
             await Page.CheckAsync("#hasHeaderRow");

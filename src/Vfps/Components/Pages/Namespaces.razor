@@ -39,14 +39,6 @@
         </BbButton>
     </div>
 
-    @if (_deleteErrorMessage is not null)
-    {
-        <BbAlert Variant="AlertVariant.Danger">
-            <BbAlertTitle>@Localizer["App.Namespaces.DeleteErrorTitle"]</BbAlertTitle>
-            <BbAlertDescription>@_deleteErrorMessage</BbAlertDescription>
-        </BbAlert>
-    }
-
     @* Set when a namespace was created but could not be put into the projects chosen for it. The
        namespace itself is fine, which is why this is not the create dialog's error: by the time
        it is known the dialog has closed. *@
@@ -58,28 +50,48 @@
         </BbAlert>
     }
 
-    @if (_pendingDelete is not null)
-    {
-        <BbAlert Variant="AlertVariant.Danger">
-            <BbAlertTitle>@Localizer["App.Namespaces.DeleteConfirmTitle", _pendingDelete.Name]</BbAlertTitle>
-            <BbAlertDescription>
-                <p class="bb:mb-3">
-                    @Localizer["App.Namespaces.DeleteConfirmBodyPrefix"]
-                    <strong>@_pendingDelete.Name</strong>
-                    @Localizer["App.Namespaces.DeleteConfirmBodySuffix"]
-                </p>
-                <div class="bb:flex bb:flex-wrap bb:items-end bb:gap-2">
-                    <BbField Class="bb:w-64">
-                        <BbFieldContent>
-                            <BbInput
-                                @ref="_deleteConfirmationInput"
-                                @bind-Value="_deleteConfirmationText"
-                                UpdateTiming="UpdateTiming.Immediate"
-                                Id="confirmDeleteNamespaceName"
-                                Placeholder="@_pendingDelete.Name"
-                            />
-                        </BbFieldContent>
-                    </BbField>
+    @* An alert dialog rather than a panel at the top of the page: the panel opened far above the
+       Delete button that summoned it, pushed that button down the page, and left two Delete buttons
+       on screen at once. The dialog appears where the eye already is, takes focus straight into the
+       name field, and can only be left through Cancel or Delete - not by a stray click outside or
+       Escape, which is the point of an alertdialog for an action that destroys every pseudonym in
+       the namespace. The delete error belongs in here for the same reason as the create dialog's:
+       the overlay covers the page. *@
+    <BbAlertDialog Open="@(_pendingDelete is not null)" OpenChanged="OnDeleteDialogOpenChanged">
+        <BbAlertDialogContent>
+            @if (_pendingDelete is { } pendingDelete)
+            {
+                <BbAlertDialogHeader>
+                    <BbAlertDialogTitle Class="bb:leading-tight">
+                        @Localizer["App.Namespaces.DeleteConfirmTitle", pendingDelete.Name]
+                    </BbAlertDialogTitle>
+                    <BbAlertDialogDescription>
+                        @Localizer["App.Namespaces.DeleteConfirmBodyPrefix"]
+                        <strong>@pendingDelete.Name</strong>
+                        @Localizer["App.Namespaces.DeleteConfirmBodySuffix"]
+                    </BbAlertDialogDescription>
+                </BbAlertDialogHeader>
+
+                @if (_deleteErrorMessage is not null)
+                {
+                    <BbAlert Variant="AlertVariant.Danger">
+                        <BbAlertTitle>@Localizer["App.Namespaces.DeleteErrorTitle"]</BbAlertTitle>
+                        <BbAlertDescription>@_deleteErrorMessage</BbAlertDescription>
+                    </BbAlert>
+                }
+
+                <BbInput
+                    @bind-Value="_deleteConfirmationText"
+                    UpdateTiming="UpdateTiming.Immediate"
+                    Id="confirmDeleteNamespaceName"
+                    Placeholder="@pendingDelete.Name"
+                    AriaLabel="@Localizer["App.Common.Name"]"
+                />
+
+                <BbAlertDialogFooter>
+                    <BbButton Variant="ButtonVariant.Outline" OnClick="CancelDeleteNamespace">
+                        @Localizer["App.Common.Cancel"]
+                    </BbButton>
                     <BbButton
                         id="confirmDeleteNamespaceButton"
                         Variant="ButtonVariant.Destructive"
@@ -89,13 +101,10 @@
                     >
                         @Localizer["App.Common.Delete"]
                     </BbButton>
-                    <BbButton Variant="ButtonVariant.Outline" OnClick="CancelDeleteNamespace">
-                        @Localizer["App.Common.Cancel"]
-                    </BbButton>
-                </div>
-            </BbAlertDescription>
-        </BbAlert>
-    }
+                </BbAlertDialogFooter>
+            }
+        </BbAlertDialogContent>
+    </BbAlertDialog>
 
     @* Controlled rather than trigger-driven: the same flag has to be able to close the dialog
        from code once the namespace has actually been created. Width and height are set as a
@@ -105,7 +114,7 @@
     <BbDialog Open="_showCreateForm" OpenChanged="OnCreateDialogOpenChanged">
         <BbDialogContent style="max-width: 46rem;">
             <BbDialogHeader>
-                <BbDialogTitle>@Localizer["App.Namespaces.CreateTitle"]</BbDialogTitle>
+                <BbDialogTitle Class="bb:leading-tight">@Localizer["App.Namespaces.CreateTitle"]</BbDialogTitle>
                 <BbDialogDescription>
                     @Localizer["App.Namespaces.CreateDescription"]
                 </BbDialogDescription>
@@ -307,7 +316,7 @@
         <BbDialog Open="_showAccessDialog" OpenChanged="OnAccessDialogOpenChanged">
             <BbDialogContent style="max-width: 42rem;">
                 <BbDialogHeader>
-                    <BbDialogTitle>
+                    <BbDialogTitle Class="bb:leading-tight">
                         @Localizer["App.Namespaces.ConfigureAccessTitle", _accessNamespaceName]
                     </BbDialogTitle>
                     <BbDialogDescription>
@@ -343,7 +352,7 @@
         <BbDialog Open="_showEditDialog" OpenChanged="OnEditDialogOpenChanged">
             <BbDialogContent style="max-width: 42rem;">
                 <BbDialogHeader>
-                    <BbDialogTitle>
+                    <BbDialogTitle Class="bb:leading-tight">
                         @Localizer["App.Namespaces.EditTitle", _editNamespaceName]
                     </BbDialogTitle>
                     <BbDialogDescription>
@@ -427,7 +436,6 @@
 
     <BbCard>
         <BbCardHeader>
-            <BbCardTitle>@Localizer["App.Namespaces.HierarchyTitle"]</BbCardTitle>
             <BbCardDescription>
                 @Localizer["App.Namespaces.HierarchyDescription"]
             </BbCardDescription>
@@ -456,7 +464,7 @@
                                 Id="namespaceSearch"
                                 Placeholder="@Localizer["App.Namespaces.HierarchySearchPlaceholder"]"
                                 AriaLabel="@Localizer["App.Namespaces.HierarchySearchPlaceholder"]"
-                                Class="bb:h-8 bb:text-sm"
+                                Class="bb:text-sm"
                             />
                             @* Only worth having once there is a project to filter by. *@
                             @if (_projects.Count > 0)
@@ -467,7 +475,7 @@
                                     id="namespaceProjectFilter"
                                     aria-label="@Localizer["App.Namespaces.ProjectFilterLabel"]"
                                     style="max-width: 45%;"
-                                    class="bb:flex bb:h-8 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-2 bb:text-sm bb:focus-visible:outline-none"
+                                    class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:text-sm bb:focus-visible:outline-none"
                                 >
                                     <option value="">@Localizer["App.Namespaces.AllProjects"]</option>
                                     <option value="@NoProjectFilter">@Localizer["App.Namespaces.NoProject"]</option>
@@ -509,7 +517,11 @@
                         }
                     </div>
 
-                    <div id="namespaceDetails" class="bb:rounded-md bb:border bb:border-border bb:p-4">
+                    @* self-start: as tall as its own content, rather than an empty bordered box
+                       stretched to the height of a long tree beside it. Sticky, so the details of
+                       the namespace just selected stay in view while scrolling a tree that runs
+                       several screens long - the same pair the Access Tokens side card uses. *@
+                    <div id="namespaceDetails" class="bb:self-start bb:sticky bb:top-6 bb:rounded-md bb:border bb:border-border bb:p-4">
                         @if (SelectedNamespace is { } selected)
                         {
                             <NamespaceDetails
@@ -519,13 +531,16 @@
                                 IsPseudonymCountLoading="_isLoadingSelectedNamespacePseudonymCount"
                                 ProjectNames="ProjectNamesOf(selected.Name)"
                             />
+                            @* Everyday actions first, the most common one leading; Delete last and
+                               pushed to the far end, in the quieter destructive-action style
+                               (wwwroot/app.css) rather than a filled red button. *@
                             <div class="bb:mt-4 bb:flex bb:flex-wrap bb:gap-2">
                                 <BbButton
                                     Variant="ButtonVariant.Outline"
                                     Size="ButtonSize.Small"
                                     Href="@($"/ui/namespaces/{Uri.EscapeDataString(selected.Name)}/pseudonyms")"
                                 >
-                                    @Localizer["App.Common.Browse"]
+                                    @Localizer["App.Namespaces.BrowsePseudonyms"]
                                 </BbButton>
                                 @if (_isAdmin)
                                 {
@@ -551,8 +566,9 @@
                                 }
                                 <BbButton
                                     id="deleteSelectedNamespaceButton"
-                                    Variant="ButtonVariant.Destructive"
+                                    Variant="ButtonVariant.Outline"
                                     Size="ButtonSize.Small"
+                                    Class="ml-auto destructive-action"
                                     OnClick="() => StartDeleteNamespace(selected)"
                                 >
                                     @Localizer["App.Common.Delete"]
@@ -662,8 +678,7 @@
 
     // The create form is opened from the header button rather than sitting on the page
     // permanently, so the hierarchy is what greets you instead. Focusing the name field on the
-    // render that reveals the form scrolls it into view and lets typing start straight away, the
-    // same way the delete confirmation panel below does.
+    // render that reveals the form scrolls it into view and lets typing start straight away.
     private bool _showCreateForm;
     private BbInput? _createNameInput;
     private bool _shouldFocusCreateName;
@@ -789,19 +804,10 @@
                 string.Equals(n.Name, _selectedNamespaceName, StringComparison.Ordinal)
             );
 
-    // Set when a row's "Delete" button is clicked, cleared on cancel/confirm - drives the inline
-    // confirmation panel rendered above the tables. Deliberately not a modal dialog (see
-    // ConfirmDeleteNamespaceAsync's comment on DeleteNamespaceDialog.razor's removal).
+    // Set when the details panel's "Delete" button is clicked, cleared on cancel/confirm - opens
+    // the delete confirmation's alert dialog, which focuses its name field on its own.
     private Namespace? _pendingDelete;
     private string _deleteConfirmationText = string.Empty;
-
-    // The panel opens at the top of the page while the "Delete" button that opens it sits in the
-    // table further down, so on anything but a very short list it would be scrolled off-screen
-    // above the viewport and clicking Delete would look like it did nothing at all. Focusing the
-    // confirmation input on the render that reveals the panel scrolls it into view and lets the
-    // name be typed straight away.
-    private BbInput? _deleteConfirmationInput;
-    private bool _shouldFocusDeleteConfirmation;
 
     private bool IsDeleteConfirmed =>
         _pendingDelete is not null
@@ -830,12 +836,6 @@
         if (firstRender)
         {
             await ResolveBrowserTimeZoneAsync();
-        }
-
-        if (_shouldFocusDeleteConfirmation && _deleteConfirmationInput is not null)
-        {
-            _shouldFocusDeleteConfirmation = false;
-            await _deleteConfirmationInput.FocusAsync();
         }
 
         if (_shouldFocusCreateName && _createNameInput is not null)
@@ -1232,13 +1232,23 @@
         _pendingDelete = namespaceToDelete;
         _deleteConfirmationText = string.Empty;
         _deleteErrorMessage = null;
-        _shouldFocusDeleteConfirmation = true;
     }
 
     private void CancelDeleteNamespace()
     {
         _pendingDelete = null;
         _deleteConfirmationText = string.Empty;
+        _deleteErrorMessage = null;
+    }
+
+    // An alert dialog only closes through its own buttons, but anything that does close it - now
+    // or after a library change - is a cancel as far as the pending delete is concerned.
+    private void OnDeleteDialogOpenChanged(bool open)
+    {
+        if (!open)
+        {
+            CancelDeleteNamespace();
+        }
     }
 
     private async Task ConfirmDeleteNamespaceAsync()

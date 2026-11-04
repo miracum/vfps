@@ -30,11 +30,8 @@
     <div class="bb:flex bb:flex-wrap bb:items-center bb:justify-between bb:gap-2">
         @if (IsSingleProject)
         {
-            <div>
-                <BbButton Variant="ButtonVariant.Link" Href="/ui/projects" Class="bb:px-0">
-                    <LucideIcon Name="arrow-left" Size="16" />
-                    @Localizer["App.Projects.BackToProjects"]
-                </BbButton>
+            <div class="bb:space-y-1">
+                <BackLink Href="/ui/projects">@Localizer["App.Projects.BackToProjects"]</BackLink>
                 <div class="bb:flex bb:items-center bb:gap-2">
                     <LucideIcon Name="folder" Size="24" Class="bb:text-primary" />
                     <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@ProjectName</h1>
@@ -88,15 +85,23 @@
         </BbAlert>
     }
 
-    @* Inline rather than a dialog, like the namespace delete confirmation. No name has to be
-       typed: deleting a project removes nothing but the grouping. *@
-    @if (_pendingDelete is not null)
-    {
-        <BbAlert Variant="AlertVariant.Danger">
-            <BbAlertTitle>@Localizer["App.Projects.DeleteConfirmTitle", _pendingDelete.Name]</BbAlertTitle>
-            <BbAlertDescription>
-                <p class="bb:mb-3">@Localizer["App.Projects.DeleteConfirmBody"]</p>
-                <div class="bb:flex bb:flex-wrap bb:gap-2">
+    @* An alert dialog, like the namespace delete confirmation, so it appears where the Delete
+       button was clicked rather than at the top of the page. No name has to be typed: deleting a
+       project removes nothing but the grouping. *@
+    <BbAlertDialog Open="@(_pendingDelete is not null)" OpenChanged="OnDeleteDialogOpenChanged">
+        <BbAlertDialogContent>
+            @if (_pendingDelete is { } pendingDelete)
+            {
+                <BbAlertDialogHeader>
+                    <BbAlertDialogTitle Class="bb:leading-tight">
+                        @Localizer["App.Projects.DeleteConfirmTitle", pendingDelete.Name]
+                    </BbAlertDialogTitle>
+                    <BbAlertDialogDescription>@Localizer["App.Projects.DeleteConfirmBody"]</BbAlertDialogDescription>
+                </BbAlertDialogHeader>
+                <BbAlertDialogFooter>
+                    <BbButton Variant="ButtonVariant.Outline" OnClick="CancelDelete">
+                        @Localizer["App.Common.Cancel"]
+                    </BbButton>
                     <BbButton
                         id="confirmDeleteProjectButton"
                         Variant="ButtonVariant.Destructive"
@@ -105,13 +110,10 @@
                     >
                         @Localizer["App.Common.Delete"]
                     </BbButton>
-                    <BbButton Variant="ButtonVariant.Outline" OnClick="CancelDelete">
-                        @Localizer["App.Common.Cancel"]
-                    </BbButton>
-                </div>
-            </BbAlertDescription>
-        </BbAlert>
-    }
+                </BbAlertDialogFooter>
+            }
+        </BbAlertDialogContent>
+    </BbAlertDialog>
 
     @if (_isAdmin)
     {
@@ -120,7 +122,7 @@
         <BbDialog Open="_showProjectDialog" OpenChanged="OnProjectDialogOpenChanged">
             <BbDialogContent style="max-width: 36rem;">
                 <BbDialogHeader>
-                    <BbDialogTitle>
+                    <BbDialogTitle Class="bb:leading-tight">
                         @(_editingProjectName is null
                             ? Localizer["App.Projects.CreateTitle"]
                             : Localizer["App.Projects.EditTitle", _editingProjectName])
@@ -184,7 +186,7 @@
             <BbDialog Open="_showManageDialog" OpenChanged="OnManageDialogOpenChanged">
                 <BbDialogContent style="max-width: 36rem;">
                     <BbDialogHeader>
-                        <BbDialogTitle>@Localizer["App.Projects.ManageTitle", _manageProjectName]</BbDialogTitle>
+                        <BbDialogTitle Class="bb:leading-tight">@Localizer["App.Projects.ManageTitle", _manageProjectName]</BbDialogTitle>
                         <BbDialogDescription>@Localizer["App.Projects.ManageDescription"]</BbDialogDescription>
                     </BbDialogHeader>
 
@@ -245,13 +247,13 @@
                         @* On the project's own page the name is already the page heading. *@
                         @if (!IsSingleProject)
                         {
-                            <BbCardTitle>
+                            <SectionTitle>
                                 @* The project's static link, which is what it can be shared by. *@
                                 <a href="@ProjectHref(project.Name)"
                                    class="title-link"
                                    title="@Localizer["App.Projects.OpenProject", project.Name]"
                                    data-project-link="@project.Name">@project.Name</a>
-                            </BbCardTitle>
+                            </SectionTitle>
                         }
                         @if (!string.IsNullOrWhiteSpace(project.Description))
                         {
@@ -308,9 +310,12 @@
                                 >
                                     @Localizer["App.Namespaces.EditAction"]
                                 </BbButton>
+                                @* Last, pushed to the far end, and outlined rather than filled - see
+                                   .destructive-action in wwwroot/app.css. *@
                                 <BbButton
-                                    Variant="ButtonVariant.Destructive"
+                                    Variant="ButtonVariant.Outline"
                                     Size="ButtonSize.Small"
+                                    Class="ml-auto destructive-action"
                                     data-action="delete-project"
                                     OnClick="() => StartDelete(project)"
                                 >
@@ -585,6 +590,15 @@
     }
 
     private void CancelDelete() => _pendingDelete = null;
+
+    // Same as the namespace delete dialog: whatever closes the dialog cancels the delete.
+    private void OnDeleteDialogOpenChanged(bool open)
+    {
+        if (!open)
+        {
+            CancelDelete();
+        }
+    }
 
     private async Task ConfirmDeleteAsync()
     {

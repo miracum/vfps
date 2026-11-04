@@ -709,6 +709,9 @@
   <data name="App.Namespaces.HierarchyTitle" xml:space="preserve">
     <value>Namespace-Hierarchie</value>
   </data>
+  <data name="App.Namespaces.BrowsePseudonyms" xml:space="preserve">
+    <value>Pseudonyme anzeigen</value>
+  </data>
   <data name="App.Namespaces.HierarchyEmpty" xml:space="preserve">
     <value>Es sind noch keine Namespaces vorhanden.</value>
   </data>

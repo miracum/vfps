@@ -129,6 +129,65 @@ body {
 }
 
 /*
+ * BbLabel sets leading-none, so a label that wraps - German ones do in the namespace dialog's
+ * label column - stacks its lines with no gap between them. Same 1.25 as the section titles.
+ */
+label[class~="bb:leading-none"] {
+  line-height: 1.25;
+}
+
+/*
+ * Headings wrap to even lines instead of leaving one word on the last; paragraphs avoid a lone
+ * last word. Both are progressive: a browser that ignores them keeps its default wrap.
+ */
+h1,
+h2,
+h3 {
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/*
+ * The page's <main> (MainLayout.razor). It used to be overflow-auto, but nothing gives it a height
+ * of its own, so it never scrolled - the document does - while still being the scroll container
+ * every position: sticky element inside it measured against. So nothing on any page could stick:
+ * not the namespace details beside a long tree, not the Access Tokens side card. clip keeps what
+ * overflow-auto actually did here, holding something too wide inside the page rather than
+ * scrolling the whole page sideways, without making main a scroll container.
+ */
+.page-main {
+  overflow-x: clip;
+}
+
+/*
+ * The page content's width (MainLayout.razor). Uncapped, a wide screen stretched every card,
+ * input and paragraph to its full width. 80rem keeps the two-column pages two columns on an
+ * ordinary laptop while stopping them at a readable size on a large monitor. The shipped bundle's
+ * widest max-w-* is 4xl, far too narrow for a page - see the note at the top of this file.
+ */
+.content-width {
+  max-width: 80rem;
+  margin-inline: auto;
+}
+
+/*
+ * A readable measure for running text. Card descriptions and field help used to run the full width
+ * of their card, ~170 characters a line. A paragraph in centered text (empty states) is centered as
+ * a box too, so its lines don't start at the left edge of the column.
+ */
+main p {
+  max-width: 75ch;
+}
+
+main [class~="bb:text-center"] p,
+main p[class~="bb:text-center"] {
+  margin-inline: auto;
+}
+
+/*
  * Routes.razor's <FocusOnNavigate Selector="h1"> moves focus to each page's heading after a
  * navigation, so a screen reader announces the new page. Programmatic focus on a heading with no
  * prior pointer interaction - every full page load, including the one back from the identity
@@ -158,6 +217,56 @@ h1:focus {
 .link-pill svg {
   margin-left: 0.25rem;
   flex-shrink: 0;
+}
+
+/*
+ * BbButton's Small size pairs its 36px control with 12px text - smaller than the 14px body copy
+ * and inputs beside it, which made every small button read as puffy. Button labels are one role at
+ * 14px whatever the size. Keyed off the Small size's own utility pair (only Small carries both), so
+ * Default, Icon and IconSmall are untouched. Attribute selectors rather than escaped class
+ * selectors, which aren't kebab-case.
+ */
+:is(button, a)[class~="bb:h-9"][class~="bb:text-xs"] {
+  font-size: var(--bb-text-sm);
+  line-height: 1.25rem; /* text-sm's own; the library's variable for it isn't kebab-case */
+}
+
+/*
+ * A label/value list with the labels in a column of their own (NamespaceDetails.razor), so each
+ * value sits beside its label instead of at the far edge of the panel. The label column is as wide
+ * as its longest label, within limits, so German labels don't crowd the values out.
+ */
+.detail-list {
+  display: grid;
+  grid-template-columns: minmax(8rem, max-content) minmax(0, 1fr);
+  gap: 0.375rem 1rem; /* row, column */
+}
+
+.detail-list dt {
+  color: var(--muted-foreground);
+}
+
+.detail-list dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The weight a destructive action gets where it sits among everyday ones (delete a namespace,
+ * a project, a token): an outline button with red text rather than a filled red one, which made
+ * Delete the loudest thing on the page. Goes on BbButton Variant="Outline". Plain CSS for the
+ * reason at the top of this file; unlayered, so it also wins over the outline variant's own
+ * hover text color, which sits in the bundle's utilities layer.
+ */
+.destructive-action {
+  color: var(--destructive);
+}
+
+.destructive-action:hover,
+.destructive-action:focus-visible {
+  color: var(--destructive);
+  background-color: color-mix(in oklch, var(--destructive) 8%, transparent);
+  border-color: color-mix(in oklch, var(--destructive) 40%, var(--border));
 }
 
 /* A heading that is a link - a project card's title, which opens the project's own page. */

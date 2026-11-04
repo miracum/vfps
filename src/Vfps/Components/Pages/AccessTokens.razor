@@ -19,9 +19,26 @@
 <PageTitle>@Localizer["App.Nav.AccessTokens"]</PageTitle>
 
 <div class="bb:mx-auto bb:space-y-6">
-    <div class="bb:flex bb:items-center bb:gap-2">
-        <LucideIcon Name="key-round" Size="24" Class="bb:text-primary" />
-        <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Nav.AccessTokens"]</h1>
+    <div class="bb:flex bb:flex-wrap bb:items-center bb:justify-between bb:gap-2">
+        <div class="bb:flex bb:items-center bb:gap-2">
+            <LucideIcon Name="key-round" Size="24" Class="bb:text-primary" />
+            <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Nav.AccessTokens"]</h1>
+        </div>
+        @if (IsUsable)
+        {
+            <BbButton
+                id="showCreateAccessTokenButton"
+                IconPosition="IconPosition.Start"
+                OnClick="() => OnCreateDialogOpenChanged(true)"
+            >
+                <Icon>
+                    <LucideIcon Name="plus" Size="16" />
+                </Icon>
+                <ChildContent>
+                    @Localizer["App.AccessTokens.CreateAction"]
+                </ChildContent>
+            </BbButton>
+        }
     </div>
 
     @if (!AuthorizationConfigOptions.Value.IsEnabled)
@@ -102,14 +119,25 @@
                     </BbAlert>
                 }
 
-                <BbCard>
-                    <BbCardHeader>
-                        <BbCardTitle>@Localizer["App.AccessTokens.CreateTitle"]</BbCardTitle>
-                        <BbCardDescription>@Localizer["App.AccessTokens.CreateDescription"]</BbCardDescription>
-                    </BbCardHeader>
-                    <BbCardContent>
+                @* The form is a dialog opened from the header, so the tokens themselves are what the
+                   page opens on. The secret it produces is deliberately not shown in the dialog:
+                   one stray click outside it would close it and lose the token for good. It goes
+                   to the alert above instead, which only its own Close button dismisses. *@
+                <BbDialog Open="_showCreateDialog" OpenChanged="OnCreateDialogOpenChanged">
+                    <BbDialogContent>
+                        <BbDialogHeader>
+                            <BbDialogTitle Class="bb:leading-tight">@Localizer["App.AccessTokens.CreateTitle"]</BbDialogTitle>
+                            <BbDialogDescription>@Localizer["App.AccessTokens.CreateDescription"]</BbDialogDescription>
+                        </BbDialogHeader>
+                        @if (_createError is not null)
+                        {
+                            <BbAlert Variant="AlertVariant.Danger">
+                                <BbAlertTitle>@Localizer["App.AccessTokens.ErrorTitle"]</BbAlertTitle>
+                                <BbAlertDescription>@_createError</BbAlertDescription>
+                            </BbAlert>
+                        }
                         <EditForm Model="_newToken" FormName="create-access-token" OnValidSubmit="CreateAsync">
-                            <div class="bb:grid bb:gap-4 bb:sm:grid-cols-2">
+                            <div class="bb:space-y-4 bb:py-2">
                                 <BbField>
                                     <BbFieldLabel For="newTokenName">@Localizer["App.AccessTokens.NameLabel"]</BbFieldLabel>
                                     <BbFieldContent>
@@ -141,27 +169,25 @@
                                     </BbFieldContent>
                                 </BbField>
                             </div>
-                            <BbButton
-                                id="createAccessTokenButton"
-                                Type="ButtonType.Submit"
-                                Loading="_isCreating"
-                                Class="bb:mt-4"
-                                IconPosition="IconPosition.Start"
-                            >
-                                <Icon>
-                                    <LucideIcon Name="plus" Size="16" />
-                                </Icon>
-                                <ChildContent>
+                            <BbDialogFooter>
+                                <BbButton Variant="ButtonVariant.Outline" OnClick="() => OnCreateDialogOpenChanged(false)">
+                                    @Localizer["App.Common.Cancel"]
+                                </BbButton>
+                                <BbButton
+                                    id="createAccessTokenButton"
+                                    Type="ButtonType.Submit"
+                                    Loading="_isCreating"
+                                >
                                     @Localizer["App.AccessTokens.CreateAction"]
-                                </ChildContent>
-                            </BbButton>
+                                </BbButton>
+                            </BbDialogFooter>
                         </EditForm>
-                    </BbCardContent>
-                </BbCard>
+                    </BbDialogContent>
+                </BbDialog>
 
                 <BbCard>
                     <BbCardHeader>
-                        <BbCardTitle>@Localizer["App.AccessTokens.MineTitle"]</BbCardTitle>
+                        <SectionTitle>@Localizer["App.AccessTokens.MineTitle"]</SectionTitle>
                         <BbCardDescription>@Localizer["App.AccessTokens.MineDescription"]</BbCardDescription>
                     </BbCardHeader>
                     <BbCardContent>
@@ -173,7 +199,7 @@
                 {
                     <BbCard>
                         <BbCardHeader>
-                            <BbCardTitle>@Localizer["App.AccessTokens.AllTitle"]</BbCardTitle>
+                            <SectionTitle>@Localizer["App.AccessTokens.AllTitle"]</SectionTitle>
                             <BbCardDescription>@Localizer["App.AccessTokens.AllDescription"]</BbCardDescription>
                         </BbCardHeader>
                         <BbCardContent>
@@ -199,6 +225,11 @@
     private IReadOnlyList<AccessToken> _allTokens = [];
     private readonly NewTokenModel _newToken = new();
     private bool _isCreating;
+    private bool _showCreateDialog;
+
+    // A failed create is reported in the create dialog, where the form is; _error is for the
+    // revoke and delete actions on the page itself.
+    private string? _createError;
     private string? _error;
     private string? _issuedSecret;
     private bool _secretCopied;
@@ -252,10 +283,20 @@
         }
     }
 
+    // Also reached when the dialog closes itself - the overlay, Escape, or its own close button.
+    private void OnCreateDialogOpenChanged(bool open)
+    {
+        _showCreateDialog = open;
+        if (!open)
+        {
+            _createError = null;
+        }
+    }
+
     private async Task CreateAsync()
     {
         _isCreating = true;
-        _error = null;
+        _createError = null;
         _issuedSecret = null;
         _secretCopied = false;
 
@@ -270,11 +311,12 @@
 
             _issuedSecret = issued.Secret;
             _newToken.Reset();
+            OnCreateDialogOpenChanged(false);
             await LoadAsync();
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            _createError = ex.Message;
         }
         finally
         {
@@ -408,8 +450,9 @@
                                     }
                                     <BbButton
                                         id="@($"deleteToken-{token.Id}")"
-                                        Variant="ButtonVariant.Destructive"
+                                        Variant="ButtonVariant.Outline"
                                         Size="ButtonSize.Small"
+                                        Class="destructive-action"
                                         OnClick="@(() => DeleteAsync(token))"
                                     >
                                         @Localizer["App.Common.Delete"]

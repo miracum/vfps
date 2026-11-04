@@ -1,6 +1,9 @@
 @using Microsoft.AspNetCore.Components.Web
 <!DOCTYPE html>
-<html lang="en">
+@* BlazorBlueprint's own density switch: compact scales its whole spacing unit (and with it every
+   control height, padding and gap) to 7/8, which suits an admin tool used for long sessions
+   better than the default's marketing-site generosity. *@
+<html lang="en" data-bb-density="compact">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />

@@ -37,9 +37,23 @@
 else
 {
     <div class="bb:mx-auto bb:space-y-6">
-        <div class="bb:flex bb:items-center bb:gap-2">
-            <LucideIcon Name="file-spreadsheet" Size="24" Class="bb:text-primary" />
-            <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.CsvJobs.PageTitle"]</h1>
+        <div class="bb:flex bb:flex-wrap bb:items-center bb:justify-between bb:gap-2">
+            <div class="bb:flex bb:items-center bb:gap-2">
+                <LucideIcon Name="file-spreadsheet" Size="24" Class="bb:text-primary" />
+                <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.CsvJobs.PageTitle"]</h1>
+            </div>
+            <BbButton
+                id="showNewJobButton"
+                IconPosition="IconPosition.Start"
+                OnClick="() => OnNewJobDialogOpenChanged(true)"
+            >
+                <Icon>
+                    <LucideIcon Name="plus" Size="16" />
+                </Icon>
+                <ChildContent>
+                    @Localizer["App.CsvJobs.NewJobTitle"]
+                </ChildContent>
+            </BbButton>
         </div>
 
         @if (S3ConfigOptions.Value.ObjectRetentionDays > 0)
@@ -53,22 +67,30 @@ else
             </BbAlert>
         }
 
-        @if (_createError is not null)
-        {
-            <BbAlert Variant="AlertVariant.Danger">
-                <BbAlertTitle>@Localizer["App.CsvJobs.CreateErrorTitle"]</BbAlertTitle>
-                <BbAlertDescription>@_createError</BbAlertDescription>
-            </BbAlert>
-        }
+        @* The form is a dialog opened from the header, so the jobs - what a returning user comes
+           here to check on - are what the page opens on. Its width is a plain style for the
+           reason given on Namespaces.razor's create dialog. Only the fields scroll, so the submit
+           button stays in reach however many mapping rows there are. The dialog stays open while
+           the file uploads, its progress shown in here, and closes once the job exists. *@
+        <BbDialog Open="_showNewJobDialog" OpenChanged="OnNewJobDialogOpenChanged">
+            <BbDialogContent style="max-width: 56rem;">
+                <BbDialogHeader>
+                    <BbDialogTitle Class="bb:leading-tight">@Localizer["App.CsvJobs.NewJobTitle"]</BbDialogTitle>
+                    <BbDialogDescription>
+                        @Localizer["App.CsvJobs.NewJobDescription"]
+                    </BbDialogDescription>
+                </BbDialogHeader>
 
-        <BbCard>
-            <BbCardHeader>
-                <BbCardTitle>@Localizer["App.CsvJobs.NewJobTitle"]</BbCardTitle>
-                <BbCardDescription>
-                    @Localizer["App.CsvJobs.NewJobDescription"]
-                </BbCardDescription>
-            </BbCardHeader>
-            <BbCardContent Class="bb:space-y-6">
+                @* In here rather than on the page: the dialog's overlay covers the page. *@
+                @if (_createError is not null)
+                {
+                    <BbAlert Variant="AlertVariant.Danger">
+                        <BbAlertTitle>@Localizer["App.CsvJobs.CreateErrorTitle"]</BbAlertTitle>
+                        <BbAlertDescription>@_createError</BbAlertDescription>
+                    </BbAlert>
+                }
+
+                <div class="bb:space-y-6 bb:py-2" style="max-height: 65vh; overflow-y: auto; padding-right: 1rem;">
                 <div class="bb:grid bb:gap-4 bb:sm:grid-cols-3">
                     <BbField>
                         <BbFieldLabel For="direction">@Localizer["App.CsvJobs.Direction"]</BbFieldLabel>
@@ -382,43 +404,54 @@ else
                     </div>
                 }
 
-                <BbButton id="submitJobButton" OnClick="CreateJobAsync" Loading="_isCreating">
-                    @(RequiresInputFile
-                        ? Localizer["App.CsvJobs.UploadAndProcess"].Value
-                        : Localizer["App.CsvJobs.StartExport"].Value)
-                </BbButton>
+                </div>
 
                 @* Only while the browser-to-S3 PUT itself is in flight - the job already exists
                    server-side by this point (see StartUploadJobAsync), so this is purely local,
                    client-side upload progress, distinct from the per-job processing progress the
-                   jobs grid below shows once the runner picks the job up. *@
+                   jobs grid shows once the runner picks the job up. *@
                 @if (_uploadProgressPercent is { } uploadProgressPercent)
                 {
-                    <div class="bb:max-w-sm bb:space-y-1" id="uploadProgress">
+                    <div class="bb:space-y-1" id="uploadProgress">
                         <p class="bb:text-sm bb:text-muted-foreground">
                             @Localizer["App.CsvJobs.Uploading"]
                         </p>
                         <BbProgress Value="@uploadProgressPercent" ShowLabel="true" />
                     </div>
                 }
-            </BbCardContent>
-        </BbCard>
+
+                <BbDialogFooter>
+                    <BbButton Variant="ButtonVariant.Outline" OnClick="() => OnNewJobDialogOpenChanged(false)">
+                        @Localizer["App.Common.Cancel"]
+                    </BbButton>
+                    <BbButton id="submitJobButton" OnClick="CreateJobAsync" Loading="_isCreating">
+                        @(RequiresInputFile
+                            ? Localizer["App.CsvJobs.UploadAndProcess"].Value
+                            : Localizer["App.CsvJobs.StartExport"].Value)
+                    </BbButton>
+                </BbDialogFooter>
+            </BbDialogContent>
+        </BbDialog>
 
         <BbCard>
             <BbCardHeader>
-                <BbCardTitle>@Localizer["App.CsvJobs.JobsTitle"]</BbCardTitle>
-                @if (_jobs.Any(j => IsFinished(j.Status)))
-                {
-                    <BbCardAction>
+                @* A row of our own rather than BbCardAction, for the reason given on Home.razor:
+                   the shipped stylesheet lacks the grid utilities that put the action on the
+                   title's right, so it stacked underneath it instead. *@
+                <div class="bb:flex bb:items-center bb:justify-between bb:gap-4">
+                    <SectionTitle>@Localizer["App.CsvJobs.JobsTitle"]</SectionTitle>
+                    @if (_jobs.Any(j => IsFinished(j.Status)))
+                    {
                         <BbButton
                             Variant="ButtonVariant.Outline"
                             Size="ButtonSize.Small"
+                            Class="bb:shrink-0"
                             OnClick="() => _showClearFinishedConfirm = true"
                         >
                             @Localizer["App.CsvJobs.ClearFinishedJobs"]
                         </BbButton>
-                    </BbCardAction>
-                }
+                    }
+                </div>
             </BbCardHeader>
             <BbCardContent>
                 @if (_showClearFinishedConfirm)
@@ -716,6 +749,15 @@ else
     // theme detection in wwwroot/js/themeToggle.js.
     private TimeZoneInfo _browserTimeZone = TimeZoneInfo.Utc;
 
+    // The home page's "New job" links here with ?new=1, which opens the form straight away. A
+    // string rather than a bool: Blazor parses a bool query parameter strictly ("true"/"false"
+    // only) and throws on anything else, which would take the whole page down over a hand-edited
+    // or stale link. Anything but the two values below is simply ignored.
+    [SupplyParameterFromQuery(Name = "new")]
+    public string? OpenNewJob { get; set; }
+
+    private bool _showNewJobDialog;
+
     protected override async Task OnInitializedAsync()
     {
         if (!S3ConfigOptions.Value.IsEnabled)
@@ -730,6 +772,7 @@ else
         _namespaces = await NamespaceAppService.GetAllAsync(user, CancellationToken.None);
 
         await ReloadJobsAsync();
+        _showNewJobDialog = OpenNewJob is "1" or "true";
 
         _pollCts = new CancellationTokenSource();
         _pollTask = PollLoopAsync(_pollCts.Token);
@@ -924,6 +967,22 @@ else
         }
     }
 
+    // Also reached when the dialog closes itself - the overlay, Escape, or its own close button.
+    // The settings and mappings filled in so far are kept, so reopening after a stray click
+    // doesn't mean starting over. The file is not: closing the dialog tears its file picker out of
+    // the DOM, so the browser no longer holds the file _fileName and _detectedColumns describe -
+    // the same reason OnDirectionChanged drops them.
+    private void OnNewJobDialogOpenChanged(bool open)
+    {
+        _showNewJobDialog = open;
+        if (!open)
+        {
+            _createError = null;
+            _fileName = null;
+            _detectedColumns = [];
+        }
+    }
+
     private void AddMappingRow() => _columnMappings.Add(new ColumnMappingRow());
 
     private void RemoveMappingRow(ColumnMappingRow row) => _columnMappings.Remove(row);
@@ -1059,6 +1118,7 @@ else
 
         _detectedColumns = [];
         _fileName = null;
+        _showNewJobDialog = false;
         await ReloadJobsAsync();
     }
 
@@ -1082,6 +1142,7 @@ else
             Localizer["App.CsvJobs.JobCreated"]
         );
 
+        _showNewJobDialog = false;
         await ReloadJobsAsync();
     }
 

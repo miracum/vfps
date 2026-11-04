@@ -151,7 +151,9 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         //
         // Matching this page instead of the absence of a string removes both halves at once -
         // these assertions retry, so they also wait for the render the URL alone doesn't prove.
-        await Expect(Page.Locator("#originalValue")).ToBeVisibleAsync();
+        // The list's search field rather than the create form's: creating a pseudonym is a dialog
+        // now, closed until asked for, while the list is what the page opens on.
+        await Expect(Page.Locator("#pseudonymSearch")).ToBeVisibleAsync();
 
         // The heading is what actually pins the regression down: the name has to come back out of
         // the route parameter decoded, not as the escaped form the address bar shows. A page that
@@ -168,11 +170,10 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
     [Fact]
     public async Task DeleteNamespace_FocusesTheConfirmation_ThenRemovesTheNamespace()
     {
-        // Regression test: the confirmation panel renders at the top of the page while the button
-        // that opens it sits further down, so once the page scrolls at all, clicking Delete
-        // revealed the panel off-screen above the viewport and the click looked like it had done
-        // nothing. StartDeleteNamespace now asks for the confirmation input to be focused, which
-        // brings the panel into view.
+        // Regression test: the confirmation used to be a panel at the top of the page, far from
+        // the Delete button that opened it, so once the page scrolled at all the click looked like
+        // it had done nothing. It is an alert dialog now, which has to come up on screen with its
+        // name field focused, so the name can be typed straight away.
         var name = UniqueName();
 
         await GotoAsync("/ui/namespaces");
