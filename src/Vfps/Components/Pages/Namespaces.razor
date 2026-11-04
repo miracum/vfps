@@ -72,6 +72,29 @@
                     </BbAlertDialogDescription>
                 </BbAlertDialogHeader>
 
+                @* What is actually lost, in numbers: "every pseudonym it contains" reads the same for
+                   an empty test namespace and for one holding a whole study's patients. The count
+                   is the one the details panel fetched when this namespace was selected. A
+                   namespace with children can't be deleted at all, so that is said up front
+                   instead of after the name has been typed and the delete has failed. *@
+                @if (PendingDeleteChildren is { Count: > 0 } children)
+                {
+                    <BbAlert Variant="AlertVariant.Warning" id="deleteNamespaceBlockedByChildren">
+                        <BbAlertDescription>
+                            @string.Format(
+                                Localizer["App.Namespaces.DeleteBlockedByChildren"].Value,
+                                string.Join(", ", children.Select(c => c.Name))
+                            )
+                        </BbAlertDescription>
+                    </BbAlert>
+                }
+                else
+                {
+                    <p class="bb:text-sm bb:font-medium" id="deleteNamespacePseudonymCount">
+                        @PendingDeleteCountText
+                    </p>
+                }
+
                 @if (_deleteErrorMessage is not null)
                 {
                     <BbAlert Variant="AlertVariant.Danger">
@@ -86,6 +109,7 @@
                     Id="confirmDeleteNamespaceName"
                     Placeholder="@pendingDelete.Name"
                     AriaLabel="@Localizer["App.Common.Name"]"
+                    Disabled="@(PendingDeleteChildren.Count > 0)"
                 />
 
                 <BbAlertDialogFooter>
@@ -811,7 +835,48 @@
 
     private bool IsDeleteConfirmed =>
         _pendingDelete is not null
+        && PendingDeleteChildren.Count == 0
         && string.Equals(_deleteConfirmationText, _pendingDelete.Name, StringComparison.Ordinal);
+
+    // The pending delete's direct children among the namespaces the caller can read - deleting a
+    // namespace that has any fails with NamespaceHasChildrenException, so the dialog refuses up
+    // front. A child the caller can't read still makes the delete fail; that case keeps the
+    // server's own error message.
+    private IReadOnlyList<Namespace> PendingDeleteChildren =>
+        _pendingDelete is not null
+        && ChildrenByParent.TryGetValue(_pendingDelete.Name, out var children)
+            ? children
+            : [];
+
+    private string PendingDeleteCountText
+    {
+        get
+        {
+            var countsThisNamespace = string.Equals(
+                _selectedNamespaceName,
+                _pendingDelete?.Name,
+                StringComparison.Ordinal
+            );
+
+            if (countsThisNamespace && _isLoadingSelectedNamespacePseudonymCount)
+            {
+                return Localizer["App.Namespaces.PseudonymCountLoading"].Value;
+            }
+
+            // Unknown (the count failed, or something else is selected) says nothing rather than
+            // guessing; the dialog's own text still says every pseudonym goes.
+            return (countsThisNamespace ? _selectedNamespacePseudonymCount : null) switch
+            {
+                null => string.Empty,
+                0 => Localizer["App.Namespaces.DeleteCountNone"].Value,
+                1 => Localizer["App.Namespaces.DeleteCountOne"].Value,
+                { } count => string.Format(
+                    Localizer["App.Namespaces.DeleteCountMany"].Value,
+                    count.ToString("N0")
+                ),
+            };
+        }
+    }
 
     // Null for a freely-configurable method - non-null (e.g. Uuid4's 36) means the length field
     // is locked to this value, since the generator itself has no length concept to configure.

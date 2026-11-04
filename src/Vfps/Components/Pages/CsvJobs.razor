@@ -90,7 +90,13 @@ else
                     </BbAlert>
                 }
 
-                <div class="bb:space-y-6 bb:py-2" style="max-height: 65vh; overflow-y: auto; padding-right: 1rem;">
+                @* Hidden rather than removed while the review below is showing: taking the form out
+                   of the DOM would take its file picker - and the file the browser holds in it -
+                   with it, and the upload would have nothing to send. *@
+                <div
+                    class="bb:space-y-6 bb:py-2"
+                    style="max-height: 65vh; overflow-y: auto; padding-right: 1rem;@(_isReviewing ? " display: none;" : "")"
+                >
                 <div class="bb:grid bb:gap-4 bb:sm:grid-cols-3">
                     <BbField>
                         <BbFieldLabel For="direction">@Localizer["App.CsvJobs.Direction"]</BbFieldLabel>
@@ -420,15 +426,85 @@ else
                     </div>
                 }
 
+                @* The second step of a de-pseudonymization or an export: what is about to be revealed,
+                   in full, before anything starts. Both hand back original values in bulk into a
+                   file anyone who can download it can read - see SubmitJobAsync. *@
+                @if (_isReviewing)
+                {
+                    var isExport = SelectedDirection == PseudonymizationJobDirection.Export;
+                    <div class="bb:space-y-4 bb:py-2" id="revealReview">
+                        <div class="reveal-note bb:space-y-1">
+                            <p class="bb:flex bb:items-center bb:gap-2 bb:font-medium">
+                                <LucideIcon Name="eye" Size="16" />
+                                @Localizer["App.CsvJobs.ReviewTitle"]
+                            </p>
+                            <p class="bb:text-sm">
+                                @(isExport
+                                    ? Localizer["App.CsvJobs.ReviewExportBody"].Value
+                                    : Localizer["App.CsvJobs.ReviewDepseudonymizeBody"].Value)
+                            </p>
+                        </div>
+                        @if (isExport)
+                        {
+                            <dl class="detail-list bb:text-sm">
+                                <dt>@Localizer["App.CsvJobs.ReviewNamespace"]</dt>
+                                <dd class="bb:font-mono">@_namespaceMapping.Namespace</dd>
+                            </dl>
+                        }
+                        else
+                        {
+                            <dl class="detail-list bb:text-sm">
+                                <dt>@Localizer["App.CsvJobs.ReviewFile"]</dt>
+                                <dd class="bb:font-mono">@_fileName</dd>
+                            </dl>
+                            <table class="review-table bb:text-sm">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">@Localizer["App.CsvJobs.SourceColumn"]</th>
+                                        <th scope="col">@Localizer["App.CsvJobs.TargetColumn"]</th>
+                                        <th scope="col">@Localizer["App.CsvJobs.ReviewNamespace"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var mapping in _reviewMappings)
+                                    {
+                                        <tr>
+                                            <td class="bb:font-mono">@mapping.SourceColumn</td>
+                                            <td class="@(mapping.TargetColumn is null ? "bb:text-muted-foreground" : "bb:font-mono")">
+                                                @(mapping.TargetColumn ?? Localizer["App.CsvJobs.ReviewInPlace"].Value)
+                                            </td>
+                                            <td class="bb:font-mono">@mapping.Namespace</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                }
+
                 <BbDialogFooter>
-                    <BbButton Variant="ButtonVariant.Outline" OnClick="() => OnNewJobDialogOpenChanged(false)">
-                        @Localizer["App.Common.Cancel"]
-                    </BbButton>
-                    <BbButton id="submitJobButton" OnClick="CreateJobAsync" Loading="_isCreating">
-                        @(RequiresInputFile
-                            ? Localizer["App.CsvJobs.UploadAndProcess"].Value
-                            : Localizer["App.CsvJobs.StartExport"].Value)
-                    </BbButton>
+                    @if (_isReviewing)
+                    {
+                        <BbButton Variant="ButtonVariant.Outline" Disabled="_isCreating" OnClick="() => _isReviewing = false">
+                            @Localizer["App.Common.Back"]
+                        </BbButton>
+                        <BbButton id="confirmRevealJobButton" OnClick="SubmitJobAsync" Loading="_isCreating">
+                            @(SelectedDirection == PseudonymizationJobDirection.Export
+                                ? Localizer["App.CsvJobs.ReviewConfirmExport"].Value
+                                : Localizer["App.CsvJobs.ReviewConfirmDepseudonymize"].Value)
+                        </BbButton>
+                    }
+                    else
+                    {
+                        <BbButton Variant="ButtonVariant.Outline" OnClick="() => OnNewJobDialogOpenChanged(false)">
+                            @Localizer["App.Common.Cancel"]
+                        </BbButton>
+                        <BbButton id="submitJobButton" OnClick="SubmitJobAsync" Loading="_isCreating">
+                            @(RequiresInputFile
+                                ? Localizer["App.CsvJobs.UploadAndProcess"].Value
+                                : Localizer["App.CsvJobs.StartExport"].Value)
+                        </BbButton>
+                    }
                 </BbDialogFooter>
             </BbDialogContent>
         </BbDialog>
@@ -952,6 +1028,7 @@ else
     {
         // The previous direction's error no longer describes what the form now asks for.
         _createError = null;
+        _isReviewing = false;
 
         // Switching to or from Export tears the file picker out of the DOM (or puts a fresh,
         // empty one back), so the browser has no file selected any more while _fileName and
@@ -980,7 +1057,70 @@ else
             _createError = null;
             _fileName = null;
             _detectedColumns = [];
+            _isReviewing = false;
         }
+    }
+
+    // A de-pseudonymization or an export hands back original values in bulk, so its submit first
+    // shows exactly what is about to be revealed (the review panel), and only the explicit
+    // confirmation there starts the job. Every other direction starts straight away, as before.
+    private bool _isReviewing;
+    private IReadOnlyList<ColumnMapping> _reviewMappings = [];
+
+    private bool IsRevealingDirection =>
+        SelectedDirection
+            is PseudonymizationJobDirection.Depseudonymize
+                or PseudonymizationJobDirection.Export;
+
+    private async Task SubmitJobAsync()
+    {
+        if (IsRevealingDirection && !_isReviewing)
+        {
+            _isReviewing = PrepareReview();
+            return;
+        }
+
+        await CreateJobAsync();
+
+        // Back to the form whatever happened: on success the dialog has closed already, and on a
+        // failure the error is shown above the form it is about.
+        _isReviewing = false;
+    }
+
+    /// <summary>
+    /// The same checks the job would fail on, run before the review rather than after it - a
+    /// review of a job that can't start would only ask for a confirmation it then ignores.
+    /// </summary>
+    private bool PrepareReview()
+    {
+        _createError = null;
+
+        if (SelectedDirection == PseudonymizationJobDirection.Export)
+        {
+            if (string.IsNullOrWhiteSpace(_namespaceMapping.Namespace))
+            {
+                _createError = Localizer["App.CsvJobs.NoNamespaceError"];
+                return false;
+            }
+
+            _reviewMappings = [];
+            return true;
+        }
+
+        if (string.IsNullOrEmpty(_fileName))
+        {
+            _createError = Localizer["App.CsvJobs.NoFileError"];
+            return false;
+        }
+
+        var mappings = BuildColumnMappings();
+        if (mappings is null)
+        {
+            return false;
+        }
+
+        _reviewMappings = mappings;
+        return true;
     }
 
     private void AddMappingRow() => _columnMappings.Add(new ColumnMappingRow());

@@ -21,12 +21,19 @@
             </div>
         </div>
         <div class="bb:flex bb:flex-wrap bb:gap-2">
+            @* Marked as revealing - see .reveal-mark in wwwroot/app.css. *@
             <BbButton
                 id="showReverseLookupButton"
                 Variant="ButtonVariant.Outline"
+                IconPosition="IconPosition.Start"
                 OnClick="() => OnLookupDialogOpenChanged(true)"
             >
-                @Localizer["App.Pseudonyms.ReverseLookupTitle"]
+                <Icon>
+                    <LucideIcon Name="eye" Size="16" Class="reveal-mark" />
+                </Icon>
+                <ChildContent>
+                    @Localizer["App.Pseudonyms.ReverseLookupTitle"]
+                </ChildContent>
             </BbButton>
             <BbButton
                 id="showCreatePseudonymButton"
@@ -105,7 +112,10 @@
     <BbDialog Open="_showLookupDialog" OpenChanged="OnLookupDialogOpenChanged">
         <BbDialogContent>
             <BbDialogHeader>
-                <BbDialogTitle Class="bb:leading-tight">@Localizer["App.Pseudonyms.ReverseLookupTitle"]</BbDialogTitle>
+                <BbDialogTitle Class="bb:leading-tight bb:flex bb:items-center bb:gap-2">
+                    <LucideIcon Name="eye" Size="18" Class="reveal-mark" />
+                    @Localizer["App.Pseudonyms.ReverseLookupTitle"]
+                </BbDialogTitle>
                 <BbDialogDescription>@Localizer["App.Pseudonyms.ReverseLookupDescription"]</BbDialogDescription>
             </BbDialogHeader>
             <form class="bb:space-y-4" @onsubmit="ReverseLookupAsync">

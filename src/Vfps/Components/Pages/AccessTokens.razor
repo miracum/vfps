@@ -111,13 +111,6 @@
                     </BbAlert>
                 }
 
-                @if (_error is not null)
-                {
-                    <BbAlert Variant="AlertVariant.Danger">
-                        <BbAlertTitle>@Localizer["App.AccessTokens.ErrorTitle"]</BbAlertTitle>
-                        <BbAlertDescription>@_error</BbAlertDescription>
-                    </BbAlert>
-                }
 
                 @* The form is a dialog opened from the header, so the tokens themselves are what the
                    page opens on. The secret it produces is deliberately not shown in the dialog:
@@ -212,6 +205,29 @@
                 <AccessTokenUsageExamples />
             </aside>
         </div>
+
+        @* Revoking and deleting both cut off whatever still uses the token, and neither can be
+           taken back - so each one names the token and when it was last used before it goes. *@
+        <ConfirmDialog
+            Open="@(_pendingTokenAction is not null)"
+            Title="@PendingTokenActionTitle"
+            ConfirmLabel="@(_pendingTokenAction?.IsRevoke == true ? Localizer["App.AccessTokens.RevokeAction"].Value : Localizer["App.Common.Delete"].Value)"
+            ConfirmButtonId="confirmTokenActionButton"
+            IsBusy="_isConfirmingTokenAction"
+            Error="@_tokenActionError"
+            OnConfirm="ConfirmTokenActionAsync"
+            OnCancel="CancelTokenAction"
+        >
+            @if (_pendingTokenAction is { } pending)
+            {
+                @string.Format(
+                    pending.IsRevoke
+                        ? Localizer["App.AccessTokens.RevokeConfirmBody"].Value
+                        : Localizer["App.AccessTokens.DeleteConfirmBody"].Value,
+                    Format(pending.Token.LastUsedAt)
+                )
+            }
+        </ConfirmDialog>
     }
 </div>
 
@@ -227,10 +243,9 @@
     private bool _isCreating;
     private bool _showCreateDialog;
 
-    // A failed create is reported in the create dialog, where the form is; _error is for the
-    // revoke and delete actions on the page itself.
+    // A failed create is reported in the create dialog, a failed revoke or delete in its
+    // confirmation dialog - each next to the button that was clicked.
     private string? _createError;
-    private string? _error;
     private string? _issuedSecret;
     private bool _secretCopied;
     private TimeZoneInfo _browserTimeZone = TimeZoneInfo.Utc;
@@ -324,35 +339,72 @@
         }
     }
 
-    private async Task RevokeAsync(AccessToken token)
+    // The token a Revoke or Delete button was clicked for, waiting on its confirmation.
+    private sealed record PendingTokenAction(AccessToken Token, bool IsRevoke);
+
+    private PendingTokenAction? _pendingTokenAction;
+    private bool _isConfirmingTokenAction;
+    private string? _tokenActionError;
+
+    private string PendingTokenActionTitle =>
+        _pendingTokenAction is not { } pending
+            ? string.Empty
+            : string.Format(
+                pending.IsRevoke
+                    ? Localizer["App.AccessTokens.RevokeConfirmTitle"].Value
+                    : Localizer["App.AccessTokens.DeleteConfirmTitle"].Value,
+                pending.Token.Name
+            );
+
+    private void StartTokenAction(AccessToken token, bool isRevoke)
     {
-        _error = null;
-
-        try
-        {
-            await AccessTokenAppService.RevokeAsync(token.Id, _user, CancellationToken.None);
-        }
-        catch (Exception ex)
-        {
-            _error = ex.Message;
-        }
-
-        await LoadAsync();
+        _pendingTokenAction = new PendingTokenAction(token, isRevoke);
+        _tokenActionError = null;
     }
 
-    private async Task DeleteAsync(AccessToken token)
+    private void CancelTokenAction()
     {
-        _error = null;
+        _pendingTokenAction = null;
+        _tokenActionError = null;
+    }
+
+    private async Task ConfirmTokenActionAsync()
+    {
+        // Same re-entrancy guard as CreateNamespaceAsync: a second click can race ahead of the
+        // render that disables the button.
+        if (_isConfirmingTokenAction || _pendingTokenAction is not { } pending)
+        {
+            return;
+        }
+
+        _isConfirmingTokenAction = true;
+        _tokenActionError = null;
 
         try
         {
-            await AccessTokenAppService.DeleteAsync(token.Id, _user, CancellationToken.None);
+            if (pending.IsRevoke)
+            {
+                await AccessTokenAppService.RevokeAsync(pending.Token.Id, _user, CancellationToken.None);
+            }
+            else
+            {
+                await AccessTokenAppService.DeleteAsync(pending.Token.Id, _user, CancellationToken.None);
+            }
+
+            _pendingTokenAction = null;
         }
         catch (Exception ex)
         {
-            _error = ex.Message;
+            // Left open with the reason, so the action can be retried or abandoned.
+            _tokenActionError = ex.Message;
+        }
+        finally
+        {
+            _isConfirmingTokenAction = false;
         }
 
+        // Reloaded either way: on success to show the change, on failure because the likeliest
+        // cause is someone else having already revoked or deleted it.
         await LoadAsync();
     }
 
@@ -424,7 +476,7 @@
                             <div class="bb:flex bb:flex-wrap bb:items-center bb:justify-between bb:gap-2">
                                 <div class="bb:flex bb:flex-wrap bb:items-center bb:gap-2">
                                     <AccessTokenStatusBadge Token="token" />
-                                    <span class="bb:text-sm bb:font-medium">@token.Name</span>
+                                    <span class="break-anywhere bb:text-sm bb:font-medium">@token.Name</span>
                                     @if (showOwner)
                                     {
                                         <BbBadge Variant="BadgeVariant.Outline">
@@ -443,7 +495,7 @@
                                             id="@($"revokeToken-{token.Id}")"
                                             Variant="ButtonVariant.Outline"
                                             Size="ButtonSize.Small"
-                                            OnClick="@(() => RevokeAsync(token))"
+                                            OnClick="@(() => StartTokenAction(token, isRevoke: true))"
                                         >
                                             @Localizer["App.AccessTokens.RevokeAction"]
                                         </BbButton>
@@ -453,7 +505,7 @@
                                         Variant="ButtonVariant.Outline"
                                         Size="ButtonSize.Small"
                                         Class="destructive-action"
-                                        OnClick="@(() => DeleteAsync(token))"
+                                        OnClick="@(() => StartTokenAction(token, isRevoke: false))"
                                     >
                                         @Localizer["App.Common.Delete"]
                                     </BbButton>

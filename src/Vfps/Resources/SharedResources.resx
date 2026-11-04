@@ -931,9 +931,6 @@
   <data name="App.ServiceAccounts.DeleteAction" xml:space="preserve">
     <value>Delete account</value>
   </data>
-  <data name="App.ServiceAccounts.DeleteConfirm" xml:space="preserve">
-    <value>Delete '{0}'? Its access grants and every token issued for it go with it.</value>
-  </data>
   <data name="App.ServiceAccounts.DescriptionLabel" xml:space="preserve">
     <value>Description</value>
   </data>
@@ -1071,5 +1068,71 @@
   </data>
   <data name="App.Projects.UnavailableTitle" xml:space="preserve">
     <value>Project unavailable</value>
+  </data>
+  <data name="App.Common.Back" xml:space="preserve">
+    <value>Back</value>
+  </data>
+  <data name="App.AccessTokens.RevokeConfirmTitle" xml:space="preserve">
+    <value>Revoke '{0}'?</value>
+  </data>
+  <data name="App.AccessTokens.RevokeConfirmBody" xml:space="preserve">
+    <value>Anything still using it loses access - at once on this replica, everywhere else within the grant cache duration. Last used: {0}. A revoked token can't be reinstated; issue a new one instead.</value>
+  </data>
+  <data name="App.AccessTokens.DeleteConfirmTitle" xml:space="preserve">
+    <value>Delete '{0}'?</value>
+  </data>
+  <data name="App.AccessTokens.DeleteConfirmBody" xml:space="preserve">
+    <value>The token stops working, and its record, including when it was last used, is removed for good. Last used: {0}.</value>
+  </data>
+  <data name="App.ServiceAccounts.DeleteConfirmBody" xml:space="preserve">
+    <value>Its access grants and every token issued for it are deleted with it, so anything that authenticates as it stops working.</value>
+  </data>
+  <data name="App.AccessControl.DeleteGrantConfirm" xml:space="preserve">
+    <value>Delete this grant? {0} loses {1} on this namespace.</value>
+  </data>
+  <data name="App.AccessControl.ReverseLookupWarning" xml:space="preserve">
+    <value>Reverse lookup lets the grantee turn pseudonyms in this namespace back into the original, identifying values - one at a time in the UI, or in bulk through de-pseudonymization jobs and the API.</value>
+  </data>
+  <data name="App.AccessControl.ReverseLookupConfirmAction" xml:space="preserve">
+    <value>Allow reverse lookup</value>
+  </data>
+  <data name="App.Namespaces.DeleteCountNone" xml:space="preserve">
+    <value>It holds no pseudonyms.</value>
+  </data>
+  <data name="App.Namespaces.DeleteCountOne" xml:space="preserve">
+    <value>Its 1 pseudonym is deleted with it.</value>
+  </data>
+  <data name="App.Namespaces.DeleteCountMany" xml:space="preserve">
+    <value>Its {0} pseudonyms are deleted with it.</value>
+  </data>
+  <data name="App.Namespaces.DeleteBlockedByChildren" xml:space="preserve">
+    <value>It can't be deleted while it has child namespaces. Delete these first: {0}</value>
+  </data>
+  <data name="App.CsvJobs.ReviewTitle" xml:space="preserve">
+    <value>Check before revealing original values</value>
+  </data>
+  <data name="App.CsvJobs.ReviewDepseudonymizeBody" xml:space="preserve">
+    <value>The output file will contain the original, identifying values these pseudonyms stand for. Anyone who can download it can read them.</value>
+  </data>
+  <data name="App.CsvJobs.ReviewExportBody" xml:space="preserve">
+    <value>Every original value in this namespace is written to the output file next to its pseudonym. Anyone who can download it can read them.</value>
+  </data>
+  <data name="App.CsvJobs.ReviewFile" xml:space="preserve">
+    <value>File</value>
+  </data>
+  <data name="App.CsvJobs.ReviewNamespace" xml:space="preserve">
+    <value>Namespace</value>
+  </data>
+  <data name="App.CsvJobs.ReviewInPlace" xml:space="preserve">
+    <value>in place</value>
+  </data>
+  <data name="App.CsvJobs.ReviewConfirmDepseudonymize" xml:space="preserve">
+    <value>Reveal original values</value>
+  </data>
+  <data name="App.CsvJobs.ReviewConfirmExport" xml:space="preserve">
+    <value>Export original values</value>
+  </data>
+  <data name="App.CsvJobs.NoFileError" xml:space="preserve">
+    <value>Pick a CSV file to upload.</value>
   </data>
 </root>

@@ -97,11 +97,18 @@
             </div>
             <div class="bb:flex bb:items-center bb:gap-2">
                 <BbSwitch @bind-Checked="_newGrant.CanReverseLookup" Id="newGrantCanReverseLookup" />
-                <label for="newGrantCanReverseLookup" class="bb:text-sm">
-                    @Localizer["App.AccessControl.ReverseLookup"]
-                </label>
+                @ReverseLookupLabel("newGrantCanReverseLookup")
             </div>
         </div>
+        @* Read and write work with pseudonyms; this one hands back the identifying values they
+           stand for. Said in so many words while it's switched on, so it is never granted as if
+           it were just one more permission next to the other two. *@
+        @if (_newGrant.CanReverseLookup)
+        {
+            <p class="reveal-note bb:mt-3 bb:text-sm" id="newGrantReverseLookupWarning">
+                @Localizer["App.AccessControl.ReverseLookupWarning"]
+            </p>
+        }
         <BbButton
             id="addAccessGrantButton"
             Type="ButtonType.Submit"
@@ -148,14 +155,48 @@
                                 </BbBadge>
                                 <span class="bb:text-sm">@grant.Grantee</span>
                             </div>
-                            <BbButton
-                                id="@($"deleteGrant-{grant.Id}")"
-                                Variant="ButtonVariant.Destructive"
-                                Size="ButtonSize.Small"
-                                OnClick="@(() => DeleteGrantAsync(grant))"
-                            >
-                                @Localizer["App.Common.Delete"]
-                            </BbButton>
+                            @* Confirmed in place rather than in a dialog: this already sits in one,
+                               and the row it would delete is right here. *@
+                            @if (_pendingDeleteGrantId == grant.Id)
+                            {
+                                <div class="bb:flex bb:flex-wrap bb:items-center bb:gap-2">
+                                    <span class="bb:text-sm">
+                                        @string.Format(
+                                            Localizer["App.AccessControl.DeleteGrantConfirm"].Value,
+                                            grant.Grantee,
+                                            PermissionSummary(grant)
+                                        )
+                                    </span>
+                                    <BbButton
+                                        Variant="ButtonVariant.Outline"
+                                        Size="ButtonSize.Small"
+                                        OnClick="@(() => _pendingDeleteGrantId = null)"
+                                    >
+                                        @Localizer["App.Common.Cancel"]
+                                    </BbButton>
+                                    <BbButton
+                                        id="@($"confirmDeleteGrant-{grant.Id}")"
+                                        Variant="ButtonVariant.Destructive"
+                                        Size="ButtonSize.Small"
+                                        Loading="@(_deletingGrantId == grant.Id)"
+                                        OnClick="@(() => DeleteGrantAsync(grant))"
+                                    >
+                                        @Localizer["App.Common.Delete"]
+                                    </BbButton>
+                                </div>
+                            }
+                            else
+                            {
+                                <BbButton
+                                    id="@($"deleteGrant-{grant.Id}")"
+                                    Variant="ButtonVariant.Outline"
+                                    Size="ButtonSize.Small"
+                                    Class="destructive-action"
+                                    OnClick="@(() => _pendingDeleteGrantId = grant.Id)"
+                                >
+                                    @Localizer["App.Common.Delete"]
+                                </BbButton>
+                            }
                         </div>
                         <div class="bb:mt-2 bb:flex bb:flex-wrap bb:items-center bb:gap-4">
                             <div class="bb:flex bb:items-center bb:gap-2">
@@ -163,7 +204,7 @@
                                     @bind-Checked="grant.CanRead"
                                     @bind-Checked:after="@(() => SaveGrantAsync(grant))"
                                     Id="@($"grant-{grant.Id}-read")"
-                                    Disabled="@(_savingGrantId == grant.Id)"
+                                    Disabled="@(_savingGrantId == grant.Id || _pendingReverseLookupGrantId == grant.Id)"
                                 />
                                 <label for="@($"grant-{grant.Id}-read")" class="bb:text-sm">
                                     @Localizer["App.AccessControl.Read"]
@@ -174,7 +215,7 @@
                                     @bind-Checked="grant.CanWrite"
                                     @bind-Checked:after="@(() => SaveGrantAsync(grant))"
                                     Id="@($"grant-{grant.Id}-write")"
-                                    Disabled="@(_savingGrantId == grant.Id)"
+                                    Disabled="@(_savingGrantId == grant.Id || _pendingReverseLookupGrantId == grant.Id)"
                                 />
                                 <label for="@($"grant-{grant.Id}-write")" class="bb:text-sm">
                                     @Localizer["App.AccessControl.Write"]
@@ -183,15 +224,40 @@
                             <div class="bb:flex bb:items-center bb:gap-2">
                                 <BbSwitch
                                     @bind-Checked="grant.CanReverseLookup"
-                                    @bind-Checked:after="@(() => SaveGrantAsync(grant))"
+                                    @bind-Checked:after="@(() => OnReverseLookupToggledAsync(grant))"
                                     Id="@($"grant-{grant.Id}-reverse-lookup")"
                                     Disabled="@(_savingGrantId == grant.Id)"
                                 />
-                                <label for="@($"grant-{grant.Id}-reverse-lookup")" class="bb:text-sm">
-                                    @Localizer["App.AccessControl.ReverseLookup"]
-                                </label>
+                                @ReverseLookupLabel($"grant-{grant.Id}-reverse-lookup")
                             </div>
                         </div>
+                        @* The other two switches save the moment they flip. Switching this one on
+                           waits for an explicit yes, for the reason given on the add form above. *@
+                        @if (_pendingReverseLookupGrantId == grant.Id)
+                        {
+                            <div class="bb:mt-3 bb:space-y-2" id="@($"grant-{grant.Id}-reverse-lookup-confirm")">
+                                <p class="reveal-note bb:text-sm">
+                                    @Localizer["App.AccessControl.ReverseLookupWarning"]
+                                </p>
+                                <div class="bb:flex bb:flex-wrap bb:gap-2">
+                                    <BbButton
+                                        Variant="ButtonVariant.Outline"
+                                        Size="ButtonSize.Small"
+                                        OnClick="@(() => CancelReverseLookup(grant))"
+                                    >
+                                        @Localizer["App.Common.Cancel"]
+                                    </BbButton>
+                                    <BbButton
+                                        id="@($"grant-{grant.Id}-reverse-lookup-allow")"
+                                        Size="ButtonSize.Small"
+                                        Loading="@(_savingGrantId == grant.Id)"
+                                        OnClick="@(() => AllowReverseLookupAsync(grant))"
+                                    >
+                                        @Localizer["App.AccessControl.ReverseLookupConfirmAction"]
+                                    </BbButton>
+                                </div>
+                            </div>
+                        }
                     </div>
                 }
             </div>
@@ -253,6 +319,15 @@
     private string? _error;
     private Guid? _savingGrantId;
 
+    // The grant whose Delete was clicked, waiting on its in-place confirmation, and the one being
+    // deleted right now.
+    private Guid? _pendingDeleteGrantId;
+    private Guid? _deletingGrantId;
+
+    // The grant whose reverse-lookup switch was turned on but not yet confirmed. Its switch shows
+    // on; nothing has been saved.
+    private Guid? _pendingReverseLookupGrantId;
+
     // The namespace the currently loaded grants belong to. Blazor reuses this component instance
     // when the host reopens its dialog for a different namespace, so a parameter change has to
     // reload rather than relying on OnInitializedAsync running again.
@@ -271,6 +346,11 @@
 
     private async Task LoadAsync()
     {
+        // Whatever was waiting on an in-row confirmation refers to grants about to be replaced by
+        // what the server holds now.
+        _pendingDeleteGrantId = null;
+        _pendingReverseLookupGrantId = null;
+
         if (AreServiceAccountsEnabled)
         {
             _serviceAccounts =
@@ -361,8 +441,52 @@
         }
     }
 
+    // Turning reverse lookup on asks first (see the markup); turning it off - including off again
+    // while that question is still open - goes through like any other switch, or simply drops
+    // the question, since nothing was saved for it.
+    private async Task OnReverseLookupToggledAsync(NamespaceAccessGrant grant)
+    {
+        if (grant.CanReverseLookup)
+        {
+            _pendingReverseLookupGrantId = grant.Id;
+            return;
+        }
+
+        if (_pendingReverseLookupGrantId == grant.Id)
+        {
+            _pendingReverseLookupGrantId = null;
+            return;
+        }
+
+        await SaveGrantAsync(grant);
+    }
+
+    private void CancelReverseLookup(NamespaceAccessGrant grant)
+    {
+        grant.CanReverseLookup = false;
+        _pendingReverseLookupGrantId = null;
+    }
+
+    private async Task AllowReverseLookupAsync(NamespaceAccessGrant grant)
+    {
+        if (_savingGrantId == grant.Id)
+        {
+            return;
+        }
+
+        await SaveGrantAsync(grant);
+        _pendingReverseLookupGrantId = null;
+    }
+
     private async Task DeleteGrantAsync(NamespaceAccessGrant grant)
     {
+        // Same re-entrancy guard as everywhere else a click starts a server call.
+        if (_deletingGrantId == grant.Id)
+        {
+            return;
+        }
+
+        _deletingGrantId = grant.Id;
         _error = null;
 
         try
@@ -373,12 +497,26 @@
         {
             _error = ex.Message;
         }
+        finally
+        {
+            _deletingGrantId = null;
+            _pendingDeleteGrantId = null;
+        }
 
         // Reloaded either way: on success to drop the row, on failure because the most likely
         // cause is another admin having already deleted it.
         await LoadAsync();
         await OnChanged.InvokeAsync();
     }
+
+    // The reverse-lookup switch's label, in the reveal style (wwwroot/app.css) wherever it
+    // appears, so the one permission that hands back identifying data never reads like the two
+    // beside it.
+    private RenderFragment ReverseLookupLabel(string forId) =>
+        @<label for="@forId" class="reveal-mark bb:inline-flex bb:items-center bb:gap-1 bb:text-sm">
+            <LucideIcon Name="eye" Size="14" />
+            @Localizer["App.AccessControl.ReverseLookup"]
+        </label>;
 
     /// <summary>
     /// Switching the grantee type clears the grantee, because the old value can't be right for

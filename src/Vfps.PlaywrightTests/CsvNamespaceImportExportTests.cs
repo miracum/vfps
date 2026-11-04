@@ -88,6 +88,11 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
             await Page.SelectOptionAsync("#jobNamespace", namespaceName);
             await Page.ClickAsync("#submitJobButton");
 
+            // An export hands back every original value, so the submit shows what it is about
+            // to reveal and waits for an explicit confirmation before the job starts.
+            await Expect(Page.Locator("#revealReview")).ToContainTextAsync(namespaceName);
+            await Page.ClickAsync("#confirmRevealJobButton");
+
             var exportRow = JobRow(namespaceName);
             await Expect(exportRow).ToContainTextAsync("Completed", RowTimeout());
             await Expect(exportRow).ToContainTextAsync($"{pairs.Length} rows");

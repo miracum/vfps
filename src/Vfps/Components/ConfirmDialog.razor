@@ -1,0 +1,92 @@
+@*
+    A yes/no confirmation for an action that can't be taken back - revoking or deleting a token,
+    deleting a service account. An alert dialog: it opens over the button that asked for it, can
+    only be left through its own two buttons (not a stray click outside, not Escape), and puts
+    focus on Cancel, its first button, so the safe choice is the one Enter picks. A failure stays
+    in here next to the button rather than on the page behind the overlay; the dialog stays open
+    so the action can be retried or abandoned.
+
+    The host owns the state: Open is whether there is something pending, OnConfirm does the work
+    and clears it, OnCancel just clears it.
+*@
+
+<BbAlertDialog Open="@Open" OpenChanged="OnOpenChanged">
+    <BbAlertDialogContent>
+        @if (Open)
+        {
+            <BbAlertDialogHeader>
+                <BbAlertDialogTitle Class="bb:leading-tight">@Title</BbAlertDialogTitle>
+                @if (ChildContent is not null)
+                {
+                    <BbAlertDialogDescription>@ChildContent</BbAlertDialogDescription>
+                }
+            </BbAlertDialogHeader>
+
+            @if (Error is not null)
+            {
+                <BbAlert Variant="AlertVariant.Danger">
+                    <BbAlertDescription>@Error</BbAlertDescription>
+                </BbAlert>
+            }
+
+            <BbAlertDialogFooter>
+                <BbButton Variant="ButtonVariant.Outline" Disabled="@IsBusy" OnClick="OnCancel">
+                    @Localizer["App.Common.Cancel"]
+                </BbButton>
+                <BbButton
+                    id="@ConfirmButtonId"
+                    Variant="ButtonVariant.Destructive"
+                    Loading="@IsBusy"
+                    OnClick="OnConfirm"
+                >
+                    @ConfirmLabel
+                </BbButton>
+            </BbAlertDialogFooter>
+        }
+    </BbAlertDialogContent>
+</BbAlertDialog>
+
+@code {
+    [Inject]
+    private IStringLocalizer<SharedResources> Localizer { get; set; } = null!;
+
+    [Parameter]
+    public bool Open { get; set; }
+
+    [Parameter, EditorRequired]
+    public required string Title { get; set; }
+
+    /// <summary>What the action does and what it costs - the dialog's description.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter, EditorRequired]
+    public required string ConfirmLabel { get; set; }
+
+    [Parameter]
+    public string? ConfirmButtonId { get; set; }
+
+    /// <summary>Set while OnConfirm runs - spins the confirm button and locks Cancel.</summary>
+    [Parameter]
+    public bool IsBusy { get; set; }
+
+    /// <summary>Why the last attempt failed, shown above the buttons.</summary>
+    [Parameter]
+    public string? Error { get; set; }
+
+    [Parameter]
+    public EventCallback OnConfirm { get; set; }
+
+    [Parameter]
+    public EventCallback OnCancel { get; set; }
+
+    // An alert dialog only closes through its own buttons, but anything that does close it is a
+    // cancel as far as the host is concerned.
+    private async Task OnOpenChanged(bool open)
+    {
+        if (!open)
+        {
+            await OnCancel.InvokeAsync();
+        }
+    }
+}

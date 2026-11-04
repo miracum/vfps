@@ -217,6 +217,26 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
     }
 
     [Fact]
+    public async Task DeleteNamespace_WithAChild_IsRefusedBeforeTheNameIsTyped()
+    {
+        // A namespace with children can't be deleted - the server refuses - so the dialog says so
+        // and names the child up front, instead of letting the name be typed only to fail.
+        var parent = UniqueName();
+        var child = UniqueName();
+
+        await GotoAsync("/ui/namespaces");
+        await CreateNamespaceAsync(parent);
+        await CreateNamespaceAsync(child, parent: parent);
+
+        await SelectNamespaceAsync(parent);
+        await Page.ClickAsync("#deleteSelectedNamespaceButton");
+
+        await Expect(Page.Locator("#deleteNamespaceBlockedByChildren")).ToContainTextAsync(child);
+        await Expect(Page.Locator("#confirmDeleteNamespaceName")).ToBeDisabledAsync();
+        await Expect(Page.Locator("#confirmDeleteNamespaceButton")).ToBeDisabledAsync();
+    }
+
+    [Fact]
     public async Task EditDescription_UpdatesTheDetailsPanel_AndClearingItRemovesTheDescription()
     {
         var name = UniqueName();

@@ -931,9 +931,6 @@
   <data name="App.ServiceAccounts.DeleteAction" xml:space="preserve">
     <value>Konto löschen</value>
   </data>
-  <data name="App.ServiceAccounts.DeleteConfirm" xml:space="preserve">
-    <value>'{0}' löschen? Die Zugriffsregeln und alle dafür ausgestellten Token werden mitgelöscht.</value>
-  </data>
   <data name="App.ServiceAccounts.DescriptionLabel" xml:space="preserve">
     <value>Beschreibung</value>
   </data>
@@ -1071,5 +1068,71 @@
   </data>
   <data name="App.Projects.UnavailableTitle" xml:space="preserve">
     <value>Projekt nicht verfügbar</value>
+  </data>
+  <data name="App.Common.Back" xml:space="preserve">
+    <value>Zurück</value>
+  </data>
+  <data name="App.AccessTokens.RevokeConfirmTitle" xml:space="preserve">
+    <value>'{0}' widerrufen?</value>
+  </data>
+  <data name="App.AccessTokens.RevokeConfirmBody" xml:space="preserve">
+    <value>Alles, was es noch verwendet, verliert den Zugriff - auf diesem Replikat sofort, überall sonst innerhalb der Grant-Cache-Dauer. Zuletzt verwendet: {0}. Ein widerrufenes Token lässt sich nicht wiederherstellen; stellen Sie stattdessen ein neues aus.</value>
+  </data>
+  <data name="App.AccessTokens.DeleteConfirmTitle" xml:space="preserve">
+    <value>'{0}' löschen?</value>
+  </data>
+  <data name="App.AccessTokens.DeleteConfirmBody" xml:space="preserve">
+    <value>Das Token funktioniert nicht mehr, und sein Eintrag samt der letzten Verwendung wird endgültig entfernt. Zuletzt verwendet: {0}.</value>
+  </data>
+  <data name="App.ServiceAccounts.DeleteConfirmBody" xml:space="preserve">
+    <value>Seine Zugriffsregeln und alle dafür ausgestellten Token werden mitgelöscht; alles, was sich damit anmeldet, funktioniert danach nicht mehr.</value>
+  </data>
+  <data name="App.AccessControl.DeleteGrantConfirm" xml:space="preserve">
+    <value>Diese Berechtigung löschen? {0} verliert {1} für diesen Namespace.</value>
+  </data>
+  <data name="App.AccessControl.ReverseLookupWarning" xml:space="preserve">
+    <value>Reverse-Lookup erlaubt es, Pseudonyme in diesem Namespace wieder in die ursprünglichen, identifizierenden Werte zurückzuverwandeln - einzeln in der Oberfläche oder in großen Mengen über De-Pseudonymisierungsjobs und die API.</value>
+  </data>
+  <data name="App.AccessControl.ReverseLookupConfirmAction" xml:space="preserve">
+    <value>Reverse-Lookup erlauben</value>
+  </data>
+  <data name="App.Namespaces.DeleteCountNone" xml:space="preserve">
+    <value>Er enthält keine Pseudonyme.</value>
+  </data>
+  <data name="App.Namespaces.DeleteCountOne" xml:space="preserve">
+    <value>Sein 1 Pseudonym wird mitgelöscht.</value>
+  </data>
+  <data name="App.Namespaces.DeleteCountMany" xml:space="preserve">
+    <value>Seine {0} Pseudonyme werden mitgelöscht.</value>
+  </data>
+  <data name="App.Namespaces.DeleteBlockedByChildren" xml:space="preserve">
+    <value>Er kann nicht gelöscht werden, solange er untergeordnete Namespaces hat. Löschen Sie zuerst: {0}</value>
+  </data>
+  <data name="App.CsvJobs.ReviewTitle" xml:space="preserve">
+    <value>Vor dem Offenlegen der Originalwerte prüfen</value>
+  </data>
+  <data name="App.CsvJobs.ReviewDepseudonymizeBody" xml:space="preserve">
+    <value>Die Ausgabedatei enthält die ursprünglichen, identifizierenden Werte hinter diesen Pseudonymen. Wer sie herunterladen kann, kann sie lesen.</value>
+  </data>
+  <data name="App.CsvJobs.ReviewExportBody" xml:space="preserve">
+    <value>Jeder Originalwert dieses Namespace wird mit seinem Pseudonym in die Ausgabedatei geschrieben. Wer sie herunterladen kann, kann sie lesen.</value>
+  </data>
+  <data name="App.CsvJobs.ReviewFile" xml:space="preserve">
+    <value>Datei</value>
+  </data>
+  <data name="App.CsvJobs.ReviewNamespace" xml:space="preserve">
+    <value>Namespace</value>
+  </data>
+  <data name="App.CsvJobs.ReviewInPlace" xml:space="preserve">
+    <value>an Ort und Stelle</value>
+  </data>
+  <data name="App.CsvJobs.ReviewConfirmDepseudonymize" xml:space="preserve">
+    <value>Originalwerte offenlegen</value>
+  </data>
+  <data name="App.CsvJobs.ReviewConfirmExport" xml:space="preserve">
+    <value>Originalwerte exportieren</value>
+  </data>
+  <data name="App.CsvJobs.NoFileError" xml:space="preserve">
+    <value>Wählen Sie eine CSV-Datei zum Hochladen aus.</value>
   </data>
 </root>
