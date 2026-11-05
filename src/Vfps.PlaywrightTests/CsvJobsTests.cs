@@ -81,7 +81,8 @@ public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
             await GotoAsync("/ui/csv-jobs?new=1");
             await Page.SelectOptionAsync("#pseudonymizeMode", "FailIfMissing");
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
-            await Page.GetByLabel("Source column").SelectOptionAsync("patient_id");
+            // A text box until the file's header row has been read, and only then a dropdown.
+            await Page.Locator("select[id^=sourceColumn-]").SelectOptionAsync("patient_id");
             await Page.Locator("[id^=namespace-]").SelectOptionAsync(namespaceName);
             await Page.ClickAsync("#submitJobButton");
 
