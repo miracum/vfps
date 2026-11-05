@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793914616328,
+  "lastUpdate": 1793916905032,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -15654,6 +15654,66 @@ window.BENCHMARK_DATA = {
             "value": 927.400584440965,
             "unit": "ns",
             "range": "± 1.0935381362360481"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "6737b1dda062055e2631fe666a1602cec040db9b",
+          "message": "chore(deps): updated to csvhelper v34 (#438)\n\n* feat(ui): added impeccable and reviewed via it\n\n* feat(ui): impeccable refactor\n\n* language revising\n\n* ui revision\n\n* docs: updated screenshots\n\n* lint\n\n* fmt\n\n* fix: cves\n\n* chore(deps): updated to csvhelper v34\n\n---------\n\nCo-authored-by: copilot-swe-agent[bot] <198982749+Copilot@users.noreply.github.com>\nCo-authored-by: chgl <5307555+chgl@users.noreply.github.com>",
+          "timestamp": "2026-11-05T23:11:17+01:00",
+          "tree_id": "d6b89b53242086e7e2fefaa30ebe0643b6dc1be9",
+          "url": "https://github.com/miracum/vfps/commit/6737b1dda062055e2631fe666a1602cec040db9b"
+        },
+        "date": 1793916904265,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 897.592936882606,
+            "unit": "ns",
+            "range": "± 3.3136948959147974"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 749.9778023401897,
+            "unit": "ns",
+            "range": "± 3.8711434327319356"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 779.8185572942098,
+            "unit": "ns",
+            "range": "± 0.6429120683464572"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 868.7259109360831,
+            "unit": "ns",
+            "range": "± 3.2309866080210083"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 939.3138157980783,
+            "unit": "ns",
+            "range": "± 2.2426470787156028"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 907.940219116211,
+            "unit": "ns",
+            "range": "± 4.239815667462211"
           }
         ]
       }
