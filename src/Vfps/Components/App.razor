@@ -1,9 +1,10 @@
 @using Microsoft.AspNetCore.Components.Web
+@inject IStringLocalizer<SharedResources> Localizer
 <!DOCTYPE html>
 @* BlazorBlueprint's own density switch: compact scales its whole spacing unit (and with it every
    control height, padding and gap) to 7/8, which suits an admin tool used for long sessions
    better than the default's marketing-site generosity. *@
-<html lang="en" data-bb-density="compact">
+<html lang="@System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName" data-bb-density="compact">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -33,10 +34,40 @@
 </head>
 <body>
     <Routes @rendermode="InteractiveServer" />
+    @* Instead of the framework's default, a white box whose text inherits the page's - nearly
+       unreadable in the dark theme - and English whatever the language. Blazor finds this element
+       by its id and puts the state it is in on it as a class: see .reconnect-modal in
+       wwwroot/app.css. *@
+    <div id="components-reconnect-modal" class="reconnect-modal" data-nosnippet>
+        <div class="reconnect-card" role="alert">
+            <p class="reconnect-trying">@Localizer["App.Reconnect.Trying"]</p>
+            <div class="reconnect-lost">
+                <p>@Localizer["App.Reconnect.Lost"]</p>
+                <button
+                    type="button"
+                    onclick="location.reload()"
+                    class="bb:inline-flex bb:h-9 bb:items-center bb:justify-center bb:rounded-md bb:bg-primary bb:px-3 bb:text-sm bb:font-medium bb:text-primary-foreground"
+                >
+                    @Localizer["App.Reconnect.Reload"]
+                </button>
+            </div>
+        </div>
+    </div>
     <script src="/ui/_framework/blazor.web.js"></script>
     <script src="/ui/js/clipboard.js"></script>
     <script src="/ui/js/csvUpload.js"></script>
     <script src="/ui/js/themeToggle.js"></script>
     <script src="/ui/js/timezone.js"></script>
+    <script>
+        // "rejected" means the server is back but no longer knows this session, typically after a
+        // restart. Nothing further can come of waiting, and a reload is all it takes.
+        document
+            .getElementById("components-reconnect-modal")
+            .addEventListener("components-reconnect-state-changed", function (event) {
+                if (event.detail.state === "rejected") {
+                    location.reload();
+                }
+            });
+    </script>
 </body>
 </html>

@@ -21,7 +21,7 @@
 <div class="bb:mx-auto bb:space-y-6">
     <div class="bb:flex bb:flex-wrap bb:items-center bb:justify-between bb:gap-2">
         <div class="bb:flex bb:items-center bb:gap-2">
-            <LucideIcon Name="key-round" Size="24" Class="bb:text-primary" />
+            <LucideIcon aria-hidden="true" Name="key-round" Size="24" Class="bb:shrink-0 bb:text-primary" />
             <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Nav.AccessTokens"]</h1>
         </div>
         @if (IsUsable)
@@ -32,7 +32,7 @@
                 OnClick="() => OnCreateDialogOpenChanged(true)"
             >
                 <Icon>
-                    <LucideIcon Name="plus" Size="16" />
+                    <LucideIcon aria-hidden="true" Name="plus" Size="16" />
                 </Icon>
                 <ChildContent>
                     @Localizer["App.AccessTokens.CreateAction"]
@@ -44,7 +44,7 @@
     @if (!AuthorizationConfigOptions.Value.IsEnabled)
     {
         <BbAlert Variant="AlertVariant.Info">
-            <BbAlertTitle>@Localizer["App.AccessControl.DisabledTitle"]</BbAlertTitle>
+            <BbAlertTitle As="p">@Localizer["App.AccessControl.DisabledTitle"]</BbAlertTitle>
             <BbAlertDescription>
                 @((MarkupString)
                     string.Format(
@@ -58,7 +58,7 @@
     else if (!TokenConfig.IsEnabled)
     {
         <BbAlert Variant="AlertVariant.Info">
-            <BbAlertTitle>@Localizer["App.AccessTokens.FeatureDisabledTitle"]</BbAlertTitle>
+            <BbAlertTitle As="p">@Localizer["App.AccessTokens.FeatureDisabledTitle"]</BbAlertTitle>
             <BbAlertDescription>
                 @((MarkupString)
                     string.Format(
@@ -81,7 +81,7 @@
                     @* Shown once and never again: only the hash is stored, so navigating away without
                        copying this means creating a new token. *@
                     <BbAlert Variant="AlertVariant.Warning">
-                        <BbAlertTitle>@Localizer["App.AccessTokens.IssuedTitle"]</BbAlertTitle>
+                        <BbAlertTitle As="p">@Localizer["App.AccessTokens.IssuedTitle"]</BbAlertTitle>
                         <BbAlertDescription>
                             <p class="bb:mb-3">@Localizer["App.AccessTokens.IssuedDescription"]</p>
                             <div class="bb:flex bb:flex-wrap bb:items-center bb:gap-2">
@@ -125,7 +125,7 @@
                         @if (_createError is not null)
                         {
                             <BbAlert Variant="AlertVariant.Danger">
-                                <BbAlertTitle>@Localizer["App.AccessTokens.ErrorTitle"]</BbAlertTitle>
+                                <BbAlertTitle As="p">@Localizer["App.AccessTokens.ErrorTitle"]</BbAlertTitle>
                                 <BbAlertDescription>@_createError</BbAlertDescription>
                             </BbAlert>
                         }
@@ -436,25 +436,14 @@
 
     private async Task ResolveBrowserTimeZoneAsync()
     {
-        try
-        {
-            var ianaId = await JS.InvokeAsync<string>("vfpsTimeZone.get");
-            _browserTimeZone = TimeZoneInfo.FindSystemTimeZoneById(ianaId);
-        }
-        catch (Exception ex)
-            when (ex is Microsoft.JSInterop.JSException or TimeZoneNotFoundException)
-        {
-            Logger.LogWarning(ex, "Failed to resolve the browser's time zone, defaulting to UTC");
-            return;
-        }
-
+        _browserTimeZone = await BrowserTime.GetZoneAsync(JS, Logger);
         StateHasChanged();
     }
 
     private string Format(DateTimeOffset? timestamp) =>
         timestamp is null
             ? Localizer["App.AccessTokens.Never"].Value
-            : TimeZoneInfo.ConvertTime(timestamp.Value, _browserTimeZone).ToString("g");
+            : BrowserTime.Format(timestamp.Value, _browserTimeZone);
 
     private string Owner(AccessToken token) =>
         token.TokenType == AccessTokenType.ServiceAccount
@@ -492,7 +481,7 @@
                                     @if (token.RevokedAt is null)
                                     {
                                         <BbButton
-                                            id="@($"revokeToken-{token.Id}")"
+                                            id="@($"revokeToken-{(showOwner ? "all" : "mine")}-{token.Id}")"
                                             Variant="ButtonVariant.Outline"
                                             Size="ButtonSize.Small"
                                             OnClick="@(() => StartTokenAction(token, isRevoke: true))"
@@ -501,7 +490,7 @@
                                         </BbButton>
                                     }
                                     <BbButton
-                                        id="@($"deleteToken-{token.Id}")"
+                                        id="@($"deleteToken-{(showOwner ? "all" : "mine")}-{token.Id}")"
                                         Variant="ButtonVariant.Outline"
                                         Size="ButtonSize.Small"
                                         Class="destructive-action"

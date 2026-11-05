@@ -29,6 +29,7 @@ public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
             await GotoAsync("/ui/csv-jobs?new=1");
 
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
+            await Page.Locator(".file-format summary").ClickAsync();
             await Page.CheckAsync("#hasHeaderRow");
 
             var sourceColumnSelect = Page.GetByLabel("Source column");
@@ -36,6 +37,68 @@ public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
 
             var optionTexts = await sourceColumnSelect.Locator("option").AllInnerTextsAsync();
             optionTexts.Should().Contain(["patient_id", "name", "notes"]);
+        }
+        finally
+        {
+            File.Delete(csvPath);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "RequiresS3")]
+    public async Task FileFormat_IsFoldedAway_WithWhatItIsSetToInPlainView()
+    {
+        await GotoAsync("/ui/csv-jobs?new=1");
+
+        var summary = Page.Locator("#fileFormatSummary");
+        await Expect(Page.Locator("#delimiter")).ToBeHiddenAsync();
+        await Expect(summary).ToContainTextAsync("utf-8");
+
+        await Page.Locator(".file-format summary").ClickAsync();
+        await FillInputAsync("#delimiter", ";");
+        await Page.Locator("#delimiter").BlurAsync();
+
+        await Expect(summary).ToContainTextAsync("delimiter \";\"");
+    }
+
+    [Fact]
+    [Trait("Category", "RequiresS3")]
+    public async Task AFailedJobsReason_WrapsInsteadOfWideningTheGrid()
+    {
+        // The grid used to be as wide as the longest error message, with the job's actions at the
+        // far end of it: 2235px with a real one, so Download was off screen on any monitor.
+        var namespaceName = $"e2e-failing-{UniqueSuffix()}";
+        var csvPath = Path.Join(Path.GetTempPath(), $"vfps-e2e-{UniqueSuffix()}.csv");
+        await File.WriteAllTextAsync(
+            csvPath,
+            "patient_id\nnot-in-the-namespace\n",
+            TestContext.Current.CancellationToken
+        );
+        try
+        {
+            await CreateNamespaceAsync(namespaceName);
+
+            await GotoAsync("/ui/csv-jobs?new=1");
+            await Page.SelectOptionAsync("#pseudonymizeMode", "FailIfMissing");
+            await Page.SetInputFilesAsync("#csvFileInput", csvPath);
+            await Page.GetByLabel("Source column").SelectOptionAsync("patient_id");
+            await Page.Locator("[id^=namespace-]").SelectOptionAsync(namespaceName);
+            await Page.ClickAsync("#submitJobButton");
+
+            var row = Page.Locator("tr")
+                .Filter(new LocatorFilterOptions { HasText = Path.GetFileName(csvPath) })
+                .First;
+            await Expect(row).ToContainTextAsync("Failed", new() { Timeout = 60_000 });
+
+            foreach (var width in new[] { 1440, 1024, 390 })
+            {
+                await Page.SetViewportSizeAsync(width, 900);
+                var overflow = await Page.Locator(".jobs-grid table")
+                    .EvaluateAsync<int>(
+                        "t => t.parentElement.scrollWidth - t.parentElement.clientWidth"
+                    );
+                overflow.Should().Be(0, $"the grid should fit at {width}px");
+            }
         }
         finally
         {

@@ -248,25 +248,25 @@
     <value>Unbekannte Werte</value>
   </data>
   <data name="App.CsvJobs.PseudonymizeModeKeepIfMissingHint" xml:space="preserve">
-    <value>Unbekannte Werte bleiben als Originalwert erhalten und werden gezählt, anstatt durch ein Pseudonym ersetzt zu werden.</value>
+    <value>Werte, die der Namespace nicht kennt, bleiben als ursprüngliche, identifizierende Werte in der Ausgabe. Der Job zählt sie.</value>
   </data>
   <data name="App.CsvJobs.PseudonymizeModeKeepIfMissingOption" xml:space="preserve">
-    <value>Originalwert beibehalten, wenn der Namespace ihn noch nicht kennt</value>
+    <value>Originalwert beibehalten</value>
   </data>
   <data name="App.CsvJobs.PseudonymizeModeCreateIfMissingOption" xml:space="preserve">
-    <value>Pseudonym erzeugen, wenn der Namespace den Wert noch nicht kennt</value>
+    <value>Pseudonym erzeugen</value>
   </data>
   <data name="App.CsvJobs.PseudonymizeModeFailIfMissingOption" xml:space="preserve">
-    <value>Auftrag abbrechen, wenn der Namespace einen Wert noch nicht kennt</value>
+    <value>Job abbrechen</value>
   </data>
   <data name="App.CsvJobs.UnresolvedValueCountPlural" xml:space="preserve">
-    <value>{0} unbekannte Werte</value>
+    <value>{0} Originalwerte beibehalten</value>
   </data>
   <data name="App.CsvJobs.UnresolvedValueCountSingular" xml:space="preserve">
-    <value>{0} unbekannter Wert</value>
+    <value>{0} Originalwert beibehalten</value>
   </data>
   <data name="App.CsvJobs.UnresolvedValueTitle" xml:space="preserve">
-    <value>Für diese Werte gab es im Namespace kein Pseudonym, und dieser Auftrag sollte keines erzeugen - sie wurden als leere Zellen ausgegeben.</value>
+    <value>Für diese Werte gab es im Namespace kein Pseudonym, und dieser Job sollte keines erzeugen. Sie bleiben daher als Originalwerte in der Ausgabe.</value>
   </data>
   <data name="App.Namespaces.ConfigureAccessAction" xml:space="preserve">
     <value>Zugriff konfigurieren</value>
@@ -419,19 +419,28 @@
     <value>Zu exportierender Namespace</value>
   </data>
   <data name="App.CsvJobs.ExportWarning" xml:space="preserve">
-    <value>Schreibt jeden Originalwert des Namespace mit seinem Pseudonym in eine CSV-Datei - identifizierende Daten. Erfordert Reverse-Lookup-Zugriff auf den Namespace.</value>
+    <value>Die Ausgabe enthält identifizierende Daten: jeden Originalwert des Namespace. Erfordert Reverse-Lookup-Zugriff auf den Namespace.</value>
   </data>
   <data name="App.CsvJobs.File" xml:space="preserve">
     <value>Datei</value>
+  </data>
+  <data name="App.CsvJobs.FileFormat" xml:space="preserve">
+    <value>Dateiformat</value>
+  </data>
+  <data name="App.CsvJobs.FileFormatDelimiter" xml:space="preserve">
+    <value>Trennzeichen "{0}"</value>
+  </data>
+  <data name="App.CsvJobs.FileFormatHasHeader" xml:space="preserve">
+    <value>Kopfzeile</value>
+  </data>
+  <data name="App.CsvJobs.FileFormatNoHeader" xml:space="preserve">
+    <value>keine Kopfzeile</value>
   </data>
   <data name="App.CsvJobs.HasHeaderRow" xml:space="preserve">
     <value>Datei hat eine Kopfzeile</value>
   </data>
   <data name="App.CsvJobs.HeaderRow" xml:space="preserve">
     <value>Kopfzeile</value>
-  </data>
-  <data name="App.CsvJobs.Id" xml:space="preserve">
-    <value>Id</value>
   </data>
   <data name="App.CsvJobs.ImportHint" xml:space="preserve">
     <value>Speichert die Paare aus der Datei unverändert, ohne Pseudonyme zu erzeugen. Zeilen, deren Originalwert oder Pseudonym bereits vergeben ist, werden in der herunterladbaren Ergebnisdatei gemeldet und im Namespace unverändert gelassen.</value>
@@ -441,9 +450,6 @@
   </data>
   <data name="App.CsvJobs.ImportTitleNamespaceColumn" xml:space="preserve">
     <value>Zu importierende Spalten</value>
-  </data>
-  <data name="App.CsvJobs.Issue" xml:space="preserve">
-    <value>Problem</value>
   </data>
   <data name="App.CsvJobs.JobActionFailedTitle" xml:space="preserve">
     <value>Aktion fehlgeschlagen</value>
@@ -494,7 +500,7 @@
     <value>Spalte mit Originalwert</value>
   </data>
   <data name="App.CsvJobs.PageTitle" xml:space="preserve">
-    <value>CSV-Pseudonymisierung</value>
+    <value>CSV-Jobs</value>
   </data>
   <data name="App.CsvJobs.Progress" xml:space="preserve">
     <value>Fortschritt</value>
@@ -712,9 +718,6 @@
   <data name="App.Namespaces.BrowsePseudonyms" xml:space="preserve">
     <value>Pseudonyme anzeigen</value>
   </data>
-  <data name="App.Namespaces.HierarchyEmpty" xml:space="preserve">
-    <value>Es sind noch keine Namespaces vorhanden.</value>
-  </data>
   <data name="App.Namespaces.HierarchySelectHint" xml:space="preserve">
     <value>Wählen Sie einen Namespace aus, um seine Details zu sehen.</value>
   </data>
@@ -751,6 +754,9 @@
   <data name="App.Namespaces.CreateTitle" xml:space="preserve">
     <value>Namespace erstellen</value>
   </data>
+  <data name="App.Namespaces.EmptyAdminDescription" xml:space="preserve">
+    <value>Erstellen Sie den ersten mit der Schaltfläche oben.</value>
+  </data>
   <data name="App.Namespaces.DeleteConfirmBodyPrefix" xml:space="preserve">
     <value>Dies löscht den Namespace und jedes darin enthaltene Pseudonym dauerhaft. Dies kann nicht rückgängig gemacht werden. Geben Sie</value>
   </data>
@@ -777,12 +783,6 @@
   </data>
   <data name="App.Namespaces.LengthColumn" xml:space="preserve">
     <value>Länge</value>
-  </data>
-  <data name="App.Namespaces.NoPermissionDescription" xml:space="preserve">
-    <value>Zum Erstellen eines Namespace ist Admin-Zugriff erforderlich. Wenden Sie sich an eine Administratorin oder einen Administrator, wenn Sie einen neuen benötigen.</value>
-  </data>
-  <data name="App.Namespaces.NoPermissionTitle" xml:space="preserve">
-    <value>Sie haben keine Berechtigung, Namespaces zu erstellen</value>
   </data>
   <data name="App.Namespaces.Prefix" xml:space="preserve">
     <value>Präfix</value>
@@ -820,8 +820,8 @@
   <data name="App.Nav.ApiDocs" xml:space="preserve">
     <value>API-Dokumentation</value>
   </data>
-  <data name="App.Nav.CsvProcessing" xml:space="preserve">
-    <value>CSV-Verarbeitung</value>
+  <data name="App.Nav.CsvJobs" xml:space="preserve">
+    <value>CSV-Jobs</value>
   </data>
   <data name="App.Nav.Namespaces" xml:space="preserve">
     <value>Namespaces</value>
@@ -834,6 +834,12 @@
   </data>
   <data name="App.NotFound.Description" xml:space="preserve">
     <value>Leider gibt es unter dieser Adresse nichts.</value>
+  </data>
+  <data name="App.NotFound.BackHome" xml:space="preserve">
+    <value>Zur Startseite</value>
+  </data>
+  <data name="App.NotFound.Title" xml:space="preserve">
+    <value>Seite nicht gefunden</value>
   </data>
   <data name="App.Pseudonyms.BackToNamespaces" xml:space="preserve">
     <value>Zurück zu den Namespaces</value>
@@ -917,7 +923,7 @@
     <value>Nach Pseudonymwert suchen</value>
   </data>
   <data name="App.Pseudonyms.SearchWithOriginalValuePlaceholder" xml:space="preserve">
-    <value>Nach Pseudonym- oder Originalwert suchen</value>
+    <value>Pseudonym oder Originalwert</value>
   </data>
   <data name="App.ServiceAccounts.CreateAction" xml:space="preserve">
     <value>Service Account erstellen</value>
@@ -1005,6 +1011,15 @@
   </data>
   <data name="App.Namespaces.NoProject" xml:space="preserve">
     <value>Kein Projekt</value>
+  </data>
+  <data name="App.Reconnect.Lost" xml:space="preserve">
+    <value>Die Verbindung zum Server konnte nicht wiederhergestellt werden. Laden Sie die Seite neu, um fortzufahren. Noch nicht Gespeichertes geht dabei verloren.</value>
+  </data>
+  <data name="App.Reconnect.Reload" xml:space="preserve">
+    <value>Seite neu laden</value>
+  </data>
+  <data name="App.Reconnect.Trying" xml:space="preserve">
+    <value>Die Verbindung zum Server wurde unterbrochen. Verbindung wird wiederhergestellt ...</value>
   </data>
   <data name="App.Projects.Description" xml:space="preserve">
     <value>Projekte fassen Namespaces zusammen, die zusammengehören, zum Beispiel die Namespaces für Patienten-ID und Fall-ID einer Studie. Ein Namespace kann zu mehreren Projekten gehören. Die Gruppierung ändert nichts daran, wer worauf zugreifen darf – das wird weiterhin pro Namespace vergeben.</value>
@@ -1164,5 +1179,26 @@
   </data>
   <data name="App.Pseudonyms.NoMatchesDescription" xml:space="preserve">
     <value>Prüfen Sie die Schreibweise oder leeren Sie die Suche, um alle Pseudonyme zu sehen.</value>
+  </data>
+  <data name="App.CsvJobs.PseudonymizeModeCreateIfMissingHint" xml:space="preserve">
+    <value>Ein Wert, den der Namespace noch nicht kennt, erhält ein neues Pseudonym.</value>
+  </data>
+  <data name="App.CsvJobs.PseudonymizeModeFailIfMissingHint" xml:space="preserve">
+    <value>Der Job stoppt beim ersten Wert, den der Namespace nicht kennt, und meldet dessen Position. Es entsteht keine Ausgabedatei.</value>
+  </data>
+  <data name="App.MainLayout.SkipToContent" xml:space="preserve">
+    <value>Zum Inhalt springen</value>
+  </data>
+  <data name="App.MainLayout.MainNavigation" xml:space="preserve">
+    <value>Hauptnavigation</value>
+  </data>
+  <data name="App.MainLayout.OpenNavigation" xml:space="preserve">
+    <value>Navigationsmenü öffnen</value>
+  </data>
+  <data name="App.MainLayout.AccountMenu" xml:space="preserve">
+    <value>Kontomenü</value>
+  </data>
+  <data name="App.Common.Yes" xml:space="preserve">
+    <value>Ja</value>
   </data>
 </root>

@@ -21,22 +21,25 @@
 <div class="bb:mx-auto bb:space-y-6">
     <div class="bb:flex bb:flex-wrap bb:items-center bb:justify-between bb:gap-2">
         <div class="bb:flex bb:items-center bb:gap-2">
-            <LucideIcon Name="database" Size="24" Class="bb:text-primary" />
+            <LucideIcon aria-hidden="true" Name="database" Size="24" Class="bb:shrink-0 bb:text-primary" />
             <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Nav.Namespaces"]</h1>
         </div>
-        <BbButton
-            id="showCreateNamespaceFormButton"
-            Type="ButtonType.Button"
-            OnClick="ToggleCreateForm"
-            IconPosition="IconPosition.Start"
-        >
-            <Icon>
-                <LucideIcon Name="plus" Size="16" />
-            </Icon>
-            <ChildContent>
-                @Localizer["App.Namespaces.CreateTitle"]
-            </ChildContent>
-        </BbButton>
+        @if (_isAdmin)
+        {
+            <BbButton
+                id="showCreateNamespaceFormButton"
+                Type="ButtonType.Button"
+                OnClick="ToggleCreateForm"
+                IconPosition="IconPosition.Start"
+            >
+                <Icon>
+                    <LucideIcon aria-hidden="true" Name="plus" Size="16" />
+                </Icon>
+                <ChildContent>
+                    @Localizer["App.Namespaces.CreateTitle"]
+                </ChildContent>
+            </BbButton>
+        }
     </div>
 
     @* Set when a namespace was created but could not be put into the projects chosen for it. The
@@ -45,7 +48,7 @@
     @if (_projectsErrorMessage is not null)
     {
         <BbAlert Variant="AlertVariant.Danger">
-            <BbAlertTitle>@Localizer["App.Namespaces.ProjectsErrorTitle"]</BbAlertTitle>
+            <BbAlertTitle As="p">@Localizer["App.Namespaces.ProjectsErrorTitle"]</BbAlertTitle>
             <BbAlertDescription>@_projectsErrorMessage</BbAlertDescription>
         </BbAlert>
     }
@@ -98,7 +101,7 @@
                 @if (_deleteErrorMessage is not null)
                 {
                     <BbAlert Variant="AlertVariant.Danger">
-                        <BbAlertTitle>@Localizer["App.Namespaces.DeleteErrorTitle"]</BbAlertTitle>
+                        <BbAlertTitle As="p">@Localizer["App.Namespaces.DeleteErrorTitle"]</BbAlertTitle>
                         <BbAlertDescription>@_deleteErrorMessage</BbAlertDescription>
                     </BbAlert>
                 }
@@ -152,186 +155,169 @@
             @if (_errorMessage is not null)
             {
                 <BbAlert Variant="AlertVariant.Danger">
-                    <BbAlertTitle>@Localizer["App.Namespaces.CreateErrorTitle"]</BbAlertTitle>
+                    <BbAlertTitle As="p">@Localizer["App.Namespaces.CreateErrorTitle"]</BbAlertTitle>
                     <BbAlertDescription>@_errorMessage</BbAlertDescription>
                 </BbAlert>
             }
 
-            @if (!_isAdmin)
-            {
-                <BbAlert Variant="AlertVariant.Warning" Class="bb:mb-4">
-                    <BbAlertTitle>@Localizer["App.Namespaces.NoPermissionTitle"]</BbAlertTitle>
-                    <BbAlertDescription>
-                        @Localizer["App.Namespaces.NoPermissionDescription"]
-                    </BbAlertDescription>
-                </BbAlert>
-            }
             <EditForm
                 Model="_newNamespace"
                 FormName="create-namespace"
                 OnValidSubmit="CreateNamespaceAsync"
             >
                 <DataAnnotationsValidator />
-                <fieldset disabled="@(!_isAdmin)" class="bb:contents">
-                    @* One field per row, label right-aligned in a narrow column and the control
-                       in a wide one - the layout the component library's own dialog example uses.
-                       col-span-3 is the one utility in it that the shipped blazorblueprint.css
-                       doesn't carry, so wwwroot/app.css defines it (see the note there). *@
-                    @* Only the fields scroll, so the header stays put and Create/Cancel remain
-                       reachable without scrolling to the bottom of a ten-row form. The right
-                       padding keeps the scrollbar off the inputs - it sits inside this box, hard
-                       against their right edge otherwise, and an overlay scrollbar paints over
-                       them outright. *@
-                    <div
-                        class="bb:grid bb:gap-4 bb:py-4"
-                        style="max-height: 60vh; overflow-y: auto; padding-right: 1rem;"
-                    >
-                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
-                            <BbLabel For="name" Class="text-right">@Localizer["App.Common.Name"]</BbLabel>
-                            <div class="col-span-3">
-                                <BbInput
-                                    @ref="_createNameInput"
-                                    @bind-Value="_newNamespace.Name"
-                                    Id="name"
-                                    Required="true"
-                                />
-                            </div>
-                        </div>
-                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
-                            <BbLabel For="description" Class="text-right">@Localizer["App.Common.Description"]</BbLabel>
-                            <div class="col-span-3">
-                                <BbInput @bind-Value="_newNamespace.Description" Id="description" />
-                            </div>
-                        </div>
-                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
-                            <BbLabel For="method" Class="text-right">@Localizer["App.Namespaces.GenerationMethod"]</BbLabel>
-                            <div class="col-span-3">
-                                <select
-                                    @bind="_selectedMethod"
-                                    @bind:after="OnMethodChanged"
-                                    id="method"
-                                    class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
-                                >
-                                    @foreach (var method in PseudonymGenerationMethodDisplay.SelectableFor(MethodsLookup))
-                                    {
-                                        <option value="@method">
-                                            @PseudonymGenerationMethodDisplay.FriendlyName(method)
-                                        </option>
-                                    }
-                                </select>
-                            </div>
-                        </div>
-                        <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
-                            <BbLabel For="length" Class="text-right bb:pt-2">@Localizer["App.Namespaces.Length"]</BbLabel>
-                            <div class="col-span-3">
-                                <BbNumericInput
-                                    @bind-Value="_newNamespace.PseudonymLength"
-                                    Id="length"
-                                    Min="1"
-                                    TValue="uint"
-                                    Disabled="@FixedPseudonymLength.HasValue"
-                                />
-                                @if (FixedPseudonymLength is not null)
-                                {
-                                    <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
-                                        @Localizer["App.Namespaces.FixedLengthNote", FixedPseudonymLength]
-                                    </p>
-                                }
-                            </div>
-                        </div>
-                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
-                            <BbLabel For="prefix" Class="text-right">@Localizer["App.Namespaces.Prefix"]</BbLabel>
-                            <div class="col-span-3">
-                                <BbInput @bind-Value="_newNamespace.PseudonymPrefix" Id="prefix" />
-                            </div>
-                        </div>
-                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
-                            <BbLabel For="suffix" Class="text-right">@Localizer["App.Namespaces.Suffix"]</BbLabel>
-                            <div class="col-span-3">
-                                <BbInput @bind-Value="_newNamespace.PseudonymSuffix" Id="suffix" />
-                            </div>
-                        </div>
-                        <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
-                            <BbLabel For="validationRegex" Class="text-right bb:pt-2">@Localizer["App.Namespaces.ValidationRegex"]</BbLabel>
-                            <div class="col-span-3">
-                                <ValidationRegexInput
-                                    @bind-Value="_newNamespace.OriginalValueValidationRegex"
-                                    @bind-Sample="_validationRegexSample"
-                                    Id="validationRegex"
-                                />
-                            </div>
-                        </div>
-                        <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
-                            <BbLabel For="allowsMultiplePseudonyms" Class="text-right">@Localizer["App.Namespaces.AllowsMultiplePseudonyms"]</BbLabel>
-                            <div class="col-span-3">
-                                <BbSwitch
-                                    @bind-Checked="_newNamespace.AllowsMultiplePseudonyms"
-                                    Id="allowsMultiplePseudonyms"
-                                />
-                            </div>
-                        </div>
-                        <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
-                            <BbLabel For="parentName" Class="text-right bb:pt-2">@Localizer["App.Namespaces.Parent"]</BbLabel>
-                            <div class="col-span-3">
-                                <select
-                                    @bind="_newNamespace.ParentName"
-                                    id="parentName"
-                                    class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
-                                >
-                                    <option value="">@Localizer["App.Namespaces.NoParent"]</option>
-                                    @foreach (var candidate in _namespaces)
-                                    {
-                                        <option value="@candidate.Name">@candidate.Name</option>
-                                    }
-                                </select>
-                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
-                                    @Localizer["App.Namespaces.ParentHelp"]
-                                </p>
-                            </div>
-                        </div>
-                        <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
-                            <BbLabel For="ensureParentPseudonymExists" Class="text-right">@Localizer["App.Namespaces.EnsureParentPseudonymExists"]</BbLabel>
-                            <div class="col-span-3">
-                                <BbSwitch
-                                    @bind-Checked="_newNamespace.EnsureParentPseudonymExists"
-                                    Id="ensureParentPseudonymExists"
-                                    Disabled="@string.IsNullOrEmpty(_newNamespace.ParentName)"
-                                />
-                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
-                                    @Localizer["App.Namespaces.EnsureParentPseudonymExistsHelp"]
-                                </p>
-                            </div>
-                        </div>
-                        <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
-                            <BbLabel Class="text-right bb:pt-2">@Localizer["App.Namespaces.Projects"]</BbLabel>
-                            <div class="col-span-3">
-                                <NameChecklist
-                                    Items="ProjectNames"
-                                    Selected="_newNamespaceProjects"
-                                    IdPrefix="newNamespaceProject"
-                                    EmptyText="@Localizer["App.Projects.PickerEmpty"]"
-                                    AriaLabel="@Localizer["App.Namespaces.Projects"]"
-                                />
-                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
-                                    @Localizer["App.Namespaces.ProjectsHelp"]
-                                </p>
-                            </div>
+                @* One field per row, label right-aligned in a narrow column and the control
+                   in a wide one - the layout the component library's own dialog example uses.
+                   col-span-3 is the one utility in it that the shipped blazorblueprint.css
+                   doesn't carry, so wwwroot/app.css defines it (see the note there). *@
+                @* Only the fields scroll, so the header stays put and Create/Cancel remain
+                   reachable without scrolling to the bottom of a ten-row form. *@
+                <div class="dialog-body bb:grid bb:gap-4 bb:py-4">
+                    <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
+                        <BbLabel For="name" Class="text-right">@Localizer["App.Common.Name"]</BbLabel>
+                        <div class="col-span-3">
+                            <BbInput
+                                @ref="_createNameInput"
+                                @bind-Value="_newNamespace.Name"
+                                Id="name"
+                                Required="true"
+                            />
                         </div>
                     </div>
-                    <BbDialogFooter Class="bb:mt-4">
-                        <BbButton
-                            id="cancelCreateNamespaceButton"
-                            Type="ButtonType.Button"
-                            Variant="ButtonVariant.Outline"
-                            OnClick="CloseCreateForm"
-                        >
-                            @Localizer["App.Common.Cancel"]
-                        </BbButton>
-                        <BbButton Type="ButtonType.Submit" Loading="_isCreating">
-                            @Localizer["App.Common.Create"]
-                        </BbButton>
-                    </BbDialogFooter>
-                </fieldset>
+                    <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
+                        <BbLabel For="description" Class="text-right">@Localizer["App.Common.Description"]</BbLabel>
+                        <div class="col-span-3">
+                            <BbInput @bind-Value="_newNamespace.Description" Id="description" />
+                        </div>
+                    </div>
+                    <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
+                        <BbLabel For="method" Class="text-right">@Localizer["App.Namespaces.GenerationMethod"]</BbLabel>
+                        <div class="col-span-3">
+                            <select
+                                @bind="_selectedMethod"
+                                @bind:after="OnMethodChanged"
+                                id="method"
+                                class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
+                            >
+                                @foreach (var method in PseudonymGenerationMethodDisplay.SelectableFor(MethodsLookup))
+                                {
+                                    <option value="@method">
+                                        @PseudonymGenerationMethodDisplay.FriendlyName(method)
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                    </div>
+                    <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
+                        <BbLabel For="length" Class="text-right bb:pt-2">@Localizer["App.Namespaces.Length"]</BbLabel>
+                        <div class="col-span-3">
+                            <BbNumericInput
+                                @bind-Value="_newNamespace.PseudonymLength"
+                                Id="length"
+                                Min="1"
+                                TValue="uint"
+                                Disabled="@FixedPseudonymLength.HasValue"
+                            />
+                            @if (FixedPseudonymLength is not null)
+                            {
+                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
+                                    @Localizer["App.Namespaces.FixedLengthNote", FixedPseudonymLength]
+                                </p>
+                            }
+                        </div>
+                    </div>
+                    <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
+                        <BbLabel For="prefix" Class="text-right">@Localizer["App.Namespaces.Prefix"]</BbLabel>
+                        <div class="col-span-3">
+                            <BbInput @bind-Value="_newNamespace.PseudonymPrefix" Id="prefix" />
+                        </div>
+                    </div>
+                    <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
+                        <BbLabel For="suffix" Class="text-right">@Localizer["App.Namespaces.Suffix"]</BbLabel>
+                        <div class="col-span-3">
+                            <BbInput @bind-Value="_newNamespace.PseudonymSuffix" Id="suffix" />
+                        </div>
+                    </div>
+                    <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
+                        <BbLabel For="validationRegex" Class="text-right bb:pt-2">@Localizer["App.Namespaces.ValidationRegex"]</BbLabel>
+                        <div class="col-span-3">
+                            <ValidationRegexInput
+                                @bind-Value="_newNamespace.OriginalValueValidationRegex"
+                                @bind-Sample="_validationRegexSample"
+                                Id="validationRegex"
+                            />
+                        </div>
+                    </div>
+                    <div class="bb:grid bb:grid-cols-4 bb:items-center bb:gap-4">
+                        <BbLabel For="allowsMultiplePseudonyms" Class="text-right">@Localizer["App.Namespaces.AllowsMultiplePseudonyms"]</BbLabel>
+                        <div class="col-span-3">
+                            <BbSwitch
+                                @bind-Checked="_newNamespace.AllowsMultiplePseudonyms"
+                                Id="allowsMultiplePseudonyms"
+                            />
+                        </div>
+                    </div>
+                    <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
+                        <BbLabel For="parentName" Class="text-right bb:pt-2">@Localizer["App.Namespaces.Parent"]</BbLabel>
+                        <div class="col-span-3">
+                            <select
+                                @bind="_newNamespace.ParentName"
+                                id="parentName"
+                                class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
+                            >
+                                <option value="">@Localizer["App.Namespaces.NoParent"]</option>
+                                @foreach (var candidate in _namespaces)
+                                {
+                                    <option value="@candidate.Name">@candidate.Name</option>
+                                }
+                            </select>
+                            <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
+                                @Localizer["App.Namespaces.ParentHelp"]
+                            </p>
+                        </div>
+                    </div>
+                    <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
+                        <BbLabel For="ensureParentPseudonymExists" Class="text-right">@Localizer["App.Namespaces.EnsureParentPseudonymExists"]</BbLabel>
+                        <div class="col-span-3">
+                            <BbSwitch
+                                @bind-Checked="_newNamespace.EnsureParentPseudonymExists"
+                                Id="ensureParentPseudonymExists"
+                                Disabled="@string.IsNullOrEmpty(_newNamespace.ParentName)"
+                            />
+                            <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
+                                @Localizer["App.Namespaces.EnsureParentPseudonymExistsHelp"]
+                            </p>
+                        </div>
+                    </div>
+                    <div class="bb:grid bb:grid-cols-4 bb:items-start bb:gap-4">
+                        <BbLabel Class="text-right bb:pt-2">@Localizer["App.Namespaces.Projects"]</BbLabel>
+                        <div class="col-span-3">
+                            <NameChecklist
+                                Items="ProjectNames"
+                                Selected="_newNamespaceProjects"
+                                IdPrefix="newNamespaceProject"
+                                EmptyText="@Localizer["App.Projects.PickerEmpty"]"
+                                AriaLabel="@Localizer["App.Namespaces.Projects"]"
+                            />
+                            <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground">
+                                @Localizer["App.Namespaces.ProjectsHelp"]
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <BbDialogFooter Class="bb:mt-4">
+                    <BbButton
+                        id="cancelCreateNamespaceButton"
+                        Type="ButtonType.Button"
+                        Variant="ButtonVariant.Outline"
+                        OnClick="CloseCreateForm"
+                    >
+                        @Localizer["App.Common.Cancel"]
+                    </BbButton>
+                    <BbButton Type="ButtonType.Submit" Loading="_isCreating">
+                        @Localizer["App.Common.Create"]
+                    </BbButton>
+                </BbDialogFooter>
             </EditForm>
         </BbDialogContent>
     </BbDialog>
@@ -349,7 +335,7 @@
                         @Localizer["App.Namespaces.ConfigureAccessDescription"]
                     </BbDialogDescription>
                 </BbDialogHeader>
-                <div style="max-height: 60vh; overflow-y: auto; padding-right: 1rem;">
+                <div class="dialog-body">
                     <NamespaceAccessGrantsEditor
                         NamespaceName="@_accessNamespaceName"
                         User="_user"
@@ -391,7 +377,7 @@
                 @if (_editErrorMessage is not null)
                 {
                     <BbAlert Variant="AlertVariant.Danger">
-                        <BbAlertTitle>@Localizer["App.Namespaces.EditErrorTitle"]</BbAlertTitle>
+                        <BbAlertTitle As="p">@Localizer["App.Namespaces.EditErrorTitle"]</BbAlertTitle>
                         <BbAlertDescription>@_editErrorMessage</BbAlertDescription>
                     </BbAlert>
                 }
@@ -469,20 +455,28 @@
         <BbCardContent>
             @if (_namespaces.Count == 0)
             {
-                <p class="bb:text-sm bb:text-muted-foreground">
-                    @Localizer["App.Namespaces.HierarchyEmpty"]
-                </p>
+                @* Worded by who is looking: to someone without any grants, "none exist" would be
+                   untrue, and there is no button above for them to use. *@
+                <BbEmpty
+                    Size="EmptySize.Small"
+                    Title="@Localizer["App.Home.NoNamespacesTitle"]"
+                    Description="@(_isAdmin ? Localizer["App.Namespaces.EmptyAdminDescription"] : Localizer["App.Home.NoNamespacesDescription"])"
+                >
+                    <Icon>
+                        <LucideIcon aria-hidden="true" Name="database" />
+                    </Icon>
+                </BbEmpty>
             }
             else
             {
-                <div class="bb:grid bb:gap-4 bb:md:grid-cols-2">
+                <div class="bb:grid bb:grid-cols-1 bb:gap-4 bb:md:grid-cols-2">
                     <div>
                         @* Our own search field rather than BbTreeView's ShowSearch one, for two
                            reasons: the component only filters in its data-driven mode (this tree is
                            declarative, which is what gives each node its hover card), and the input
                            it renders updates on change - so its box would sit inert until focus left
                            it. Debounced binding here filters as you type. *@
-                        <div class="bb:mb-2 bb:flex bb:gap-2">
+                        <div class="search-row bb:mb-2">
                             <BbInput
                                 @bind-Value="_treeSearch"
                                 @bind-Value:after="OnTreeSearchChanged"
@@ -500,7 +494,6 @@
                                     @bind:after="OnTreeSearchChanged"
                                     id="namespaceProjectFilter"
                                     aria-label="@Localizer["App.Namespaces.ProjectFilterLabel"]"
-                                    style="max-width: 45%;"
                                     class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:text-sm bb:focus-visible:outline-none"
                                 >
                                     <option value="">@Localizer["App.Namespaces.AllProjects"]</option>
@@ -920,21 +913,7 @@
 
     private async Task ResolveBrowserTimeZoneAsync()
     {
-        try
-        {
-            var ianaId = await JS.InvokeAsync<string>("vfpsTimeZone.get");
-            _browserTimeZone = TimeZoneInfo.FindSystemTimeZoneById(ianaId);
-        }
-        catch (Exception ex)
-            when (ex is Microsoft.JSInterop.JSException or TimeZoneNotFoundException)
-        {
-            // Falls back to the UTC already set as _browserTimeZone's default - a missing or
-            // unrecognized zone shouldn't break the page, just leave timestamps in UTC.
-            Logger.LogWarning(ex, "Failed to resolve the browser's time zone, defaulting to UTC");
-
-            return;
-        }
-
+        _browserTimeZone = await BrowserTime.GetZoneAsync(JS, Logger);
         StateHasChanged();
     }
 

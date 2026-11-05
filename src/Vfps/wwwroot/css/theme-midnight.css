@@ -95,7 +95,7 @@
   --secondary-foreground: oklch(93.24% 0.008 253.8552deg);
   --muted: oklch(26.54% 0.022 254.2034deg);
   --muted-foreground: oklch(64.98% 0.0271 257.6665deg);
-  --accent: oklch(26.54% 0.022 254.2034deg);
+  --accent: oklch(32% 0.03 250deg); /* lifted from 26.54%: a selected tree row barely stood out from the card */
   --accent-foreground: oklch(83.3% 0.0499 230.3705deg);
   --destructive: oklch(66.57% 0.1387 24.1829deg);
   --destructive-foreground: oklch(15.62% 0.0257 25.5104deg);

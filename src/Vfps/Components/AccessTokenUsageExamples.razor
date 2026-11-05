@@ -30,7 +30,7 @@
                     IconPosition="IconPosition.Start"
                 >
                     <Icon>
-                        <LucideIcon Name="@(_copiedTab == _activeTab ? "check" : "copy")" Size="14" />
+                        <LucideIcon aria-hidden="true" Name="@(_copiedTab == _activeTab ? "check" : "copy")" Size="14" />
                     </Icon>
                     <ChildContent>
                         @(_copiedTab == _activeTab
@@ -40,10 +40,10 @@
                 </BbButton>
             </div>
             <BbTabsContent Value="@RestTab">
-                <pre class="bb:overflow-x-auto bb:rounded-md bb:bg-muted bb:p-3 bb:font-mono bb:text-xs bb:leading-relaxed"><code>@Curl</code></pre>
+                <pre class="usage-sample bb:rounded-md bb:bg-muted bb:p-3 bb:font-mono bb:text-xs bb:leading-relaxed"><code>@Curl</code></pre>
             </BbTabsContent>
             <BbTabsContent Value="@GrpcTab" Class="bb:space-y-3">
-                <pre class="bb:overflow-x-auto bb:rounded-md bb:bg-muted bb:p-3 bb:font-mono bb:text-xs bb:leading-relaxed"><code>@Grpcurl</code></pre>
+                <pre class="usage-sample bb:rounded-md bb:bg-muted bb:p-3 bb:font-mono bb:text-xs bb:leading-relaxed"><code>@Grpcurl</code></pre>
                 <p class="bb:text-xs bb:text-muted-foreground">
                     @Localizer["App.AccessTokens.UsageGrpcNote", GrpcPort]
                 </p>
@@ -82,7 +82,7 @@
             class="bb:inline-flex bb:items-center bb:gap-1 bb:text-xs bb:text-primary bb:underline-offset-4 bb:hover:underline"
         >
             @text
-            <LucideIcon Name="external-link" Size="12" />
+            <LucideIcon aria-hidden="true" Name="external-link" Size="12" />
         </a>;
 
     private async Task CopyAsync()

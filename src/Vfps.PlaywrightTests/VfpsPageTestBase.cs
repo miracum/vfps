@@ -68,6 +68,16 @@ public abstract class VfpsPageTestBase(PlaywrightFixture fixture) : IAsyncLifeti
     }
 
     /// <inheritdoc cref="FillInputAsync(ILocator, string)"/>
+    protected async Task CreateNamespaceAsync(string name)
+    {
+        await GotoAsync("/ui/namespaces");
+        await Page.ClickAsync("#showCreateNamespaceFormButton");
+        await Expect(Page.Locator("#name")).ToBeVisibleAsync();
+        await FillInputAsync("#name", name);
+        await Page.ClickAsync("form:has(#name) button[type=submit]");
+        await Expect(Page.Locator($"[role=treeitem][data-value=\"{name}\"]")).ToHaveCountAsync(1);
+    }
+
     protected Task FillInputAsync(string selector, string value) =>
         FillInputAsync(Page.Locator(selector), value);
 

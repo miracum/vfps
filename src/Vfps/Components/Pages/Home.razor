@@ -24,7 +24,7 @@
     {
         var now = DateTimeOffset.UtcNow;
 
-        <div class="bb:grid bb:grid-cols-1 bb:gap-4 @StatGridClass(summary)">
+        <div class="stat-grid bb:grid bb:grid-cols-1 bb:gap-4 @StatGridClass(summary)">
             <HomeStatTile
                 Label="@Localizer["App.Nav.Namespaces"]"
                 Value="@summary.NamespaceCount.ToString("N0")"
@@ -70,10 +70,10 @@
         {
             <BbAlert Variant="AlertVariant.Warning" data-testid="attention">
                 <Icon>
-                    <LucideIcon Name="triangle-alert" Size="16" />
+                    <LucideIcon aria-hidden="true" Name="triangle-alert" Size="16" />
                 </Icon>
                 <ChildContent>
-                    <BbAlertTitle>@Localizer["App.Home.AttentionTitle"]</BbAlertTitle>
+                    <BbAlertTitle As="p">@Localizer["App.Home.AttentionTitle"]</BbAlertTitle>
                     <BbAlertDescription>
                         <ul class="bb:mt-2 bb:space-y-2">
                             @foreach (var item in summary.Attention)
@@ -110,7 +110,7 @@
                         </div>
                         <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Small" Class="bb:shrink-0" Href="/ui/namespaces">
                             @Localizer["App.Home.ViewAll"]
-                            <LucideIcon Name="arrow-right" Size="14" />
+                            <LucideIcon aria-hidden="true" Name="arrow-right" Size="14" />
                         </BbButton>
                     </div>
                 </BbCardHeader>
@@ -125,7 +125,7 @@
                                 : Localizer["App.Home.NoNamespacesDescription"])"
                         >
                             <Icon>
-                                <LucideIcon Name="database" />
+                                <LucideIcon aria-hidden="true" Name="database" />
                             </Icon>
                         </BbEmpty>
                     }
@@ -134,13 +134,15 @@
                         <BbItemGroup>
                             @foreach (var ns in summary.TopNamespaces)
                             {
+                                @* BbItemGroup is role="list"; a link can't be its item directly. *@
+                                <div role="listitem">
                                 <BbItem
                                     AsChild="a"
                                     Href="@($"/ui/namespaces/{Uri.EscapeDataString(ns.Name)}/pseudonyms")"
                                     Size="ItemSize.Sm"
                                 >
                                     <BbItemMedia Variant="ItemMediaVariant.Icon">
-                                        <LucideIcon Name="database" Size="16" />
+                                        <LucideIcon aria-hidden="true" Name="database" Size="16" />
                                     </BbItemMedia>
                                     <BbItemContent Class="bb:min-w-0">
                                         <BbItemTitle>@ns.Name</BbItemTitle>
@@ -155,6 +157,7 @@
                                         </span>
                                     </BbItemActions>
                                 </BbItem>
+                                </div>
                             }
                         </BbItemGroup>
                     }
@@ -176,7 +179,7 @@
                             </div>
                             <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Small" Class="bb:shrink-0" Href="/ui/csv-jobs">
                                 @Localizer["App.Home.ViewAll"]
-                                <LucideIcon Name="arrow-right" Size="14" />
+                                <LucideIcon aria-hidden="true" Name="arrow-right" Size="14" />
                             </BbButton>
                         </div>
                     </BbCardHeader>
@@ -189,7 +192,7 @@
                                 Description="@Localizer["App.Home.CsvProcessingDescription"]"
                             >
                                 <Icon>
-                                    <LucideIcon Name="file-spreadsheet" />
+                                    <LucideIcon aria-hidden="true" Name="file-spreadsheet" />
                                 </Icon>
                                 <ChildContent>
                                     @* ?new=1 opens the CSV page's new-job dialog straight away. *@
@@ -204,24 +207,26 @@
                             <BbItemGroup>
                                 @foreach (var job in recentJobs)
                                 {
-                                    <BbItem AsChild="a" Href="/ui/csv-jobs" Size="ItemSize.Sm">
+                                    <div role="listitem">
+                                    <BbItem AsChild="a" Href="/ui/csv-jobs" Size="ItemSize.Sm" Class="recent-job">
                                         <BbItemMedia Variant="ItemMediaVariant.Icon">
-                                            <LucideIcon Name="file-spreadsheet" Size="16" />
+                                            <LucideIcon aria-hidden="true" Name="file-spreadsheet" Size="16" />
                                         </BbItemMedia>
-                                        <BbItemContent Class="bb:min-w-0">
+                                        <BbItemContent Class="recent-job-text bb:min-w-0">
                                             <BbItemTitle Class="bb:truncate">@(job.Subject ?? "—")</BbItemTitle>
                                             <BbItemDescription>
                                                 @CsvJobDisplay.DirectionLabel(job.Direction, Localizer) · @job.CreatedAt.Humanize(now)
                                             </BbItemDescription>
                                         </BbItemContent>
-                                        <BbItemActions>
+                                        <BbItemActions Class="recent-job-status">
                                             @if (job.Status == PseudonymizationJobStatus.Running && job.ProgressPercent is { } progress)
                                             {
-                                                <BbProgress Value="@progress" Class="bb:w-16" />
+                                                <BbProgress Value="@CsvJobDisplay.ProgressValue(progress)" Class="bb:w-16" aria-label="@Localizer["App.CsvJobs.Progress"]" />
                                             }
                                             <CsvJobStatusBadge Status="job.Status" />
                                         </BbItemActions>
                                     </BbItem>
+                                    </div>
                                 }
                             </BbItemGroup>
                         }

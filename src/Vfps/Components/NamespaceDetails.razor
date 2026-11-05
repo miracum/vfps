@@ -51,7 +51,7 @@
         <dd>
             @if (Namespace.AllowsMultiplePseudonyms)
             {
-                <LucideIcon Name="check" Size="14" />
+                <LucideIcon Name="check" Size="14" AriaLabel="@Localizer["App.Common.Yes"]" />
             }
             else
             {
@@ -93,7 +93,7 @@
                        data-project-link="@projectName">
                         <BbBadge Variant="BadgeVariant.Secondary">
                             @projectName
-                            <LucideIcon Name="link" Size="12" />
+                            <LucideIcon aria-hidden="true" Name="link" Size="12" />
                         </BbBadge>
                     </a>
                 }
@@ -156,6 +156,5 @@
     [Parameter]
     public bool IsPseudonymCountLoading { get; set; }
 
-    private string FormatTimestamp(DateTimeOffset timestamp) =>
-        TimeZoneInfo.ConvertTime(timestamp, TimeZone).ToString("yyyy-MM-dd HH:mm:ss");
+    private string FormatTimestamp(DateTimeOffset timestamp) => BrowserTime.Format(timestamp, TimeZone);
 }

@@ -33,7 +33,7 @@
             <div class="bb:space-y-1">
                 <BackLink Href="/ui/projects">@Localizer["App.Projects.BackToProjects"]</BackLink>
                 <div class="bb:flex bb:items-center bb:gap-2">
-                    <LucideIcon Name="folder" Size="24" Class="bb:text-primary" />
+                    <LucideIcon aria-hidden="true" Name="folder" Size="24" Class="bb:shrink-0 bb:text-primary" />
                     <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@ProjectName</h1>
                 </div>
             </div>
@@ -41,7 +41,7 @@
         else
         {
             <div class="bb:flex bb:items-center bb:gap-2">
-                <LucideIcon Name="folder" Size="24" Class="bb:text-primary" />
+                <LucideIcon aria-hidden="true" Name="folder" Size="24" Class="bb:shrink-0 bb:text-primary" />
                 <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Nav.Projects"]</h1>
             </div>
         }
@@ -54,7 +54,7 @@
                 IconPosition="IconPosition.Start"
             >
                 <Icon>
-                    <LucideIcon Name="plus" Size="16" />
+                    <LucideIcon aria-hidden="true" Name="plus" Size="16" />
                 </Icon>
                 <ChildContent>
                     @Localizer["App.Projects.CreateTitle"]
@@ -72,7 +72,7 @@
     @if (_unavailableMessage is not null)
     {
         <BbAlert Variant="AlertVariant.Danger">
-            <BbAlertTitle>@Localizer["App.Projects.UnavailableTitle"]</BbAlertTitle>
+            <BbAlertTitle As="p">@Localizer["App.Projects.UnavailableTitle"]</BbAlertTitle>
             <BbAlertDescription>@_unavailableMessage</BbAlertDescription>
         </BbAlert>
     }
@@ -80,7 +80,7 @@
     @if (_errorMessage is not null)
     {
         <BbAlert Variant="AlertVariant.Danger">
-            <BbAlertTitle>@Localizer["App.Projects.ErrorTitle"]</BbAlertTitle>
+            <BbAlertTitle As="p">@Localizer["App.Projects.ErrorTitle"]</BbAlertTitle>
             <BbAlertDescription>@_errorMessage</BbAlertDescription>
         </BbAlert>
     }
@@ -137,7 +137,7 @@
                 @if (_dialogErrorMessage is not null)
                 {
                     <BbAlert Variant="AlertVariant.Danger">
-                        <BbAlertTitle>@Localizer["App.Projects.ErrorTitle"]</BbAlertTitle>
+                        <BbAlertTitle As="p">@Localizer["App.Projects.ErrorTitle"]</BbAlertTitle>
                         <BbAlertDescription>@_dialogErrorMessage</BbAlertDescription>
                     </BbAlert>
                 }
@@ -193,7 +193,7 @@
                     @if (_dialogErrorMessage is not null)
                     {
                         <BbAlert Variant="AlertVariant.Danger">
-                            <BbAlertTitle>@Localizer["App.Projects.ErrorTitle"]</BbAlertTitle>
+                            <BbAlertTitle As="p">@Localizer["App.Projects.ErrorTitle"]</BbAlertTitle>
                             <BbAlertDescription>@_dialogErrorMessage</BbAlertDescription>
                         </BbAlert>
                     }
@@ -285,7 +285,7 @@
                                        data-namespace-link="@namespaceName">
                                         <BbBadge Variant="BadgeVariant.Secondary">
                                             @namespaceName
-                                            <LucideIcon Name="link" Size="12" />
+                                            <LucideIcon aria-hidden="true" Name="link" Size="12" />
                                         </BbBadge>
                                     </a>
                                 }

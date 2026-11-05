@@ -5,6 +5,7 @@
 @inject INamespacePermissionChecker PermissionChecker
 @inject IStringLocalizer<SharedResources> Localizer
 @inject ILogger<Pseudonyms> Logger
+@inject IJSRuntime JS
 
 <PageTitle>@Localizer["App.Pseudonyms.PageTitle", NamespaceName]</PageTitle>
 
@@ -16,38 +17,49 @@
         <div class="bb:space-y-1">
             <BackLink Href="/ui/namespaces">@Localizer["App.Pseudonyms.BackToNamespaces"]</BackLink>
             <div class="bb:flex bb:items-center bb:gap-2">
-                <LucideIcon Name="key-round" Size="24" Class="bb:text-primary" />
+                <LucideIcon aria-hidden="true" Name="fingerprint-pattern" Size="24" Class="bb:shrink-0 bb:text-primary" />
                 <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Pseudonyms.Heading", NamespaceName]</h1>
             </div>
         </div>
-        <div class="bb:flex bb:flex-wrap bb:gap-2">
-            @* Marked as revealing - see .reveal-mark in wwwroot/app.css. *@
-            <BbButton
-                id="showReverseLookupButton"
-                Variant="ButtonVariant.Outline"
-                IconPosition="IconPosition.Start"
-                OnClick="() => OnLookupDialogOpenChanged(true)"
-            >
-                <Icon>
-                    <LucideIcon Name="eye" Size="16" Class="reveal-mark" />
-                </Icon>
-                <ChildContent>
-                    @Localizer["App.Pseudonyms.ReverseLookupTitle"]
-                </ChildContent>
-            </BbButton>
-            <BbButton
-                id="showCreatePseudonymButton"
-                IconPosition="IconPosition.Start"
-                OnClick="() => OnCreateDialogOpenChanged(true)"
-            >
-                <Icon>
-                    <LucideIcon Name="plus" Size="16" />
-                </Icon>
-                <ChildContent>
-                    @Localizer["App.Pseudonyms.CreateTitle"]
-                </ChildContent>
-            </BbButton>
-        </div>
+        @* Only what this caller can actually do here, and nothing if the namespace can't be read
+           at all: the buttons used to open dialogs that could only end in an access error. *@
+        @if (_errorMessage is null)
+        {
+            <div class="bb:flex bb:flex-wrap bb:gap-2">
+                @* Marked as revealing - see .reveal-mark in wwwroot/app.css. *@
+                @if (_hasReverseLookupAccess)
+                {
+                    <BbButton
+                        id="showReverseLookupButton"
+                        Variant="ButtonVariant.Outline"
+                        IconPosition="IconPosition.Start"
+                        OnClick="() => OnLookupDialogOpenChanged(true)"
+                    >
+                        <Icon>
+                            <LucideIcon aria-hidden="true" Name="eye" Size="16" Class="reveal-mark" />
+                        </Icon>
+                        <ChildContent>
+                            @Localizer["App.Pseudonyms.ReverseLookupTitle"]
+                        </ChildContent>
+                    </BbButton>
+                }
+                @if (_hasWriteAccess)
+                {
+                    <BbButton
+                        id="showCreatePseudonymButton"
+                        IconPosition="IconPosition.Start"
+                        OnClick="() => OnCreateDialogOpenChanged(true)"
+                    >
+                        <Icon>
+                            <LucideIcon aria-hidden="true" Name="plus" Size="16" />
+                        </Icon>
+                        <ChildContent>
+                            @Localizer["App.Pseudonyms.CreateTitle"]
+                        </ChildContent>
+                    </BbButton>
+                }
+            </div>
+        }
     </div>
 
     @* Results and errors stay inside each dialog: its overlay covers the page while it's open.
@@ -113,7 +125,7 @@
         <BbDialogContent>
             <BbDialogHeader>
                 <BbDialogTitle Class="bb:leading-tight bb:flex bb:items-center bb:gap-2">
-                    <LucideIcon Name="eye" Size="18" Class="reveal-mark" />
+                    <LucideIcon aria-hidden="true" Name="eye" Size="18" Class="reveal-mark" />
                     @Localizer["App.Pseudonyms.ReverseLookupTitle"]
                 </BbDialogTitle>
                 <BbDialogDescription>@Localizer["App.Pseudonyms.ReverseLookupDescription"]</BbDialogDescription>
@@ -222,23 +234,20 @@
     @if (_errorMessage is not null)
     {
         <BbAlert Variant="AlertVariant.Danger">
-            <BbAlertTitle>@Localizer["App.Pseudonyms.LoadErrorTitle"]</BbAlertTitle>
+            <BbAlertTitle As="p">@Localizer["App.Pseudonyms.LoadErrorTitle"]</BbAlertTitle>
             <BbAlertDescription>@_errorMessage</BbAlertDescription>
         </BbAlert>
     }
     else
     {
         <BbCard>
-            <BbCardHeader>
-                <SectionTitle>@Localizer["App.Nav.Pseudonyms"]</SectionTitle>
-            </BbCardHeader>
-            <BbCardContent Class="bb:space-y-4">
+            <BbCardContent Class="bb:space-y-4 bb:pt-6">
                 @* Our own search form instead of the grid's ShowSearch box: that one searches a
                    debounce after every keystroke, and on a large namespace each of those is a
                    query. Here a search runs on Enter or the button. The input reports every
                    keystroke rather than on change, so the submit handler always sees all of what
                    was typed. *@
-                <form class="bb:flex bb:items-center bb:gap-2" role="search" @onsubmit="SubmitSearch">
+                <form class="search-row" role="search" @onsubmit="SubmitSearch">
                     <BbInput
                         Type="InputType.Search"
                         @bind-Value="_searchInput"
@@ -249,7 +258,7 @@
                         Class="bb:max-w-sm"
                     />
                     <BbButton Type="ButtonType.Submit" Variant="ButtonVariant.Outline">
-                        <LucideIcon Name="search" Size="16" />
+                        <LucideIcon aria-hidden="true" Name="search" Size="16" />
                         @Localizer["App.Common.Search"]
                     </BbButton>
                     @if (_isSearching)
@@ -265,11 +274,12 @@
                 @if (_searchFailed)
                 {
                     <BbAlert Variant="AlertVariant.Danger">
-                        <BbAlertTitle>@Localizer["App.Pseudonyms.SearchErrorTitle"]</BbAlertTitle>
+                        <BbAlertTitle As="p">@Localizer["App.Pseudonyms.SearchErrorTitle"]</BbAlertTitle>
                         <BbAlertDescription>@Localizer["App.Pseudonyms.SearchErrorDescription"]</BbAlertDescription>
                     </BbAlert>
                 }
                 <BbDataGrid
+                    Class="pseudonym-grid"
                     @key="_run"
                     @ref="_grid"
                     TData="PseudonymSearchItemDto"
@@ -305,7 +315,7 @@
                                 Description="@Localizer["App.Pseudonyms.NoMatchesDescription"]"
                             >
                                 <Icon>
-                                    <LucideIcon Name="search-x" />
+                                    <LucideIcon aria-hidden="true" Name="search-x" />
                                 </Icon>
                             </BbEmpty>
                         }
@@ -317,7 +327,7 @@
                                 Description="@Localizer["App.Pseudonyms.EmptyDescription"]"
                             >
                                 <Icon>
-                                    <LucideIcon Name="fingerprint-pattern" />
+                                    <LucideIcon aria-hidden="true" Name="fingerprint-pattern" />
                                 </Icon>
                             </BbEmpty>
                         }
@@ -350,13 +360,19 @@
                         <BbDataGridPropertyColumn
                             Property="@(p => p.CreatedAt)"
                             Title="@Localizer["App.Pseudonyms.CreatedAt"]"
-                            Format="yyyy-MM-dd HH:mm:ss"
-                        />
+                        >
+                            <CellTemplate Context="p">
+                                @BrowserTime.Format(p.CreatedAt, _browserTimeZone)
+                            </CellTemplate>
+                        </BbDataGridPropertyColumn>
                         <BbDataGridPropertyColumn
                             Property="@(p => p.LastUpdatedAt)"
                             Title="@Localizer["App.Pseudonyms.LastUpdated"]"
-                            Format="yyyy-MM-dd HH:mm:ss"
-                        />
+                        >
+                            <CellTemplate Context="p">
+                                @BrowserTime.Format(p.LastUpdatedAt, _browserTimeZone)
+                            </CellTemplate>
+                        </BbDataGridPropertyColumn>
                         @if (_children.Count > 0)
                         {
                             <BbDataGridTemplateColumn Title="@Localizer["App.Common.Actions"]">
@@ -443,7 +459,13 @@
     // server-side on every request via PseudonymAppService.SearchAsync, so this flag being stale
     // (e.g. permissions changed mid-session) can't let anyone search original values they aren't
     // allowed to see.
-    private bool _hasReverseLookupAccess;
+    // Both start out true and are corrected as soon as the checks below return. The usual caller
+    // can do both, and starting from false would make their buttons blink out and back while the
+    // circuit takes over from the prerender. The app service enforces both regardless.
+    private bool _hasReverseLookupAccess = true;
+    private bool _hasWriteAccess = true;
+
+    private TimeZoneInfo _browserTimeZone = TimeZoneInfo.Utc;
 
     // The create and reverse-lookup dialogs. Each one's result and error belong to that dialog, so
     // they are cleared when it closes - reopening it later starts from a blank field.
@@ -476,11 +498,25 @@
     private string? _chainError;
     private Vfps.Data.Models.Pseudonym? _chainResult;
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _browserTimeZone = await BrowserTime.GetZoneAsync(JS, Logger);
+            StateHasChanged();
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         StartRun(_run);
         var user = await GetUserAsync();
         _hasReverseLookupAccess = await PermissionChecker.HasReverseLookupAccessAsync(
+            user,
+            NamespaceName,
+            CancellationToken.None
+        );
+        _hasWriteAccess = await PermissionChecker.HasWriteAccessAsync(
             user,
             NamespaceName,
             CancellationToken.None

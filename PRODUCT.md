@@ -75,7 +75,7 @@ No comparative claims against gPAS or E-PIX are on record. Don't invent any.
 
 ## Brand Commitments
 
-- Name: **vfps**, lowercase in prose and docs. The UI footer currently shows "Vfps vX.Y.Z".
+- Name: **vfps**, lowercase in prose and docs. The UI footer shows "vfps vX.Y.Z".
 - Tagline in use: "A very fast and resource-efficient pseudonymization service".
 - Existing assets: `website/img/text-logo.svg` (wordmark), `website/img/vfps-lockup-morph-loop.svg`
   (animated lockup on the docs home page), and the V-mark logo in the admin UI header.

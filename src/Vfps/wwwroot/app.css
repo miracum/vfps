@@ -1,9 +1,16 @@
-html,
-body {
+html {
   height: 100%;
 }
 
+/*
+ * The app shell (MainLayout.razor): a column at least as tall as the window, with <main> taking up
+ * whatever is left. That keeps the footer on the bottom edge of a short page and after the content
+ * of a long one. dvh so a phone's address bar doesn't push it out of view.
+ */
 body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
   margin: 0;
 }
 
@@ -30,12 +37,12 @@ body {
  */
 .badge-completed {
   border-color: transparent;
-  background-color: #16a34a; /* Tailwind green-600 */
+  background-color: #15803d; /* Tailwind green-700: white on it is 5.0:1, on green-600 only 3.3:1 */
   color: #fff;
 }
 
 .badge-completed:hover {
-  background-color: #15803d; /* Tailwind green-700 */
+  background-color: #166534; /* Tailwind green-800 */
 }
 
 /* Shared by the Stalled status badge and the "N malformed rows" warning badge - both are the
@@ -46,8 +53,19 @@ body {
   color: #92400e; /* Tailwind amber-800 */
 }
 
+/* The same colors as .dark .reveal-note: the light-theme pill glared on the dark card. */
+.dark .badge-warning-amber {
+  border-color: color-mix(in oklch, #f59e0b 45%, transparent); /* Tailwind amber-500 */
+  background-color: color-mix(in oklch, #f59e0b 12%, transparent);
+  color: #fde68a; /* Tailwind amber-200 */
+}
+
 .issue-text-stalled {
   color: #b45309; /* Tailwind amber-700 */
+}
+
+.dark .issue-text-stalled {
+  color: #fbbf24; /* Tailwind amber-400: amber-700 is too dark to read on the dark card */
 }
 
 /*
@@ -146,8 +164,151 @@ h3 {
   text-wrap: balance;
 }
 
+/* A page title can quote a name someone chose, which can be one long unbroken run of characters. */
+main h1 {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 p {
   text-wrap: pretty;
+}
+
+/*
+ * The main nav (MainLayout.razor). Plain links in a list, shown as a row once there is room for
+ * every item in both languages, and as a sheet behind .nav-toggle below that. The breakpoint is
+ * where the seven items of a signed-in admin plus the header's right-hand controls fit in German,
+ * the longer of the two.
+ */
+.main-nav {
+  display: none;
+}
+
+.main-nav ul,
+.sheet-nav ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.main-nav ul {
+  display: flex;
+  align-items: center;
+  gap: 0.125rem;
+}
+
+.sheet-nav ul {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.nav-link {
+  display: block;
+  border-radius: calc(var(--radius) - 2px);
+  padding: 0.375rem 0.75rem;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.sheet-nav .nav-link {
+  padding-block: 0.625rem; /* a comfortable touch target: the sheet is mostly used on touch screens */
+}
+
+.nav-link:hover,
+.nav-link.active {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+}
+
+@media (width >= 78rem) {
+  .main-nav {
+    display: block;
+  }
+
+  .nav-toggle {
+    display: none;
+  }
+}
+
+/*
+ * The header's language links: tall enough to hit, the links being all that's there to aim at.
+ */
+.lang-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.5rem;
+}
+
+/*
+ * Native selects, drawn to match the library's own select (the data grid's page size): the same
+ * chevron rather than each browser's arrow, and text that starts where an input's does - a native
+ * select indents its own by a few pixels more. The list that opens stays the browser's. The stroke
+ * is a gray with enough contrast on both themes' backgrounds, as a background image can't use
+ * currentColor.
+ */
+select:not([multiple]) {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2371717a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-position: right 0.75rem center;
+  background-repeat: no-repeat;
+  padding-right: 2.25rem;
+  text-overflow: ellipsis;
+}
+
+/* Selected text, which people copy pseudonyms by, in the theme's color rather than the browser's. */
+::selection {
+  background-color: color-mix(in oklch, var(--primary) 25%, transparent);
+}
+
+/* Figures that line up from row to row, in the tables and the label/value lists. */
+main td,
+.detail-list dd {
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * Keyboard focus for what the bundle's own focus rings don't reach: the native selects, which
+ * carry focus-visible:outline-none and nothing in its place, the file format group and the nav
+ * links. Unlayered, so it wins over that utility.
+ */
+select:focus-visible,
+summary:focus-visible,
+.nav-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* The skip link is off-screen until it has keyboard focus, and it is the first thing that can. */
+.skip-link {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 60;
+  transform: translateY(-200%);
+  border-radius: calc(var(--radius) - 2px);
+  background-color: var(--primary);
+  padding: 0.5rem 0.75rem;
+  color: var(--primary-foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  transform: none;
+}
+
+.skip-link:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* The skip link focuses main itself, which isn't interactive - the same reasoning as h1:focus. */
+main:focus {
+  outline: none;
 }
 
 /*
@@ -160,6 +321,36 @@ p {
  */
 .page-main {
   overflow-x: clip;
+}
+
+/* On a phone every pixel of gutter comes off the content, twice: page, then card. */
+@media (width < 40rem) {
+  .page-main {
+    padding: 1rem;
+  }
+}
+
+/* The smallest phones, where the header's controls only just don't fit in their usual spacing. */
+@media (width < 24rem) {
+  body > header,
+  body > header > .ml-auto {
+    gap: 0.25rem;
+  }
+
+  body > header {
+    padding-inline: 0.75rem;
+  }
+}
+
+/*
+ * The compact density suits a mouse on a desk, which is where this UI is mostly used. A finger gets
+ * the library's standard one, which scales every control up by the same step. Keyed off the input
+ * rather than the width: a touch laptop has a wide screen, and a narrow browser window has a mouse.
+ */
+@media (pointer: coarse) {
+  :root {
+    --bb-spacing: 0.25rem;
+  }
 }
 
 /*
@@ -348,4 +539,397 @@ h1:focus {
 .title-link:hover,
 .title-link:focus-visible {
   text-decoration: underline;
+}
+
+/*
+ * Every dialog, whatever it holds: the library centers it on the window with nothing to stop it
+ * being taller than that, which would put its top and bottom out of reach. Sheets are full height
+ * already and don't carry this class.
+ */
+:is([role="dialog"], [role="alertdialog"])[class~="bb:top-[50%]"] {
+  max-height: 100dvh;
+  overflow-y: auto;
+}
+
+/*
+ * The part of a long dialog that scrolls, so its title and buttons stay in reach. The height is
+ * also limited by what's left of the window after them, or a phone held sideways would push both
+ * off the screen. Pulled out to the dialog's own edges and padded back in, so the scrollbar runs
+ * along the edge of the dialog, the fields line up with the buttons below, and a focus ring has
+ * room not to be clipped.
+ */
+.dialog-body {
+  max-height: min(65vh, calc(100dvh - 12.5rem));
+  margin-inline: calc(var(--bb-spacing) * -6);
+  overflow-y: auto;
+  padding-inline: calc(var(--bb-spacing) * 6);
+}
+
+/*
+ * The label-beside-its-field rows of the namespace and project dialogs. A quarter of a phone screen
+ * can't hold a German label - it was cut off by the field next to it - so there it goes above.
+ */
+@media (width < 40rem) {
+  [class~="bb:grid-cols-4"] {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.375rem;
+  }
+
+  [class~="bb:grid-cols-4"] > label {
+    padding-top: 0;
+    text-align: start;
+  }
+
+  [class~="bb:grid-cols-4"] > .col-span-3 {
+    grid-column: auto;
+  }
+}
+
+/* The job dialog's introduction, the first thing to give up where height is short. */
+@media (width < 40rem), (height < 30rem) {
+  .job-dialog-intro {
+    display: none;
+  }
+}
+
+/* A search box with what goes beside it, wrapping below it once the box would get too short to read. */
+.search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.search-row > input {
+  flex: 2 1 16rem;
+  width: auto;
+}
+
+.search-row > select {
+  flex: 1 1 9rem;
+  width: auto;
+}
+
+/* A field whose explanation sits beside it where there is room, and under it where there isn't. */
+.field-with-note {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0.25rem 1rem; /* row, column */
+}
+
+/*
+ * The CSV job dialog's File format group: a details element, whose marker is replaced by the same
+ * chevron the namespace tree uses so it reads as something that opens.
+ */
+.file-format summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem; /* row, column */
+  width: fit-content;
+  cursor: pointer;
+  list-style: none;
+}
+
+.file-format summary::-webkit-details-marker {
+  display: none;
+}
+
+.file-format[open] .file-format-chevron {
+  transform: rotate(90deg);
+}
+
+/*
+ * The fields a CSV job applies to its columns. As many columns as fit, each no narrower than a
+ * label and a short value, so they stack on their own on a phone. A mapping row is the one with a
+ * remove button after its fields; alone on a phone it would be a whole row of nothing, and with a
+ * single mapping left there is nothing to remove anyway.
+ */
+.field-box {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(10rem, 100%), 1fr));
+  align-items: end;
+  gap: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+}
+
+.mapping-row > button {
+  justify-self: end;
+}
+
+@media (width < 40rem) {
+  .mapping-row > button:disabled {
+    display: none;
+  }
+}
+
+@media (width >= 40rem) {
+  .field-with-note {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+  }
+
+  .mapping-row {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  }
+}
+
+/*
+ * The CSV jobs grid (CsvJobs.razor). The first column holds what tells the jobs apart and takes all
+ * the width that's left; the others stay on one line at their own width.
+ */
+.jobs-grid :is(th, td):first-child {
+  width: 100%;
+}
+
+.jobs-grid td:nth-child(2) {
+  white-space: nowrap;
+}
+
+.job-subject {
+  min-width: 14rem;
+  overflow-wrap: anywhere;
+}
+
+.job-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.job-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-top: 0.25rem;
+  white-space: nowrap;
+}
+
+.job-created {
+  white-space: nowrap;
+}
+
+.job-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+/*
+ * Below the width all five columns fit at, in German, each job is a stack of the same cells rather
+ * than a table to scroll sideways: subject and status on top, then progress, then what can be done.
+ * The rows keep their explicit ARIA roles whatever they're displayed as. Headings go because the
+ * cells say what they are; the empty state's single cell has the whole row.
+ */
+@media (width < 78rem) {
+  .jobs-grid thead {
+    display: none;
+  }
+
+  .jobs-grid :is(table, tbody) {
+    display: block;
+    background-color: transparent;
+  }
+
+  .jobs-grid tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 0.5rem 1rem; /* row, column */
+    border-bottom: 1px solid var(--border);
+    padding-block: 0.875rem;
+  }
+
+  .jobs-grid td,
+  .jobs-grid td:first-child {
+    display: block;
+    width: auto;
+    border: 0;
+    padding: 0;
+  }
+
+  .jobs-grid td:nth-child(n + 3),
+  .jobs-grid td[colspan] {
+    grid-column: 1 / -1;
+  }
+
+  .job-subject {
+    min-width: 0;
+  }
+
+  .job-created {
+    color: var(--muted-foreground);
+    font-size: var(--bb-text-xs);
+  }
+
+  .job-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (40rem <= width < 78rem) {
+  .jobs-grid td:nth-child(3) {
+    grid-column: 1;
+  }
+
+  .jobs-grid td:nth-child(4) {
+    grid-column: 2;
+    text-align: end;
+  }
+}
+
+/*
+ * The pseudonym grid (Pseudonyms.razor) on a screen too narrow for its columns: pseudonym, original
+ * value and creation time stacked, the long values wrapping rather than scrolled out of sight. The
+ * last-updated time is left out here, the one thing not worth a line of its own - without its
+ * heading it would just be a second, unexplained timestamp.
+ */
+@media (width < 60rem) {
+  .pseudonym-grid thead {
+    display: none;
+  }
+
+  .pseudonym-grid :is(table, tbody, tr, td) {
+    display: block;
+    background-color: transparent;
+  }
+
+  .pseudonym-grid tr {
+    border-bottom: 1px solid var(--border);
+    padding-block: 0.75rem;
+  }
+
+  .pseudonym-grid code {
+    display: inline-block;
+    max-width: 100%;
+  }
+
+  .pseudonym-grid td {
+    border: 0;
+    padding: 0.125rem 0;
+    overflow-wrap: anywhere;
+  }
+
+  .pseudonym-grid td:nth-child(3) {
+    color: var(--muted-foreground);
+    font-size: var(--bb-text-xs);
+  }
+
+  .pseudonym-grid td:nth-child(4) {
+    display: none;
+  }
+}
+
+/*
+ * The access token usage samples (AccessTokenUsageExamples.razor). Wrapped rather than scrolled, so
+ * the whole command is on screen: the end of the line is the URL, which is the part that differs
+ * from one deployment to the next. Copying goes through the button, which copies the original lines.
+ */
+.usage-sample {
+  white-space: pre-wrap;
+  word-break: break-all; /* not overflow-wrap: that moves the long URL to a line of its own, past its indent */
+}
+
+/*
+ * The home page's stat tiles on a phone: two across where a large count still fits, so the page's
+ * lists aren't pushed a whole screen down. An enormous count wraps rather than leaving its tile.
+ */
+.stat-value {
+  overflow-wrap: anywhere;
+}
+
+@media (24rem <= width < 40rem) {
+  .stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stat-value {
+    font-size: 1.5rem;
+    line-height: 2rem;
+  }
+}
+
+/*
+ * A row of the home page's recent jobs. The status moves onto a line of its own once it would leave
+ * too little of the file name to recognize - in a two-column page that happens well above phone
+ * widths, which is why this goes by the room there is rather than by a breakpoint.
+ */
+.recent-job {
+  flex-wrap: wrap;
+}
+
+.recent-job-text {
+  flex: 1 1 12rem;
+}
+
+.recent-job-status {
+  margin-inline-start: auto;
+}
+
+/*
+ * Shown while the connection to the server is lost (App.razor). Blazor sets the state as a class on
+ * the outer element: still trying, or given up, which needs a reload.
+ */
+.reconnect-modal {
+  display: none;
+  position: fixed;
+  z-index: 100;
+  place-items: center;
+  inset: 0;
+  background-color: color-mix(in oklch, var(--background) 75%, transparent);
+  padding: 1rem;
+}
+
+.reconnect-modal:is(
+    .components-reconnect-show,
+    .components-reconnect-retrying,
+    .components-reconnect-failed,
+    .components-reconnect-rejected,
+    .components-reconnect-paused,
+    .components-reconnect-resume-failed
+  ) {
+  display: grid;
+}
+
+.reconnect-card {
+  max-width: 26rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background-color: var(--card);
+  color: var(--card-foreground);
+  padding: 1.25rem;
+  font-size: 0.875rem;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 15%);
+}
+
+.reconnect-lost {
+  display: none;
+}
+
+.reconnect-lost button {
+  margin-top: 0.75rem;
+}
+
+.reconnect-modal:is(
+    .components-reconnect-failed,
+    .components-reconnect-rejected,
+    .components-reconnect-paused,
+    .components-reconnect-resume-failed
+  )
+  .reconnect-trying {
+  display: none;
+}
+
+.reconnect-modal:is(
+    .components-reconnect-failed,
+    .components-reconnect-rejected,
+    .components-reconnect-paused,
+    .components-reconnect-resume-failed
+  )
+  .reconnect-lost {
+  display: block;
 }

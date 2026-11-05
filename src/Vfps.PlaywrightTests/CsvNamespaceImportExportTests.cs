@@ -222,16 +222,6 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
         return await response.TextAsync();
     }
 
-    private async Task CreateNamespaceAsync(string name)
-    {
-        await GotoAsync("/ui/namespaces");
-        await Page.ClickAsync("#showCreateNamespaceFormButton");
-        await Expect(Page.Locator("#name")).ToBeVisibleAsync();
-        await FillInputAsync("#name", name);
-        await Page.ClickAsync("form:has(#name) button[type=submit]");
-        await Expect(Page.Locator($"[role=treeitem][data-value=\"{name}\"]")).ToHaveCountAsync(1);
-    }
-
     [Fact]
     public async Task ImportColumns_AreOfferedAsDropdownsOfTheFilesOwnHeaderRow()
     {

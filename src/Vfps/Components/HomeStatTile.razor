@@ -9,9 +9,9 @@
         <BbCardHeader>
             <div class="bb:flex bb:items-center bb:justify-between bb:gap-2">
                 <span class="bb:text-sm bb:font-medium bb:text-muted-foreground">@Label</span>
-                <LucideIcon Name="@Icon" Size="16" Class="bb:shrink-0 bb:text-muted-foreground" />
+                <LucideIcon aria-hidden="true" Name="@Icon" Size="16" Class="bb:shrink-0 bb:text-muted-foreground" />
             </div>
-            <p class="bb:text-3xl bb:font-semibold bb:tracking-tight bb:tabular-nums">@Value</p>
+            <p class="stat-value bb:text-3xl bb:font-semibold bb:tracking-tight bb:tabular-nums">@Value</p>
             @if (Caption is not null)
             {
                 <p class="bb:text-xs bb:text-muted-foreground">@Caption</p>
