@@ -73,8 +73,8 @@ internal sealed class CsvJobProgressReporter(
 
     /// <summary>
     /// Rows CsvHelper flagged as malformed but recovered from - incremented from inside the
-    /// <c>BadDataFound</c> closure on the job's <see cref="CsvHelper.Configuration.CsvConfiguration"/>
-    /// (see <see cref="CsvJobFormat.CreateConfiguration"/>), which is why this
+    /// <c>OnMalformedRecord</c> closure on the job's <see cref="CsvHelper.CsvReaderOptions"/>
+    /// (see <see cref="CsvJobFormat.CreateReaderOptions"/>), which is why this
     /// lives on a shared object rather than as a local the reporting code below couldn't observe.
     /// </summary>
     public int BadDataRowCount { get; set; }

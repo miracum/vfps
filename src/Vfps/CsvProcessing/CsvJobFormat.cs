@@ -1,6 +1,5 @@
-using System.Globalization;
 using System.Text;
-using CsvHelper.Configuration;
+using CsvHelper;
 using Microsoft.Extensions.Logging;
 using Vfps.Config;
 using Vfps.Data.Models;
@@ -16,34 +15,77 @@ namespace Vfps.CsvProcessing;
 internal static class CsvJobFormat
 {
     /// <summary>
-    /// Builds the reader/writer configuration for <paramref name="job"/>, with malformed rows
-    /// counted on <paramref name="progress"/> instead of failing the job.
+    /// How a job's input is parsed. Fields here are opaque values to relocate rather than data to
+    /// interpret, so every default that would act on what a file contains is pinned or noted.
+    ///
+    /// Malformed quoting - a real-world export's stray, unescaped '"' inside an otherwise unquoted
+    /// field, say a free-text column with an inch mark - is recovered from, keeping the raw field
+    /// content, rather than failing the whole job over one row. Never log the raw record
+    /// (<see cref="CsvMalformedRecord.RawRecord"/>), only its number, since that value is exactly
+    /// what this service exists to protect. The count is surfaced on the job itself so the UI can
+    /// flag it.
     /// </summary>
-    public static CsvConfiguration CreateConfiguration(
+    public static CsvReaderOptions CreateReaderOptions(
         PseudonymizationJob job,
         CsvJobProgressReporter progress,
         ILogger logger
     ) =>
-        new(CultureInfo.InvariantCulture)
+        new()
         {
-            Delimiter = job.Delimiter,
-            HasHeaderRecord = job.HasHeaderRow,
-            // Real-world exports sometimes contain a stray, unescaped '"' inside an otherwise
-            // unquoted field (e.g. a free-text column with an inch mark). CsvHelper treats that as
-            // malformed CSV and throws by default. Since fields here are opaque values to relocate
-            // rather than data to interpret, keep the raw field content as-is and move on instead
-            // of failing the whole job over one row. Never log the raw field/record - only the row
-            // number - since that value is exactly what this service exists to protect. The count
-            // is surfaced on the job itself so the UI can flag it.
-            BadDataFound = args =>
+            // Set rather than left to the library's detection, which guesses from the first lines.
+            Separator = ParseDelimiter(job.Delimiter),
+            HasHeader = job.HasHeaderRow,
+            // Off, or a first line of the form sep=; silently disappears from the file.
+            DetectSeparatorHint = false,
+            IncludeValuesInExceptions = false,
+            OnMalformedRecord = record =>
             {
                 progress.BadDataRowCount++;
                 logger.LogWarning(
-                    "Ignoring malformed CSV data on parser row {Row}",
-                    args.Context.Parser?.Row
+                    "Ignoring malformed CSV data on record {RecordNumber}",
+                    record.RecordNumber
                 );
             },
         };
+
+    /// <summary>
+    /// How a job's output is written, which has to give back every value the input held.
+    /// </summary>
+    public static CsvWriterOptions CreateWriterOptions(PseudonymizationJob job) =>
+        new()
+        {
+            Separator = ParseDelimiter(job.Delimiter),
+            // Keeps a value's surrounding whitespace safe from a reader that trims it. The library's
+            // default stopped quoting those, and a pseudonym mapped from " a" is not one mapped from
+            // "a".
+            Quoting = CsvQuoting.WhenNeededOrWhitespace,
+            // On by default, where it throws on a row with a different number of fields. Rows go
+            // through a job as they came, however many fields each one has.
+            ValidateFieldCount = false,
+        };
+
+    /// <summary>
+    /// A job's delimiter as the one character CsvHelper takes: printable ASCII or a tab, and not
+    /// the quote. Called when a job is created, so a bad one is an error the person creating it
+    /// sees rather than a job that fails later; an InvalidOperationException because that is what
+    /// the job form shows to them. The same check guards a job already stored with a delimiter
+    /// from before this limit existed, which then fails like any other unprocessable job.
+    /// </summary>
+    public static char ParseDelimiter(string delimiter)
+    {
+        if (
+            delimiter is [var character]
+            && (character == '\t' || character is >= ' ' and <= '~')
+            && character != '"'
+        )
+        {
+            return character;
+        }
+
+        throw new InvalidOperationException(
+            "The delimiter must be a single ASCII character or a tab, and not a double quote."
+        );
+    }
 
     /// <summary>
     /// How much of the input object to pull per read of the underlying stream.

@@ -92,11 +92,11 @@ internal static class CsvJobRowReader
                 // ShutdownToken is a plain CancellationToken, so this stays a free flag read.
                 cancellationToken.ShutdownToken.ThrowIfCancellationRequested();
 
-                var fieldCount = csvReader.Parser.Count;
+                var fieldCount = csvReader.FieldCount;
                 rawFields = new string?[fieldCount];
                 for (var i = 0; i < fieldCount; i++)
                 {
-                    rawFields[i] = csvReader.GetField(i);
+                    rawFields[i] = csvReader.GetString(i);
                 }
             }
 

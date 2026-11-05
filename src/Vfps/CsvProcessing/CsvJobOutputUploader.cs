@@ -3,7 +3,6 @@ using System.Text;
 using Amazon.S3;
 using Amazon.S3.Transfer;
 using CsvHelper;
-using CsvHelper.Configuration;
 using Microsoft.Extensions.Options;
 using Vfps.Config;
 
@@ -28,7 +27,7 @@ internal sealed class CsvJobOutputUploader(IAmazonS3 s3, IOptions<S3Config> s3Co
     /// </summary>
     /// <param name="objectKey">Object to upload the produced CSV to, in the configured bucket.</param>
     /// <param name="encoding">The job's configured output encoding.</param>
-    /// <param name="csvConfig">The job's configured delimiter/header handling.</param>
+    /// <param name="writerOptions">The job's configured delimiter and quoting.</param>
     /// <param name="writeRows">Produces the output, one record at a time.</param>
     /// <param name="shutdownToken">
     /// Hangfire's server-shutdown token. Deliberately only wired to the upload half: the write
@@ -38,14 +37,14 @@ internal sealed class CsvJobOutputUploader(IAmazonS3 s3, IOptions<S3Config> s3Co
     public async Task<T> UploadAsync<T>(
         string objectKey,
         Encoding encoding,
-        CsvConfiguration csvConfig,
+        CsvWriterOptions writerOptions,
         Func<CsvWriter, Task<T>> writeRows,
         CancellationToken shutdownToken
     )
     {
         var pipe = new Pipe();
 
-        var writeTask = WriteAsync(pipe.Writer, encoding, csvConfig, writeRows);
+        var writeTask = WriteAsync(pipe.Writer, encoding, writerOptions, writeRows);
         using var transferUtility = new TransferUtility(s3);
         var uploadTask = transferUtility.UploadAsync(
             pipe.Reader.AsStream(),
@@ -62,7 +61,7 @@ internal sealed class CsvJobOutputUploader(IAmazonS3 s3, IOptions<S3Config> s3Co
     private static async Task<T> WriteAsync<T>(
         PipeWriter pipeWriter,
         Encoding encoding,
-        CsvConfiguration csvConfig,
+        CsvWriterOptions writerOptions,
         Func<CsvWriter, Task<T>> writeRows
     )
     {
@@ -70,7 +69,7 @@ internal sealed class CsvJobOutputUploader(IAmazonS3 s3, IOptions<S3Config> s3Co
         try
         {
             await using var writer = new StreamWriter(pipeOutStream, encoding, leaveOpen: true);
-            await using var csvWriter = new CsvWriter(writer, csvConfig, leaveOpen: true);
+            await using var csvWriter = CsvWriter.Create(writer, writerOptions, leaveOpen: true);
 
             return await writeRows(csvWriter);
         }

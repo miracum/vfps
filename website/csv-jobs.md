@@ -9,6 +9,9 @@ CSV job input/output bytes never pass through the vfps process itself: the admin
 
 Each job runs in one of two directions: **Pseudonymize** (replace original values with their pseudonym - requires write access to every namespace used) or **De-pseudonymize** (replace pseudonym values with their original value - requires reverse-lookup access, since this reveals data). A pseudonym with no match in its namespace during de-pseudonymization is left unchanged in the output rather than failing the job.
 
+A file's delimiter must be a single ASCII character or a tab. A job with any other delimiter is
+refused when it's created.
+
 ## Unknown values
 
 A **pseudonymize** job normally creates a pseudonym for any value the namespace doesn't know yet.
