@@ -88,7 +88,8 @@ No comparative claims against gPAS or E-PIX are on record. Don't invent any.
   headline figures on the docs home page (~12,000 req/s, P99 < 10 ms, < 2 s cold start, ~1,000 req/s
   on 1 CPU and 128 MiB) come from there.
 - Admin UI screenshots in light and dark themes: `website/img/ui/`.
-- Feature documentation: `website/*.md`; API contracts: `src/Vfps/Protos/vfps/api/v1/`.
+- Feature documentation is in `website/*.md`, and the API contracts are the protobuf files in
+  `src/Vfps/Protos/vfps/api/v1/`.
 - No testimonials, adopter list, case studies or deployment counts are on record. Don't fabricate
   any.
 
