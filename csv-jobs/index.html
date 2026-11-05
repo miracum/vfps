@@ -1160,6 +1160,8 @@
 <img alt="CSV pseudonymization jobs page" src="../img/ui/ui-jobs-dark.png#only-dark" /></p>
 <p>CSV job input/output bytes never pass through the vfps process itself: the admin UI uploads directly to a presigned S3 PUT URL and downloads directly from a presigned S3 GET URL, and the Hangfire background job (running in-process, no separate worker deployment) streams the file S3-to-S3. See <code>compose.yaml</code>'s <code>s3</code> profile for a local SeaweedFS setup usable for manual testing.</p>
 <p>Each job runs in one of two directions: <strong>Pseudonymize</strong> (replace original values with their pseudonym - requires write access to every namespace used) or <strong>De-pseudonymize</strong> (replace pseudonym values with their original value - requires reverse-lookup access, since this reveals data). A pseudonym with no match in its namespace during de-pseudonymization is left unchanged in the output rather than failing the job.</p>
+<p>A file's delimiter must be a single ASCII character or a tab. A job with any other delimiter is
+refused when it's created.</p>
 <h2 id="unknown-values">Unknown values<a class="headerlink" href="#unknown-values" title="Permanent link">&para;</a></h2>
 <p>A <strong>pseudonymize</strong> job normally creates a pseudonym for any value the namespace doesn't know yet.
 Where that is wrong - a file that is supposed to contain only subjects already in a cohort, where a
