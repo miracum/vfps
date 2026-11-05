@@ -2,7 +2,7 @@
 target: "the current admin UI (localhost:8080/ui)"
 total_score: 25
 max_score: 40
-na_heuristics: 
+na_heuristics:
 p0_count: 0
 p1_count: 4
 target_identity: "file:/home/gulch/proj/github/miracum/vfps/src/Vfps/Components"
