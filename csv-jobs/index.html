@@ -15,6 +15,7 @@
         <link rel="canonical" href="https://miracum.github.io/vfps/csv-jobs/">
       
       
+      
         <link rel="prev" href="../api-reference/">
       
       
@@ -25,7 +26,7 @@
       
       
       <link rel="icon" href="../assets/logo.svg">
-      <meta name="generator" content="zensical-0.0.67">
+      <meta name="generator" content="zensical-0.0.70">
     
     
       
@@ -36,12 +37,12 @@
       
         
       
-      <link rel="stylesheet" href="../assets/stylesheets/modern/main.4ae390e2.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/modern/main.e442bf79.min.css">
       
         
           
         
-        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.96d1a7e4.min.css">
+        <link rel="stylesheet" href="../assets/stylesheets/modern/palette.b60ce83d.min.css">
       
       
 
@@ -83,14 +84,11 @@
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
     <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
-    <label class="md-overlay" for="__drawer" aria-label="Navigation"></label>
+    <label class="md-overlay" for="__drawer" aria-hidden="true"></label>
     <div data-md-component="skip">
-      
-        
-        <a href="#csv-jobs" class="md-skip">
-          Skip to content
-        </a>
-      
+      <a href="#__skip" class="md-skip">
+        Skip to content
+      </a>
     </div>
     <div data-md-component="announce">
       
@@ -1143,6 +1141,7 @@
 
               
               <article class="md-content__inner md-typeset">
+                <a id="__skip" tabindex="-1"></a>
                 
                   
 
@@ -1170,14 +1169,21 @@ setting changes what happens instead:</p>
 <li><strong>Fail the job</strong> stops at the first value the namespace doesn't know, before writing any part of
   the chunk it was found in, and reports the data row, column and namespace it stopped at. The
   value itself is never recorded in the error, only where it was.</li>
-<li><strong>Leave the cell empty</strong> writes an empty cell for each unknown value, counts them, and carries
-  on. The count is shown on the job, separately from the "missing value" count: both render as an
-  empty cell in the output and mean opposite things - "the input had nothing here" versus "the
-  input had a value this namespace has never seen".</li>
+<li><strong>Keep the original value</strong> leaves each unknown value in the output exactly as the input had it,
+  counts them, and carries on - for a file where some rows simply have no counterpart yet, and
+  losing the value to a blank cell would be worse. The count is shown on the job, separately from
+  the "missing value" count: both leave the cell as the input had it and mean opposite things - "the
+  input had nothing here" versus "the input had a value this namespace has never seen, and it is
+  still there".</li>
 </ul>
-<p>Neither ever writes the original value through to the output. That is what de-pseudonymization does
-with a pseudonym it cannot resolve, where the field harmlessly stays a pseudonym; doing the same
-here would leave unpseudonymized data in the very column the job was asked to replace.</p>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>The output of a job with <strong>Keep the original value</strong> is not fully pseudonymized: every value it
+counted is still the original, identifying value, in the very column the job was asked to
+replace. De-pseudonymization also leaves a value it can't resolve in place, but there the field
+harmlessly stays a pseudonym. Treat the file accordingly, or use <strong>Fail the job</strong> where that
+isn't acceptable.</p>
+</div>
 <p>The setting applies to pseudonymize jobs only, and is rejected rather than ignored on any other
 direction - the other three either read pseudonyms or store pairs the caller already holds, so
 there is nothing for it to guard. The equivalent single-value API operation is
@@ -1341,10 +1347,10 @@ reference.</p>
       
         
         
-      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["announce.dismiss","content.action.edit","content.code.annotate","content.code.copy","content.code.select","content.footnote.tooltips","content.tabs.link","content.tooltips","navigation.footer","navigation.indexes","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.sections","navigation.top","navigation.tracking","search.highlight","toc.follow"],"redirect":null,"search":"../assets/javascripts/workers/search.7d14d953.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
+      <script id="__config" type="application/json">{"annotate":null,"base":"..","features":["announce.dismiss","content.action.edit","content.code.annotate","content.code.copy","content.code.select","content.footnote.tooltips","content.tabs.link","content.tooltips","navigation.footer","navigation.indexes","navigation.instant","navigation.instant.prefetch","navigation.path","navigation.sections","navigation.top","navigation.tracking","search.highlight","toc.follow"],"redirect":null,"search":"../assets/javascripts/workers/search.c47bb847.min.js","tags":null,"translations":{"clipboard.copied":"Copied to clipboard","clipboard.copy":"Copy to clipboard","clipboard.error":"Could not copy to clipboard","search.result.more.one":"1 more on this page","search.result.more.other":"# more on this page","search.result.none":"No matching documents","search.result.one":"1 matching document","search.result.other":"# matching documents","search.result.placeholder":"Type to start searching","search.result.term.missing":"Missing","select.version":"Select version"},"version":null}</script>
     
     
-      <script src="../assets/javascripts/bundle.67a597eb.min.js"></script>
+      <script src="../assets/javascripts/bundle.a2388154.min.js"></script>
       
     
   </body>
