@@ -1,3 +1,7 @@
 scan:
   skip-dirs:
     - tests/
+    # Build output isn't what ships, and an old one lingers: a build for a runtime identifier six
+    # weeks ago kept reporting that runtime's long-fixed CVEs. Images are scanned as images.
+    - "**/bin"
+    - "**/obj"

@@ -23,6 +23,14 @@ public static class CsvJobDisplay
             ? job.ColumnMappings.FirstOrDefault()?.Namespace
             : job.OriginalFileName;
 
+    /// <summary>
+    /// A percentage as BbProgress can take it. The component writes its value into a CSS transform
+    /// in the current culture, so under German "38,7" makes the whole declaration invalid and the
+    /// bar draws full - a job at 39% looks finished. A whole number reads the same in every
+    /// culture.
+    /// </summary>
+    public static double ProgressValue(double percent) => Math.Round(percent);
+
     public static string DirectionLabel(
         PseudonymizationJobDirection direction,
         IStringLocalizer localizer

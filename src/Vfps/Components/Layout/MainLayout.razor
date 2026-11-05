@@ -9,164 +9,216 @@
 @inject NavigationManager NavigationManager
 @inject IStringLocalizer<SharedResources> Localizer
 
-<BbResponsiveNavProvider>
-    <header class="bb:flex bb:h-16 bb:shrink-0 bb:items-center bb:gap-4 bb:border-b bb:bg-background bb:px-4">
-        <a href="/ui" class="bb:flex bb:shrink-0 bb:items-center bb:gap-2 bb:font-semibold">
-            <img src="img/logo.svg" alt="Vfps logo" class="bb:h-6 bb:w-6 bb:shrink-0" />
-        </a>
+@* Shows only when focused - see .skip-link in wwwroot/app.css. preventDefault because <base> would
+   otherwise resolve this href to /ui/#main-content and navigate to the home page. *@
+<a href="#main-content" class="skip-link" @onclick="SkipToContentAsync" @onclick:preventDefault="true">
+    @Localizer["App.MainLayout.SkipToContent"]
+</a>
 
-        <BbResponsiveNavItems Items="@_navItems" />
+@* The nav is our own rather than BbResponsiveNav: its desktop links render as role="menuitem"
+   tabindex="-1" with no menu around them, so Tab skipped the whole nav and no keyboard user could
+   reach a page from it; and it only collapses below 768px, which left the seven items wider than
+   the screen on anything from a tablet to a small laptop. Plain links in a list, plus a sheet of
+   the same links below the breakpoint in .main-nav's rule in wwwroot/app.css. *@
+<header class="bb:flex bb:h-16 bb:shrink-0 bb:items-center bb:gap-4 bb:border-b bb:bg-background bb:px-4">
+    <a href="/ui" class="bb:flex bb:shrink-0 bb:items-center bb:gap-2 bb:font-semibold">
+        <img src="img/logo.svg" alt="vfps" class="bb:h-6 bb:w-6 bb:shrink-0" />
+    </a>
 
-        <div class="ml-auto bb:flex bb:items-center bb:gap-3">
-            <button
-                type="button"
-                onclick="vfpsToggleDarkMode()"
-                aria-label="@Localizer["App.MainLayout.ToggleDarkMode"]"
-                class="bb:inline-flex bb:h-10 bb:w-10 bb:items-center bb:justify-center bb:rounded-md bb:hover:bg-accent bb:hover:text-accent-foreground"
-            >
-                <LucideIcon Name="moon" Size="18" Class="theme-icon-light" />
-                <LucideIcon Name="sun" Size="18" Class="theme-icon-dark" />
-            </button>
-
-            <div class="bb:flex bb:items-center bb:gap-1 bb:text-xs bb:text-muted-foreground">
-                @for (var i = 0; i < SupportedCultures.Length; i++)
-                {
-                    var culture = SupportedCultures[i];
-                    <a
-                        href="@BuildCultureUrl(culture)"
-                        data-enhance-nav="false"
-                        class="bb:rounded bb:px-1.5 bb:py-0.5 bb:uppercase bb:hover:bg-accent bb:hover:text-accent-foreground @(IsCurrentCulture(culture) ? "bb:font-semibold bb:text-foreground" : "")"
-                    >
-                        @culture
-                    </a>
-                    @if (i < SupportedCultures.Length - 1)
-                    {
-                        <span aria-hidden="true">|</span>
-                    }
-                }
-            </div>
-
-            @if (AuthorizationConfigOptions.Value.IsEnabled)
+    <nav class="main-nav" aria-label="@Localizer["App.MainLayout.MainNavigation"]">
+        <ul>
+            @foreach (var item in _navItems)
             {
-                <AuthorizeView>
-                    <Authorized>
-                        <div class="bb:flex bb:items-center bb:gap-2">
-                            <BbPopover>
-                                <BbPopoverTrigger AsChild="false" class="bb:rounded-full bb:cursor-pointer">
-                                    <BbAvatar Size="AvatarSize.Small">
-                                        <BbAvatarFallback>@Initials(context.User)</BbAvatarFallback>
-                                    </BbAvatar>
-                                </BbPopoverTrigger>
-                                <BbPopoverContent Align="PopoverAlign.End">
-                                    @{
-                                        var displayName = DisplayName(context.User);
-                                        var username = context.User.Identity?.Name;
-                                        var email = Email(context.User);
-                                        var roles = Roles(context.User);
-                                    }
-                                    <div class="bb:space-y-3">
-                                        <div>
-                                            <p class="bb:text-sm bb:font-medium">
-                                                @(displayName ?? username ?? Localizer["App.MainLayout.UnknownUser"].Value)
-                                            </p>
-                                            @if (displayName is not null && username is not null)
-                                            {
-                                                <p class="bb:text-xs bb:text-muted-foreground">@username</p>
-                                            }
-                                        </div>
-                                        <dl class="bb:space-y-1.5 bb:text-xs">
-                                            <div class="bb:flex bb:items-center bb:justify-between bb:gap-2">
-                                                <dt class="bb:text-muted-foreground">@Localizer["App.MainLayout.Email"]</dt>
-                                                <dd class="bb:truncate">@(email ?? "—")</dd>
-                                            </div>
-                                            <div>
-                                                <dt class="bb:text-muted-foreground">@Localizer["App.MainLayout.Roles"]</dt>
-                                                <dd class="bb:mt-1 bb:flex bb:flex-wrap bb:gap-1">
-                                                    @if (roles.Count == 0)
-                                                    {
-                                                        <span class="bb:text-muted-foreground">@Localizer["App.MainLayout.NoRoles"]</span>
-                                                    }
-                                                    else
-                                                    {
-                                                        @foreach (var role in roles)
-                                                        {
-                                                            <BbBadge Variant="BadgeVariant.Secondary">
-                                                                @role
-                                                            </BbBadge>
-                                                        }
-                                                    }
-                                                </dd>
-                                            </div>
-                                        </dl>
-                                    </div>
-                                </BbPopoverContent>
-                            </BbPopover>
-                            <form
-                                action="/ui/authentication/logout"
-                                method="post"
-                                @formname="logout"
-                            >
-                                <AntiforgeryToken />
-                                <BbButton
-                                    Type="ButtonType.Submit"
-                                    Variant="ButtonVariant.Ghost"
-                                    Size="ButtonSize.Small"
-                                >
-                                    @Localizer["App.MainLayout.SignOut"]
-                                </BbButton>
-                            </form>
-                        </div>
-                    </Authorized>
-                    <NotAuthorized>
-                        <BbButton
-                            Variant="ButtonVariant.Outline"
-                            Size="ButtonSize.Small"
-                            Href="@LoginUrl"
-                        >
-                            @Localizer["App.MainLayout.SignIn"]
-                        </BbButton>
-                    </NotAuthorized>
-                </AuthorizeView>
+                <li><NavLink class="nav-link" href="@item.Href" Match="item.Match">@item.Text</NavLink></li>
+            }
+        </ul>
+    </nav>
+
+    <div class="ml-auto bb:flex bb:items-center bb:gap-3">
+        <button
+            type="button"
+            onclick="vfpsToggleDarkMode()"
+            aria-label="@Localizer["App.MainLayout.ToggleDarkMode"]"
+            class="bb:inline-flex bb:h-9 bb:w-9 bb:items-center bb:justify-center bb:rounded-md bb:hover:bg-accent bb:hover:text-accent-foreground"
+        >
+            <LucideIcon aria-hidden="true" Name="moon" Size="18" Class="theme-icon-light" />
+            <LucideIcon aria-hidden="true" Name="sun" Size="18" Class="theme-icon-dark" />
+        </button>
+
+        <div class="bb:flex bb:items-center bb:gap-1 bb:text-xs bb:text-muted-foreground">
+            @for (var i = 0; i < SupportedCultures.Length; i++)
+            {
+                var culture = SupportedCultures[i];
+                <a
+                    href="@BuildCultureUrl(culture)"
+                    data-enhance-nav="false"
+                    class="lang-link bb:rounded bb:px-1.5 bb:uppercase bb:hover:bg-accent bb:hover:text-accent-foreground @(IsCurrentCulture(culture) ? "bb:font-semibold bb:text-foreground" : "")"
+                >
+                    @culture
+                </a>
+                @if (i < SupportedCultures.Length - 1)
+                {
+                    <span aria-hidden="true">|</span>
+                }
             }
         </div>
 
-        <BbResponsiveNavTrigger />
-    </header>
-
-    <main class="bb:flex-1 bb:overflow-auto bb:p-6">
-        @* Without this, an exception a page doesn't handle itself terminates the whole Blazor
-           circuit, and the browser is left with a page that no longer reacts to anything. The
-           boundary logs it and swaps in the error below instead, with the header still working.
-           Routes is rendered InteractiveServer as a whole, so this layout runs in the same
-           circuit as the pages and the boundary sees their errors. *@
-        <ErrorBoundary @ref="_errorBoundary">
-            <ChildContent>
-                @Body
-            </ChildContent>
-            <ErrorContent>
-                <BbAlert Variant="AlertVariant.Danger">
-                    <BbAlertTitle>@Localizer["App.MainLayout.ErrorTitle"]</BbAlertTitle>
-                    <BbAlertDescription>
-                        <p>@Localizer["App.MainLayout.ErrorDescription"]</p>
-                        <BbButton
-                            Variant="ButtonVariant.Outline"
-                            Size="ButtonSize.Small"
-                            Class="bb:mt-3"
-                            OnClick="ReloadPage"
+        @if (AuthorizationConfigOptions.Value.IsEnabled)
+        {
+            <AuthorizeView>
+                <Authorized>
+                    <div class="bb:flex bb:items-center bb:gap-2">
+                        <BbPopover>
+                            <BbPopoverTrigger
+                                AsChild="false"
+                                class="bb:rounded-full bb:cursor-pointer"
+                                aria-label="@Localizer["App.MainLayout.AccountMenu"]"
+                            >
+                                <BbAvatar Size="AvatarSize.Small">
+                                    <BbAvatarFallback>@Initials(context.User)</BbAvatarFallback>
+                                </BbAvatar>
+                            </BbPopoverTrigger>
+                            <BbPopoverContent Align="PopoverAlign.End">
+                                @{
+                                    var displayName = DisplayName(context.User);
+                                    var username = context.User.Identity?.Name;
+                                    var email = Email(context.User);
+                                    var roles = Roles(context.User);
+                                }
+                                <div class="bb:space-y-3">
+                                    <div>
+                                        <p class="bb:text-sm bb:font-medium">
+                                            @(displayName ?? username ?? Localizer["App.MainLayout.UnknownUser"].Value)
+                                        </p>
+                                        @if (displayName is not null && username is not null)
+                                        {
+                                            <p class="bb:text-xs bb:text-muted-foreground">@username</p>
+                                        }
+                                    </div>
+                                    <dl class="bb:space-y-1.5 bb:text-xs">
+                                        <div class="bb:flex bb:items-center bb:justify-between bb:gap-2">
+                                            <dt class="bb:text-muted-foreground">@Localizer["App.MainLayout.Email"]</dt>
+                                            <dd class="bb:truncate">@(email ?? "—")</dd>
+                                        </div>
+                                        <div>
+                                            <dt class="bb:text-muted-foreground">@Localizer["App.MainLayout.Roles"]</dt>
+                                            <dd class="bb:mt-1 bb:flex bb:flex-wrap bb:gap-1">
+                                                @if (roles.Count == 0)
+                                                {
+                                                    <span class="bb:text-muted-foreground">@Localizer["App.MainLayout.NoRoles"]</span>
+                                                }
+                                                else
+                                                {
+                                                    @foreach (var role in roles)
+                                                    {
+                                                        <BbBadge Variant="BadgeVariant.Secondary">
+                                                            @role
+                                                        </BbBadge>
+                                                    }
+                                                }
+                                            </dd>
+                                        </div>
+                                    </dl>
+                                </div>
+                            </BbPopoverContent>
+                        </BbPopover>
+                        <form
+                            action="/ui/authentication/logout"
+                            method="post"
+                            @formname="logout"
                         >
-                            <LucideIcon Name="rotate-cw" Size="16" />
-                            @Localizer["App.MainLayout.ErrorReload"]
-                        </BbButton>
-                    </BbAlertDescription>
-                </BbAlert>
-            </ErrorContent>
-        </ErrorBoundary>
-    </main>
+                            <AntiforgeryToken />
+                            <BbButton
+                                Type="ButtonType.Submit"
+                                Variant="ButtonVariant.Ghost"
+                                Size="ButtonSize.Small"
+                            >
+                                @Localizer["App.MainLayout.SignOut"]
+                            </BbButton>
+                        </form>
+                    </div>
+                </Authorized>
+                <NotAuthorized>
+                    <BbButton
+                        Variant="ButtonVariant.Outline"
+                        Size="ButtonSize.Small"
+                        Href="@LoginUrl"
+                    >
+                        @Localizer["App.MainLayout.SignIn"]
+                    </BbButton>
+                </NotAuthorized>
+            </AuthorizeView>
+        }
+    </div>
 
-    <footer class="bb:shrink-0 bb:border-t bb:px-4 bb:py-3 bb:text-center bb:text-xs bb:text-muted-foreground">
-        Vfps v@(AppVersion)
-    </footer>
-</BbResponsiveNavProvider>
+    <button
+        type="button"
+        class="nav-toggle bb:inline-flex bb:h-9 bb:w-9 bb:items-center bb:justify-center bb:rounded-md bb:hover:bg-accent bb:hover:text-accent-foreground"
+        aria-label="@Localizer["App.MainLayout.OpenNavigation"]"
+        aria-haspopup="dialog"
+        aria-expanded="@(_isNavOpen ? "true" : "false")"
+        @onclick="() => _isNavOpen = true"
+    >
+        <LucideIcon aria-hidden="true" Name="menu" Size="18" />
+    </button>
+</header>
+
+<BbSheet Open="_isNavOpen" OpenChanged="value => _isNavOpen = value" Side="SheetSide.Right">
+    <BbSheetContent>
+        <BbSheetHeader>
+            <BbSheetTitle>@Localizer["App.MainLayout.MainNavigation"]</BbSheetTitle>
+        </BbSheetHeader>
+        <nav class="sheet-nav" aria-label="@Localizer["App.MainLayout.MainNavigation"]">
+            <ul>
+                @foreach (var item in _navItems)
+                {
+                    <li>
+                        <NavLink class="nav-link" href="@item.Href" Match="item.Match" @onclick="() => _isNavOpen = false">
+                            @item.Text
+                        </NavLink>
+                    </li>
+                }
+            </ul>
+        </nav>
+    </BbSheetContent>
+</BbSheet>
+
+@* tabindex="-1" so the skip link can move focus here; nothing else can tab to it. *@
+<main id="main-content" tabindex="-1" class="page-main bb:flex-1 bb:p-6" @ref="_main">
+    @* Without this, an exception a page doesn't handle itself terminates the whole Blazor
+       circuit, and the browser is left with a page that no longer reacts to anything. The
+       boundary logs it and swaps in the error below instead, with the header still working.
+       Routes is rendered InteractiveServer as a whole, so this layout runs in the same
+       circuit as the pages and the boundary sees their errors. *@
+    <ErrorBoundary @ref="_errorBoundary">
+        <ChildContent>
+            <div class="content-width">
+                @Body
+            </div>
+        </ChildContent>
+        <ErrorContent>
+            <BbAlert Variant="AlertVariant.Danger">
+                <BbAlertTitle As="p">@Localizer["App.MainLayout.ErrorTitle"]</BbAlertTitle>
+                <BbAlertDescription>
+                    <p>@Localizer["App.MainLayout.ErrorDescription"]</p>
+                    <BbButton
+                        Variant="ButtonVariant.Outline"
+                        Size="ButtonSize.Small"
+                        Class="bb:mt-3"
+                        OnClick="ReloadPage"
+                    >
+                        <LucideIcon aria-hidden="true" Name="rotate-cw" Size="16" />
+                        @Localizer["App.MainLayout.ErrorReload"]
+                    </BbButton>
+                </BbAlertDescription>
+            </BbAlert>
+        </ErrorContent>
+    </ErrorBoundary>
+</main>
+
+<footer class="bb:shrink-0 bb:border-t bb:px-4 bb:py-3 bb:text-center bb:text-xs bb:text-muted-foreground">
+    vfps v@(AppVersion)
+</footer>
 
 <BbToastProvider Position="ToastPosition.BottomRight" />
 <BbDialogProvider />
@@ -194,7 +246,14 @@
 
     private IReadOnlyList<NavItemDefinition> _navItems = [];
 
+    // Whether the sheet holding the nav below its breakpoint is open.
+    private bool _isNavOpen;
+
+    private ElementReference _main;
+
     private ErrorBoundary? _errorBoundary;
+
+    private async Task SkipToContentAsync() => await _main.FocusAsync();
 
     // The layout is handed a new Body on every navigation, so this is where leaving a broken page
     // for another one clears the error - otherwise it would stay up on every page after it.
@@ -215,7 +274,7 @@
         if (S3ConfigOptions.Value.IsEnabled)
         {
             items.Add(
-                new NavItemDefinition { Text = Localizer["App.Nav.CsvProcessing"], Href = "/ui/csv-jobs" }
+                new NavItemDefinition { Text = Localizer["App.Nav.CsvJobs"], Href = "/ui/csv-jobs" }
             );
         }
 

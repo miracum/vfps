@@ -17,10 +17,14 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
     // jobs grid's own 2s poll - none of which is instant on a loaded machine.
     private const float JobTimeoutMs = 60_000;
 
+    // The CSV jobs page with its new-job dialog already open - the form is a dialog now, and this
+    // is the same link the home page's "New job" button follows.
+    private const string NewJobPath = "/ui/csv-jobs?new=1";
+
     [Fact]
     public async Task ExportDirection_ReplacesTheFileFormWithANamespacePicker()
     {
-        await GotoAsync("/ui/csv-jobs");
+        await GotoAsync(NewJobPath);
 
         await Expect(Page.Locator("#csvFileInput")).ToBeVisibleAsync();
 
@@ -37,7 +41,7 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
     [Fact]
     public async Task ImportDirection_DefaultsToTheColumnNamesAnExportWrites()
     {
-        await GotoAsync("/ui/csv-jobs");
+        await GotoAsync(NewJobPath);
         await Page.SelectOptionAsync("#direction", "Import");
 
         // An export file imports back without the operator restating either column name.
@@ -61,7 +65,7 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
         {
             await CreateNamespaceAsync(namespaceName);
 
-            await GotoAsync("/ui/csv-jobs");
+            await GotoAsync(NewJobPath);
             await Page.SelectOptionAsync("#direction", "Import");
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
             await Page.SelectOptionAsync("#jobNamespace", namespaceName);
@@ -79,10 +83,15 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
                 await Expect(Page.Locator("body")).ToContainTextAsync(pseudonymValue);
             }
 
-            await GotoAsync("/ui/csv-jobs");
+            await GotoAsync(NewJobPath);
             await Page.SelectOptionAsync("#direction", "Export");
             await Page.SelectOptionAsync("#jobNamespace", namespaceName);
             await Page.ClickAsync("#submitJobButton");
+
+            // An export hands back every original value, so the submit shows what it is about
+            // to reveal and waits for an explicit confirmation before the job starts.
+            await Expect(Page.Locator("#revealReview")).ToContainTextAsync(namespaceName);
+            await Page.ClickAsync("#confirmRevealJobButton");
 
             var exportRow = JobRow(namespaceName);
             await Expect(exportRow).ToContainTextAsync("Completed", RowTimeout());
@@ -109,7 +118,7 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
             {
                 await CreateNamespaceAsync(secondNamespace);
 
-                await GotoAsync("/ui/csv-jobs");
+                await GotoAsync(NewJobPath);
                 await Page.SelectOptionAsync("#direction", "Import");
                 await Page.SetInputFilesAsync("#csvFileInput", exportedPath);
                 await Page.SelectOptionAsync("#jobNamespace", secondNamespace);
@@ -151,7 +160,7 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
         {
             await CreateNamespaceAsync(namespaceName);
 
-            await GotoAsync("/ui/csv-jobs");
+            await GotoAsync(NewJobPath);
             await Page.SelectOptionAsync("#direction", "Import");
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
             await Page.SelectOptionAsync("#jobNamespace", namespaceName);
@@ -213,16 +222,6 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
         return await response.TextAsync();
     }
 
-    private async Task CreateNamespaceAsync(string name)
-    {
-        await GotoAsync("/ui/namespaces");
-        await Page.ClickAsync("#showCreateNamespaceFormButton");
-        await Expect(Page.Locator("#name")).ToBeVisibleAsync();
-        await FillInputAsync("#name", name);
-        await Page.ClickAsync("form:has(#name) button[type=submit]");
-        await Expect(Page.Locator($"[role=treeitem][data-value=\"{name}\"]")).ToHaveCountAsync(1);
-    }
-
     [Fact]
     public async Task ImportColumns_AreOfferedAsDropdownsOfTheFilesOwnHeaderRow()
     {
@@ -233,7 +232,7 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
 
         try
         {
-            await GotoAsync("/ui/csv-jobs");
+            await GotoAsync(NewJobPath);
             await Page.SelectOptionAsync("#direction", "Import");
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
 
@@ -266,7 +265,7 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
 
         try
         {
-            await GotoAsync("/ui/csv-jobs");
+            await GotoAsync(NewJobPath);
             await Page.SelectOptionAsync("#direction", "Import");
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
 
@@ -307,7 +306,7 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
             await CreateNamespaceAsync(first);
             await CreateNamespaceAsync(second);
 
-            await GotoAsync("/ui/csv-jobs");
+            await GotoAsync(NewJobPath);
             await Page.SelectOptionAsync("#direction", "Import");
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
             await SelectDetectedColumnAsync("#namespaceColumn", "namespace");

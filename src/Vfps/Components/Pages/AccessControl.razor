@@ -22,7 +22,7 @@
             {
                 @foreach (var value in values)
                 {
-                    <BbBadge Variant="BadgeVariant.Outline">@value</BbBadge>
+                    <BbBadge Variant="BadgeVariant.Outline" Class="bb:whitespace-nowrap">@value</BbBadge>
                 }
             }
         </div>;
@@ -37,17 +37,17 @@
             {
                 @foreach (var grantee in grantees)
                 {
-                    <BbBadge Variant="BadgeVariant.Outline">
+                    <BbBadge Variant="BadgeVariant.Outline" Class="bb:whitespace-nowrap">
                         @switch (grantee.Type)
                         {
                             case GranteeType.ServiceAccount:
-                                <LucideIcon Name="bot" Size="12" />
+                                <LucideIcon aria-hidden="true" Name="bot" Size="12" />
                                 break;
                             case GranteeType.Email:
-                                <LucideIcon Name="user" Size="12" />
+                                <LucideIcon aria-hidden="true" Name="user" Size="12" />
                                 break;
                             case GranteeType.Role:
-                                <LucideIcon Name="users" Size="12" />
+                                <LucideIcon aria-hidden="true" Name="users" Size="12" />
                                 break;
                         }
                         @grantee.Name
@@ -59,14 +59,14 @@
 
 <div class="bb:mx-auto bb:space-y-6">
     <div class="bb:flex bb:items-center bb:gap-2">
-        <LucideIcon Name="shield" Size="24" Class="bb:text-primary" />
+        <LucideIcon aria-hidden="true" Name="shield" Size="24" Class="bb:shrink-0 bb:text-primary" />
         <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Nav.AccessControl"]</h1>
     </div>
 
     @if (!AuthorizationConfigOptions.Value.IsEnabled)
     {
         <BbAlert Variant="AlertVariant.Info">
-            <BbAlertTitle>@Localizer["App.AccessControl.DisabledTitle"]</BbAlertTitle>
+            <BbAlertTitle As="p">@Localizer["App.AccessControl.DisabledTitle"]</BbAlertTitle>
             <BbAlertDescription>
                 @((MarkupString)
                     string.Format(
@@ -80,7 +80,7 @@
     else if (!_isAdmin)
     {
         <BbAlert Variant="AlertVariant.Danger">
-            <BbAlertTitle>@Localizer["App.AccessControl.AdminsOnlyTitle"]</BbAlertTitle>
+            <BbAlertTitle As="p">@Localizer["App.AccessControl.AdminsOnlyTitle"]</BbAlertTitle>
             <BbAlertDescription>
                 @Localizer["App.AccessControl.AdminsOnlyDescription"]
             </BbAlertDescription>
@@ -90,7 +90,7 @@
     {
         <BbCard>
             <BbCardHeader>
-                <BbCardTitle>@Localizer["App.AccessControl.AdminRolesTitle"]</BbCardTitle>
+                <SectionTitle>@Localizer["App.AccessControl.AdminRolesTitle"]</SectionTitle>
                 <BbCardDescription>
                     @((MarkupString)
                         string.Format(
@@ -106,7 +106,7 @@
 
         <BbCard>
             <BbCardHeader>
-                <BbCardTitle>@Localizer["App.AccessControl.EffectiveAccessTitle"]</BbCardTitle>
+                <SectionTitle>@Localizer["App.AccessControl.EffectiveAccessTitle"]</SectionTitle>
                 <BbCardDescription>
                     @Localizer["App.AccessControl.EffectiveAccessDescription"]
                 </BbCardDescription>

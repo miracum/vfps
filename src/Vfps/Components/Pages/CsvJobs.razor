@@ -22,7 +22,7 @@
 {
     <div class="bb:mx-auto">
         <BbAlert Variant="AlertVariant.Warning">
-            <BbAlertTitle>@Localizer["App.CsvJobs.DisabledTitle"]</BbAlertTitle>
+            <BbAlertTitle As="p">@Localizer["App.CsvJobs.DisabledTitle"]</BbAlertTitle>
             <BbAlertDescription>
                 @((MarkupString)
                     string.Format(
@@ -37,9 +37,23 @@
 else
 {
     <div class="bb:mx-auto bb:space-y-6">
-        <div class="bb:flex bb:items-center bb:gap-2">
-            <LucideIcon Name="file-spreadsheet" Size="24" Class="bb:text-primary" />
-            <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.CsvJobs.PageTitle"]</h1>
+        <div class="bb:flex bb:flex-wrap bb:items-center bb:justify-between bb:gap-2">
+            <div class="bb:flex bb:items-center bb:gap-2">
+                <LucideIcon aria-hidden="true" Name="file-spreadsheet" Size="24" Class="bb:shrink-0 bb:text-primary" />
+                <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.CsvJobs.PageTitle"]</h1>
+            </div>
+            <BbButton
+                id="showNewJobButton"
+                IconPosition="IconPosition.Start"
+                OnClick="() => OnNewJobDialogOpenChanged(true)"
+            >
+                <Icon>
+                    <LucideIcon aria-hidden="true" Name="plus" Size="16" />
+                </Icon>
+                <ChildContent>
+                    @Localizer["App.CsvJobs.NewJobTitle"]
+                </ChildContent>
+            </BbButton>
         </div>
 
         @if (S3ConfigOptions.Value.ObjectRetentionDays > 0)
@@ -53,23 +67,34 @@ else
             </BbAlert>
         }
 
-        @if (_createError is not null)
-        {
-            <BbAlert Variant="AlertVariant.Danger">
-                <BbAlertTitle>@Localizer["App.CsvJobs.CreateErrorTitle"]</BbAlertTitle>
-                <BbAlertDescription>@_createError</BbAlertDescription>
-            </BbAlert>
-        }
+        @* The form is a dialog opened from the header, so the jobs - what a returning user comes
+           here to check on - are what the page opens on. Its width is a plain style for the
+           reason given on Namespaces.razor's create dialog. Only the fields scroll, so the submit
+           button stays in reach however many mapping rows there are. The dialog stays open while
+           the file uploads, its progress shown in here, and closes once the job exists. *@
+        <BbDialog Open="_showNewJobDialog" OpenChanged="OnNewJobDialogOpenChanged">
+            <BbDialogContent style="max-width: 56rem;">
+                <BbDialogHeader>
+                    <BbDialogTitle Class="bb:leading-tight">@Localizer["App.CsvJobs.NewJobTitle"]</BbDialogTitle>
+                    <BbDialogDescription Class="job-dialog-intro">
+                        @Localizer["App.CsvJobs.NewJobDescription"]
+                    </BbDialogDescription>
+                </BbDialogHeader>
 
-        <BbCard>
-            <BbCardHeader>
-                <BbCardTitle>@Localizer["App.CsvJobs.NewJobTitle"]</BbCardTitle>
-                <BbCardDescription>
-                    @Localizer["App.CsvJobs.NewJobDescription"]
-                </BbCardDescription>
-            </BbCardHeader>
-            <BbCardContent Class="bb:space-y-6">
-                <div class="bb:grid bb:gap-4 bb:sm:grid-cols-3">
+                @* In here rather than on the page: the dialog's overlay covers the page. *@
+                @if (_createError is not null)
+                {
+                    <BbAlert Variant="AlertVariant.Danger">
+                        <BbAlertTitle As="p">@Localizer["App.CsvJobs.CreateErrorTitle"]</BbAlertTitle>
+                        <BbAlertDescription>@_createError</BbAlertDescription>
+                    </BbAlert>
+                }
+
+                @* Hidden rather than removed while the review below is showing: taking the form out
+                   of the DOM would take its file picker - and the file the browser holds in it -
+                   with it, and the upload would have nothing to send. *@
+                <div class="dialog-body bb:space-y-6 bb:py-2" hidden="@_isReviewing">
+                <div class="bb:grid bb:grid-cols-1 bb:gap-4 bb:sm:grid-cols-2">
                     <BbField>
                         <BbFieldLabel For="direction">@Localizer["App.CsvJobs.Direction"]</BbFieldLabel>
                         <BbFieldContent>
@@ -92,56 +117,18 @@ else
                                     @Localizer["App.CsvJobs.DirectionExportOption"]
                                 </option>
                             </select>
-                        </BbFieldContent>
-                    </BbField>
-                    @* Both of these hand back original values in bulk, so both get the same
-                       "this reveals the data" warning the manual reverse-lookup box carries. *@
-                    @if (SelectedDirection is PseudonymizationJobDirection.Depseudonymize
-                        or PseudonymizationJobDirection.Export)
-                    {
-                        <BbAlert Variant="AlertVariant.Warning">
-                            <BbAlertDescription>
-                                @(SelectedDirection == PseudonymizationJobDirection.Export
-                                    ? Localizer["App.CsvJobs.ExportWarning"].Value
-                                    : Localizer["App.CsvJobs.DepseudonymizeWarning"].Value)
-                            </BbAlertDescription>
-                        </BbAlert>
-                    }
-                    @* Only a pseudonymizing job can be told not to create: every other direction
-                       either reads pseudonyms or stores pairs the caller already holds. The app
-                       service rejects a mode set on one of those rather than ignoring it, so this
-                       must not offer one there. *@
-                    @if (SelectedDirection == PseudonymizationJobDirection.Pseudonymize)
-                    {
-                        <BbField>
-                            <BbFieldLabel For="pseudonymizeMode">
-                                @Localizer["App.CsvJobs.PseudonymizeMode"]
-                            </BbFieldLabel>
-                            <BbFieldContent>
-                                <select
-                                    @bind="_pseudonymizeMode"
-                                    id="pseudonymizeMode"
-                                    class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
-                                >
-                                    <option value="@nameof(PseudonymizeMode.CreateIfMissing)">
-                                        @Localizer["App.CsvJobs.PseudonymizeModeCreateIfMissingOption"]
-                                    </option>
-                                    <option value="@nameof(PseudonymizeMode.FailIfMissing)">
-                                        @Localizer["App.CsvJobs.PseudonymizeModeFailIfMissingOption"]
-                                    </option>
-                                    <option value="@nameof(PseudonymizeMode.KeepIfMissing)">
-                                        @Localizer["App.CsvJobs.PseudonymizeModeKeepIfMissingOption"]
-                                    </option>
-                                </select>
-                            </BbFieldContent>
-                            @if (SelectedPseudonymizeMode == PseudonymizeMode.KeepIfMissing)
+                            @* The options are short names - a full sentence each got cut off in
+                               the select - and what the chosen one does is said here instead. The
+                               two directions that reveal original values say it in their warning
+                               below, so they get no second description here. *@
+                            @if (DirectionHint is { } directionHint)
                             {
-                                <p class="bb:text-sm bb:text-muted-foreground">
-                                    @Localizer["App.CsvJobs.PseudonymizeModeKeepIfMissingHint"]
+                                <p class="bb:mt-1 bb:text-xs bb:text-muted-foreground" id="directionHint">
+                                    @directionHint
                                 </p>
                             }
-                        </BbField>
-                    }
+                        </BbFieldContent>
+                    </BbField>
                     @* An export has nothing to upload - its rows come from the database - so the
                        file picker and the header-row question don't apply to it. Encoding and
                        delimiter still do: they describe the file being written. *@
@@ -160,40 +147,118 @@ else
                             </BbFieldContent>
                         </BbField>
                     }
+                </div>
 
-                    <BbField>
-                        <BbFieldLabel For="encoding">@Localizer["App.CsvJobs.Encoding"]</BbFieldLabel>
-                        <BbFieldContent>
-                            <BbInput @bind-Value="_encoding" Id="encoding" />
-                        </BbFieldContent>
-                    </BbField>
-                    <BbField>
-                        <BbFieldLabel For="delimiter">@Localizer["App.CsvJobs.Delimiter"]</BbFieldLabel>
-                        <BbFieldContent>
-                            <BbInput
-                                @bind-Value="_delimiter"
-                                @bind-Value:after="DetectColumnsAsync"
-                                Id="delimiter"
-                            />
-                        </BbFieldContent>
-                    </BbField>
-                    @if (RequiresInputFile)
-                    {
+                @* Both of these hand back original values in bulk, so both get the same
+                   "this reveals the data" warning the manual reverse-lookup box carries. *@
+                @if (SelectedDirection is PseudonymizationJobDirection.Depseudonymize
+                    or PseudonymizationJobDirection.Export)
+                {
+                    <BbAlert Variant="AlertVariant.Warning">
+                        <BbAlertDescription>
+                            @(SelectedDirection == PseudonymizationJobDirection.Export
+                                ? Localizer["App.CsvJobs.ExportWarning"].Value
+                                : Localizer["App.CsvJobs.DepseudonymizeWarning"].Value)
+                        </BbAlertDescription>
+                    </BbAlert>
+                }
+
+                @* Most files need none of this changed, so it stays folded away with what it's set
+                   to in plain view - which is how a semicolon-separated file that came out as one
+                   long column gets noticed. Right under the file picker rather than at the end of
+                   the form, because the source columns below are read using these settings. A
+                   native details element: nothing about opening it needs the server, and the fields
+                   stay in the DOM when it's closed. *@
+                <details class="file-format">
+                    <summary>
+                        <LucideIcon aria-hidden="true" Name="chevron-right" Size="16" Class="file-format-chevron" />
+                        <span class="bb:text-sm bb:font-medium">@Localizer["App.CsvJobs.FileFormat"]</span>
+                        <span class="bb:text-sm bb:text-muted-foreground" id="fileFormatSummary">@FileFormatSummary</span>
+                    </summary>
+                    <div class="bb:mt-3 bb:grid bb:grid-cols-1 bb:gap-4 bb:sm:grid-cols-3">
                         <BbField>
-                            <BbFieldLabel For="hasHeaderRow">@Localizer["App.CsvJobs.HeaderRow"]</BbFieldLabel>
+                            <BbFieldLabel For="encoding">@Localizer["App.CsvJobs.Encoding"]</BbFieldLabel>
                             <BbFieldContent>
-                                <div class="bb:flex bb:h-10 bb:items-center bb:gap-2">
-                                    <BbCheckbox
-                                        Checked="_hasHeaderRow"
-                                        CheckedChanged="OnHasHeaderRowChangedAsync"
-                                        Id="hasHeaderRow"
-                                    />
-                                    <label for="hasHeaderRow" class="bb:text-sm">@Localizer["App.CsvJobs.HasHeaderRow"]</label>
-                                </div>
+                                <BbInput @bind-Value="_encoding" Id="encoding" />
                             </BbFieldContent>
                         </BbField>
-                    }
-                </div>
+                        <BbField>
+                            <BbFieldLabel For="delimiter">@Localizer["App.CsvJobs.Delimiter"]</BbFieldLabel>
+                            <BbFieldContent>
+                                <BbInput
+                                    @bind-Value="_delimiter"
+                                    @bind-Value:after="DetectColumnsAsync"
+                                    Id="delimiter"
+                                />
+                            </BbFieldContent>
+                        </BbField>
+                        @if (RequiresInputFile)
+                        {
+                            <BbField>
+                                <BbFieldLabel For="hasHeaderRow">@Localizer["App.CsvJobs.HeaderRow"]</BbFieldLabel>
+                                <BbFieldContent>
+                                    <div class="bb:flex bb:h-10 bb:items-center bb:gap-2">
+                                        <BbCheckbox
+                                            Checked="_hasHeaderRow"
+                                            CheckedChanged="OnHasHeaderRowChangedAsync"
+                                            Id="hasHeaderRow"
+                                        />
+                                        <label for="hasHeaderRow" class="bb:text-sm">@Localizer["App.CsvJobs.HasHeaderRow"]</label>
+                                    </div>
+                                </BbFieldContent>
+                            </BbField>
+                        }
+                    </div>
+                </details>
+
+                @* Only a pseudonymizing job can be told not to create: every other direction
+                   either reads pseudonyms or stores pairs the caller already holds. The app
+                   service rejects a mode set on one of those rather than ignoring it, so this
+                   must not offer one there. *@
+                @if (SelectedDirection == PseudonymizationJobDirection.Pseudonymize)
+                {
+                    <BbField>
+                        <BbFieldLabel For="pseudonymizeMode">
+                            @Localizer["App.CsvJobs.PseudonymizeMode"]
+                        </BbFieldLabel>
+                        <div class="field-with-note">
+                            <BbFieldContent>
+                                <select
+                                    @bind="_pseudonymizeMode"
+                                    id="pseudonymizeMode"
+                                    class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
+                                >
+                                    <option value="@nameof(PseudonymizeMode.CreateIfMissing)">
+                                        @Localizer["App.CsvJobs.PseudonymizeModeCreateIfMissingOption"]
+                                    </option>
+                                    <option value="@nameof(PseudonymizeMode.FailIfMissing)">
+                                        @Localizer["App.CsvJobs.PseudonymizeModeFailIfMissingOption"]
+                                    </option>
+                                    <option value="@nameof(PseudonymizeMode.KeepIfMissing)">
+                                        @Localizer["App.CsvJobs.PseudonymizeModeKeepIfMissingOption"]
+                                    </option>
+                                </select>
+                            </BbFieldContent>
+                            @* Keeping the original value means a "pseudonymized" file can still hold
+                               identifying data, so that one is said in the reveal style
+                               (wwwroot/app.css) rather than as ordinary help text. *@
+                            @if (SelectedPseudonymizeMode == PseudonymizeMode.KeepIfMissing)
+                            {
+                                <p class="reveal-note bb:text-xs" id="pseudonymizeModeHint">
+                                    @Localizer["App.CsvJobs.PseudonymizeModeKeepIfMissingHint"]
+                                </p>
+                            }
+                            else
+                            {
+                                <p class="bb:text-xs bb:text-muted-foreground" id="pseudonymizeModeHint">
+                                    @(SelectedPseudonymizeMode == PseudonymizeMode.FailIfMissing
+                                        ? Localizer["App.CsvJobs.PseudonymizeModeFailIfMissingHint"]
+                                        : Localizer["App.CsvJobs.PseudonymizeModeCreateIfMissingHint"])
+                                </p>
+                            }
+                        </div>
+                    </BbField>
+                }
 
                 @* Import and export both act on exactly one namespace rather than an
                    arbitrary set of column mappings, so each gets its own, much smaller form -
@@ -203,23 +268,18 @@ else
                 {
                     <div>
                         <h3 class="bb:text-sm bb:font-medium">@Localizer["App.CsvJobs.ColumnMappings"]</h3>
+                        @* Both sentences on one line, with the space between them written out:
+                           split across a @if block, Razor dropped the whitespace and the two ran
+                           together ("...in place).Pick a CSV file"). *@
                         <p class="bb:mt-1 bb:text-sm bb:text-muted-foreground">
-                            @if (_direction == nameof(PseudonymizationJobDirection.Depseudonymize))
-                            {
-                                <text>@Localizer["App.CsvJobs.ColumnMappingsHintDepseudonymize"]</text>
-                            }
-                            else
-                            {
-                                <text>@Localizer["App.CsvJobs.ColumnMappingsHintPseudonymize"]</text>
-                            }
-                            @Localizer["App.CsvJobs.ColumnMappingsHintSuffix"]
+                            @(_direction == nameof(PseudonymizationJobDirection.Depseudonymize) ? Localizer["App.CsvJobs.ColumnMappingsHintDepseudonymize"] : Localizer["App.CsvJobs.ColumnMappingsHintPseudonymize"]) @Localizer["App.CsvJobs.ColumnMappingsHintSuffix"]
                         </p>
 
                         <div class="bb:mt-3 bb:space-y-3">
                             @foreach (var row in _columnMappings)
                             {
-                                <div class="bb:flex bb:flex-wrap bb:items-end bb:gap-2 bb:rounded-lg bb:border bb:p-3">
-                                    <BbField Class="bb:w-40 bb:flex-1">
+                                <div class="field-box mapping-row">
+                                    <BbField>
                                         <BbFieldLabel For="@row.SourceColumnId">
                                             @Localizer["App.CsvJobs.SourceColumn"]
                                         </BbFieldLabel>
@@ -233,7 +293,7 @@ else
                                             />
                                         </BbFieldContent>
                                     </BbField>
-                                    <BbField Class="bb:w-40 bb:flex-1">
+                                    <BbField>
                                         <BbFieldLabel For="@row.TargetColumnId">
                                             @Localizer["App.CsvJobs.TargetColumn"]
                                         </BbFieldLabel>
@@ -245,8 +305,8 @@ else
                                             />
                                         </BbFieldContent>
                                     </BbField>
-                                    <BbField Class="bb:w-40 bb:flex-1">
-                                        <BbFieldLabel For="@row.NamespaceId">@Localizer["App.Nav.Namespaces"]</BbFieldLabel>
+                                    <BbField>
+                                        <BbFieldLabel For="@row.NamespaceId">@Localizer["App.CsvJobs.NamespaceLabel"]</BbFieldLabel>
                                         <BbFieldContent>
                                             <select
                                                 @bind="row.Namespace"
@@ -268,14 +328,14 @@ else
                                         Disabled="@(_columnMappings.Count == 1)"
                                         AriaLabel="@Localizer["App.CsvJobs.RemoveMapping"]"
                                     >
-                                        <LucideIcon Name="x" Size="16" />
+                                        <LucideIcon aria-hidden="true" Name="x" Size="16" />
                                     </BbButton>
                                 </div>
                             }
                         </div>
 
                         <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="AddMappingRow" Class="bb:mt-3">
-                            <LucideIcon Name="plus" Size="16" />
+                            <LucideIcon aria-hidden="true" Name="plus" Size="16" />
                             @Localizer["App.CsvJobs.AddColumnMapping"]
                         </BbButton>
                     </div>
@@ -300,14 +360,14 @@ else
                                 : Localizer["App.CsvJobs.ExportHint"].Value)
                         </p>
 
-                        <div class="bb:mt-3 bb:flex bb:flex-wrap bb:items-end bb:gap-2 bb:rounded-lg bb:border bb:p-3">
+                        <div class="field-box bb:mt-3">
                             @* An import that reads its namespace from a column has no single
                                namespace to pick, so the picker gives way to the column selector
                                below rather than sitting there meaning nothing. *@
                             @if (!ImportsIntoNamespaceColumn)
                             {
-                                <BbField Class="bb:w-40 bb:flex-1">
-                                    <BbFieldLabel For="jobNamespace">@Localizer["App.Nav.Namespaces"]</BbFieldLabel>
+                                <BbField>
+                                    <BbFieldLabel For="jobNamespace">@Localizer["App.CsvJobs.NamespaceLabel"]</BbFieldLabel>
                                     <BbFieldContent>
                                         <select
                                             @bind="_namespaceMapping.Namespace"
@@ -329,7 +389,7 @@ else
                                selector the transform mappings above use. *@
                             @if (IsImport)
                             {
-                                <BbField Class="bb:w-40 bb:flex-1">
+                                <BbField>
                                     <BbFieldLabel For="originalValueColumn">
                                         @Localizer["App.CsvJobs.OriginalValueColumn"]
                                     </BbFieldLabel>
@@ -342,7 +402,7 @@ else
                                         />
                                     </BbFieldContent>
                                 </BbField>
-                                <BbField Class="bb:w-40 bb:flex-1">
+                                <BbField>
                                     <BbFieldLabel For="pseudonymValueColumn">
                                         @Localizer["App.CsvJobs.PseudonymValueColumn"]
                                     </BbFieldLabel>
@@ -355,7 +415,7 @@ else
                                         />
                                     </BbFieldContent>
                                 </BbField>
-                                <BbField Class="bb:w-40 bb:flex-1">
+                                <BbField>
                                     <BbFieldLabel For="namespaceColumn">
                                         @Localizer["App.CsvJobs.NamespaceColumn"]
                                     </BbFieldLabel>
@@ -382,90 +442,174 @@ else
                     </div>
                 }
 
-                <BbButton id="submitJobButton" OnClick="CreateJobAsync" Loading="_isCreating">
-                    @(RequiresInputFile
-                        ? Localizer["App.CsvJobs.UploadAndProcess"].Value
-                        : Localizer["App.CsvJobs.StartExport"].Value)
-                </BbButton>
+                </div>
 
                 @* Only while the browser-to-S3 PUT itself is in flight - the job already exists
                    server-side by this point (see StartUploadJobAsync), so this is purely local,
                    client-side upload progress, distinct from the per-job processing progress the
-                   jobs grid below shows once the runner picks the job up. *@
+                   jobs grid shows once the runner picks the job up. *@
                 @if (_uploadProgressPercent is { } uploadProgressPercent)
                 {
-                    <div class="bb:max-w-sm bb:space-y-1" id="uploadProgress">
+                    <div class="bb:space-y-1" id="uploadProgress">
                         <p class="bb:text-sm bb:text-muted-foreground">
                             @Localizer["App.CsvJobs.Uploading"]
                         </p>
-                        <BbProgress Value="@uploadProgressPercent" ShowLabel="true" />
+                        <BbProgress Value="@CsvJobDisplay.ProgressValue(uploadProgressPercent)" ShowLabel="true" aria-label="@Localizer["App.CsvJobs.Uploading"]" />
                     </div>
                 }
-            </BbCardContent>
-        </BbCard>
+
+                @* The second step of a de-pseudonymization or an export: what is about to be revealed,
+                   in full, before anything starts. Both hand back original values in bulk into a
+                   file anyone who can download it can read - see SubmitJobAsync. *@
+                @if (_isReviewing)
+                {
+                    var isExport = SelectedDirection == PseudonymizationJobDirection.Export;
+                    <div class="bb:space-y-4 bb:py-2" id="revealReview">
+                        <div class="reveal-note bb:space-y-1">
+                            <p class="bb:flex bb:items-center bb:gap-2 bb:font-medium">
+                                <LucideIcon aria-hidden="true" Name="eye" Size="16" />
+                                @Localizer["App.CsvJobs.ReviewTitle"]
+                            </p>
+                            <p class="bb:text-sm">
+                                @(isExport
+                                    ? Localizer["App.CsvJobs.ReviewExportBody"].Value
+                                    : Localizer["App.CsvJobs.ReviewDepseudonymizeBody"].Value)
+                            </p>
+                        </div>
+                        @if (isExport)
+                        {
+                            <dl class="detail-list bb:text-sm">
+                                <dt>@Localizer["App.CsvJobs.ReviewNamespace"]</dt>
+                                <dd class="bb:font-mono">@_namespaceMapping.Namespace</dd>
+                            </dl>
+                        }
+                        else
+                        {
+                            <dl class="detail-list bb:text-sm">
+                                <dt>@Localizer["App.CsvJobs.ReviewFile"]</dt>
+                                <dd class="bb:font-mono">@_fileName</dd>
+                            </dl>
+                            <table class="review-table bb:text-sm">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">@Localizer["App.CsvJobs.SourceColumn"]</th>
+                                        <th scope="col">@Localizer["App.CsvJobs.TargetColumn"]</th>
+                                        <th scope="col">@Localizer["App.CsvJobs.ReviewNamespace"]</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var mapping in _reviewMappings)
+                                    {
+                                        <tr>
+                                            <td class="bb:font-mono">@mapping.SourceColumn</td>
+                                            <td class="@(mapping.TargetColumn is null ? "bb:text-muted-foreground" : "bb:font-mono")">
+                                                @(mapping.TargetColumn ?? Localizer["App.CsvJobs.ReviewInPlace"].Value)
+                                            </td>
+                                            <td class="bb:font-mono">@mapping.Namespace</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        }
+                    </div>
+                }
+
+                <BbDialogFooter>
+                    @if (_isReviewing)
+                    {
+                        <BbButton Variant="ButtonVariant.Outline" Disabled="_isCreating" OnClick="() => _isReviewing = false">
+                            @Localizer["App.Common.Back"]
+                        </BbButton>
+                        <BbButton id="confirmRevealJobButton" OnClick="SubmitJobAsync" Loading="_isCreating">
+                            @(SelectedDirection == PseudonymizationJobDirection.Export
+                                ? Localizer["App.CsvJobs.ReviewConfirmExport"].Value
+                                : Localizer["App.CsvJobs.ReviewConfirmDepseudonymize"].Value)
+                        </BbButton>
+                    }
+                    else
+                    {
+                        <BbButton Variant="ButtonVariant.Outline" OnClick="() => OnNewJobDialogOpenChanged(false)">
+                            @Localizer["App.Common.Cancel"]
+                        </BbButton>
+                        <BbButton id="submitJobButton" OnClick="SubmitJobAsync" Loading="_isCreating">
+                            @(RequiresInputFile
+                                ? Localizer["App.CsvJobs.UploadAndProcess"].Value
+                                : Localizer["App.CsvJobs.StartExport"].Value)
+                        </BbButton>
+                    }
+                </BbDialogFooter>
+            </BbDialogContent>
+        </BbDialog>
 
         <BbCard>
             <BbCardHeader>
-                <BbCardTitle>@Localizer["App.CsvJobs.JobsTitle"]</BbCardTitle>
-                @if (_jobs.Any(j => IsFinished(j.Status)))
-                {
-                    <BbCardAction>
+                @* A row of our own rather than BbCardAction, for the reason given on Home.razor:
+                   the shipped stylesheet lacks the grid utilities that put the action on the
+                   title's right, so it stacked underneath it instead. *@
+                <div class="bb:flex bb:items-center bb:justify-between bb:gap-4">
+                    <SectionTitle>@Localizer["App.CsvJobs.JobsTitle"]</SectionTitle>
+                    @if (_jobs.Any(j => IsFinished(j.Status)))
+                    {
                         <BbButton
                             Variant="ButtonVariant.Outline"
                             Size="ButtonSize.Small"
+                            Class="bb:shrink-0"
                             OnClick="() => _showClearFinishedConfirm = true"
                         >
                             @Localizer["App.CsvJobs.ClearFinishedJobs"]
                         </BbButton>
-                    </BbCardAction>
-                }
+                    }
+                </div>
             </BbCardHeader>
             <BbCardContent>
-                @if (_showClearFinishedConfirm)
-                {
-                    <BbAlert Variant="AlertVariant.Warning" Class="bb:mb-4">
-                        <BbAlertTitle>@Localizer["App.CsvJobs.ClearFinishedJobsConfirmTitle"]</BbAlertTitle>
-                        <BbAlertDescription>
-                            <p class="bb:mb-3">
-                                @Localizer["App.CsvJobs.ClearFinishedJobsConfirmBody"]
-                            </p>
-                            <div class="bb:flex bb:items-center bb:gap-2">
-                                <BbButton
-                                    Variant="ButtonVariant.Destructive"
-                                    Loading="_isClearingFinished"
-                                    OnClick="ConfirmClearFinishedJobsAsync"
-                                >
-                                    @Localizer["App.Common.Clear"]
-                                </BbButton>
-                                <BbButton
-                                    Variant="ButtonVariant.Outline"
-                                    OnClick="() => _showClearFinishedConfirm = false"
-                                >
-                                    @Localizer["App.Common.Cancel"]
-                                </BbButton>
-                            </div>
-                        </BbAlertDescription>
-                    </BbAlert>
-                }
                 @* Explicit page size for the same reason as the namespaces grid: with the
                    pager hidden, the grid's default would silently cut the list off at ten. *@
-                <BbDataGrid Items="@_jobs" ShowPagination="false" InitialPageSize="int.MaxValue">
+                <BbDataGrid Class="jobs-grid" Items="@_jobs" ShowPagination="false" InitialPageSize="int.MaxValue">
+                    @* The jobs list isn't searched, so the grid's own "No results found" was never
+                       true here - there simply aren't any yet. *@
+                    <EmptyTemplate>
+                        <BbEmpty
+                            Size="EmptySize.Small"
+                            Title="@Localizer["App.Home.NoJobsTitle"]"
+                            Description="@Localizer["App.CsvJobs.EmptyDescription"]"
+                        >
+                            <Icon>
+                                <LucideIcon aria-hidden="true" Name="file-spreadsheet" />
+                            </Icon>
+                        </BbEmpty>
+                    </EmptyTemplate>
+                    @* Five columns, and everything that tells one job from another in the first:
+                       with direction, id and failure reason in columns of their own, an error
+                       message set how wide the table was and pushed Download out of sight even on
+                       a large screen. Below .jobs-grid's breakpoint in wwwroot/app.css each row
+                       turns into a stack of these same cells, which is why none of them relies on
+                       its column heading to be understood. *@
                     <Columns>
-                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Id"]">
-                            <ChildContent Context="j">
-                                <code class="bb:text-xs">@j.Id.ToString()[..8]</code>
-                            </ChildContent>
-                        </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.File"]">
                             <ChildContent Context="j">
-                                <div class="bb:truncate bb:text-xs" title="@CsvJobDisplay.Subject(j)">
-                                    @(CsvJobDisplay.Subject(j) ?? "—")
+                                <div class="job-subject">
+                                    <div class="bb:text-sm bb:font-medium">@(CsvJobDisplay.Subject(j) ?? "—")</div>
+                                    <div class="bb:text-xs bb:text-muted-foreground">
+                                        @CsvJobDisplay.DirectionLabel(j.Direction, Localizer) · <code>@j.Id.ToString()[..8]</code>
+                                    </div>
+                                    @if (
+                                        (j.Status == PseudonymizationJobStatus.Failed
+                                            || j.Status == PseudonymizationJobStatus.Stalled)
+                                        && j.ErrorMessage is not null
+                                    )
+                                    {
+                                        <div
+                                            class="bb:mt-1 bb:flex bb:items-start bb:gap-1.5 bb:text-xs @(j.Status == PseudonymizationJobStatus.Stalled ? "issue-text-stalled" : "bb:text-destructive")"
+                                        >
+                                            <LucideIcon aria-hidden="true"
+                                                Name="@(j.Status == PseudonymizationJobStatus.Stalled ? "clock-alert" : "triangle-alert")"
+                                                Size="14"
+                                                Class="bb:mt-0.5 bb:shrink-0"
+                                            />
+                                            <span class="bb:min-w-0">@j.ErrorMessage</span>
+                                        </div>
+                                    }
                                 </div>
-                            </ChildContent>
-                        </BbDataGridTemplateColumn>
-                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Direction"]">
-                            <ChildContent Context="j">
-                                @CsvJobDisplay.DirectionLabel(j.Direction, Localizer)
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Status"]">
@@ -477,17 +621,17 @@ else
                             <ChildContent Context="j">
                                 @if (j.TotalBytes > 0)
                                 {
-                                    <div class="bb:flex bb:items-center bb:gap-2">
-                                        <BbProgress Value="@(100.0 * j.BytesProcessed / j.TotalBytes)" Class="bb:w-24" />
+                                    <div class="job-progress">
+                                        <BbProgress Value="@CsvJobDisplay.ProgressValue(100.0 * j.BytesProcessed / j.TotalBytes)" Class="bb:w-24" aria-label="@Localizer["App.CsvJobs.Progress"]" />
                                         <span class="bb:text-xs bb:text-muted-foreground">
-                                            @Localizer["App.CsvJobs.RowsCount", j.RowsProcessed]
+                                            @Localizer["App.CsvJobs.RowsCount", j.RowsProcessed.ToString("N0")]
                                         </span>
                                     </div>
                                 }
                                 else
                                 {
                                     <span class="bb:text-xs bb:text-muted-foreground">
-                                        @Localizer["App.CsvJobs.RowsCount", j.RowsProcessed]
+                                        @Localizer["App.CsvJobs.RowsCount", j.RowsProcessed.ToString("N0")]
                                     </span>
                                 }
                                 @if (ThroughputTextFor(j) is { } throughputText)
@@ -496,83 +640,57 @@ else
                                         @throughputText
                                     </div>
                                 }
-                                @if (j.BadDataRowCount > 0)
+                                @if (j.BadDataRowCount > 0 || j.MissingValueCount > 0 || j.UnresolvedValueCount > 0)
                                 {
-                                    <div
-                                        class="bb:mt-1"
-                                        title="@Localizer["App.CsvJobs.BadDataRowTitle"]"
-                                    >
-                                        <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
-                                            @(j.BadDataRowCount == 1
-                                                ? Localizer["App.CsvJobs.WarningCountSingular", j.BadDataRowCount].Value
-                                                : Localizer["App.CsvJobs.WarningCountPlural", j.BadDataRowCount].Value)
-                                        </BbBadge>
-                                    </div>
-                                }
-                                @if (j.MissingValueCount > 0)
-                                {
-                                    <div
-                                        class="bb:mt-1"
-                                        title="@Localizer["App.CsvJobs.MissingValueTitle"]"
-                                    >
-                                        <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
-                                            @(j.MissingValueCount == 1
-                                                ? Localizer["App.CsvJobs.MissingValueCountSingular", j.MissingValueCount].Value
-                                                : Localizer["App.CsvJobs.MissingValueCountPlural", j.MissingValueCount].Value)
-                                        </BbBadge>
-                                    </div>
-                                }
-                                @* Its own badge rather than folded into the missing-value one
-                                   above: both render as an empty cell in the output and mean
-                                   opposite things - "the input had nothing here" versus "the
-                                   input had a value this namespace has never seen". *@
-                                @if (j.UnresolvedValueCount > 0)
-                                {
-                                    <div
-                                        class="bb:mt-1"
-                                        title="@Localizer["App.CsvJobs.UnresolvedValueTitle"]"
-                                    >
-                                        <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
-                                            @(j.UnresolvedValueCount == 1
-                                                ? Localizer["App.CsvJobs.UnresolvedValueCountSingular", j.UnresolvedValueCount].Value
-                                                : Localizer["App.CsvJobs.UnresolvedValueCountPlural", j.UnresolvedValueCount].Value)
-                                        </BbBadge>
+                                    <div class="job-badges">
+                                        @if (j.BadDataRowCount > 0)
+                                        {
+                                            <div title="@Localizer["App.CsvJobs.BadDataRowTitle"]">
+                                                <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
+                                                    @(j.BadDataRowCount == 1
+                                                        ? Localizer["App.CsvJobs.WarningCountSingular", j.BadDataRowCount].Value
+                                                        : Localizer["App.CsvJobs.WarningCountPlural", j.BadDataRowCount].Value)
+                                                </BbBadge>
+                                            </div>
+                                        }
+                                        @if (j.MissingValueCount > 0)
+                                        {
+                                            <div title="@Localizer["App.CsvJobs.MissingValueTitle"]">
+                                                <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
+                                                    @(j.MissingValueCount == 1
+                                                        ? Localizer["App.CsvJobs.MissingValueCountSingular", j.MissingValueCount].Value
+                                                        : Localizer["App.CsvJobs.MissingValueCountPlural", j.MissingValueCount].Value)
+                                                </BbBadge>
+                                            </div>
+                                        }
+                                        @* Its own badge rather than folded into the missing-value one
+                                           above: both leave the cell as the input had it, and mean opposite
+                                           things - "the input had nothing here" versus "the input had a
+                                           value this namespace has never seen, and it is still there". *@
+                                        @if (j.UnresolvedValueCount > 0)
+                                        {
+                                            <div title="@Localizer["App.CsvJobs.UnresolvedValueTitle"]">
+                                                <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
+                                                    @(j.UnresolvedValueCount == 1
+                                                        ? Localizer["App.CsvJobs.UnresolvedValueCountSingular", j.UnresolvedValueCount].Value
+                                                        : Localizer["App.CsvJobs.UnresolvedValueCountPlural", j.UnresolvedValueCount].Value)
+                                                </BbBadge>
+                                            </div>
+                                        }
                                     </div>
                                 }
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.CreatedAt"]">
                             <ChildContent Context="j">
-                                @TimeZoneInfo.ConvertTime(j.CreatedAt, _browserTimeZone).ToString(
-                                    "yyyy-MM-dd HH:mm:ss"
-                                )
-                            </ChildContent>
-                        </BbDataGridTemplateColumn>
-                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Issue"]">
-                            <ChildContent Context="j">
-                                @if (
-                                    (j.Status == PseudonymizationJobStatus.Failed
-                                        || j.Status == PseudonymizationJobStatus.Stalled)
-                                    && j.ErrorMessage is not null
-                                )
-                                {
-                                    <div
-                                        class="bb:flex bb:items-start bb:gap-1.5 bb:text-xs @(j.Status == PseudonymizationJobStatus.Stalled ? "issue-text-stalled" : "bb:text-destructive")"
-                                        title="@j.ErrorMessage"
-                                    >
-                                        <LucideIcon
-                                            Name="@(j.Status == PseudonymizationJobStatus.Stalled ? "clock-alert" : "triangle-alert")"
-                                            Size="14"
-                                            Class="bb:mt-0.5 bb:shrink-0"
-                                        />
-                                        <span class="bb:truncate">@j.ErrorMessage</span>
-                                    </div>
-                                }
+                                <span class="job-created bb:tabular-nums">
+                                    @BrowserTime.Format(j.CreatedAt, _browserTimeZone)
+                                </span>
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.Common.Actions"]">
                             <ChildContent Context="j">
-                                <div class="bb:flex bb:items-center bb:gap-2">
+                                <div class="job-actions">
                                     @if (j.Status == PseudonymizationJobStatus.Completed)
                                     {
                                         <BbButton
@@ -601,11 +719,12 @@ else
                                        role (see Program.cs), so for anyone else this button
                                        could only ever lead to a 403. A job's own creator still
                                        sees its status, progress and failure reason in this grid
-                                       - the dashboard adds Hangfire's internal view of it. *@
+                                       - the dashboard adds Hangfire's internal view of it. Ghost,
+                                       so it reads as the side route it is next to Download. *@
                                     @if (_isAdmin && j.HangfireJobId is not null)
                                     {
                                         <BbButton
-                                            Variant="ButtonVariant.Outline"
+                                            Variant="ButtonVariant.Ghost"
                                             Size="ButtonSize.Small"
                                             Href="@HangfireJobDetailsUrl(j.HangfireJobId)"
                                             Target="_blank"
@@ -620,6 +739,18 @@ else
                 </BbDataGrid>
             </BbCardContent>
         </BbCard>
+
+        <ConfirmDialog
+            Open="_showClearFinishedConfirm"
+            Title="@Localizer["App.CsvJobs.ClearFinishedJobsConfirmTitle"]"
+            ConfirmLabel="@Localizer["App.Common.Clear"]"
+            ConfirmButtonId="confirmClearFinishedJobsButton"
+            IsBusy="_isClearingFinished"
+            OnConfirm="ConfirmClearFinishedJobsAsync"
+            OnCancel="() => _showClearFinishedConfirm = false"
+        >
+            @Localizer["App.CsvJobs.ClearFinishedJobsConfirmBody"]
+        </ConfirmDialog>
     </div>
 }
 
@@ -710,11 +841,16 @@ else
     // no upload step at all.
     private bool RequiresInputFile => SelectedDirection != PseudonymizationJobDirection.Export;
 
-    // Blazor Server renders on the server, so "Created at" starts out shown in UTC until this
-    // JS round-trip (OnAfterRenderAsync below) resolves the browser's own IANA time zone name -
-    // a brief flash of UTC on first render is an accepted trade-off here, same as the dark-mode
-    // theme detection in wwwroot/js/themeToggle.js.
     private TimeZoneInfo _browserTimeZone = TimeZoneInfo.Utc;
+
+    // The home page's "New job" links here with ?new=1, which opens the form straight away. A
+    // string rather than a bool: Blazor parses a bool query parameter strictly ("true"/"false"
+    // only) and throws on anything else, which would take the whole page down over a hand-edited
+    // or stale link. Anything but the two values below is simply ignored.
+    [SupplyParameterFromQuery(Name = "new")]
+    public string? OpenNewJob { get; set; }
+
+    private bool _showNewJobDialog;
 
     protected override async Task OnInitializedAsync()
     {
@@ -730,6 +866,7 @@ else
         _namespaces = await NamespaceAppService.GetAllAsync(user, CancellationToken.None);
 
         await ReloadJobsAsync();
+        _showNewJobDialog = OpenNewJob is "1" or "true";
 
         _pollCts = new CancellationTokenSource();
         _pollTask = PollLoopAsync(_pollCts.Token);
@@ -742,19 +879,7 @@ else
             return;
         }
 
-        try
-        {
-            var ianaId = await JS.InvokeAsync<string>("vfpsTimeZone.get");
-            _browserTimeZone = TimeZoneInfo.FindSystemTimeZoneById(ianaId);
-        }
-        catch (Exception ex)
-            when (ex is Microsoft.JSInterop.JSException or TimeZoneNotFoundException)
-        {
-            // Falls back to the UTC already set as _browserTimeZone's default - a missing/
-            // unrecognized zone shouldn't break the page, just leave timestamps in UTC.
-            Logger.LogWarning(ex, "Failed to resolve the browser's time zone, defaulting to UTC");
-        }
-
+        _browserTimeZone = await BrowserTime.GetZoneAsync(JS, Logger);
         StateHasChanged();
     }
 
@@ -909,6 +1034,7 @@ else
     {
         // The previous direction's error no longer describes what the form now asks for.
         _createError = null;
+        _isReviewing = false;
 
         // Switching to or from Export tears the file picker out of the DOM (or puts a fresh,
         // empty one back), so the browser has no file selected any more while _fileName and
@@ -922,6 +1048,120 @@ else
             _fileName = null;
             _detectedColumns = [];
         }
+    }
+
+    // Also reached when the dialog closes itself - the overlay, Escape, or its own close button.
+    // The settings and mappings filled in so far are kept, so reopening after a stray click
+    // doesn't mean starting over. The file is not: closing the dialog tears its file picker out of
+    // the DOM, so the browser no longer holds the file _fileName and _detectedColumns describe -
+    // the same reason OnDirectionChanged drops them.
+    private void OnNewJobDialogOpenChanged(bool open)
+    {
+        _showNewJobDialog = open;
+        if (!open)
+        {
+            _createError = null;
+            _fileName = null;
+            _detectedColumns = [];
+            _isReviewing = false;
+        }
+    }
+
+    // A de-pseudonymization or an export hands back original values in bulk, so its submit first
+    // shows exactly what is about to be revealed (the review panel), and only the explicit
+    // confirmation there starts the job. Every other direction starts straight away, as before.
+    private bool _isReviewing;
+    private IReadOnlyList<ColumnMapping> _reviewMappings = [];
+
+    private string? DirectionHint =>
+        SelectedDirection switch
+        {
+            PseudonymizationJobDirection.Pseudonymize =>
+                Localizer["App.CsvJobs.DirectionHintPseudonymize"].Value,
+            PseudonymizationJobDirection.Import =>
+                Localizer["App.CsvJobs.DirectionHintImport"].Value,
+            _ => null,
+        };
+
+    // What the folded File format group is set to. An export writes its file without a header-row
+    // question to answer, so it says nothing about one.
+    private string FileFormatSummary
+    {
+        get
+        {
+            var parts = new List<string>
+            {
+                _encoding,
+                Localizer["App.CsvJobs.FileFormatDelimiter", _delimiter].Value,
+            };
+
+            if (RequiresInputFile)
+            {
+                parts.Add(
+                    _hasHeaderRow
+                        ? Localizer["App.CsvJobs.FileFormatHasHeader"].Value
+                        : Localizer["App.CsvJobs.FileFormatNoHeader"].Value
+                );
+            }
+
+            return string.Join(" · ", parts);
+        }
+    }
+
+    private bool IsRevealingDirection =>
+        SelectedDirection
+            is PseudonymizationJobDirection.Depseudonymize
+                or PseudonymizationJobDirection.Export;
+
+    private async Task SubmitJobAsync()
+    {
+        if (IsRevealingDirection && !_isReviewing)
+        {
+            _isReviewing = PrepareReview();
+            return;
+        }
+
+        await CreateJobAsync();
+
+        // Back to the form whatever happened: on success the dialog has closed already, and on a
+        // failure the error is shown above the form it is about.
+        _isReviewing = false;
+    }
+
+    /// <summary>
+    /// The same checks the job would fail on, run before the review rather than after it - a
+    /// review of a job that can't start would only ask for a confirmation it then ignores.
+    /// </summary>
+    private bool PrepareReview()
+    {
+        _createError = null;
+
+        if (SelectedDirection == PseudonymizationJobDirection.Export)
+        {
+            if (string.IsNullOrWhiteSpace(_namespaceMapping.Namespace))
+            {
+                _createError = Localizer["App.CsvJobs.NoNamespaceError"];
+                return false;
+            }
+
+            _reviewMappings = [];
+            return true;
+        }
+
+        if (string.IsNullOrEmpty(_fileName))
+        {
+            _createError = Localizer["App.CsvJobs.NoFileError"];
+            return false;
+        }
+
+        var mappings = BuildColumnMappings();
+        if (mappings is null)
+        {
+            return false;
+        }
+
+        _reviewMappings = mappings;
+        return true;
     }
 
     private void AddMappingRow() => _columnMappings.Add(new ColumnMappingRow());
@@ -1059,6 +1299,7 @@ else
 
         _detectedColumns = [];
         _fileName = null;
+        _showNewJobDialog = false;
         await ReloadJobsAsync();
     }
 
@@ -1082,6 +1323,7 @@ else
             Localizer["App.CsvJobs.JobCreated"]
         );
 
+        _showNewJobDialog = false;
         await ReloadJobsAsync();
     }
 

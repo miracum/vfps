@@ -1,9 +1,8 @@
 @using Microsoft.Extensions.Options
 @using Vfps.Config
 @inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
-@inject IStringLocalizer<SharedResources> Localizer
 
-<Router AppAssembly="typeof(Program).Assembly">
+<Router AppAssembly="typeof(Program).Assembly" NotFoundPage="typeof(Pages.NotFound)">
     <Found Context="routeData">
         @if (AuthorizationConfigOptions.Value.IsEnabled)
         {
@@ -38,9 +37,4 @@
         }
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
-    <NotFound>
-        <LayoutView Layout="typeof(MainLayout)">
-            <p role="alert">@Localizer["App.NotFound.Description"]</p>
-        </LayoutView>
-    </NotFound>
 </Router>

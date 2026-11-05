@@ -1,0 +1,18 @@
+@*
+    The "back to the list" link above a detail page's heading. A text link at body size rather
+    than a link-variant BbButton, which brought a full 40px control's height with it and pushed the
+    page's h1 down below every other page's.
+*@
+
+<a href="@Href" class="bb:inline-flex bb:items-center bb:gap-1 bb:text-sm bb:text-primary bb:underline-offset-4 bb:hover:underline">
+    <LucideIcon aria-hidden="true" Name="arrow-left" Size="14" />
+    @ChildContent
+</a>
+
+@code {
+    [Parameter, EditorRequired]
+    public required string Href { get; set; }
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

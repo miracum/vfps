@@ -19,14 +19,20 @@ setting changes what happens instead:
 - **Fail the job** stops at the first value the namespace doesn't know, before writing any part of
   the chunk it was found in, and reports the data row, column and namespace it stopped at. The
   value itself is never recorded in the error, only where it was.
-- **Leave the cell empty** writes an empty cell for each unknown value, counts them, and carries
-  on. The count is shown on the job, separately from the "missing value" count: both render as an
-  empty cell in the output and mean opposite things - "the input had nothing here" versus "the
-  input had a value this namespace has never seen".
+- **Keep the original value** leaves each unknown value in the output exactly as the input had it,
+  counts them, and carries on - for a file where some rows simply have no counterpart yet, and
+  losing the value to a blank cell would be worse. The count is shown on the job, separately from
+  the "missing value" count: both leave the cell as the input had it and mean opposite things - "the
+  input had nothing here" versus "the input had a value this namespace has never seen, and it is
+  still there".
 
-Neither ever writes the original value through to the output. That is what de-pseudonymization does
-with a pseudonym it cannot resolve, where the field harmlessly stays a pseudonym; doing the same
-here would leave unpseudonymized data in the very column the job was asked to replace.
+!!! warning
+
+    The output of a job with **Keep the original value** is not fully pseudonymized: every value it
+    counted is still the original, identifying value, in the very column the job was asked to
+    replace. De-pseudonymization also leaves a value it can't resolve in place, but there the field
+    harmlessly stays a pseudonym. Treat the file accordingly, or use **Fail the job** where that
+    isn't acceptable.
 
 The setting applies to pseudonymize jobs only, and is rejected rather than ignored on any other
 direction - the other three either read pseudonyms or store pairs the caller already holds, so

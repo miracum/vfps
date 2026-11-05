@@ -38,7 +38,7 @@
             id="@($"{Id}Error")"
             class="bb:mt-2 bb:flex bb:items-start bb:gap-1 bb:text-xs bb:text-destructive"
         >
-            <LucideIcon Name="x" Size="14" Class="bb:shrink-0" />
+            <LucideIcon aria-hidden="true" Name="x" Size="14" Class="bb:shrink-0" />
             @* The regex parser's own message, which names the offending construct and its offset -
                far more use than a generic "invalid pattern". Not localized: it comes from the .NET
                runtime. *@
@@ -52,7 +52,7 @@
                 id="@($"{Id}Valid")"
                 class="bb:flex bb:items-center bb:gap-1 bb:text-xs regex-check-ok"
             >
-                <LucideIcon Name="check" Size="14" Class="bb:shrink-0" />
+                <LucideIcon aria-hidden="true" Name="check" Size="14" Class="bb:shrink-0" />
                 @Localizer["App.Namespaces.ValidationRegexValid"]
             </p>
             @* A pattern that compiles still isn't necessarily the one that was meant - most often
@@ -80,7 +80,7 @@
                         id="@($"{Id}SampleResult")"
                         class="@(matches ? "bb:flex bb:items-center bb:gap-1 bb:text-xs regex-check-ok" : "bb:flex bb:items-center bb:gap-1 bb:text-xs bb:text-destructive")"
                     >
-                        <LucideIcon Name="@(matches ? "check" : "x")" Size="14" Class="bb:shrink-0" />
+                        <LucideIcon aria-hidden="true" Name="@(matches ? "check" : "x")" Size="14" Class="bb:shrink-0" />
                         @(matches
                             ? Localizer["App.Namespaces.ValidationRegexSampleAccepted"].Value
                             : Localizer["App.Namespaces.ValidationRegexSampleRejected"].Value)

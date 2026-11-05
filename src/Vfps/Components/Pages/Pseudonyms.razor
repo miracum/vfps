@@ -5,35 +5,82 @@
 @inject INamespacePermissionChecker PermissionChecker
 @inject IStringLocalizer<SharedResources> Localizer
 @inject ILogger<Pseudonyms> Logger
+@inject IJSRuntime JS
 
 <PageTitle>@Localizer["App.Pseudonyms.PageTitle", NamespaceName]</PageTitle>
 
 <div class="bb:mx-auto bb:space-y-6">
-    <div>
-        <BbButton Variant="ButtonVariant.Link" Href="/ui/namespaces" Class="bb:px-0">
-            <LucideIcon Name="arrow-left" Size="16" />
-            @Localizer["App.Pseudonyms.BackToNamespaces"]
-        </BbButton>
-        <div class="bb:flex bb:items-center bb:gap-2">
-            <LucideIcon Name="key-round" Size="24" Class="bb:text-primary" />
-            <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Pseudonyms.Heading", NamespaceName]</h1>
+    @* The pseudonyms are what this page is for, so the list comes first and the two one-off tools
+       open as dialogs from the header - the same create-in-a-dialog pattern as every other page,
+       and Create is the page's one primary action. *@
+    <div class="bb:flex bb:flex-wrap bb:items-end bb:justify-between bb:gap-2">
+        <div class="bb:space-y-1">
+            <BackLink Href="/ui/namespaces">@Localizer["App.Pseudonyms.BackToNamespaces"]</BackLink>
+            <div class="bb:flex bb:items-center bb:gap-2">
+                <LucideIcon aria-hidden="true" Name="fingerprint-pattern" Size="24" Class="bb:shrink-0 bb:text-primary" />
+                <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Pseudonyms.Heading", NamespaceName]</h1>
+            </div>
         </div>
+        @* Only what this caller can actually do here, and nothing if the namespace can't be read
+           at all: the buttons used to open dialogs that could only end in an access error. *@
+        @if (_errorMessage is null)
+        {
+            <div class="bb:flex bb:flex-wrap bb:gap-2">
+                @* Marked as revealing - see .reveal-mark in wwwroot/app.css. *@
+                @if (_hasReverseLookupAccess)
+                {
+                    <BbButton
+                        id="showReverseLookupButton"
+                        Variant="ButtonVariant.Outline"
+                        IconPosition="IconPosition.Start"
+                        OnClick="() => OnLookupDialogOpenChanged(true)"
+                    >
+                        <Icon>
+                            <LucideIcon aria-hidden="true" Name="eye" Size="16" Class="reveal-mark" />
+                        </Icon>
+                        <ChildContent>
+                            @Localizer["App.Pseudonyms.ReverseLookupTitle"]
+                        </ChildContent>
+                    </BbButton>
+                }
+                @if (_hasWriteAccess)
+                {
+                    <BbButton
+                        id="showCreatePseudonymButton"
+                        IconPosition="IconPosition.Start"
+                        OnClick="() => OnCreateDialogOpenChanged(true)"
+                    >
+                        <Icon>
+                            <LucideIcon aria-hidden="true" Name="plus" Size="16" />
+                        </Icon>
+                        <ChildContent>
+                            @Localizer["App.Pseudonyms.CreateTitle"]
+                        </ChildContent>
+                    </BbButton>
+                }
+            </div>
+        }
     </div>
 
-    <div class="bb:grid bb:gap-6 bb:md:grid-cols-2">
-        <BbCard>
-            <BbCardHeader>
-                <BbCardTitle>@Localizer["App.Pseudonyms.CreateTitle"]</BbCardTitle>
-                <BbCardDescription>
-                    @Localizer["App.Pseudonyms.CreateDescription"]
-                </BbCardDescription>
-            </BbCardHeader>
-            <BbCardContent Class="bb:space-y-3">
+    @* Results and errors stay inside each dialog: its overlay covers the page while it's open.
+       Each dialog stays open after a success so the next value can go straight in. *@
+    <BbDialog Open="_showCreateDialog" OpenChanged="OnCreateDialogOpenChanged">
+        <BbDialogContent>
+            <BbDialogHeader>
+                <BbDialogTitle Class="bb:leading-tight">@Localizer["App.Pseudonyms.CreateTitle"]</BbDialogTitle>
+                <BbDialogDescription>@Localizer["App.Pseudonyms.CreateDescription"]</BbDialogDescription>
+            </BbDialogHeader>
+            <form class="bb:space-y-4" @onsubmit="CreatePseudonymAsync">
                 <div class="bb:flex bb:flex-wrap bb:items-end bb:gap-2">
-                    <BbField Class="bb:w-full bb:max-w-sm">
+                    <BbField Class="bb:min-w-0 bb:flex-1">
                         <BbFieldLabel For="originalValue">@Localizer["App.Pseudonyms.OriginalValue"]</BbFieldLabel>
                         <BbFieldContent>
-                            <BbInput @bind-Value="_createValue" Id="originalValue" Required="true" />
+                            <BbInput
+                                @bind-Value="_createValue"
+                                UpdateTiming="UpdateTiming.Immediate"
+                                Id="originalValue"
+                                Required="true"
+                            />
                         </BbFieldContent>
                     </BbField>
                     @if (_allowsMultiplePseudonyms)
@@ -45,7 +92,6 @@
                             </BbFieldContent>
                         </BbField>
                     }
-                    <BbButton OnClick="CreatePseudonymAsync" Loading="_isCreating">@Localizer["App.Common.Create"]</BbButton>
                 </div>
                 @if (_createError is not null)
                 {
@@ -63,26 +109,38 @@
                         }
                     </div>
                 }
-            </BbCardContent>
-        </BbCard>
+                <BbDialogFooter>
+                    <BbButton Variant="ButtonVariant.Outline" OnClick="() => OnCreateDialogOpenChanged(false)">
+                        @Localizer["App.Common.Close"]
+                    </BbButton>
+                    <BbButton id="createPseudonymButton" Type="ButtonType.Submit" Loading="_isCreating">
+                        @Localizer["App.Common.Create"]
+                    </BbButton>
+                </BbDialogFooter>
+            </form>
+        </BbDialogContent>
+    </BbDialog>
 
-        <BbCard>
-            <BbCardHeader>
-                <BbCardTitle>@Localizer["App.Pseudonyms.ReverseLookupTitle"]</BbCardTitle>
-                <BbCardDescription>
-                    @Localizer["App.Pseudonyms.ReverseLookupDescription"]
-                </BbCardDescription>
-            </BbCardHeader>
-            <BbCardContent Class="bb:space-y-3">
-                <div class="bb:flex bb:flex-wrap bb:items-end bb:gap-2">
-                    <BbField Class="bb:w-full bb:max-w-sm">
-                        <BbFieldLabel For="lookupValue">@Localizer["App.Pseudonyms.PseudonymValue"]</BbFieldLabel>
-                        <BbFieldContent>
-                            <BbInput @bind-Value="_lookupValue" Id="lookupValue" />
-                        </BbFieldContent>
-                    </BbField>
-                    <BbButton OnClick="ReverseLookupAsync" Loading="_isLookingUp">@Localizer["App.Pseudonyms.LookUp"]</BbButton>
-                </div>
+    <BbDialog Open="_showLookupDialog" OpenChanged="OnLookupDialogOpenChanged">
+        <BbDialogContent>
+            <BbDialogHeader>
+                <BbDialogTitle Class="bb:leading-tight bb:flex bb:items-center bb:gap-2">
+                    <LucideIcon aria-hidden="true" Name="eye" Size="18" Class="reveal-mark" />
+                    @Localizer["App.Pseudonyms.ReverseLookupTitle"]
+                </BbDialogTitle>
+                <BbDialogDescription>@Localizer["App.Pseudonyms.ReverseLookupDescription"]</BbDialogDescription>
+            </BbDialogHeader>
+            <form class="bb:space-y-4" @onsubmit="ReverseLookupAsync">
+                <BbField>
+                    <BbFieldLabel For="lookupValue">@Localizer["App.Pseudonyms.PseudonymValue"]</BbFieldLabel>
+                    <BbFieldContent>
+                        <BbInput
+                            @bind-Value="_lookupValue"
+                            UpdateTiming="UpdateTiming.Immediate"
+                            Id="lookupValue"
+                        />
+                    </BbFieldContent>
+                </BbField>
                 @if (_lookupError is not null)
                 {
                     <BbAlert Variant="AlertVariant.Danger">
@@ -95,26 +153,34 @@
                         @Localizer["App.Pseudonyms.OriginalValueLabel"]: <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5">@_lookupResult.OriginalValue</code>
                     </p>
                 }
-            </BbCardContent>
-        </BbCard>
-    </div>
+                <BbDialogFooter>
+                    <BbButton Variant="ButtonVariant.Outline" OnClick="() => OnLookupDialogOpenChanged(false)">
+                        @Localizer["App.Common.Close"]
+                    </BbButton>
+                    <BbButton id="reverseLookupButton" Type="ButtonType.Submit" Loading="_isLookingUp">
+                        @Localizer["App.Pseudonyms.LookUp"]
+                    </BbButton>
+                </BbDialogFooter>
+            </form>
+        </BbDialogContent>
+    </BbDialog>
 
-    @if (_chainSourceValue is not null)
-    {
-        <BbCard>
-            <BbCardHeader>
-                <BbCardTitle>@Localizer["App.Pseudonyms.ChainTitle"]</BbCardTitle>
-                <BbCardDescription>
-                    @Localizer["App.Pseudonyms.ChainDescription", NamespaceName]
-                </BbCardDescription>
-            </BbCardHeader>
-            <BbCardContent Class="bb:space-y-3">
-                <p class="bb:text-sm">
-                    @Localizer["App.Pseudonyms.ChainOriginalValue"]:
-                    <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5 bb:text-xs">@_chainSourceValue</code>
-                </p>
-                <div class="bb:flex bb:flex-wrap bb:items-end bb:gap-2">
-                    <BbField Class="bb:w-full bb:max-w-sm">
+    @* Opened from a row's chain action, so it comes up over that row rather than as a card that
+       appeared above the list, out of sight of the row that asked for it. *@
+    <BbDialog Open="@(_chainSourceValue is not null)" OpenChanged="OnChainDialogOpenChanged">
+        <BbDialogContent>
+            @if (_chainSourceValue is { } chainSourceValue)
+            {
+                <BbDialogHeader>
+                    <BbDialogTitle Class="bb:leading-tight">@Localizer["App.Pseudonyms.ChainTitle"]</BbDialogTitle>
+                    <BbDialogDescription>@Localizer["App.Pseudonyms.ChainDescription", NamespaceName]</BbDialogDescription>
+                </BbDialogHeader>
+                <form class="bb:space-y-4" @onsubmit="ChainPseudonymAsync">
+                    <p class="bb:text-sm">
+                        @Localizer["App.Pseudonyms.ChainOriginalValue"]:
+                        <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5 bb:text-sm">@chainSourceValue</code>
+                    </p>
+                    <BbField>
                         <BbFieldLabel For="chainTarget">@Localizer["App.Pseudonyms.ChainTarget"]</BbFieldLabel>
                         <BbFieldContent>
                             <select
@@ -129,57 +195,59 @@
                             </select>
                         </BbFieldContent>
                     </BbField>
-                    <BbButton OnClick="ChainPseudonymAsync" Loading="_isChaining">
-                        @Localizer["App.Common.Create"]
-                    </BbButton>
-                    <BbButton Variant="ButtonVariant.Outline" OnClick="CancelChain">
-                        @Localizer["App.Common.Cancel"]
-                    </BbButton>
-                </div>
-                @if (_chainError is not null)
-                {
-                    <BbAlert Variant="AlertVariant.Danger">
-                        <BbAlertDescription>@_chainError</BbAlertDescription>
-                    </BbAlert>
-                }
-                @if (_chainResult is not null)
-                {
-                    <p class="bb:text-sm">
-                        @Localizer["App.Pseudonyms.PseudonymLabel"]:
-                        <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5">@_chainResult.PseudonymValue</code>
-                        <BbButton
-                            Variant="ButtonVariant.Link"
-                            Size="ButtonSize.Small"
-                            Href="@($"/ui/namespaces/{Uri.EscapeDataString(_chainResult.NamespaceName)}/pseudonyms")"
-                        >
-                            @Localizer["App.Common.Browse"]
+                    @if (_chainError is not null)
+                    {
+                        <BbAlert Variant="AlertVariant.Danger">
+                            <BbAlertDescription>@_chainError</BbAlertDescription>
+                        </BbAlert>
+                    }
+                    @if (_chainResult is not null)
+                    {
+                        <p class="bb:text-sm">
+                            @Localizer["App.Pseudonyms.PseudonymLabel"]:
+                            <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5">@_chainResult.PseudonymValue</code>
+                            <BbButton
+                                Variant="ButtonVariant.Link"
+                                Size="ButtonSize.Small"
+                                Href="@($"/ui/namespaces/{Uri.EscapeDataString(_chainResult.NamespaceName)}/pseudonyms")"
+                            >
+                                @Localizer["App.Common.Browse"]
+                            </BbButton>
+                        </p>
+                    }
+                    <BbDialogFooter>
+                        <BbButton Variant="ButtonVariant.Outline" OnClick="CancelChain">
+                            @(_chainResult is null ? Localizer["App.Common.Cancel"] : Localizer["App.Common.Close"])
                         </BbButton>
-                    </p>
-                }
-            </BbCardContent>
-        </BbCard>
-    }
+                        @if (_chainResult is null)
+                        {
+                            <BbButton id="chainPseudonymButton" Type="ButtonType.Submit" Loading="_isChaining">
+                                @Localizer["App.Common.Create"]
+                            </BbButton>
+                        }
+                    </BbDialogFooter>
+                </form>
+            }
+        </BbDialogContent>
+    </BbDialog>
 
     @if (_errorMessage is not null)
     {
         <BbAlert Variant="AlertVariant.Danger">
-            <BbAlertTitle>@Localizer["App.Pseudonyms.LoadErrorTitle"]</BbAlertTitle>
+            <BbAlertTitle As="p">@Localizer["App.Pseudonyms.LoadErrorTitle"]</BbAlertTitle>
             <BbAlertDescription>@_errorMessage</BbAlertDescription>
         </BbAlert>
     }
     else
     {
         <BbCard>
-            <BbCardHeader>
-                <BbCardTitle>@Localizer["App.Nav.Pseudonyms"]</BbCardTitle>
-            </BbCardHeader>
-            <BbCardContent Class="bb:space-y-4">
+            <BbCardContent Class="bb:space-y-4 bb:pt-6">
                 @* Our own search form instead of the grid's ShowSearch box: that one searches a
                    debounce after every keystroke, and on a large namespace each of those is a
                    query. Here a search runs on Enter or the button. The input reports every
                    keystroke rather than on change, so the submit handler always sees all of what
                    was typed. *@
-                <form class="bb:flex bb:items-center bb:gap-2" role="search" @onsubmit="SubmitSearch">
+                <form class="search-row" role="search" @onsubmit="SubmitSearch">
                     <BbInput
                         Type="InputType.Search"
                         @bind-Value="_searchInput"
@@ -189,8 +257,8 @@
                         AriaLabel="@(_hasReverseLookupAccess ? Localizer["App.Pseudonyms.SearchWithOriginalValuePlaceholder"] : Localizer["App.Pseudonyms.SearchPlaceholder"])"
                         Class="bb:max-w-sm"
                     />
-                    <BbButton Type="ButtonType.Submit">
-                        <LucideIcon Name="search" Size="16" />
+                    <BbButton Type="ButtonType.Submit" Variant="ButtonVariant.Outline">
+                        <LucideIcon aria-hidden="true" Name="search" Size="16" />
                         @Localizer["App.Common.Search"]
                     </BbButton>
                     @if (_isSearching)
@@ -206,11 +274,12 @@
                 @if (_searchFailed)
                 {
                     <BbAlert Variant="AlertVariant.Danger">
-                        <BbAlertTitle>@Localizer["App.Pseudonyms.SearchErrorTitle"]</BbAlertTitle>
+                        <BbAlertTitle As="p">@Localizer["App.Pseudonyms.SearchErrorTitle"]</BbAlertTitle>
                         <BbAlertDescription>@Localizer["App.Pseudonyms.SearchErrorDescription"]</BbAlertDescription>
                     </BbAlert>
                 }
                 <BbDataGrid
+                    Class="pseudonym-grid"
                     @key="_run"
                     @ref="_grid"
                     TData="PseudonymSearchItemDto"
@@ -235,6 +304,34 @@
                             }
                         </div>
                     </LoadingTemplate>
+                    @* Instead of the grid's own "No results found": an empty namespace and a search
+                       that matched nothing are different situations with different next steps. *@
+                    <EmptyTemplate>
+                        @if (_run.Text is { } searchedFor)
+                        {
+                            <BbEmpty
+                                Size="EmptySize.Small"
+                                Title="@string.Format(Localizer["App.Pseudonyms.NoMatchesTitle"].Value, searchedFor)"
+                                Description="@Localizer["App.Pseudonyms.NoMatchesDescription"]"
+                            >
+                                <Icon>
+                                    <LucideIcon aria-hidden="true" Name="search-x" />
+                                </Icon>
+                            </BbEmpty>
+                        }
+                        else
+                        {
+                            <BbEmpty
+                                Size="EmptySize.Small"
+                                Title="@Localizer["App.Pseudonyms.EmptyTitle"]"
+                                Description="@Localizer["App.Pseudonyms.EmptyDescription"]"
+                            >
+                                <Icon>
+                                    <LucideIcon aria-hidden="true" Name="fingerprint-pattern" />
+                                </Icon>
+                            </BbEmpty>
+                        }
+                    </EmptyTemplate>
                     <Columns>
                         @* A property column with a cell template rather than a template column:
                            the pseudonym stays sortable and filterable like any other property,
@@ -245,14 +342,14 @@
                             Title="@Localizer["App.Pseudonyms.PseudonymLabel"]"
                         >
                             <CellTemplate Context="p">
-                                <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5 bb:text-xs">@p.PseudonymValue</code>
+                                <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5 bb:text-sm">@p.PseudonymValue</code>
                             </CellTemplate>
                         </BbDataGridPropertyColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.Pseudonyms.OriginalValueLabel"]">
                             <ChildContent Context="p">
                                 @if (p.OriginalValue is { } revealed)
                                 {
-                                    <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5 bb:text-xs">@revealed</code>
+                                    <code class="bb:rounded bb:bg-muted bb:px-1.5 bb:py-0.5 bb:text-sm">@revealed</code>
                                 }
                                 else
                                 {
@@ -263,13 +360,19 @@
                         <BbDataGridPropertyColumn
                             Property="@(p => p.CreatedAt)"
                             Title="@Localizer["App.Pseudonyms.CreatedAt"]"
-                            Format="yyyy-MM-dd HH:mm:ss"
-                        />
+                        >
+                            <CellTemplate Context="p">
+                                @BrowserTime.Format(p.CreatedAt, _browserTimeZone)
+                            </CellTemplate>
+                        </BbDataGridPropertyColumn>
                         <BbDataGridPropertyColumn
                             Property="@(p => p.LastUpdatedAt)"
                             Title="@Localizer["App.Pseudonyms.LastUpdated"]"
-                            Format="yyyy-MM-dd HH:mm:ss"
-                        />
+                        >
+                            <CellTemplate Context="p">
+                                @BrowserTime.Format(p.LastUpdatedAt, _browserTimeZone)
+                            </CellTemplate>
+                        </BbDataGridPropertyColumn>
                         @if (_children.Count > 0)
                         {
                             <BbDataGridTemplateColumn Title="@Localizer["App.Common.Actions"]">
@@ -356,7 +459,18 @@
     // server-side on every request via PseudonymAppService.SearchAsync, so this flag being stale
     // (e.g. permissions changed mid-session) can't let anyone search original values they aren't
     // allowed to see.
-    private bool _hasReverseLookupAccess;
+    // Both start out true and are corrected as soon as the checks below return. The usual caller
+    // can do both, and starting from false would make their buttons blink out and back while the
+    // circuit takes over from the prerender. The app service enforces both regardless.
+    private bool _hasReverseLookupAccess = true;
+    private bool _hasWriteAccess = true;
+
+    private TimeZoneInfo _browserTimeZone = TimeZoneInfo.Utc;
+
+    // The create and reverse-lookup dialogs. Each one's result and error belong to that dialog, so
+    // they are cleared when it closes - reopening it later starts from a blank field.
+    private bool _showCreateDialog;
+    private bool _showLookupDialog;
 
     private string _lookupValue = string.Empty;
     private bool _isLookingUp;
@@ -384,11 +498,25 @@
     private string? _chainError;
     private Vfps.Data.Models.Pseudonym? _chainResult;
 
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _browserTimeZone = await BrowserTime.GetZoneAsync(JS, Logger);
+            StateHasChanged();
+        }
+    }
+
     protected override async Task OnInitializedAsync()
     {
         StartRun(_run);
         var user = await GetUserAsync();
         _hasReverseLookupAccess = await PermissionChecker.HasReverseLookupAccessAsync(
+            user,
+            NamespaceName,
+            CancellationToken.None
+        );
+        _hasWriteAccess = await PermissionChecker.HasWriteAccessAsync(
             user,
             NamespaceName,
             CancellationToken.None
@@ -438,6 +566,37 @@
         _chainSourceValue = null;
         _chainError = null;
         _chainResult = null;
+    }
+
+    // Also reached when a dialog closes itself - the overlay, Escape, or its own close button.
+    private void OnChainDialogOpenChanged(bool open)
+    {
+        if (!open)
+        {
+            CancelChain();
+        }
+    }
+
+    private void OnCreateDialogOpenChanged(bool open)
+    {
+        _showCreateDialog = open;
+        if (!open)
+        {
+            _createValue = string.Empty;
+            _createError = null;
+            _createResults = [];
+        }
+    }
+
+    private void OnLookupDialogOpenChanged(bool open)
+    {
+        _showLookupDialog = open;
+        if (!open)
+        {
+            _lookupValue = string.Empty;
+            _lookupError = null;
+            _lookupResult = null;
+        }
     }
 
     private async Task ChainPseudonymAsync()

@@ -4,73 +4,63 @@
     Everything worth knowing about a single namespace, as a compact label/value list.
 
     Rows whose value is empty (prefix, suffix, validation regex) are left out entirely rather
-    than rendered as blanks.
+    than rendered as blanks. A definition list in a two-column grid (detail-list, wwwroot/app.css)
+    keeps each value beside its label - spread to opposite edges of the panel, the two were a
+    long way apart to read across.
 *@
 
-<div class="bb:space-y-2">
+<div class="bb:space-y-3">
     <div>
         <p class="bb:text-sm bb:font-semibold">@Namespace.Name</p>
         @if (!string.IsNullOrWhiteSpace(Namespace.Description))
         {
-            <p class="bb:text-xs bb:text-muted-foreground">@Namespace.Description</p>
+            <p class="bb:text-sm bb:text-muted-foreground">@Namespace.Description</p>
         }
     </div>
 
-    <div class="bb:space-y-1 bb:text-xs">
-        <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
-            <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.CreatedAt"]</span>
-            <span class="text-right">@FormatTimestamp(Namespace.CreatedAt)</span>
-        </div>
-        <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
-            <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.LastUpdated"]</span>
-            <span class="text-right">@FormatTimestamp(Namespace.LastUpdatedAt)</span>
-        </div>
-        <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
-            <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.GenerationMethodColumn"]</span>
-            <span class="text-right">
-                @PseudonymGenerationMethodDisplay.FriendlyName(Namespace.PseudonymGenerationMethod)
-            </span>
-        </div>
-        <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
-            <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.LengthColumn"]</span>
-            <span class="text-right">@Namespace.PseudonymLength</span>
-        </div>
+    <dl class="detail-list bb:text-sm">
+        <dt>@Localizer["App.Namespaces.CreatedAt"]</dt>
+        <dd>@FormatTimestamp(Namespace.CreatedAt)</dd>
+
+        <dt>@Localizer["App.Namespaces.LastUpdated"]</dt>
+        <dd>@FormatTimestamp(Namespace.LastUpdatedAt)</dd>
+
+        <dt>@Localizer["App.Namespaces.GenerationMethodColumn"]</dt>
+        <dd>@PseudonymGenerationMethodDisplay.FriendlyName(Namespace.PseudonymGenerationMethod)</dd>
+
+        <dt>@Localizer["App.Namespaces.LengthColumn"]</dt>
+        <dd>@Namespace.PseudonymLength</dd>
+
         @if (!string.IsNullOrEmpty(Namespace.PseudonymPrefix))
         {
-            <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
-                <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.Prefix"]</span>
-                <span class="text-right bb:font-mono">@Namespace.PseudonymPrefix</span>
-            </div>
+            <dt>@Localizer["App.Namespaces.Prefix"]</dt>
+            <dd class="bb:font-mono">@Namespace.PseudonymPrefix</dd>
         }
         @if (!string.IsNullOrEmpty(Namespace.PseudonymSuffix))
         {
-            <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
-                <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.Suffix"]</span>
-                <span class="text-right bb:font-mono">@Namespace.PseudonymSuffix</span>
-            </div>
+            <dt>@Localizer["App.Namespaces.Suffix"]</dt>
+            <dd class="bb:font-mono">@Namespace.PseudonymSuffix</dd>
         }
         @if (!string.IsNullOrEmpty(Namespace.OriginalValueValidationRegex))
         {
-            <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
-                <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.ValidationRegex"]</span>
-                <span class="text-right bb:font-mono">@Namespace.OriginalValueValidationRegex</span>
-            </div>
+            <dt>@Localizer["App.Namespaces.ValidationRegex"]</dt>
+            <dd class="bb:font-mono">@Namespace.OriginalValueValidationRegex</dd>
         }
-        <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
-            <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.AllowsMultiplePseudonymsColumn"]</span>
-            <span class="text-right">
-                @if (Namespace.AllowsMultiplePseudonyms)
-                {
-                    <LucideIcon Name="check" Size="14" />
-                }
-                else
-                {
-                    @NotSet
-                }
-            </span>
-        </div>
-        <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
-            <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.PseudonymCountColumn"]</span>
+
+        <dt>@Localizer["App.Namespaces.AllowsMultiplePseudonymsColumn"]</dt>
+        <dd>
+            @if (Namespace.AllowsMultiplePseudonyms)
+            {
+                <LucideIcon Name="check" Size="14" AriaLabel="@Localizer["App.Common.Yes"]" />
+            }
+            else
+            {
+                @NotSet
+            }
+        </dd>
+
+        <dt>@Localizer["App.Namespaces.PseudonymCountColumn"]</dt>
+        <dd>
             @if (IsPseudonymCountLoading)
             {
                 @* A spinner rather than a BbSkeleton: the skeleton's pulse only fades bg-muted to half
@@ -83,53 +73,51 @@
             }
             else
             {
-                <span class="text-right">@(PseudonymCount is { } count ? count.ToString("N0") : NotSet)</span>
+                @(PseudonymCount is { } count ? count.ToString("N0") : NotSet)
             }
-        </div>
-        <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
-            <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.ProjectsColumn"]</span>
-            <span class="bb:flex bb:flex-wrap bb:justify-end bb:gap-1">
-                @if (ProjectNames.Count == 0)
+        </dd>
+
+        <dt>@Localizer["App.Namespaces.ProjectsColumn"]</dt>
+        <dd class="bb:flex bb:flex-wrap bb:gap-1">
+            @if (ProjectNames.Count == 0)
+            {
+                @NotSet
+            }
+            else
+            {
+                @foreach (var projectName in ProjectNames)
                 {
-                    @NotSet
+                    <a href="@Vfps.Components.Pages.Projects.ProjectHref(projectName)"
+                       class="link-pill"
+                       title="@Localizer["App.Projects.OpenProject", projectName]"
+                       data-project-link="@projectName">
+                        <BbBadge Variant="BadgeVariant.Secondary">
+                            @projectName
+                            <LucideIcon aria-hidden="true" Name="link" Size="12" />
+                        </BbBadge>
+                    </a>
                 }
-                else
+            }
+        </dd>
+
+        <dt>@Localizer["App.Namespaces.ParentColumn"]</dt>
+        <dd>
+            @if (string.IsNullOrEmpty(Namespace.ParentName))
+            {
+                @Localizer["App.Namespaces.NoParent"]
+            }
+            else
+            {
+                @Namespace.ParentName
+                @if (Namespace.ParentValidationMode == Vfps.Protos.ParentValidationMode.EnsureExists)
                 {
-                    @foreach (var projectName in ProjectNames)
-                    {
-                        <a href="@Vfps.Components.Pages.Projects.ProjectHref(projectName)"
-                           class="link-pill"
-                           title="@Localizer["App.Projects.OpenProject", projectName]"
-                           data-project-link="@projectName">
-                            <BbBadge Variant="BadgeVariant.Secondary">
-                                @projectName
-                                <LucideIcon Name="link" Size="12" />
-                            </BbBadge>
-                        </a>
-                    }
+                    <span class="ml-1 bb:text-muted-foreground">
+                        @Localizer["App.Namespaces.ValidatedBadge"]
+                    </span>
                 }
-            </span>
-        </div>
-        <div class="bb:flex bb:items-start bb:justify-between bb:gap-3">
-            <span class="bb:text-muted-foreground">@Localizer["App.Namespaces.ParentColumn"]</span>
-            <span class="text-right">
-                @if (string.IsNullOrEmpty(Namespace.ParentName))
-                {
-                    @Localizer["App.Namespaces.NoParent"]
-                }
-                else
-                {
-                    @Namespace.ParentName
-                    @if (Namespace.ParentValidationMode == Vfps.Protos.ParentValidationMode.EnsureExists)
-                    {
-                        <span class="ml-1 bb:text-muted-foreground">
-                            @Localizer["App.Namespaces.ValidatedBadge"]
-                        </span>
-                    }
-                }
-            </span>
-        </div>
-    </div>
+            }
+        </dd>
+    </dl>
 </div>
 
 @code {
@@ -168,6 +156,5 @@
     [Parameter]
     public bool IsPseudonymCountLoading { get; set; }
 
-    private string FormatTimestamp(DateTimeOffset timestamp) =>
-        TimeZoneInfo.ConvertTime(timestamp, TimeZone).ToString("yyyy-MM-dd HH:mm:ss");
+    private string FormatTimestamp(DateTimeOffset timestamp) => BrowserTime.Format(timestamp, TimeZone);
 }

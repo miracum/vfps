@@ -3,6 +3,34 @@ namespace Vfps.PlaywrightTests;
 public class PseudonymSearchTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
 {
     [Fact]
+    public async Task Times_AreShownInTheBrowsersTimeZone()
+    {
+        // Every other page converted its times; this one showed UTC, unlabelled, beside them.
+        var cdp = await Context.NewCDPSessionAsync(Page);
+        await cdp.SendAsync(
+            "Emulation.setTimezoneOverride",
+            new Dictionary<string, object> { ["timezoneId"] = "Pacific/Auckland" }
+        );
+
+        var name = $"e2e-times-{UniqueSuffix()}";
+        await CreateNamespaceAsync(name);
+        await Page.APIRequest.PostAsync(
+            $"{PlaywrightFixture.BaseUrl}/v1/namespaces/{name}/pseudonyms",
+            new() { DataObject = new { originalValue = "alice" } }
+        );
+
+        await GotoAsync($"/ui/namespaces/{name}/pseudonyms");
+
+        var expected = TimeZoneInfo
+            .ConvertTime(
+                DateTimeOffset.UtcNow,
+                TimeZoneInfo.FindSystemTimeZoneById("Pacific/Auckland")
+            )
+            .ToString("yyyy-MM-dd HH");
+        await Expect(Page.Locator(".pseudonym-grid tbody td").Nth(2)).ToContainTextAsync(expected);
+    }
+
+    [Fact]
     public async Task Search_RunsOnEnterAndOnTheSearchButton_NotWhileTyping()
     {
         var name = $"e2e-search-{UniqueSuffix()}";

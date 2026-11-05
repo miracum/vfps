@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Localization;
@@ -899,6 +900,35 @@ if (
 }
 
 app.UsePathBase("/ui");
+
+// An address under the UI that matches nothing used to come back as an empty 404, which a browser
+// shows as a blank page with no way back into the app. Page requests only: an API client asking
+// for a path that doesn't exist keeps its plain 404. 404s only: re-execution fires on any empty
+// error response, and would otherwise answer the Hangfire dashboard's 403 with "page not found".
+// Before UseRouting, because the re-executed request has to be routed again.
+app.UseWhen(
+    context =>
+        context.Request.PathBase.HasValue
+        && HttpMethods.IsGet(context.Request.Method)
+        && context
+            .Request.Headers.Accept.ToString()
+            .Contains("text/html", StringComparison.Ordinal),
+    branch =>
+    {
+        branch.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+        branch.Use(
+            async (context, next) =>
+            {
+                await next(context);
+                if (context.Response.StatusCode != StatusCodes.Status404NotFound)
+                {
+                    context.Features.Get<IStatusCodePagesFeature>()!.Enabled = false;
+                }
+            }
+        );
+    }
+);
+
 app.UseRouting();
 
 // Configure the HTTP request pipeline.

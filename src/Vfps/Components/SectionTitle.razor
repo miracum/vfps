@@ -1,0 +1,23 @@
+@*
+    The title of a card or section, one step below the page's own h1 (bb:text-2xl). BbCardTitle on
+    its own renders at the h1's size and as an h3, so every card competed with the page heading and
+    the outline jumped from h1 straight to h3. bb:text-lg matches BbDialogTitle, so a section title
+    reads the same whether it heads a card or a dialog; bb:leading-tight replaces leading-none,
+    which made wrapped titles collide.
+*@
+
+<BbCardTitle As="@As" Class="@CssClass">@ChildContent</BbCardTitle>
+
+@code {
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The heading element. h2 directly under a page's h1; h3 for a section nested in one.</summary>
+    [Parameter]
+    public string As { get; set; } = "h2";
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    private string CssClass => $"bb:text-lg bb:leading-tight {Class}".TrimEnd();
+}
