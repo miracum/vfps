@@ -1,5 +1,5 @@
 using System.Text;
-using CsvHelper.Configuration;
+using CsvHelper;
 using Hangfire;
 using Vfps.Data.Models;
 
@@ -34,10 +34,11 @@ internal interface ICsvJobProcessor
 /// </summary>
 /// <param name="Job">The job being processed.</param>
 /// <param name="Encoding">Resolved from <see cref="PseudonymizationJob.Encoding"/>.</param>
-/// <param name="CsvConfig">
-/// Built from the job's delimiter/header settings, with the shared bad-data handler already wired
-/// to <paramref name="Progress"/>.
+/// <param name="ReaderOptions">
+/// Built from the job's delimiter/header settings, with the shared malformed-record handler already
+/// wired to <paramref name="Progress"/>.
 /// </param>
+/// <param name="WriterOptions">Built from the job's delimiter setting.</param>
 /// <param name="OutputObjectKey">Where this job's output CSV is to be written.</param>
 /// <param name="Progress">Shared progress/cancellation bookkeeping for this job.</param>
 /// <param name="Phases">
@@ -49,7 +50,8 @@ internal interface ICsvJobProcessor
 internal sealed record CsvJobContext(
     PseudonymizationJob Job,
     Encoding Encoding,
-    CsvConfiguration CsvConfig,
+    CsvReaderOptions ReaderOptions,
+    CsvWriterOptions WriterOptions,
     string OutputObjectKey,
     CsvJobProgressReporter Progress,
     CsvJobPhaseTimer Phases

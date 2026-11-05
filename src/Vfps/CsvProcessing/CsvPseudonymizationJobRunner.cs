@@ -255,7 +255,8 @@ internal sealed class CsvPseudonymizationJobRunner(
         var jobContext = new CsvJobContext(
             job,
             Encoding.GetEncoding(job.Encoding),
-            CsvJobFormat.CreateConfiguration(job, progress, logger),
+            CsvJobFormat.CreateReaderOptions(job, progress, logger),
+            CsvJobFormat.CreateWriterOptions(job),
             outputObjectKey,
             progress,
             phases

@@ -473,6 +473,72 @@ public class CsvPseudonymizationJobRunnerTests
             .MustNotHaveHappened();
     }
 
+    [Theory]
+    [InlineData("")]
+    [InlineData("\n")]
+    public async Task RunAsync_WithAFileHoldingNoHeader_ShouldFailTheJob(string csvContent)
+    {
+        // No row to name the column the mapping asks for. CsvHelper itself no longer treats this as
+        // an error, so it has to be the column lookup that stops the job from completing as if an
+        // empty output were the right answer.
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, csvContent);
+
+        var sut = CreateSut();
+        var run = () => sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+        await run.Should().ThrowAsync<InvalidOperationException>();
+
+        A.CallTo(() =>
+                jobRepository.UpdateStatusAsync(
+                    job.Id,
+                    PseudonymizationJobStatus.Failed,
+                    A<string>._,
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+        A.CallTo(() =>
+                jobRepository.CompleteAsync(job.Id, A<string>._, A<long>._, A<CancellationToken>._)
+            )
+            .MustNotHaveHappened();
+    }
+
+    [Fact]
+    public async Task RunAsync_WithADelimiterStoredBeforeItWasLimited_ShouldFailTheJob()
+    {
+        // Creating a job refuses one of these now, but one can already be waiting in the queue
+        // when this version starts.
+        var job = CreateJob(
+            PseudonymizationJobDirection.Pseudonymize,
+            new ColumnMapping { SourceColumn = "value", Namespace = "ns" }
+        );
+        job.Delimiter = "||";
+        FakeFindJob(job);
+        A.CallTo(() => namespaceRepository.FindAsync("ns", A<CancellationToken>._))
+            .Returns(CreateNamespace("ns"));
+        FakeInputObject(job, "id||value\n1||a\n");
+
+        var sut = CreateSut();
+        var run = () => sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
+        await run.Should().ThrowAsync<InvalidOperationException>();
+
+        A.CallTo(() =>
+                jobRepository.UpdateStatusAsync(
+                    job.Id,
+                    PseudonymizationJobStatus.Failed,
+                    A<string>._,
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+    }
+
     [Fact]
     public async Task RunAsync_WithFailIfMissing_ShouldRecordWhereItStoppedButNeverTheValue()
     {
@@ -693,8 +759,8 @@ public class CsvPseudonymizationJobRunnerTests
     public async Task RunAsync_WithMalformedCsvField_ShouldReportBadDataRowCountAndStillComplete()
     {
         // A stray, unescaped quote mid-field (e.g. an inch mark in free text) is malformed per
-        // strict CSV, but CsvPseudonymizationJobRunner's BadDataFound handler recovers from it -
-        // see CsvPseudonymizationJobRunner.ProcessAsync. The row must still be processed (with the
+        // strict CSV, but CsvJobFormat's OnMalformedRecord handler recovers from it -
+        // see CsvJobFormat.CreateReaderOptions. The row must still be processed (with the
         // literal field content, quote included) and counted, not silently dropped or failed.
         var job = CreateJob(
             PseudonymizationJobDirection.Pseudonymize,

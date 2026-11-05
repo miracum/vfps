@@ -12,7 +12,7 @@ namespace Vfps.CsvProcessing;
 
 /// <summary>
 /// The original two CSV job directions: reads the input file row by row (via
-/// <c>GetField(index)</c> only - never a typed <c>GetField&lt;T&gt;()</c>, since fields here are
+/// <c>GetString(index)</c> only - never a typed <c>Parse&lt;T&gt;()</c>, since fields here are
 /// opaque values to relocate, not data to interpret), replaces or appends the mapped columns'
 /// values, and writes the result out. See
 /// <see cref="PseudonymizationJobDirection.Pseudonymize"/> and
@@ -54,7 +54,7 @@ internal sealed class CsvColumnTransformer(
             return await outputUploader.UploadAsync(
                 context.OutputObjectKey,
                 context.Encoding,
-                context.CsvConfig,
+                context.WriterOptions,
                 csvWriter => TransformAsync(context, countingStream, csvWriter, cancellationToken),
                 cancellationToken.ShutdownToken
             );
@@ -83,14 +83,13 @@ internal sealed class CsvColumnTransformer(
         var progress = context.Progress;
 
         using var reader = CsvJobFormat.CreateReader(countingStream, context.Encoding);
-        using var csvReader = new CsvReader(reader, context.CsvConfig, leaveOpen: true);
+        using var csvReader = CsvReader.Create(reader, context.ReaderOptions, leaveOpen: true);
 
         string[]? header = null;
         if (job.HasHeaderRow)
         {
-            await csvReader.ReadAsync();
-            csvReader.ReadHeader();
-            header = csvReader.HeaderRecord;
+            await csvReader.ReadHeaderAsync();
+            header = [.. csvReader.Headers];
         }
 
         // Resolve every distinct namespace this job's column mappings reference exactly
@@ -139,7 +138,7 @@ internal sealed class CsvColumnTransformer(
                 csvWriter.WriteField(a.TargetColumn);
             }
 
-            await csvWriter.NextRecordAsync();
+            await csvWriter.EndRecordAsync();
         }
 
         // Both directions now resolve a chunk in one batched round trip per namespace, so both
@@ -279,7 +278,7 @@ internal sealed class CsvColumnTransformer(
             }
         }
 
-        // Covers the whole write loop rather than each NextRecordAsync individually: the rows go
+        // Covers the whole write loop rather than each EndRecordAsync individually: the rows go
         // into a pipe CsvJobOutputUploader drains concurrently, so what is being measured here is
         // how long that pipe spends full - i.e. how much of this job is spent waiting on the
         // upload to keep up - and that only shows up in aggregate across a chunk.
@@ -304,7 +303,7 @@ internal sealed class CsvColumnTransformer(
                 csvWriter.WriteField(Resolve(mapping.Column, ValueAt(row, mapping.SourceIndex)));
             }
 
-            await csvWriter.NextRecordAsync();
+            await csvWriter.EndRecordAsync();
         }
 
         void EnsureResolved(BufferedRow row, MappedColumn column, string raw)

@@ -47,6 +47,8 @@ public class PseudonymizationJobAppService(
         CancellationToken cancellationToken
     )
     {
+        CsvJobFormat.ParseDelimiter(request.Delimiter);
+
         if (
             request.PseudonymizeMode != PseudonymizeMode.CreateIfMissing
             && request.Direction != PseudonymizationJobDirection.Pseudonymize
@@ -109,6 +111,8 @@ public class PseudonymizationJobAppService(
         CancellationToken cancellationToken
     )
     {
+        CsvJobFormat.ParseDelimiter(request.Delimiter);
+
         await EnsureNamespaceAccessAsync(
             [
                 new ColumnMapping

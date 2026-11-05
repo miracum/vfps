@@ -206,8 +206,8 @@ public class PseudonymizationJob : TracksCreationAndUpdates
 
     /// <summary>
     /// Rows CsvHelper flagged as malformed (e.g. a stray, unescaped quote inside an unquoted
-    /// field) but recovered from rather than failing the job - see CsvPseudonymizationJobRunner's
-    /// BadDataFound handler. The affected field's raw content is kept as-is; this is purely a
+    /// field) but recovered from rather than failing the job - see CsvJobFormat's
+    /// OnMalformedRecord handler. The affected field's raw content is kept as-is; this is purely a
     /// count so the UI can flag "N rows had malformed data" without ever storing the data itself.
     /// </summary>
     public int BadDataRowCount { get; set; }

@@ -63,6 +63,41 @@ public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
 
     [Fact]
     [Trait("Category", "RequiresS3")]
+    public async Task ADelimiterOfTwoCharacters_IsRefusedInTheForm_RatherThanFailingAJobLater()
+    {
+        var namespaceName = $"e2e-delimiter-{UniqueSuffix()}";
+        var csvPath = Path.Join(Path.GetTempPath(), $"vfps-e2e-{UniqueSuffix()}.csv");
+        await File.WriteAllTextAsync(
+            csvPath,
+            "patient_id||name\n1||a\n",
+            TestContext.Current.CancellationToken
+        );
+        try
+        {
+            await CreateNamespaceAsync(namespaceName);
+
+            await GotoAsync("/ui/csv-jobs?new=1");
+            await Page.SetInputFilesAsync("#csvFileInput", csvPath);
+            await Page.Locator(".file-format summary").ClickAsync();
+            await FillInputAsync("#delimiter", "||");
+            await Page.Locator("#delimiter").BlurAsync();
+            // A text box until the file's header row has been read, and only then a dropdown.
+            await Page.Locator("select[id^=sourceColumn-]")
+                .SelectOptionAsync(new SelectOptionValue { Index = 1 });
+            await Page.Locator("[id^=namespace-]").SelectOptionAsync(namespaceName);
+            await Page.ClickAsync("#submitJobButton");
+
+            await Expect(Page.GetByRole(AriaRole.Dialog).GetByRole(AriaRole.Alert))
+                .ToContainTextAsync("single ASCII character");
+        }
+        finally
+        {
+            File.Delete(csvPath);
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "RequiresS3")]
     public async Task AFailedJobsReason_WrapsInsteadOfWideningTheGrid()
     {
         // The grid used to be as wide as the longest error message, with the job's actions at the

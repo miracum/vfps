@@ -52,7 +52,7 @@ internal sealed class CsvNamespaceExporter(
         return await outputUploader.UploadAsync(
             context.OutputObjectKey,
             context.Encoding,
-            context.CsvConfig,
+            context.WriterOptions,
             csvWriter => ExportAsync(context, mapping, csvWriter, cancellationToken),
             cancellationToken.ShutdownToken
         );
@@ -74,7 +74,7 @@ internal sealed class CsvNamespaceExporter(
 
             csvWriter.WriteField(mapping.SourceColumn);
             csvWriter.WriteField(mapping.TargetColumn ?? string.Empty);
-            await csvWriter.NextRecordAsync();
+            await csvWriter.EndRecordAsync();
         }
 
         var rows = 0L;
@@ -110,7 +110,7 @@ internal sealed class CsvNamespaceExporter(
                 {
                     csvWriter.WriteField(pseudonym.OriginalValue);
                     csvWriter.WriteField(pseudonym.PseudonymValue);
-                    await csvWriter.NextRecordAsync();
+                    await csvWriter.EndRecordAsync();
                 }
 
                 rows++;

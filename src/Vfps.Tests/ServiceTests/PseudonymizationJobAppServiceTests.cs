@@ -139,6 +139,50 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         await act.Should().ThrowAsync<ArgumentException>();
     }
 
+    [Theory]
+    [InlineData("||")]
+    [InlineData("§")]
+    [InlineData("")]
+    public async Task CreateJobAsync_WithADelimiterCsvHelperCannotUse_ShouldThrowBeforeCreatingAJob(
+        string delimiter
+    )
+    {
+        var (sut, repository, _, _) = CreateSut();
+
+        var request = new CreateCsvJobRequest(
+            "utf-8",
+            delimiter,
+            true,
+            [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
+            PseudonymizationJobDirection.Pseudonymize
+        );
+
+        var act = () =>
+            sut.CreateJobAsync(request, UserWithSubject("creator"), CancellationToken.None);
+
+        // InvalidOperationException specifically: it is what the job form shows to the person.
+        await act.Should()
+            .ThrowAsync<InvalidOperationException>()
+            .WithMessage("*single ASCII character*");
+    }
+
+    [Fact]
+    public async Task CreateExportJobAsync_WithADelimiterCsvHelperCannotUse_ShouldThrow()
+    {
+        var (sut, _, _, _) = CreateSut();
+
+        var act = () =>
+            sut.CreateExportJobAsync(
+                new CreateCsvExportJobRequest("existingNamespace", Delimiter: "||"),
+                UserWithSubject("creator"),
+                CancellationToken.None
+            );
+
+        await act.Should()
+            .ThrowAsync<InvalidOperationException>()
+            .WithMessage("*single ASCII character*");
+    }
+
     [Fact]
     public async Task CreateJobAsync_WithoutWriteAccessToNamespace_ShouldThrowForbidden()
     {

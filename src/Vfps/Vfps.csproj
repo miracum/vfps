@@ -8,7 +8,7 @@
     <PackageReference Include="AWSSDK.S3" Version="4.0.104.10" />
     <PackageReference Include="BlazorBlueprint.Components" Version="4.1.0" />
     <PackageReference Include="BlazorBlueprint.Icons.Lucide" Version="2.0.2" />
-    <PackageReference Include="CsvHelper" Version="33.1.0" />
+    <PackageReference Include="CsvHelper" Version="34.0.0" />
     <PackageReference Include="EFCore.NamingConventions" Version="10.0.1" />
     <PackageReference Include="EntityFrameworkCore.Exceptions.PostgreSQL" Version="10.0.1" />
     <PackageReference Include="Grpc.AspNetCore" Version="2.85.0" />

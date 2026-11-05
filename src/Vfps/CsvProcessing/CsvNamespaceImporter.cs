@@ -69,7 +69,7 @@ internal sealed class CsvNamespaceImporter(
             return await outputUploader.UploadAsync(
                 context.OutputObjectKey,
                 context.Encoding,
-                context.CsvConfig,
+                context.WriterOptions,
                 csvWriter => ImportAsync(context, countingStream, csvWriter, cancellationToken),
                 cancellationToken.ShutdownToken
             );
@@ -114,14 +114,13 @@ internal sealed class CsvNamespaceImporter(
         var namespacesByName = new Dictionary<string, Namespace?>(StringComparer.Ordinal);
 
         using var reader = CsvJobFormat.CreateReader(countingStream, context.Encoding);
-        using var csvReader = new CsvReader(reader, context.CsvConfig, leaveOpen: true);
+        using var csvReader = CsvReader.Create(reader, context.ReaderOptions, leaveOpen: true);
 
         string[]? header = null;
         if (job.HasHeaderRow)
         {
-            await csvReader.ReadAsync();
-            csvReader.ReadHeader();
-            header = csvReader.HeaderRecord;
+            await csvReader.ReadHeaderAsync();
+            header = [.. csvReader.Headers];
         }
 
         var originalValueIndex = CsvJobFormat.ResolveColumnIndex(mapping.SourceColumn, header);
@@ -144,7 +143,7 @@ internal sealed class CsvNamespaceImporter(
             }
 
             csvWriter.WriteField(StatusColumnName);
-            await csvWriter.NextRecordAsync();
+            await csvWriter.EndRecordAsync();
         }
 
         // The same batch size as pseudonymization, and for the same reason: one round trip's
@@ -281,7 +280,7 @@ internal sealed class CsvNamespaceImporter(
             // the branches that assigns a status, so a miss here is a bug in that logic and
             // should fail the job loudly rather than write a plausible-looking wrong one.
             csvWriter.WriteField(statusByRowIndex[i]);
-            await csvWriter.NextRecordAsync();
+            await csvWriter.EndRecordAsync();
         }
     }
 
