@@ -2,7 +2,7 @@
 
 ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
 
-A Helm chart for deploying VFPS, a very fast and resource-efficient pseudonym service.
+A Helm chart for deploying vfps, a very fast and resource-efficient pseudonym service.
 
 **Homepage:** <https://github.com/miracum/vfps>
 

@@ -1,6 +1,6 @@
 # vfps
 
-<p align="center"><img width="279" src="website/img/text-logo.svg" alt="Vfps Logo"></p>
+<p align="center"><img width="279" src="website/img/text-logo.svg" alt="vfps logo"></p>
 
 [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/miracum/vfps?label=openssf%20scorecard&style=flat)](https://scorecard.dev/viewer/?uri=github.com/miracum/vfps)
 [![SLSA 3](https://slsa.dev/images/gh-badge-level3.svg)](https://slsa.dev)
@@ -30,7 +30,7 @@ docker compose -f oci://ghcr.io/miracum/vfps/compose/getting-started:v1.27.0 up
 
 From a checkout, `docker compose -f compose.yaml --profile=test up` starts the same services.
 
-Visit <http://localhost:8080/swagger> to view the OpenAPI specification of the Vfps API:
+Visit <http://localhost:8080/swagger> to view the OpenAPI specification of the vfps API:
 
 You can use the JSON-transcoded REST API described via OpenAPI or interact with the service using gRPC.
 For example, using [grpcurl](https://github.com/fullstorydev/grpcurl) to create a new namespace:
@@ -70,7 +70,7 @@ grpcurl \
 
 All settings are listed in the [configuration reference](https://miracum.github.io/vfps/configuration/).
 
-![Vfps admin UI home page](website/img/ui/ui-home-light.png)
+![vfps admin UI home page](website/img/ui/ui-home-light.png)
 
 ## Development
 

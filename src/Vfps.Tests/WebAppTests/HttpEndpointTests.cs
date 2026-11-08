@@ -27,6 +27,29 @@ public class HttpEndpointTests(IntegrationTestFactory<Program, PseudonymContext>
     }
 
     /// <summary>
+    /// A FHIR client fetches the CapabilityStatement with a plain GET, which carries no
+    /// Content-Type - and routing passes over an action with a [Consumes] constraint for such a
+    /// request, answering 404, which is what both of these used to do.
+    /// </summary>
+    [Theory]
+    [InlineData("/v1/fhir/metadata")]
+    [InlineData("/fhir/mii/2026/metadata")]
+    public async Task FhirMetadata_RequestedWithAPlainGet_ShouldReturnTheCapabilityStatement(
+        string endpoint
+    )
+    {
+        var client = factory.CreateClient();
+
+        var response = await client.GetAsync(endpoint, TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.Should().Be("application/fhir+json");
+        (await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken))
+            .Should()
+            .Contain("\"resourceType\":\"CapabilityStatement\"");
+    }
+
+    /// <summary>
     /// The JSON-transcoded route for the Resolve RPC uses an AIP-136 custom-method suffix
     /// (<c>pseudonyms:resolve</c>), which is a shape nothing else in this proto uses - so the
     /// thing worth asserting is simply that ASP.NET routing serves it at all, rather than 404ing

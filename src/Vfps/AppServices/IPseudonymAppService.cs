@@ -11,6 +11,23 @@ namespace Vfps.AppServices;
 public interface IPseudonymAppService
 {
     /// <summary>
+    /// The write-access check and namespace lookup that <see cref="CreateAsync"/>,
+    /// <see cref="ResolveAsync"/> and <see cref="AppendAsync"/> start with, for a caller that has
+    /// to look at the namespace before it knows which of their trusted counterparts to run - the
+    /// MII FHIR API, whose operations each require a single- or a multi-pseudonym namespace.
+    /// </summary>
+    /// <exception cref="Authorization.ForbiddenException">
+    /// <paramref name="user"/> has no write access to the namespace. Checked first, so a caller
+    /// without access can't use this to learn whether a namespace exists.
+    /// </exception>
+    /// <exception cref="NamespaceNotFoundException">The namespace does not exist.</exception>
+    Task<Namespace> GetNamespaceForWriteAsync(
+        string namespaceName,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Creates (or fetches/grows the existing) set of pseudonyms for <paramref name="originalValue"/>
     /// in <paramref name="namespaceName"/>. Requires write access to the namespace. Shared by the
     /// gRPC adapter and <see cref="CsvProcessing.CsvPseudonymizationJobRunner"/>, so both paths
@@ -100,6 +117,18 @@ public interface IPseudonymAppService
     );
 
     /// <summary>
+    /// <see cref="AppendAsync"/> once its permission check and namespace lookup are done (see
+    /// <see cref="GetNamespaceForWriteAsync"/>), for a caller that has already done both itself.
+    /// Throws everything <see cref="AppendAsync"/> does except the two exceptions those steps raise.
+    /// </summary>
+    Task<Pseudonym> AppendTrustedAsync(
+        Namespace @namespace,
+        string originalValue,
+        Guid? requestId,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Resolves the pseudonym(s) already stored for <paramref name="originalValue"/> in
     /// <paramref name="namespaceName"/>, creating nothing. The lookup-only counterpart to
     /// <see cref="CreateAsync"/>, for a caller whose file or request is supposed to contain only
@@ -136,6 +165,23 @@ public interface IPseudonymAppService
         string namespaceName,
         string originalValue,
         ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
+    /// <see cref="ResolveAsync"/> once its permission check and namespace lookup are done (see
+    /// <see cref="GetNamespaceForWriteAsync"/>), for a caller that has already done both itself.
+    /// Validates the original value exactly as <see cref="ResolveAsync"/> does, unlike
+    /// <see cref="ResolveTrustedBatchAsync"/>.
+    /// </summary>
+    /// <exception cref="ArgumentException"><paramref name="originalValue"/> is blank.</exception>
+    /// <exception cref="OriginalValueValidationException">
+    /// <paramref name="originalValue"/> does not match the namespace's validation pattern and has
+    /// no pseudonym stored.
+    /// </exception>
+    Task<IReadOnlyList<Pseudonym>> ResolveTrustedAsync(
+        Namespace @namespace,
+        string originalValue,
         CancellationToken cancellationToken
     );
 

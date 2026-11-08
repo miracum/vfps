@@ -37,8 +37,8 @@ public class ApiAuthorizationTests(AuthorizationEnabledTestFactory factory)
 {
     // The JSON-transcoded routes of the two gRPC services, which hang off the same endpoint
     // builders MapGrpcService returns - so the policy applied there covers both surfaces, and
-    // asserting over HTTP asserts about the gRPC endpoints too - plus the FHIR operation, which
-    // is gated separately (it is an MVC controller, not a gRPC service) but must answer alike.
+    // asserting over HTTP asserts about the gRPC endpoints too - plus both FHIR APIs, which are
+    // gated separately (they are MVC controllers, not gRPC services) but must answer alike.
     public static TheoryData<HttpMethod, string> ApiEndpoints =>
         new()
         {
@@ -55,6 +55,14 @@ public class ApiAuthorizationTests(AuthorizationEnabledTestFactory factory)
             { HttpMethod.Post, "/v1/namespaces/existingNamespace/pseudonyms:resolve" },
             { HttpMethod.Post, "/v1/fhir/$create-pseudonym" },
             { HttpMethod.Post, "/v1/fhir/$resolve-pseudonym" },
+            { HttpMethod.Post, "/fhir/mii/2026" },
+            { HttpMethod.Get, "/fhir/mii/2026/metadata" },
+            { HttpMethod.Post, "/fhir/mii/2026/$pseudonymize" },
+            { HttpMethod.Post, "/fhir/mii/2026/$pseudonymize-multiple" },
+            { HttpMethod.Post, "/fhir/mii/2026/$get-pseudonym" },
+            { HttpMethod.Post, "/fhir/mii/2026/$de-pseudonymize" },
+            { HttpMethod.Post, "/fhir/mii/2026/$delete-pseudonym" },
+            { HttpMethod.Post, "/fhir/mii/2026/$anonymize-original" },
         };
 
     [Theory]

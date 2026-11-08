@@ -37,7 +37,7 @@ keep working, and are listed for context wherever they apply.
 ## Authenticating API calls
 
 With `Authorization__IsEnabled` set, the whole API - gRPC, the JSON-transcoded REST routes
-(`/v1/namespaces/...`) and the FHIR operation (`/v1/fhir/$create-pseudonym`) - accepts **bearer
+(`/v1/namespaces/...`) and the [FHIR operations](fhir.md) (`/fhir/mii/2026/...`, `/v1/fhir/...`) - accepts **bearer
 tokens only**. A call arriving without one is refused by the request pipeline before it reaches a
 service method: gRPC clients get `UNAUTHENTICATED`, HTTP clients a `401` carrying
 `WWW-Authenticate: Bearer`. A machine client obtains its token from the authority the usual way - an

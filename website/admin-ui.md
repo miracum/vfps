@@ -2,8 +2,8 @@
 
 vfps ships with a web-based admin UI, served at `/ui`, for creating and browsing namespaces and running CSV pseudonymization jobs.
 
-![Vfps admin UI home page](img/ui/ui-home-light.png#only-light)
-![Vfps admin UI home page](img/ui/ui-home-dark.png#only-dark)
+![vfps admin UI home page](img/ui/ui-home-light.png#only-light)
+![vfps admin UI home page](img/ui/ui-home-dark.png#only-dark)
 
 ## Namespaces
 

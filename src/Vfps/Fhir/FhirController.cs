@@ -12,7 +12,6 @@ namespace Vfps.Fhir;
 [ApiController]
 [Route("v1/fhir")]
 [Produces("application/fhir+json")]
-[Consumes("application/fhir+json", "application/json")]
 public class FhirController(
     ILogger<FhirController> logger,
     IPseudonymAppService pseudonymAppService
@@ -25,6 +24,7 @@ public class FhirController(
     /// <param name="cancellationToken">A cancellation token to abort the request</param>
     /// <returns>Either a FHIR Parameters resource containing the created pseudonym or a FHIR OperationOutcome in case of errors.</returns>
     [HttpPost("$create-pseudonym")]
+    [Consumes("application/fhir+json", "application/json")]
     [ProducesResponseType(typeof(Parameters), 200)]
     [ProducesResponseType(typeof(OperationOutcome), 400)]
     [ProducesResponseType(typeof(OperationOutcome), 403)]
@@ -191,6 +191,7 @@ public class FhirController(
     /// which is the difference from $create-pseudonym.
     /// </returns>
     [HttpPost("$resolve-pseudonym")]
+    [Consumes("application/fhir+json", "application/json")]
     [ProducesResponseType(typeof(Parameters), 200)]
     [ProducesResponseType(typeof(OperationOutcome), 400)]
     [ProducesResponseType(typeof(OperationOutcome), 403)]
@@ -318,6 +319,8 @@ public class FhirController(
     ///     Note that this CapabilityStatement is not valid at this point as it does not include the custom operations.
     /// </summary>
     /// <returns>The server's FHIR CapabilityStatement.</returns>
+    // No [Consumes] here, unlike the operations: the constraint rejects a request without a
+    // Content-Type - which a GET never has - and routing answers it with a 404.
     [HttpGet("metadata")]
     public CapabilityStatement GetMetadata()
     {
@@ -326,7 +329,7 @@ public class FhirController(
             Status = PublicationStatus.Active,
             Date = DateTime.UtcNow.ToString("s", CultureInfo.InvariantCulture),
             Kind = CapabilityStatementKind.Instance,
-            Software = new CapabilityStatement.SoftwareComponent { Name = "VFPS FHIR API" },
+            Software = new CapabilityStatement.SoftwareComponent { Name = "vfps FHIR API" },
             FhirVersion = FHIRVersion.N4_0_1,
             Format = new[] { "application/fhir+json" },
             Rest = new List<CapabilityStatement.RestComponent>
