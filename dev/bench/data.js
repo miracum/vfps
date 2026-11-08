@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793919799075,
+  "lastUpdate": 1794144379053,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -15834,6 +15834,66 @@ window.BENCHMARK_DATA = {
             "value": 918.9613524845669,
             "unit": "ns",
             "range": "± 1.0703276551080732"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "e0ad89917c3a52b17116f51001dfa1e786feda5a",
+          "message": "feat: implemented MII FHIR API endpoints (#440)",
+          "timestamp": "2026-11-08T14:22:48+01:00",
+          "tree_id": "c7b18ce66b1feb8bf8fd95d715eb1f936dbf14ef",
+          "url": "https://github.com/miracum/vfps/commit/e0ad89917c3a52b17116f51001dfa1e786feda5a"
+        },
+        "date": 1794144378362,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 902.4625869115193,
+            "unit": "ns",
+            "range": "± 3.0747842819042135"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 752.2021492640177,
+            "unit": "ns",
+            "range": "± 2.34956951331731"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 777.9012791560247,
+            "unit": "ns",
+            "range": "± 0.4821513999197386"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 840.9921977996826,
+            "unit": "ns",
+            "range": "± 3.980786633520077"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 978.8869983966534,
+            "unit": "ns",
+            "range": "± 2.264091622068986"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 896.8177584966023,
+            "unit": "ns",
+            "range": "± 3.711941625259234"
           }
         ]
       }
