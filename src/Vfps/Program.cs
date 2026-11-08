@@ -122,7 +122,7 @@ builder.Services.AddSwaggerGen(c =>
         "v1",
         new OpenApiInfo
         {
-            Title = "VFPS FHIR and gRPC JSON-transcoded API",
+            Title = "vfps FHIR and gRPC JSON-transcoded API",
             Version = "v1",
             Description = "A very fast and resource-efficient pseudonym service.",
             License = new OpenApiLicense
@@ -962,7 +962,7 @@ if (authConfig.IsEnabled)
 // serving.
 app.MapGrpcHealthChecksService();
 app.UseSwagger();
-app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "VFPS API v1"));
+app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "vfps API v1"));
 
 app.UseAuthentication();
 app.UseAuthorization();

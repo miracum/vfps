@@ -61,7 +61,7 @@ with gRPC, REST and FHIR APIs, an admin UI, and highly available deployments.</p
     Every operation is available over gRPC and JSON-transcoded REST, described by an OpenAPI
     specification. FHIR clients can use the MII pseudonymization operations.
 
-    [:octicons-arrow-right-24: MII FHIR pseudonymization operations](https://medizininformatik-initiative.github.io/mii-interface-module-pseudonymization/)
+    [:octicons-arrow-right-24: MII FHIR pseudonymization operations](fhir.md)
 
 - :lucide-layout-dashboard:{ .lg .middle } **Admin UI and CSV jobs**
 
@@ -78,7 +78,7 @@ with gRPC, REST and FHIR APIs, an admin UI, and highly available deployments.</p
     ---
 
     OIDC sign-in, separate read, write and reverse-lookup grants per namespace.
-    Vfps-issued personal access tokens and service accounts with fine-grained access
+    vfps-issued personal access tokens and service accounts with fine-grained access
     for machine users.
 
     [:octicons-arrow-right-24: Access control](access-control.md)

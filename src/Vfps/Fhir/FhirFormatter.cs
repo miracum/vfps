@@ -73,6 +73,23 @@ public class FhirInputFormatter : TextInputFormatter
         try
         {
             var resource = JsonSerializer.Deserialize<Resource>(json, FhirJsonOptions);
+
+            // A well-formed resource of another type than the action takes - a Bundle posted to
+            // an operation expecting Parameters - is a failed read, the same as malformed JSON.
+            // Handed on as a success, MVC would cast it to the parameter's type and fail with a
+            // 500 instead of the action answering it with an OperationOutcome.
+            if (resource is not null && !context.ModelType.IsInstanceOfType(resource))
+            {
+                var serviceProvider = httpContext.RequestServices;
+                var logger = serviceProvider.GetRequiredService<ILogger<FhirInputFormatter>>();
+                logger.LogWarning(
+                    "Received a FHIR {ResourceType} resource where a {ExpectedType} was expected",
+                    resource.TypeName,
+                    context.ModelType.Name
+                );
+                return await InputFormatterResult.FailureAsync();
+            }
+
             return await InputFormatterResult.SuccessAsync(resource);
         }
         catch (Exception exc)

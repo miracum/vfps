@@ -82,9 +82,10 @@ The response's `pseudonyms` array holds the full set (`pseudonym` is kept, popul
 first one, for callers that only read a single value). The stored set for a given original value
 only ever grows: calling `Create` again with a `count` at or below what's already stored returns
 the existing set unchanged, while a larger `count` adds exactly the missing pseudonyms, up to a
-maximum `count` of 10,000. CSV pseudonymization jobs and the FHIR `$create-pseudonym` operation
-don't support requesting more than one pseudonym - both always operate on the first
-(`sequenceNumber: 0`) pseudonym for a multi-psn namespace.
+maximum `count` of 10,000. CSV pseudonymization jobs and the `/v1/fhir` `$create-pseudonym`
+operation don't support requesting more than one pseudonym - both always operate on the first
+(`sequenceNumber: 0`) pseudonym for a multi-psn namespace. The
+[MII FHIR API](fhir.md#operations) has `$pseudonymize-multiple` for multi-psn namespaces instead.
 
 ### Appending a pseudonym
 

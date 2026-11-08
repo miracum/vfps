@@ -29,6 +29,26 @@ public class PseudonymAppService(
     public const long MaxCount = 10_000;
 
     /// <inheritdoc/>
+    public async Task<Data.Models.Namespace> GetNamespaceForWriteAsync(
+        string namespaceName,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        // Checked before the lookup, so a caller without access can't tell an existing namespace
+        // from a missing one.
+        if (!await permissionChecker.HasWriteAccessAsync(user, namespaceName, cancellationToken))
+        {
+            throw new ForbiddenException(
+                $"Write access to namespace '{namespaceName}' is required."
+            );
+        }
+
+        return await namespaceRepository.FindAsync(namespaceName, cancellationToken)
+            ?? throw new NamespaceNotFoundException(namespaceName);
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Data.Models.Pseudonym>> CreateAsync(
         string namespaceName,
         string originalValue,
@@ -37,16 +57,7 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
-        if (!await permissionChecker.HasWriteAccessAsync(user, namespaceName, cancellationToken))
-        {
-            throw new ForbiddenException(
-                $"Write access to namespace '{namespaceName}' is required."
-            );
-        }
-
-        var @namespace =
-            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
-            ?? throw new NamespaceNotFoundException(namespaceName);
+        var @namespace = await GetNamespaceForWriteAsync(namespaceName, user, cancellationToken);
 
         return await CreateTrustedAsync(@namespace, originalValue, count, cancellationToken);
     }
@@ -61,17 +72,18 @@ public class PseudonymAppService(
     {
         // Write access, not read - see the interface for why looking a mapping up is gated as
         // though it were creating one.
-        if (!await permissionChecker.HasWriteAccessAsync(user, namespaceName, cancellationToken))
-        {
-            throw new ForbiddenException(
-                $"Write access to namespace '{namespaceName}' is required."
-            );
-        }
+        var @namespace = await GetNamespaceForWriteAsync(namespaceName, user, cancellationToken);
 
-        var @namespace =
-            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
-            ?? throw new NamespaceNotFoundException(namespaceName);
+        return await ResolveTrustedAsync(@namespace, originalValue, cancellationToken);
+    }
 
+    /// <inheritdoc/>
+    public async Task<IReadOnlyList<Data.Models.Pseudonym>> ResolveTrustedAsync(
+        Data.Models.Namespace @namespace,
+        string originalValue,
+        CancellationToken cancellationToken
+    )
+    {
         if (string.IsNullOrWhiteSpace(originalValue))
         {
             throw new ArgumentException(
@@ -112,17 +124,19 @@ public class PseudonymAppService(
         CancellationToken cancellationToken
     )
     {
-        if (!await permissionChecker.HasWriteAccessAsync(user, namespaceName, cancellationToken))
-        {
-            throw new ForbiddenException(
-                $"Write access to namespace '{namespaceName}' is required."
-            );
-        }
+        var @namespace = await GetNamespaceForWriteAsync(namespaceName, user, cancellationToken);
 
-        var @namespace =
-            await namespaceRepository.FindAsync(namespaceName, cancellationToken)
-            ?? throw new NamespaceNotFoundException(namespaceName);
+        return await AppendTrustedAsync(@namespace, originalValue, requestId, cancellationToken);
+    }
 
+    /// <inheritdoc/>
+    public async Task<Data.Models.Pseudonym> AppendTrustedAsync(
+        Data.Models.Namespace @namespace,
+        string originalValue,
+        Guid? requestId,
+        CancellationToken cancellationToken
+    )
+    {
         if (string.IsNullOrWhiteSpace(originalValue))
         {
             throw new ArgumentException(

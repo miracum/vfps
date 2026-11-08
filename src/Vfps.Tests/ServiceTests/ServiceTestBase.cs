@@ -13,10 +13,45 @@ public class ServiceTestBase : IDisposable
     private bool disposedValue;
     private readonly SqliteConnection _connection;
 
+    // Set only for a connection per context - see the constructor taking connectionPerContext.
+    private readonly string? _connectionString;
+    private readonly string? _databasePath;
+
     public ServiceTestBase()
+        : this(connectionPerContext: false) { }
+
+    /// <param name="connectionPerContext">
+    /// Gives every DbContext a connection of its own, to a database file, rather than sharing one
+    /// connection to an in-memory database - as in production, where each context draws its own
+    /// connection from the pool. For tests whose code under test uses several contexts at once: a
+    /// SqliteConnection isn't safe to use from more than one thread, and concurrent commands on
+    /// the shared one fail. Slower, which is why it isn't the default.
+    /// </param>
+    protected ServiceTestBase(bool connectionPerContext)
     {
-        _connection = new SqliteConnection("Filename=:memory:;Cache=Private");
-        _connection.Open();
+        if (connectionPerContext)
+        {
+            _databasePath = Path.Combine(Path.GetTempPath(), $"vfps-tests-{Guid.NewGuid():N}.db");
+            _connectionString = new SqliteConnectionStringBuilder
+            {
+                DataSource = _databasePath,
+                // Not pooled, so that disposing the last connection releases the file for deletion.
+                Pooling = false,
+            }.ToString();
+            _connection = new SqliteConnection(_connectionString);
+            _connection.Open();
+
+            // Writers then don't block readers, and concurrent writers wait for each other - which
+            // Microsoft.Data.Sqlite does by retrying a busy statement until its command timeout.
+            using var command = _connection.CreateCommand();
+            command.CommandText = "PRAGMA journal_mode=WAL;";
+            command.ExecuteNonQuery();
+        }
+        else
+        {
+            _connection = new SqliteConnection("Filename=:memory:;Cache=Private");
+            _connection.Open();
+        }
 
         InMemoryPseudonymContext = new PseudonymContext(BuildContextOptions());
         ContextFactory = new TestPseudonymContextFactory(BuildContextOptions);
@@ -81,8 +116,11 @@ public class ServiceTestBase : IDisposable
     protected PseudonymContext InMemoryPseudonymContext { get; }
 
     private DbContextOptions<PseudonymContext> BuildContextOptions() =>
-        new DbContextOptionsBuilder<PseudonymContext>()
-            .UseSqlite(_connection)
+        (
+            _connectionString is null
+                ? new DbContextOptionsBuilder<PseudonymContext>().UseSqlite(_connection)
+                : new DbContextOptionsBuilder<PseudonymContext>().UseSqlite(_connectionString)
+        )
             .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
             .UseExceptionProcessor()
             .UseSnakeCaseNamingConvention()
@@ -181,6 +219,15 @@ public class ServiceTestBase : IDisposable
             if (disposing)
             {
                 InMemoryPseudonymContext.Dispose();
+                _connection.Dispose();
+
+                if (_databasePath is not null)
+                {
+                    foreach (var suffix in new[] { "", "-wal", "-shm" })
+                    {
+                        File.Delete(_databasePath + suffix);
+                    }
+                }
             }
 
             disposedValue = true;

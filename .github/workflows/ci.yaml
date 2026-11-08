@@ -319,7 +319,7 @@ jobs:
         env:
           VFPS_IMAGE_TAG: ${{ needs.build.outputs.image-version }}
         run: |
-          echo "Using VFPS image tag ${VFPS_IMAGE_TAG}"
+          echo "Using vfps image tag ${VFPS_IMAGE_TAG}"
           docker compose --profile=test up -d
 
       - name: Wait for the healthz endpoint to be ready
@@ -412,7 +412,7 @@ jobs:
         env:
           VFPS_IMAGE_TAG: ${{ needs.build.outputs.image-version }}
         run: |
-          echo "Using VFPS image tag ${VFPS_IMAGE_TAG}"
+          echo "Using vfps image tag ${VFPS_IMAGE_TAG}"
           # compose.test.yaml drops the vfps container's CPU/memory limits: the admin UI the e2e
           # suite drives is a heavier workload than the limits in compose.yaml are sized for, and
           # here the container shares this runner's two vCPUs with PostgreSQL, Chromium and the

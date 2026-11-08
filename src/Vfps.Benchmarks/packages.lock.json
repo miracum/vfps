@@ -148,6 +148,11 @@
         "resolved": "1.4.0",
         "contentHash": "SxpoHR46khpzQG4rOX+rJduPeuH3h9rEpEoguraOft24E0tMnnDk8CuTMVF3fMudsdyo5addKBf+wGngWHwgOQ=="
       },
+      "FhirParametersGenerator": {
+        "type": "Transitive",
+        "resolved": "0.7.6",
+        "contentHash": "DSPc3g0bALz0u/dmbKeyBbojGpKArAx21dDAdcPfUclQ0nsNJr/ihum2IUbnQYVnXjJjSukgZwWihRYZkii6AA=="
+      },
       "Gee.External.Capstone": {
         "type": "Transitive",
         "resolved": "2.3.0",
@@ -1156,6 +1161,7 @@
           "CsvHelper": "[34.0.0, )",
           "EFCore.NamingConventions": "[10.0.1, )",
           "EntityFrameworkCore.Exceptions.PostgreSQL": "[10.0.1, )",
+          "FhirParametersGenerator": "[0.7.6, )",
           "Grpc.AspNetCore": "[2.85.0, )",
           "Grpc.AspNetCore.HealthChecks": "[2.85.0, )",
           "Grpc.AspNetCore.Server.Reflection": "[2.85.0, )",
@@ -1181,7 +1187,7 @@
           "OpenTelemetry.Instrumentation.AspNetCore": "[1.20.1, )",
           "OpenTelemetry.Instrumentation.Http": "[1.20.2, )",
           "OpenTelemetry.Instrumentation.Runtime": "[1.20.1, )",
-          "Vfps.Voprf.Client": "[1.26.0, )"
+          "Vfps.Voprf.Client": "[1.27.0, )"
         }
       },
       "vfps.voprf": {
@@ -1194,8 +1200,8 @@
         "type": "Project",
         "dependencies": {
           "Grpc.Net.ClientFactory": "[2.85.0, )",
-          "Vfps.Voprf": "[1.26.0, )",
-          "Vfps.Voprf.Contracts": "[1.26.0, )"
+          "Vfps.Voprf": "[1.27.0, )",
+          "Vfps.Voprf.Contracts": "[1.27.0, )"
         }
       },
       "vfps.voprf.contracts": {

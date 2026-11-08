@@ -9,8 +9,8 @@
 site_name = "vfps"
 site_url = "https://miracum.github.io/vfps/"
 site_description = "A very fast and resource-efficient pseudonymization service."
-site_author = "The Vfps developers"
-copyright = "Copyright &copy; The Vfps developers. Licensed under the Apache License 2.0."
+site_author = "The vfps developers"
+copyright = "Copyright &copy; The vfps developers. Licensed under the Apache License 2.0."
 
 repo_url = "https://github.com/miracum/vfps"
 repo_name = "miracum/vfps"
@@ -28,6 +28,7 @@ nav = [
     { "Access control" = "access-control.md" },
     { "gRPC API" = "grpc.md" },
     { "API reference" = "api-reference.md" },
+    { "FHIR API" = "fhir.md" },
     { "CSV jobs" = "csv-jobs.md" },
   ] },
   { "Operations" = [
