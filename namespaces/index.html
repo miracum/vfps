@@ -9,7 +9,7 @@
         <meta name="description" content="A very fast and resource-efficient pseudonymization service.">
       
       
-        <meta name="author" content="The Vfps developers">
+        <meta name="author" content="The vfps developers">
       
       
         <link rel="canonical" href="https://miracum.github.io/vfps/namespaces/">
@@ -303,6 +303,8 @@
   
     
     
+      
+        
       
         
       
@@ -648,6 +650,33 @@
     
   
   API reference
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fhir/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  FHIR API
 
     
   </span>
@@ -1230,6 +1259,8 @@
       
         
       
+        
+      
     
     
     
@@ -1365,9 +1396,10 @@ than one distinct pseudonym for the same original value, via the request's optio
 first one, for callers that only read a single value). The stored set for a given original value
 only ever grows: calling <code>Create</code> again with a <code>count</code> at or below what's already stored returns
 the existing set unchanged, while a larger <code>count</code> adds exactly the missing pseudonyms, up to a
-maximum <code>count</code> of 10,000. CSV pseudonymization jobs and the FHIR <code>$create-pseudonym</code> operation
-don't support requesting more than one pseudonym - both always operate on the first
-(<code>sequenceNumber: 0</code>) pseudonym for a multi-psn namespace.</p>
+maximum <code>count</code> of 10,000. CSV pseudonymization jobs and the <code>/v1/fhir</code> <code>$create-pseudonym</code>
+operation don't support requesting more than one pseudonym - both always operate on the first
+(<code>sequenceNumber: 0</code>) pseudonym for a multi-psn namespace. The
+<a href="../fhir/#operations">MII FHIR API</a> has <code>$pseudonymize-multiple</code> for multi-psn namespaces instead.</p>
 <h3 id="appending-a-pseudonym">Appending a pseudonym<a class="headerlink" href="#appending-a-pseudonym" title="Permanent link">&para;</a></h3>
 <p><code>Create</code> is idempotent: calling it again with the same <code>count</code> returns the same set. To store one
 more pseudonym for an original value regardless of how many it already has, call <code>Append</code>
@@ -1536,7 +1568,7 @@ logged and skipped.</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; The Vfps developers. Licensed under the Apache License 2.0.
+      Copyright &copy; The vfps developers. Licensed under the Apache License 2.0.
     </div>
   
   

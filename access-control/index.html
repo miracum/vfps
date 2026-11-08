@@ -9,7 +9,7 @@
         <meta name="description" content="A very fast and resource-efficient pseudonymization service.">
       
       
-        <meta name="author" content="The Vfps developers">
+        <meta name="author" content="The vfps developers">
       
       
         <link rel="canonical" href="https://miracum.github.io/vfps/access-control/">
@@ -318,6 +318,8 @@
       
         
       
+        
+      
     
     
     
@@ -609,6 +611,33 @@
     
   
   API reference
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fhir/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  FHIR API
 
     
   </span>
@@ -1152,6 +1181,8 @@
       
         
       
+        
+      
     
     
     
@@ -1220,7 +1251,7 @@ per-namespace dialog only edits grants belonging to the namespace it was opened 
 keep working, and are listed for context wherever they apply.</p>
 <h2 id="authenticating-api-calls">Authenticating API calls<a class="headerlink" href="#authenticating-api-calls" title="Permanent link">&para;</a></h2>
 <p>With <code>Authorization__IsEnabled</code> set, the whole API - gRPC, the JSON-transcoded REST routes
-(<code>/v1/namespaces/...</code>) and the FHIR operation (<code>/v1/fhir/$create-pseudonym</code>) - accepts <strong>bearer
+(<code>/v1/namespaces/...</code>) and the <a href="../fhir/">FHIR operations</a> (<code>/fhir/mii/2026/...</code>, <code>/v1/fhir/...</code>) - accepts <strong>bearer
 tokens only</strong>. A call arriving without one is refused by the request pipeline before it reaches a
 service method: gRPC clients get <code>UNAUTHENTICATED</code>, HTTP clients a <code>401</code> carrying
 <code>WWW-Authenticate: Bearer</code>. A machine client obtains its token from the authority the usual way - an
@@ -1410,7 +1441,7 @@ to <code>"*"</code> has no UI equivalent any more and has to be re-created per n
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; The Vfps developers. Licensed under the Apache License 2.0.
+      Copyright &copy; The vfps developers. Licensed under the Apache License 2.0.
     </div>
   
   

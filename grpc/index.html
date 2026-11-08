@@ -9,7 +9,7 @@
         <meta name="description" content="A very fast and resource-efficient pseudonymization service.">
       
       
-        <meta name="author" content="The Vfps developers">
+        <meta name="author" content="The vfps developers">
       
       
         <link rel="canonical" href="https://miracum.github.io/vfps/grpc/">
@@ -303,6 +303,8 @@
   
     
     
+      
+        
       
         
       
@@ -681,6 +683,33 @@
     
   
   API reference
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+                
+              
+                
+                  
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fhir/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+  FHIR API
 
     
   </span>
@@ -1296,6 +1325,8 @@
       
         
       
+        
+      
     
     
     
@@ -1494,7 +1525,7 @@ the default branch. The image runs as <code>nobody</code> (UID 65534). Releases 
 binds port 8081 on <code>127.0.0.1</code> - share the host's network so <code>localhost</code> reaches it:</p>
 <!-- x-release-please-start-version -->
 
-<div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--network<span class="o">=</span>host<span class="w"> </span>ghcr.io/miracum/vfps/grpc-utils:v1.27.0<span class="w"> </span><span class="se">\</span>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-4-1"><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>docker<span class="w"> </span>run<span class="w"> </span>--rm<span class="w"> </span>--network<span class="o">=</span>host<span class="w"> </span>ghcr.io/miracum/vfps/grpc-utils:v1.28.0<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-4-2"><a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-4-3"><a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"authorization: Bearer </span><span class="nv">$VFPS_TOKEN</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
 </span><span id="__span-4-4"><a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">  </span>-d<span class="w"> </span><span class="s2">"{\"namespace\": \"</span><span class="nv">$VFPS_NAMESPACE</span><span class="s2">\", \"originalValue\": \"to be pseudonymized\"}"</span><span class="w"> </span><span class="se">\</span>
@@ -1513,7 +1544,7 @@ from the image in vfps's namespace and call the chart's Service, which is named 
 <!-- x-release-please-start-version -->
 
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-5-1"><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>kubectl<span class="w"> </span>run<span class="w"> </span>--namespace<span class="o">=</span>vfps<span class="w"> </span>--rm<span class="w"> </span>-i<span class="w"> </span>--tty<span class="w"> </span>--restart<span class="o">=</span>Never<span class="w"> </span><span class="se">\</span>
-</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--image<span class="o">=</span>ghcr.io/miracum/vfps/grpc-utils:v1.27.0<span class="w"> </span><span class="se">\</span>
+</span><span id="__span-5-2"><a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span>--image<span class="o">=</span>ghcr.io/miracum/vfps/grpc-utils:v1.28.0<span class="w"> </span><span class="se">\</span>
 </span><span id="__span-5-3"><a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span>vfps-grpc-utils<span class="w"> </span>--<span class="w"> </span>bash
 </span><span id="__span-5-4"><a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>
 </span><span id="__span-5-5"><a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>nobody@vfps-grpc-utils:/$<span class="w"> </span>grpcurl<span class="w"> </span>-plaintext<span class="w"> </span>vfps:8081<span class="w"> </span>list
@@ -1619,7 +1650,7 @@ on, pass the token to both:</p>
       <div class="md-copyright">
   
     <div class="md-copyright__highlight">
-      Copyright &copy; The Vfps developers. Licensed under the Apache License 2.0.
+      Copyright &copy; The vfps developers. Licensed under the Apache License 2.0.
     </div>
   
   
