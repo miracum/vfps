@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.28.0](https://github.com/miracum/vfps/compare/v1.27.0...v1.28.0) (2026-11-08)
+
+
+### Features
+
+* implemented MII FHIR API endpoints ([#440](https://github.com/miracum/vfps/issues/440)) ([e0ad899](https://github.com/miracum/vfps/commit/e0ad89917c3a52b17116f51001dfa1e786feda5a))
+
 ## [1.27.0](https://github.com/miracum/vfps/compare/v1.26.0...v1.27.0) (2026-11-05)
 
 
