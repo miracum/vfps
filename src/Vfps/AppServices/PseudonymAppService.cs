@@ -780,7 +780,7 @@ public class PseudonymAppService(
         {
             if (!storedPseudonymValuesByOriginal.TryGetValue(stored.OriginalValue, out var values))
             {
-                values = new HashSet<string>(StringComparer.Ordinal);
+                values = [with(StringComparer.Ordinal)];
                 storedPseudonymValuesByOriginal[stored.OriginalValue] = values;
             }
 
@@ -839,7 +839,7 @@ public class PseudonymAppService(
 
             if (!storedPseudonymValuesByOriginal.TryGetValue(originalValue, out var knownForValue))
             {
-                knownForValue = new HashSet<string>(StringComparer.Ordinal);
+                knownForValue = [with(StringComparer.Ordinal)];
                 storedPseudonymValuesByOriginal[originalValue] = knownForValue;
             }
 

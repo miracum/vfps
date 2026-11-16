@@ -132,7 +132,9 @@ public sealed class VoprfKeyPair : IDisposable
                 // into a pinned one afterwards would leave the key wherever the GC had since
                 // moved the original, which is exactly what pinning is meant to prevent.
                 var scalar = VoprfSuite.HashToScalarForKeyDerivation(deriveInput);
-                if (scalar.ContainsAnyExcept((byte)0))
+                // Constant-time, unlike ContainsAnyExcept, which returns at the first non-zero
+                // byte and so would time where in the secret scalar that byte sits.
+                if (!CryptographicOperations.FixedTimeEquals(scalar, 0))
                 {
                     return new VoprfKeyPair(scalar, Ristretto.ScalarMultiplyGenerator(scalar));
                 }
@@ -164,7 +166,8 @@ public sealed class VoprfKeyPair : IDisposable
             );
         }
 
-        if (!privateKey.ContainsAnyExcept((byte)0))
+        // Constant-time for the same reason as the check in DeriveKeyPair.
+        if (CryptographicOperations.FixedTimeEquals(privateKey, 0))
         {
             throw new ArgumentException("A private key must not be zero.", nameof(privateKey));
         }
