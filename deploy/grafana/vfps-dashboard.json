@@ -2837,7 +2837,7 @@
         {
           "type": "timeseries",
           "title": "Cache hit ratio",
-          "description": "Share of in-memory cache lookups (namespaces and, if enabled, pseudonyms) that were hits. Sampled every 60s, so short ranges look coarse.",
+          "description": "Share of in-memory cache lookups (namespaces and, if enabled, pseudonyms) that were hits.",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
@@ -2849,7 +2849,7 @@
                 "uid": "${datasource}"
               },
               "refId": "A",
-              "expr": "sum by (instance) (rate(vfps_cache_hits_total{job=~\"$job\", instance=~\"$instance\"}[5m])) / (sum by (instance) (rate(vfps_cache_hits_total{job=~\"$job\", instance=~\"$instance\"}[5m])) + sum by (instance) (rate(vfps_cache_misses_total{job=~\"$job\", instance=~\"$instance\"}[5m])))",
+              "expr": "sum by (instance) (rate(dotnet_cache_requests_total{job=~\"$job\", instance=~\"$instance\", dotnet_cache_request_result=\"hit\"}[5m])) / sum by (instance) (rate(dotnet_cache_requests_total{job=~\"$job\", instance=~\"$instance\"}[5m]))",
               "legendFormat": "{{instance}}",
               "range": true,
               "instant": false
@@ -2918,7 +2918,7 @@
         {
           "type": "timeseries",
           "title": "Cache lookups",
-          "description": "Cache hits and misses per second.",
+          "description": "Cache hits, misses and evictions per second. Evictions include entries reaching Pseudonymization:Caching:AbsoluteExpiration; evictions well above that rate, alongside a high miss rate, mean the cache is full at Pseudonymization:Caching:SizeLimit.",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
@@ -2930,7 +2930,7 @@
                 "uid": "${datasource}"
               },
               "refId": "A",
-              "expr": "sum by (instance) (rate(vfps_cache_hits_total{job=~\"$job\", instance=~\"$instance\"}[5m]))",
+              "expr": "sum by (instance) (rate(dotnet_cache_requests_total{job=~\"$job\", instance=~\"$instance\", dotnet_cache_request_result=\"hit\"}[5m]))",
               "legendFormat": "{{instance}} hits",
               "range": true,
               "instant": false
@@ -2941,8 +2941,19 @@
                 "uid": "${datasource}"
               },
               "refId": "B",
-              "expr": "sum by (instance) (rate(vfps_cache_misses_total{job=~\"$job\", instance=~\"$instance\"}[5m]))",
+              "expr": "sum by (instance) (rate(dotnet_cache_requests_total{job=~\"$job\", instance=~\"$instance\", dotnet_cache_request_result=\"miss\"}[5m]))",
               "legendFormat": "{{instance}} misses",
+              "range": true,
+              "instant": false
+            },
+            {
+              "datasource": {
+                "type": "prometheus",
+                "uid": "${datasource}"
+              },
+              "refId": "C",
+              "expr": "sum by (instance) (rate(dotnet_cache_evictions_total{job=~\"$job\", instance=~\"$instance\"}[5m]))",
+              "legendFormat": "{{instance}} evictions",
               "range": true,
               "instant": false
             }
@@ -3020,7 +3031,7 @@
                 "uid": "${datasource}"
               },
               "refId": "A",
-              "expr": "max by (instance) (vfps_cache_entries{job=~\"$job\", instance=~\"$instance\"})",
+              "expr": "max by (instance) (dotnet_cache_entries{job=~\"$job\", instance=~\"$instance\"})",
               "legendFormat": "{{instance}}",
               "range": true,
               "instant": false
