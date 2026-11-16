@@ -76,7 +76,7 @@ All settings are listed in the [configuration reference](https://miracum.github.
 
 ### Prerequisites
 
-- .NET 10.0: <https://dotnet.microsoft.com/en-us/download/dotnet>
+- .NET 11.0: <https://dotnet.microsoft.com/en-us/download/dotnet>
 - Docker CLI 20.10.17: <https://www.docker.com/>
 - Docker Compose: <https://docs.docker.com/compose/install/>
 

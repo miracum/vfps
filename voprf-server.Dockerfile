@@ -2,7 +2,7 @@
 # zlib1g-dev - see https://aka.ms/nativeaot-prerequisites) already installed, so nothing has
 # to be added here. The plain (non-aot) tag is what the sibling Dockerfile uses, since that
 # target has no PublishAot and doesn't need a native linker.
-FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0.403-resolute-aot@sha256:a66703b1c786b77dad068cd0de51b5538b406f3febb16e8920ec9e73aee181ae AS build
+FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:11.0.100-resolute-aot@sha256:f3264ae0bf11e2062b9650e0822d20c999320ac1685fe3acf4b7c17d0881af85 AS build
 WORKDIR /build
 ENV DOTNET_CLI_TELEMETRY_OPTOUT=1 \
     ASPNETCORE_ENVIRONMENT="Production" \
@@ -59,7 +59,7 @@ ENTRYPOINT [ "true" ]
 # links only against libc, so it needs nothing added either - see src/Vfps.Voprf/README.md.
 # ICU is skipped too: InvariantGlobalization is set in the csproj, and nothing here does
 # culture-sensitive text handling.
-FROM mcr.microsoft.com/dotnet/runtime-deps:10.0.14-resolute-chiseled@sha256:0b8cf2aa818144bdbf8f21ae77f9ee781ac67eee102089743c599b62b4fe13be AS runtime
+FROM mcr.microsoft.com/dotnet/runtime-deps:11.0.0-resolute-chiseled@sha256:24534e1f18024d3f8026061537fa21ba424f46cc0cdab4297c5528937b1ae960 AS runtime
 WORKDIR /opt/vfps-voprf
 EXPOSE 8081/tcp
 # non-root, and nothing here ever writes to disk: the image runs fine with a read-only root

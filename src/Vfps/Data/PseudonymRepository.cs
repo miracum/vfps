@@ -376,7 +376,7 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
             if (cursor is null)
             {
                 return await context
-                    .Pseudonyms.FromSqlInterpolated(
+                    .Pseudonyms.FromSql(
                         $"""
                         SELECT * FROM pseudonyms
                         WHERE namespace_name = {namespaceName}
@@ -389,7 +389,7 @@ public class PseudonymRepository(IDbContextFactory<PseudonymContext> contextFact
             }
 
             return await context
-                .Pseudonyms.FromSqlInterpolated(
+                .Pseudonyms.FromSql(
                     $"""
                     SELECT * FROM pseudonyms
                     WHERE namespace_name = {namespaceName}
