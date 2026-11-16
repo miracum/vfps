@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    "net10.0": {
+    "net11.0": {
       "libsodium": {
         "type": "Direct",
         "requested": "[1.0.22, )",
@@ -9,7 +9,7 @@
         "contentHash": "KPD9SloJFclrsjnhABu7dzWrcyYkwPbvx5l1gRSPAX/0n+OBtSiVCKtGFv4n+ecWUHU0tCG9LSSwoZZx673zBQ=="
       }
     },
-    "net10.0/linux-x64": {
+    "net11.0/linux-x64": {
       "libsodium": {
         "type": "Direct",
         "requested": "[1.0.22, )",

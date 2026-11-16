@@ -288,12 +288,33 @@ var isNamespaceCachingEnabled = builder.Configuration.GetValue(
     "Pseudonymization:Caching:Namespaces:IsEnabled",
     false
 );
-if (isNamespaceCachingEnabled)
+var isPseudonymCachingEnabled = builder.Configuration.GetValue(
+    "Pseudonymization:Caching:Pseudonyms:IsEnabled",
+    false
+);
+
+// One cache shared by both caching repositories. TrackStatistics plus the IMeterFactory makes it
+// publish its own dotnet.cache.* metrics (requests by hit/miss, evictions, entries, estimated
+// size) under MetricsConfigurationExtensions.MemoryCacheMeterName, tagged dotnet.cache.name.
+if (isNamespaceCachingEnabled || isPseudonymCachingEnabled)
 {
-    builder.Services.AddSingleton<IMemoryCache>(_ => new MemoryCache(
-        new MemoryCacheOptions { TrackStatistics = true, SizeLimit = cacheConfig.SizeLimit }
+    builder.Services.AddSingleton<IMemoryCache>(sp => new MemoryCache(
+        Microsoft.Extensions.Options.Options.Create(
+            new MemoryCacheOptions
+            {
+                TrackStatistics = true,
+                SizeLimit = cacheConfig.SizeLimit,
+                Name = "vfps",
+            }
+        ),
+        sp.GetRequiredService<ILoggerFactory>(),
+        sp.GetRequiredService<IMeterFactory>()
     ));
     builder.Services.AddSingleton(_ => cacheConfig);
+}
+
+if (isNamespaceCachingEnabled)
+{
     builder.Services.AddSingleton<INamespaceRepository, CachingNamespaceRepository>();
 }
 else
@@ -301,27 +322,13 @@ else
     builder.Services.AddSingleton<INamespaceRepository, NamespaceRepository>();
 }
 
-var isPseudonymCachingEnabled = builder.Configuration.GetValue(
-    "Pseudonymization:Caching:Pseudonyms:IsEnabled",
-    false
-);
 if (isPseudonymCachingEnabled)
 {
-    builder.Services.TryAddSingleton<IMemoryCache>(_ => new MemoryCache(
-        new MemoryCacheOptions { TrackStatistics = true, SizeLimit = cacheConfig.SizeLimit }
-    ));
-    builder.Services.TryAddSingleton(_ => cacheConfig);
     builder.Services.AddSingleton<IPseudonymRepository, CachingPseudonymRepository>();
 }
 else
 {
     builder.Services.AddSingleton<IPseudonymRepository, PseudonymRepository>();
-}
-
-// add a service to regularly query the cache statistics
-if (isNamespaceCachingEnabled || isPseudonymCachingEnabled)
-{
-    builder.Services.AddHostedService<MemoryCacheMetricsBackgroundService>();
 }
 
 builder.Services.AddScoped<INamespaceAppService, NamespaceAppService>();

@@ -27,6 +27,27 @@ public class VoprfProtocolTests
     }
 
     [Fact]
+    public void Importing_an_all_zero_private_key_is_refused()
+    {
+        var act = () => VoprfKeyPair.Import(new byte[VoprfKeyPair.PrivateKeyLength]);
+
+        act.Should().Throw<ArgumentException>().WithMessage("*must not be zero*");
+    }
+
+    [Fact]
+    public void Importing_a_private_key_whose_only_non_zero_byte_is_the_last_is_accepted()
+    {
+        // The scalar 2^248: canonical (below the group order) and non-zero only in the final
+        // byte, the position a zero check that stops early would examine last.
+        var privateKey = new byte[VoprfKeyPair.PrivateKeyLength];
+        privateKey[^1] = 0x01;
+
+        var act = () => VoprfKeyPair.Import(privateKey).Dispose();
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
     public void The_same_input_gives_the_same_output_under_the_same_key()
     {
         using var keyPair = VoprfKeyPair.Generate();

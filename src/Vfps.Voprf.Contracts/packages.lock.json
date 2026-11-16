@@ -1,7 +1,7 @@
 {
   "version": 1,
   "dependencies": {
-    "net10.0": {
+    "net11.0": {
       "Google.Protobuf": {
         "type": "Direct",
         "requested": "[3.36.2, )",
@@ -21,6 +21,6 @@
         "contentHash": "JpACpJuD56v9MBlgJEakwBLbbDifYwE3fpktbsKMPOI3yvs/VFFQVGnmWatu6mgZSNo7gzFe+TDmda9SOKg+NQ=="
       }
     },
-    "net10.0/linux-x64": {}
+    "net11.0/linux-x64": {}
   }
 }

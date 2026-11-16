@@ -7,6 +7,12 @@ namespace Vfps.Metrics;
 
 public static class MetricsConfigurationExtensions
 {
+    /// <summary>
+    /// The meter a <see cref="Microsoft.Extensions.Caching.Memory.MemoryCache"/> constructed with
+    /// an IMeterFactory and TrackStatistics publishes its dotnet.cache.* instruments under.
+    /// </summary>
+    public const string MemoryCacheMeterName = "Microsoft.Extensions.Caching.Memory.MemoryCache";
+
     public static WebApplicationBuilder AddMetrics(
         this WebApplicationBuilder builder,
         ushort metricsPort
@@ -29,7 +35,7 @@ public static class MetricsConfigurationExtensions
             .WithMetrics(metricsBuilder =>
             {
                 metricsBuilder
-                    .AddMeter(Program.Meter.Name)
+                    .AddMeter(Program.Meter.Name, MemoryCacheMeterName)
                     .AddAspNetCoreInstrumentation()
                     .AddHttpClientInstrumentation()
                     .AddNpgsqlInstrumentation()
