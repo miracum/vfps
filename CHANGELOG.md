@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.28.1](https://github.com/miracum/vfps/compare/v1.28.0...v1.28.1) (2026-11-16)
+
+
+### Miscellaneous Chores
+
+* **deps:** updated to .net 11 ([#442](https://github.com/miracum/vfps/issues/442)) ([797135b](https://github.com/miracum/vfps/commit/797135b47a1c8d3c630447578689b9f9149c1f2a))
+
 ## [1.28.0](https://github.com/miracum/vfps/compare/v1.27.0...v1.28.0) (2026-11-08)
 
 
