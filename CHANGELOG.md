@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.29.0](https://github.com/miracum/vfps/compare/v1.28.1...v1.29.0) (2026-11-19)
+
+
+### Features
+
+* **ui:** clearer naming around token permissions ([#444](https://github.com/miracum/vfps/issues/444)) ([5889998](https://github.com/miracum/vfps/commit/5889998d42ae3e6a2c93ac2b24c2b5c03e228022))
+
 ## [1.28.1](https://github.com/miracum/vfps/compare/v1.28.0...v1.28.1) (2026-11-16)
 
 
