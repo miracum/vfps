@@ -79,7 +79,10 @@ the admin UI.
 tokens** page, and a token _acts as its creator_. It captures the identity they hold at that
 moment - their subject, their verified email address and their roles - and every request made
 with it resolves against the same grants their browser session does. Nobody can grant themselves
-anything by creating one, which is why no admin role is needed to do it.
+anything by creating one, which is why no admin role is needed to do it. Access is therefore never
+granted to a personal token itself: to give one access, grant it to its owner's email address or to
+one of their roles. The Access tokens page shows beneath each active token what it reaches right
+now.
 
 **Service accounts** are the other half, and are admin-only: they are principals of their own, for
 a client that belongs to no person. Create one on the **Service accounts** page, then grant it

@@ -50,6 +50,20 @@ public interface IAccessTokenAppService
     );
 
     /// <summary>
+    /// What <paramref name="token"/> can reach right now: its principal - exactly the one
+    /// <see cref="Authorization.AccessTokenAuthenticationHandler"/> would present - resolved
+    /// against the current grants. For a personal token that means its owner's identity as
+    /// captured when it was created, not as it is today. Says nothing about whether the token is
+    /// still active; the caller checks that. Permitted to the owner of a personal token and to any
+    /// admin, like <see cref="RevokeAsync"/>.
+    /// </summary>
+    Task<Authorization.NamespacePermissions> GetReachAsync(
+        AccessToken token,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// Issues a personal access token for the caller, capturing the identity they hold right now
     /// - subject, verified email and roles.
     /// </summary>

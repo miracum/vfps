@@ -56,6 +56,25 @@ public class AccessTokenAppService(
     }
 
     /// <inheritdoc/>
+    public async Task<NamespacePermissions> GetReachAsync(
+        AccessToken token,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        EnsureEnabled();
+        EnsureMayManage(token, user, "inspect");
+
+        var principal = AccessTokenPrincipal.Build(
+            token,
+            Config.RoleClaimType,
+            AccessTokenDefaults.AuthenticationScheme
+        );
+
+        return await permissionChecker.ResolveAsync(principal, cancellationToken);
+    }
+
+    /// <inheritdoc/>
     public async Task<IssuedAccessToken> CreatePersonalAsync(
         string name,
         TimeSpan lifetime,
