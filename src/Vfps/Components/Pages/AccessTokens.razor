@@ -330,16 +330,13 @@
 
         var now = DateTimeOffset.UtcNow;
         Dictionary<Guid, NamespacePermissions> reach = [];
-        foreach (var token in _myTokens.Concat(_allTokens).DistinctBy(t => t.Id))
+        foreach (var token in _myTokens.Concat(_allTokens).DistinctBy(t => t.Id).Where(token => token.IsActiveAt(now)))
         {
-            if (token.IsActiveAt(now))
-            {
-                reach[token.Id] = await AccessTokenAppService.GetReachAsync(
-                    token,
-                    _user,
-                    CancellationToken.None
-                );
-            }
+            reach[token.Id] = await AccessTokenAppService.GetReachAsync(
+                token,
+                _user,
+                CancellationToken.None
+            );
         }
 
         _reach = reach;
