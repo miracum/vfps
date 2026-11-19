@@ -93,4 +93,22 @@ public sealed class NamespacePermissions
     /// runner's trusted, permission-check-free write path honest for that direction.
     /// </summary>
     public bool HasWriteAccessToAllNamespaces => _unrestricted || _globalWrite;
+
+    /// <summary>Read access to every namespace there is - see <see cref="HasWriteAccessToAllNamespaces"/>.</summary>
+    public bool HasReadAccessToAllNamespaces => _unrestricted || _globalRead;
+
+    /// <summary>
+    /// Reverse-lookup access to every namespace there is - see
+    /// <see cref="HasWriteAccessToAllNamespaces"/>.
+    /// </summary>
+    public bool HasReverseLookupAccessToAllNamespaces => _unrestricted || _globalReverseLookup;
+
+    /// <summary>
+    /// The namespaces some applicable grant names explicitly, in ordinal order - empty for
+    /// <see cref="Unrestricted"/>, which names none. Together with the <c>...ToAllNamespaces</c>
+    /// flags this is the whole of what the caller can reach, which is what lets the Access tokens
+    /// page show it without walking every namespace in the deployment.
+    /// </summary>
+    public IReadOnlyList<string> ExplicitlyGrantedNamespaces =>
+        [.. _readable.Union(_writable).Union(_reverseLookupable).Order(StringComparer.Ordinal)];
 }

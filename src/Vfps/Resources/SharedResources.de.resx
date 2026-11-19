@@ -95,25 +95,25 @@
     <value>Berechtigt</value>
   </data>
   <data name="App.AccessControl.GranteeEmailHelp" xml:space="preserve">
-    <value>Eine einzelne Person, unabhängig von ihren Rollen berechtigt. Gilt nur für Benutzer, deren E-Mail-Adresse vom Identity Provider als verifiziert gemeldet wird.</value>
+    <value>Eine einzelne Person, über die E-Mail-Adresse, mit der sie sich anmeldet - unabhängig von ihren Rollen. Gilt nur für Benutzer, deren E-Mail-Adresse vom Identity Provider als verifiziert gemeldet wird. Ihre persönlichen Zugriffstoken erhalten diese Rechte ebenfalls.</value>
   </data>
   <data name="App.AccessControl.GranteeEmailPlaceholder" xml:space="preserve">
     <value>z. B. user@example.org</value>
   </data>
   <data name="App.AccessControl.GranteeRoleHelp" xml:space="preserve">
-    <value>Eine OIDC-Rolle oder -Gruppe, genau so, wie sie der Identity Provider ausstellt.</value>
+    <value>Eine OIDC-Rolle oder -Gruppe, genau so, wie sie der Identity Provider ausstellt. Ein persönliches Zugriffstoken kennt nur die Rollen, die sein Besitzer beim Erstellen hatte.</value>
   </data>
   <data name="App.AccessControl.GranteeRolePlaceholder" xml:space="preserve">
     <value>z. B. vfps-ns-example-read</value>
   </data>
   <data name="App.AccessControl.GranteeServiceAccountHelp" xml:space="preserve">
-    <value>Wird mit dem Service Account abgeglichen, als der sich ein Zugriffstoken authentifiziert.</value>
+    <value>Für einen Dienst oder eine Pipeline, die keiner Person gehört. Gilt für alle Token dieses Service Accounts. Ein Service Account ist nie Admin - er hat genau die Rechte, die ihm hier gegeben werden.</value>
   </data>
   <data name="App.AccessControl.GranteeType" xml:space="preserve">
-    <value>Art</value>
+    <value>Freigeben für</value>
   </data>
   <data name="App.AccessControl.GranteeTypeEmail" xml:space="preserve">
-    <value>E-Mail</value>
+    <value>Benutzer (E-Mail)</value>
   </data>
   <data name="App.AccessControl.GranteeTypeRole" xml:space="preserve">
     <value>Rolle</value>
@@ -152,7 +152,7 @@
     <value>Token erstellen</value>
   </data>
   <data name="App.AccessTokens.CreateDescription" xml:space="preserve">
-    <value>Ein persönliches Zugriffstoken handelt als Sie selbst: Es erreicht genau die Namespaces, die Sie erreichen, und funktioniert nicht mehr, sobald Ihr Zugriff entzogen wird oder das Token abläuft.</value>
+    <value>Ein persönliches Zugriffstoken handelt als Sie: Es übernimmt Ihre verifizierte E-Mail-Adresse und die Rollen, die Sie gerade haben. Eine Freigabe für Ihre E-Mail-Adresse gilt sofort, auch wenn sie erst später erteilt wird. Ändern sich Ihre Rollen beim Identity Provider, gilt das nur für neu erstellte Token - ein bestehendes behält die alten Rollen, bis es abläuft oder Sie es widerrufen.</value>
   </data>
   <data name="App.AccessTokens.CreateTitle" xml:space="preserve">
     <value>Persönliches Zugriffstoken erstellen</value>
@@ -182,7 +182,7 @@
     <value>Gültig für (Tage)</value>
   </data>
   <data name="App.AccessTokens.MineDescription" xml:space="preserve">
-    <value>Ein widerrufenes Token funktioniert auf diesem Replikat sofort nicht mehr, auf allen anderen innerhalb der Cache-Dauer für Berechtigungen.</value>
+    <value>Einem Token selbst lässt sich nichts freigeben: Ein persönliches Token erreicht, was Ihrer E-Mail-Adresse oder einer der Rollen freigegeben ist, die Sie beim Erstellen hatten. Bei jedem Token steht, was es gerade erreicht.</value>
   </data>
   <data name="App.AccessTokens.MineTitle" xml:space="preserve">
     <value>Meine Token</value>
@@ -194,7 +194,7 @@
     <value>Name</value>
   </data>
   <data name="App.AccessTokens.NamePlaceholder" xml:space="preserve">
-    <value>z. B. nächtlicher ETL-Lauf</value>
+    <value>z. B. Auswertungsskript auf meinem Rechner</value>
   </data>
   <data name="App.AccessTokens.Never" xml:space="preserve">
     <value>Nie</value>
@@ -275,7 +275,7 @@
     <value>Zugriff auf '{0}'</value>
   </data>
   <data name="App.Namespaces.ConfigureAccessDescription" xml:space="preserve">
-    <value>Welche Rollen und Benutzer in diesem Namespace lesen, schreiben und Pseudonyme zurückauflösen dürfen.</value>
+    <value>Welche Rollen, Benutzer und Service Accounts in diesem Namespace lesen, schreiben und Pseudonyme zurückauflösen dürfen. Ein persönliches Zugriffstoken hat keine eigenen Rechte - es bekommt, was seinem Besitzer hier gegeben wird. Die Seite Zugriffskontrolle verwaltet dieselben Freigaben über alle Namespaces hinweg.</value>
   </data>
   <data name="App.AccessControl.NoGrantsForNamespace" xml:space="preserve">
     <value>Noch keine Berechtigungen - nur Administratoren erreichen diesen Namespace.</value>
@@ -1098,6 +1098,33 @@
   </data>
   <data name="App.AccessTokens.DeleteConfirmBody" xml:space="preserve">
     <value>Das Token funktioniert nicht mehr, und sein Eintrag samt der letzten Verwendung wird endgültig entfernt. Zuletzt verwendet: {0}.</value>
+  </data>
+  <data name="App.AccessTokens.ServiceAccountHintAdmin" xml:space="preserve">
+    <value>Sie richten einen Dienst oder eine Pipeline ein, etwa einen Pseudonymizer? Nehmen Sie dafür besser einen {0}: Er hat eigene Rechte und funktioniert weiter, wenn Personen ausscheiden.</value>
+  </data>
+  <data name="App.AccessTokens.ServiceAccountHint" xml:space="preserve">
+    <value>Sie richten einen Dienst oder eine Pipeline ein, etwa einen Pseudonymizer? Bitten Sie dafür besser einen Admin um einen Service Account: Er hat eigene Rechte und funktioniert weiter, wenn Personen ausscheiden.</value>
+  </data>
+  <data name="App.AccessTokens.ServiceAccountLink" xml:space="preserve">
+    <value>Service Account</value>
+  </data>
+  <data name="App.AccessTokens.AdminTokenWarning" xml:space="preserve">
+    <value>Sie haben eine Admin-Rolle, daher bekommt dieses Token Vollzugriff: alle Namespaces und zusätzlich Admin-Operationen der API wie das Anlegen und Löschen von Namespaces. Für eingeschränkten Zugriff verwenden Sie einen Service Account.</value>
+  </data>
+  <data name="App.AccessTokens.ReachLabel" xml:space="preserve">
+    <value>Erreicht</value>
+  </data>
+  <data name="App.AccessTokens.ReachFull" xml:space="preserve">
+    <value>alle Namespaces, mit Admin-Rechten</value>
+  </data>
+  <data name="App.AccessTokens.ReachAllNamespaces" xml:space="preserve">
+    <value>alle Namespaces</value>
+  </data>
+  <data name="App.AccessTokens.ReachNone" xml:space="preserve">
+    <value>noch keinen Namespace</value>
+  </data>
+  <data name="App.AccessTokens.ReachNoneHint" xml:space="preserve">
+    <value>Bitten Sie einen Admin, Ihrer E-Mail-Adresse oder einer Ihrer Rollen unter Namespaces → Zugriff konfigurieren Zugriff zu geben.</value>
   </data>
   <data name="App.ServiceAccounts.DeleteConfirmBody" xml:space="preserve">
     <value>Seine Berechtigungen und alle dafür ausgestellten Token werden mitgelöscht; alles, was sich damit anmeldet, funktioniert danach nicht mehr.</value>

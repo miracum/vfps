@@ -95,25 +95,25 @@
     <value>Grantee</value>
   </data>
   <data name="App.AccessControl.GranteeEmailHelp" xml:space="preserve">
-    <value>One user, granted access regardless of which roles they hold. Only applies to users whose identity provider reports their email address as verified.</value>
+    <value>One person, by the email address they sign in with, regardless of which roles they hold. Only applies to users whose identity provider reports their email address as verified. Their personal access tokens get this access too.</value>
   </data>
   <data name="App.AccessControl.GranteeEmailPlaceholder" xml:space="preserve">
     <value>e.g. user@example.org</value>
   </data>
   <data name="App.AccessControl.GranteeRoleHelp" xml:space="preserve">
-    <value>An OIDC role or group, exactly as your identity provider emits it.</value>
+    <value>An OIDC role or group, exactly as your identity provider emits it. A personal access token only knows the roles its owner held when they created it.</value>
   </data>
   <data name="App.AccessControl.GranteeRolePlaceholder" xml:space="preserve">
     <value>e.g. vfps-ns-example-read</value>
   </data>
   <data name="App.AccessControl.GranteeServiceAccountHelp" xml:space="preserve">
-    <value>Matched against the service account an access token authenticates as. A service account is never an admin - it holds exactly the access granted to it here.</value>
+    <value>For a service or pipeline that belongs to no person. Applies to every token issued for this service account. A service account is never an admin - it holds exactly the access granted to it here.</value>
   </data>
   <data name="App.AccessControl.GranteeType" xml:space="preserve">
-    <value>Grantee type</value>
+    <value>Grant to</value>
   </data>
   <data name="App.AccessControl.GranteeTypeEmail" xml:space="preserve">
-    <value>Email</value>
+    <value>User (email)</value>
   </data>
   <data name="App.AccessControl.GranteeTypeRole" xml:space="preserve">
     <value>Role</value>
@@ -152,7 +152,7 @@
     <value>Create token</value>
   </data>
   <data name="App.AccessTokens.CreateDescription" xml:space="preserve">
-    <value>A personal access token acts as you: it reaches exactly the namespaces you can reach, and stops working when your access is withdrawn or the token expires.</value>
+    <value>A personal access token acts as you: it takes your verified email address and the roles you hold right now. A grant to your email address applies to it at once, even one made later. If your roles change at the identity provider, only a newly created token picks that up - an existing one keeps the old roles until it expires or you revoke it.</value>
   </data>
   <data name="App.AccessTokens.CreateTitle" xml:space="preserve">
     <value>Create a personal access token</value>
@@ -182,7 +182,7 @@
     <value>Valid for (days)</value>
   </data>
   <data name="App.AccessTokens.MineDescription" xml:space="preserve">
-    <value>Revoking a token stops it working everywhere within the grant cache duration, and immediately on this replica.</value>
+    <value>Access isn't granted to a token itself: a personal token reaches what is granted to your email address or to one of the roles you held when you created it. Each token shows what it reaches right now.</value>
   </data>
   <data name="App.AccessTokens.MineTitle" xml:space="preserve">
     <value>My tokens</value>
@@ -194,7 +194,7 @@
     <value>Name</value>
   </data>
   <data name="App.AccessTokens.NamePlaceholder" xml:space="preserve">
-    <value>e.g. nightly ETL run</value>
+    <value>e.g. analysis script on my laptop</value>
   </data>
   <data name="App.AccessTokens.Never" xml:space="preserve">
     <value>Never</value>
@@ -275,7 +275,7 @@
     <value>Access to '{0}'</value>
   </data>
   <data name="App.Namespaces.ConfigureAccessDescription" xml:space="preserve">
-    <value>Which roles and users may read, write and reverse-look-up pseudonyms in this namespace. The Access Control page manages the same grants across every namespace at once.</value>
+    <value>Which roles, users and service accounts may read, write and reverse-look-up pseudonyms in this namespace. A personal access token has no grants of its own - it gets whatever its owner is granted here. The Access Control page manages the same grants across every namespace at once.</value>
   </data>
   <data name="App.AccessControl.NoGrantsForNamespace" xml:space="preserve">
     <value>No grants yet - only admins can reach this namespace.</value>
@@ -1098,6 +1098,33 @@
   </data>
   <data name="App.AccessTokens.DeleteConfirmBody" xml:space="preserve">
     <value>The token stops working, and its record, including when it was last used, is removed for good. Last used: {0}.</value>
+  </data>
+  <data name="App.AccessTokens.ServiceAccountHintAdmin" xml:space="preserve">
+    <value>Setting up a service or pipeline, such as a pseudonymizer? Use a {0} instead: it holds access of its own and keeps working when people leave.</value>
+  </data>
+  <data name="App.AccessTokens.ServiceAccountHint" xml:space="preserve">
+    <value>Setting up a service or pipeline, such as a pseudonymizer? Ask an admin for a service account instead: it holds access of its own and keeps working when people leave.</value>
+  </data>
+  <data name="App.AccessTokens.ServiceAccountLink" xml:space="preserve">
+    <value>service account</value>
+  </data>
+  <data name="App.AccessTokens.AdminTokenWarning" xml:space="preserve">
+    <value>You hold an admin role, so this token gets full access: every namespace, plus admin-only API operations such as creating and deleting namespaces. For anything narrower, use a service account.</value>
+  </data>
+  <data name="App.AccessTokens.ReachLabel" xml:space="preserve">
+    <value>Reaches</value>
+  </data>
+  <data name="App.AccessTokens.ReachFull" xml:space="preserve">
+    <value>every namespace, with admin rights</value>
+  </data>
+  <data name="App.AccessTokens.ReachAllNamespaces" xml:space="preserve">
+    <value>every namespace</value>
+  </data>
+  <data name="App.AccessTokens.ReachNone" xml:space="preserve">
+    <value>no namespace yet</value>
+  </data>
+  <data name="App.AccessTokens.ReachNoneHint" xml:space="preserve">
+    <value>Ask an admin to grant access to your email address, or to one of your roles, under Namespaces → Configure access.</value>
   </data>
   <data name="App.ServiceAccounts.DeleteConfirmBody" xml:space="preserve">
     <value>Its access grants and every token issued for it are deleted with it, so anything that authenticates as it stops working.</value>

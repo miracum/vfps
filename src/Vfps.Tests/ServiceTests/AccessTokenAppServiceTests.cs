@@ -43,7 +43,8 @@ public class AccessTokenAppServiceTests : ServiceTestBase
     private static ClaimsPrincipal Admin => User("admin-subject", roles: "admin");
 
     private (AccessTokenAppService Sut, StaticAccessTokenCache Cache) CreateSut(
-        AuthorizationConfig? config = null
+        AuthorizationConfig? config = null,
+        params NamespaceAccessGrant[] grants
     )
     {
         config ??= EnabledConfig;
@@ -51,7 +52,7 @@ public class AccessTokenAppServiceTests : ServiceTestBase
         var sut = new AccessTokenAppService(
             new AccessTokenRepository(ContextFactory),
             new ServiceAccountRepository(ContextFactory),
-            CreatePermissionChecker(config),
+            CreatePermissionChecker(config, grants),
             cache,
             Options.Create(config),
             NullLogger<AccessTokenAppService>.Instance
@@ -287,6 +288,137 @@ public class AccessTokenAppServiceTests : ServiceTestBase
             )
             .Should()
             .ThrowAsync<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task GetReachAsync_ForAPersonalToken_ShouldResolveItsOwnersGrants()
+    {
+        var (sut, _) = CreateSut(
+            grants:
+            [
+                Grants.ForEmail("by-email", "user@example.org", read: true),
+                Grants.ForRole("by-role", "reader", read: true, write: true),
+                Grants.ForRole("unrelated", "someone-else", read: true),
+            ]
+        );
+        var owner = User("subject-1", "user@example.org", roles: "reader");
+        var issued = await sut.CreatePersonalAsync(
+            "mine",
+            TimeSpan.FromDays(1),
+            owner,
+            CancellationToken.None
+        );
+
+        var reach = await sut.GetReachAsync(issued.Token, owner, CancellationToken.None);
+
+        reach.IsAdmin.Should().BeFalse();
+        reach.ExplicitlyGrantedNamespaces.Should().Equal("by-email", "by-role");
+        reach.HasWriteAccess("by-email").Should().BeFalse();
+        reach.HasWriteAccess("by-role").Should().BeTrue();
+        reach.HasReadAccessToAllNamespaces.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetReachAsync_ShouldUseTheRolesCapturedAtCreationNotTheCallersCurrentOnes()
+    {
+        // The page asking is the owner's browser session, which may hold roles the token
+        // doesn't - what's shown has to be the token's, or it would promise access it lacks.
+        var (sut, _) = CreateSut(grants: [Grants.ForRole("later", "new-role", read: true)]);
+        var issued = await sut.CreatePersonalAsync(
+            "mine",
+            TimeSpan.FromDays(1),
+            User("subject-1"),
+            CancellationToken.None
+        );
+
+        var reach = await sut.GetReachAsync(
+            issued.Token,
+            User("subject-1", roles: "new-role"),
+            CancellationToken.None
+        );
+
+        reach.ExplicitlyGrantedNamespaces.Should().BeEmpty();
+        reach.HasReadAccess("later").Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetReachAsync_ForAnAdminsToken_ShouldBeUnrestricted()
+    {
+        var (sut, _) = CreateSut();
+        var issued = await sut.CreatePersonalAsync(
+            "admin's",
+            TimeSpan.FromDays(1),
+            Admin,
+            CancellationToken.None
+        );
+
+        var reach = await sut.GetReachAsync(issued.Token, Admin, CancellationToken.None);
+
+        reach.IsAdmin.Should().BeTrue();
+        reach.HasReverseLookupAccessToAllNamespaces.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetReachAsync_ForAGlobalGrant_ShouldReportItAsCoveringAllNamespaces()
+    {
+        var (sut, _) = CreateSut(grants: [Grants.ForRole(null, "reader", read: true)]);
+        var owner = User("subject-1", roles: "reader");
+        var issued = await sut.CreatePersonalAsync(
+            "mine",
+            TimeSpan.FromDays(1),
+            owner,
+            CancellationToken.None
+        );
+
+        var reach = await sut.GetReachAsync(issued.Token, owner, CancellationToken.None);
+
+        reach.HasReadAccessToAllNamespaces.Should().BeTrue();
+        reach.HasWriteAccessToAllNamespaces.Should().BeFalse();
+        reach.ExplicitlyGrantedNamespaces.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task GetReachAsync_ForAServiceAccountToken_ShouldResolveOnlyItsOwnGrants()
+    {
+        await SeedServiceAccountAsync("pseudonymizer");
+        var (sut, _) = CreateSut(
+            grants:
+            [
+                Grants.ForServiceAccount("ns", "pseudonymizer", write: true),
+                Grants.ForRole("other", "admin", read: true),
+            ]
+        );
+        var issued = await sut.CreateForServiceAccountAsync(
+            "pseudonymizer",
+            "ci",
+            TimeSpan.FromDays(1),
+            Admin,
+            CancellationToken.None
+        );
+
+        var reach = await sut.GetReachAsync(issued.Token, Admin, CancellationToken.None);
+
+        reach.IsAdmin.Should().BeFalse();
+        reach.ExplicitlyGrantedNamespaces.Should().Equal("ns");
+    }
+
+    [Fact]
+    public async Task GetReachAsync_ForSomebodyElsesToken_ShouldThrowForbidden()
+    {
+        var (sut, _) = CreateSut();
+        var issued = await sut.CreatePersonalAsync(
+            "theirs",
+            TimeSpan.FromDays(1),
+            User("subject-1"),
+            CancellationToken.None
+        );
+
+        await FluentActions
+            .Awaiting(() =>
+                sut.GetReachAsync(issued.Token, User("subject-2"), CancellationToken.None)
+            )
+            .Should()
+            .ThrowAsync<ForbiddenException>();
     }
 
     [Fact]

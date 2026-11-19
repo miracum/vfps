@@ -99,49 +99,6 @@ public class AccessTokenAuthenticationHandler(
         return Task.CompletedTask;
     }
 
-    private ClaimsPrincipal BuildPrincipal(AccessToken token)
-    {
-        var roleClaimType = authorizationConfig.Value.RoleClaimType;
-        List<Claim> claims = [new(VfpsClaimTypes.TokenId, token.TokenId)];
-
-        if (token.TokenType == AccessTokenType.ServiceAccount)
-        {
-            // The "sub" is prefixed rather than being the bare account name so an audit log can
-            // never confuse a service account with a user whose IdP subject happens to match.
-            var accountName = token.ServiceAccountName ?? string.Empty;
-            claims.Add(new Claim("sub", $"service-account:{accountName}"));
-            claims.Add(new Claim("preferred_username", accountName));
-            claims.Add(new Claim(VfpsClaimTypes.ServiceAccount, accountName));
-        }
-        else
-        {
-            claims.Add(new Claim("sub", token.Subject ?? string.Empty));
-
-            if (!string.IsNullOrEmpty(token.Username))
-            {
-                claims.Add(new Claim("preferred_username", token.Username));
-            }
-
-            if (!string.IsNullOrEmpty(token.Email))
-            {
-                // Only a verified address is ever stored (see AccessTokenAppService), so replaying
-                // the verification flag alongside it is what ClaimsPrincipalExtensions.GetEmail
-                // needs to honour an email grant - and storing nothing when it was unverified is
-                // what stops a token from matching one its owner's own session would not.
-                claims.Add(new Claim("email", token.Email));
-                claims.Add(new Claim("email_verified", "true"));
-            }
-
-            claims.AddRange(token.Roles.Select(role => new Claim(roleClaimType, role)));
-        }
-
-        var identity = new ClaimsIdentity(
-            claims,
-            Scheme.Name,
-            nameType: "preferred_username",
-            roleType: roleClaimType
-        );
-
-        return new ClaimsPrincipal(identity);
-    }
+    private ClaimsPrincipal BuildPrincipal(AccessToken token) =>
+        AccessTokenPrincipal.Build(token, authorizationConfig.Value.RoleClaimType, Scheme.Name);
 }

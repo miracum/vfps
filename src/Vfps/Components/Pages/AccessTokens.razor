@@ -1,6 +1,7 @@
 @page "/access-tokens"
 @rendermode InteractiveServer
 @using Microsoft.Extensions.Options
+@using Vfps.Authorization
 @using Vfps.Config
 @using Vfps.Data.Models
 @inject IOptions<AuthorizationConfig> AuthorizationConfigOptions
@@ -122,6 +123,14 @@
                             <BbDialogTitle Class="bb:leading-tight">@Localizer["App.AccessTokens.CreateTitle"]</BbDialogTitle>
                             <BbDialogDescription>@Localizer["App.AccessTokens.CreateDescription"]</BbDialogDescription>
                         </BbDialogHeader>
+                        @* An admin's token replays the admin role, and with it full access - easy to
+                           miss when the form looks identical for everyone. *@
+                        @if (_isAdmin)
+                        {
+                            <BbAlert Variant="AlertVariant.Warning" id="adminTokenWarning">
+                                <BbAlertDescription>@Localizer["App.AccessTokens.AdminTokenWarning"]</BbAlertDescription>
+                            </BbAlert>
+                        }
                         @if (_createError is not null)
                         {
                             <BbAlert Variant="AlertVariant.Danger">
@@ -182,6 +191,24 @@
                     <BbCardHeader>
                         <SectionTitle>@Localizer["App.AccessTokens.MineTitle"]</SectionTitle>
                         <BbCardDescription>@Localizer["App.AccessTokens.MineDescription"]</BbCardDescription>
+                        @* Where people who want a credential for a service go wrong: a personal
+                           token works, but stops when its owner leaves or their roles change. *@
+                        <p class="bb:mt-2 bb:text-sm bb:text-muted-foreground" id="serviceAccountHint">
+                            @if (_isAdmin)
+                            {
+                                @((MarkupString)
+                                    string.Format(
+                                        System.Net.WebUtility.HtmlEncode(
+                                            Localizer["App.AccessTokens.ServiceAccountHintAdmin"].Value
+                                        ),
+                                        $"<a href=\"/ui/service-accounts\" class=\"bb:underline bb:underline-offset-4\">{System.Net.WebUtility.HtmlEncode(Localizer["App.AccessTokens.ServiceAccountLink"].Value)}</a>"
+                                    ))
+                            }
+                            else
+                            {
+                                @Localizer["App.AccessTokens.ServiceAccountHint"]
+                            }
+                        </p>
                     </BbCardHeader>
                     <BbCardContent>
                         @TokenTable(_myTokens, showOwner: false)
@@ -239,6 +266,10 @@
     private bool _isAdmin;
     private IReadOnlyList<AccessToken> _myTokens = [];
     private IReadOnlyList<AccessToken> _allTokens = [];
+
+    // What each active token reaches right now, by token id - absent for revoked and expired ones,
+    // which reach nothing and say so through their status badge.
+    private Dictionary<Guid, NamespacePermissions> _reach = [];
     private readonly NewTokenModel _newToken = new();
     private bool _isCreating;
     private bool _showCreateDialog;
@@ -296,6 +327,22 @@
         {
             _allTokens = await AccessTokenAppService.GetAllAsync(_user, CancellationToken.None);
         }
+
+        var now = DateTimeOffset.UtcNow;
+        Dictionary<Guid, NamespacePermissions> reach = [];
+        foreach (var token in _myTokens.Concat(_allTokens).DistinctBy(t => t.Id))
+        {
+            if (token.IsActiveAt(now))
+            {
+                reach[token.Id] = await AccessTokenAppService.GetReachAsync(
+                    token,
+                    _user,
+                    CancellationToken.None
+                );
+            }
+        }
+
+        _reach = reach;
     }
 
     // Also reached when the dialog closes itself - the overlay, Escape, or its own close button.
@@ -505,11 +552,97 @@
                                 <span>@Localizer["App.AccessTokens.ColumnExpires"]: @Format(token.ExpiresAt)</span>
                                 <span>@Localizer["App.AccessTokens.ColumnLastUsed"]: @Format(token.LastUsedAt)</span>
                             </div>
+                            @if (_reach.TryGetValue(token.Id, out var reach))
+                            {
+                                @TokenReach(token, reach, showOwner)
+                            }
                         </div>
                     }
                 </div>
             }
         </div>;
+
+    // One line per token answering "what can this actually do?" - the question a personal token
+    // otherwise leaves open, since access is never granted to the token itself.
+    private RenderFragment TokenReach(AccessToken token, NamespacePermissions reach, bool showOwner) =>
+        @<div class="bb:mt-2 bb:text-xs" id="@($"tokenReach-{(showOwner ? "all" : "mine")}-{token.Id}")">
+            <div class="bb:flex bb:flex-wrap bb:items-center bb:gap-1">
+                <span class="bb:font-medium">@Localizer["App.AccessTokens.ReachLabel"]:</span>
+                @if (reach.IsAdmin)
+                {
+                    <BbBadge Variant="BadgeVariant.Warning">@Localizer["App.AccessTokens.ReachFull"]</BbBadge>
+                }
+                else if (ReachEntries(reach) is { Count: > 0 } entries)
+                {
+                    @foreach (var (label, isCode, permissions) in entries)
+                    {
+                        <BbBadge Variant="BadgeVariant.Outline">
+                            @if (isCode)
+                            {
+                                <code>@label</code>
+                            }
+                            else
+                            {
+                                @label
+                            }
+                            <span class="bb:text-muted-foreground">&nbsp;@permissions</span>
+                        </BbBadge>
+                    }
+                }
+                else
+                {
+                    <span class="bb:text-muted-foreground">@Localizer["App.AccessTokens.ReachNone"]</span>
+                }
+            </div>
+            @* Only beneath the caller's own personal tokens: for anyone else's, "your email address"
+               would be the wrong person, and a service account's grants are managed from its page. *@
+            @if (!reach.IsAdmin && !showOwner && token.TokenType == AccessTokenType.Personal && ReachEntries(reach).Count == 0)
+            {
+                <p class="bb:mt-1 bb:text-muted-foreground">@Localizer["App.AccessTokens.ReachNoneHint"]</p>
+            }
+        </div>;
+
+    // Grants covering every namespace first, as one entry, then each namespace a grant names.
+    private List<(string Label, bool IsCode, string Permissions)> ReachEntries(NamespacePermissions reach)
+    {
+        List<(string, bool, string)> entries = [];
+
+        var global = PermissionList(
+            reach.HasReadAccessToAllNamespaces,
+            reach.HasWriteAccessToAllNamespaces,
+            reach.HasReverseLookupAccessToAllNamespaces
+        );
+        if (global.Length > 0)
+        {
+            entries.Add((Localizer["App.AccessTokens.ReachAllNamespaces"].Value, false, global));
+        }
+
+        foreach (var name in reach.ExplicitlyGrantedNamespaces)
+        {
+            entries.Add((
+                name,
+                true,
+                PermissionList(
+                    reach.HasReadAccess(name),
+                    reach.HasWriteAccess(name),
+                    reach.HasReverseLookupAccess(name)
+                )
+            ));
+        }
+
+        return entries;
+    }
+
+    private string PermissionList(bool read, bool write, bool reverseLookup) =>
+        string.Join(
+            ", ",
+            new[]
+            {
+                read ? Localizer["App.AccessControl.Read"].Value : null,
+                write ? Localizer["App.AccessControl.Write"].Value : null,
+                reverseLookup ? Localizer["App.AccessControl.ReverseLookup"].Value : null,
+            }.Where(p => p is not null)
+        );
 
     private sealed class NewTokenModel
     {
