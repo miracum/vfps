@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1794870655092,
+  "lastUpdate": 1795107279029,
   "repoUrl": "https://github.com/miracum/vfps",
   "entries": {
     "PseudonymGeneratorBenchmarks": [
@@ -16194,6 +16194,66 @@ window.BENCHMARK_DATA = {
             "value": 461.63310821239764,
             "unit": "ns",
             "range": "± 3.1261042955169698"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "chgl@users.noreply.github.com",
+            "name": "chgl",
+            "username": "chgl"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "5889998d42ae3e6a2c93ac2b24c2b5c03e228022",
+          "message": "feat(ui): clearer naming around token permissions (#444)\n\n* feat(ui): clearer naming for tokens\n\n* Potential fix for pull request finding 'CodeQL / Missed opportunity to use Where'\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>\n\n---------\n\nCo-authored-by: Copilot Autofix powered by AI <62310815+github-advanced-security[bot]@users.noreply.github.com>",
+          "timestamp": "2026-11-19T17:50:58+01:00",
+          "tree_id": "ea55cae5d31f2477e93c3cf366b457d902ce3a1b",
+          "url": "https://github.com/miracum/vfps/commit/5889998d42ae3e6a2c93ac2b24c2b5c03e228022"
+        },
+        "date": 1795107278626,
+        "tool": "benchmarkdotnet",
+        "benches": [
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.CryptoRandomBase64UrlEncodedGenerator",
+            "value": 924.7949476877849,
+            "unit": "ns",
+            "range": "± 8.430423319481932"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid4Generator",
+            "value": 80.5376633087794,
+            "unit": "ns",
+            "range": "± 0.6009839338212161"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.Uuid7Generator",
+            "value": 118.4775201678276,
+            "unit": "ns",
+            "range": "± 0.4206732777199943"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomHexEncodedGenerator",
+            "value": 825.967368875231,
+            "unit": "ns",
+            "range": "± 3.9915919278631242"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase62EncodedGenerator",
+            "value": 952.3076553344727,
+            "unit": "ns",
+            "range": "± 2.4332136241042623"
+          },
+          {
+            "name": "Vfps.Benchmarks.PseudonymGeneratorBenchmarks.FullRandomBase32EncodedGenerator",
+            "value": 901.9192840712411,
+            "unit": "ns",
+            "range": "± 2.9489109700637277"
           }
         ]
       }
