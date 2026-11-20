@@ -1231,4 +1231,7 @@
   <data name="App.Common.MoreAbout" xml:space="preserve">
     <value>More about {0}</value>
   </data>
+  <data name="App.CsvJobs.DownloadFailed" xml:space="preserve">
+    <value>The download could not be opened. Try again.</value>
+  </data>
 </root>

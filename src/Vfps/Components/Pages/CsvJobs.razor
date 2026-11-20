@@ -1278,6 +1278,9 @@ else
                 // right after its PUT succeeds - see that JS function and endpoint for why: the
                 // job must still get queued even if the circuit dies mid-upload, which this await
                 // alone can't guarantee no matter how its timeout is configured.
+                // BL0016 can't see the caller: CreateJobAsync catches the JSException this throws and
+                // reports it as "Upload failed" in the dialog.
+#pragma warning disable BL0016
                 await JS.InvokeVoidAsync(
                     "vfpsCsvUpload.uploadFile",
                     CancellationToken.None,
@@ -1286,6 +1289,7 @@ else
                     completeUrl,
                     dotNetRef
                 );
+#pragma warning restore BL0016
             }
             finally
             {
@@ -1456,7 +1460,20 @@ else
                 user,
                 CancellationToken.None
             );
-            await JS.InvokeVoidAsync("open", url, "_blank");
+            try
+            {
+                await JS.InvokeVoidAsync("open", url, "_blank");
+            }
+            catch (Microsoft.JSInterop.JSException ex)
+            {
+                // RunJobActionAsync only turns the app service's own failures into a toast, so a
+                // browser-side one would otherwise end the circuit for want of a download.
+                Logger.LogWarning(ex, "Failed to open the download for job {JobId}", jobId);
+                Toast.Error(
+                    Localizer["App.CsvJobs.DownloadFailed"].Value,
+                    Localizer["App.CsvJobs.JobActionFailedTitle"].Value
+                );
+            }
         });
 
     private static bool IsFinished(PseudonymizationJobStatus status) =>
