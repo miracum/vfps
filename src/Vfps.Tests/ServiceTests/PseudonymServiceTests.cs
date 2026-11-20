@@ -490,8 +490,14 @@ public class PseudonymServiceTests : ServiceTestBase
             RequestId = Guid.NewGuid().ToString(),
         };
 
-        var first = await sut.Append(request, TestServerCallContext.Create());
-        var retried = await sut.Append(request, TestServerCallContext.Create());
+        var first = await sut.Append(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
+        var retried = await sut.Append(
+            request,
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
+        );
 
         retried.Pseudonym.PseudonymValue.Should().Be(first.Pseudonym.PseudonymValue);
     }
@@ -530,7 +536,7 @@ public class PseudonymServiceTests : ServiceTestBase
                 OriginalValue = "one",
                 RequestId = requestId,
             },
-            TestServerCallContext.Create()
+            TestServerCallContext.Create(cancellationToken: TestContext.Current.CancellationToken)
         );
 
         var act = () =>

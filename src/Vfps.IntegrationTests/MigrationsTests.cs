@@ -56,9 +56,11 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
             .WithOutputConsumer(consumer)
             .Build();
 
-        await migrationsContainer.StartAsync();
+        await migrationsContainer.StartAsync(TestContext.Current.CancellationToken);
 
-        var exitCode = await migrationsContainer.GetExitCodeAsync();
+        var exitCode = await migrationsContainer.GetExitCodeAsync(
+            TestContext.Current.CancellationToken
+        );
 
         consumer.Stdout.Seek(0, SeekOrigin.Begin);
         using var stdoutReader = new StreamReader(consumer.Stdout);
@@ -86,9 +88,11 @@ public class MigrationsTests : IAsyncLifetime, IClassFixture<NetworkFixture>
             )
             .Build();
 
-        await migrationsContainer.StartAsync();
+        await migrationsContainer.StartAsync(TestContext.Current.CancellationToken);
 
-        var exitCode = await migrationsContainer.GetExitCodeAsync();
+        var exitCode = await migrationsContainer.GetExitCodeAsync(
+            TestContext.Current.CancellationToken
+        );
 
         consumer.Stdout.Seek(0, SeekOrigin.Begin);
         using var stdoutReader = new StreamReader(consumer.Stdout);

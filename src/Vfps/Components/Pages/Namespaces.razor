@@ -955,12 +955,9 @@
             return;
         }
 
-        // BbTreeView's own selection highlight updates immediately (it's client-rendered), but
-        // nothing guarantees this component re-renders before the count fetch below actually
-        // suspends - same reasoning as ProvideItemsAsync's IsLoading fix on the pseudonyms page.
-        // Without this, the details panel would keep showing "Select a namespace..." throughout
-        // the fetch instead of the new namespace's details with a loading spinner.
-        StateHasChanged();
+        // No StateHasChanged needed for the spinner: this runs as an EventCallback on this
+        // component, and Blazor renders it as soon as the handler first awaits - so the details
+        // panel switches to the new namespace with its count loading before the fetch returns.
 
         var user = await GetUserAsync();
         long? count = null;

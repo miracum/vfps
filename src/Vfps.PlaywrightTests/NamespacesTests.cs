@@ -88,7 +88,9 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
         await FillInputAsync("#name", name);
 
         var createButton = Page.Locator(CreateSubmitSelector);
-        var clickOptions = new LocatorClickOptions { Force = true };
+        // A short timeout, because a click that starts only after the dialog has closed doesn't
+        // fail fast: it waits for the button to come back, which it never does.
+        var clickOptions = new LocatorClickOptions { Force = true, Timeout = 3000 };
         await Task.WhenAll(Enumerable.Range(0, 5).Select(_ => ClickIgnoringDetachedAsync()));
 
         // The click that wins closes the dialog, which tears the button out from under the ones
@@ -100,13 +102,16 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
             {
                 await createButton.ClickAsync(clickOptions);
             }
-            catch (PlaywrightException)
+            catch (Exception ex) when (ex is PlaywrightException or TimeoutException)
             {
-                // The dialog was already gone.
+                // The dialog was already gone: detached mid-click (PlaywrightException), or before
+                // the click found the button at all (System.TimeoutException, which is what
+                // Playwright throws for a timeout, and not a PlaywrightException). Which one a
+                // late click gets is down to timing; CI's slower runners hit the second.
             }
         }
 
-        await Task.Delay(1000);
+        await Task.Delay(1000, TestContext.Current.CancellationToken);
         await Page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.NetworkIdle });
 
         // One node in the tree, not one occurrence of the name in the page text: the name shows

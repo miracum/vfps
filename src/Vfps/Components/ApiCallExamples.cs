@@ -21,9 +21,9 @@ public static class ApiCallExamples
 
     private static string Exports(AccessTokenType tokenType) =>
         $$"""
-        export VFPS_TOKEN="{{AccessTokenSecret.PrefixFor(tokenType)}}..."
-        export VFPS_NAMESPACE="..."
-        """;
+            export VFPS_TOKEN="{{AccessTokenSecret.PrefixFor(tokenType)}}..."
+            export VFPS_NAMESPACE="..."
+            """;
 
     /// <param name="apiBaseUrl">
     /// Any URL on this deployment - only its scheme, host and port are used. The API is served
