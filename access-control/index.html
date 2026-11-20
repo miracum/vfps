@@ -1289,13 +1289,14 @@ moment - their subject, their verified email address and their roles - and every
 with it resolves against the same grants their browser session does. Nobody can grant themselves
 anything by creating one, which is why no admin role is needed to do it. Access is therefore never
 granted to a personal token itself: to give one access, grant it to its owner's email address or to
-one of their roles. The Access tokens page shows beneath each active token what it reaches right
-now.</p>
+one of their roles. The Access tokens page shows beneath each active token what it can access
+right now.</p>
 <p><strong>Service accounts</strong> are the other half, and are admin-only: they are principals of their own, for
-a client that belongs to no person. Create one on the <strong>Service accounts</strong> page, then grant it
-access exactly like a role or a user - <em>Configure access</em> on the Namespaces page, with <strong>Service
-account</strong> as the grantee type - and issue it a token. Rotating that token is issuing a second one,
-rolling it out, and revoking the first; the grants belong to the account, so they never move.</p>
+a client that belongs to no person. Create one on the <strong>Service accounts</strong> tab of the Access tokens
+page, then grant it access exactly like a role or a user - <em>Configure access</em> on the Namespaces
+page, with <strong>Service account</strong> as the grantee type - and issue it a token. Rotating that token is
+issuing a second one, rolling it out, and revoking the first; the grants belong to the account, so
+they never move.</p>
 <p>Both kinds are presented the same way as an identity provider's token, so no client needs changing:</p>
 <div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># the token as the admin UI showed it, once</span>
 </span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">VFPS_TOKEN</span><span class="o">=</span><span class="s2">"vfps_sat_..."</span>
@@ -1340,8 +1341,8 @@ a leaked token is findable by a secret scanner and recognizable in a log.</p>
 <p>Deleting a service account deletes its tokens <em>and</em> its access grants, so that an account later
 re-created under the same name doesn't silently inherit them.</p>
 <h3 id="noticing-a-token-before-it-expires">Noticing a token before it expires<a class="headerlink" href="#noticing-a-token-before-it-expires" title="Permanent link">&para;</a></h3>
-<p>A token close to its expiry is marked <strong>Expires soon</strong> on the Access tokens and Service accounts
-pages, <code>Authorization__AccessTokens__ExpiryWarningPeriod</code> (14 days by default) ahead. That's enough
+<p>A token close to its expiry is marked <strong>Expires soon</strong> on the Access tokens page, on every tab,
+<code>Authorization__AccessTokens__ExpiryWarningPeriod</code> (14 days by default) ahead. That's enough
 for a personal token, since its owner is the one using it. A service-account token usually sits in
 a pipeline that nobody watches, so it is also exported as a metric to alert on:</p>
 <ul>
