@@ -106,7 +106,7 @@ public class NamespacesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixtu
             }
         }
 
-        await Task.Delay(1000);
+        await Task.Delay(1000, TestContext.Current.CancellationToken);
         await Page.ReloadAsync(new PageReloadOptions { WaitUntil = WaitUntilState.NetworkIdle });
 
         // One node in the tree, not one occurrence of the name in the page text: the name shows

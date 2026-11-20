@@ -23,7 +23,11 @@ public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
         // job; run locally with `docker compose --profile test --profile s3 up -d --build` and
         // `dotnet test --filter Category=RequiresS3`.
         var csvPath = Path.Join(Path.GetTempPath(), $"vfps-e2e-{UniqueSuffix()}.csv");
-        await File.WriteAllTextAsync(csvPath, "patient_id,name,notes\n1,Jane Doe,none\n");
+        await File.WriteAllTextAsync(
+            csvPath,
+            "patient_id,name,notes\n1,Jane Doe,none\n",
+            TestContext.Current.CancellationToken
+        );
         try
         {
             await GotoAsync("/ui/csv-jobs?new=1");

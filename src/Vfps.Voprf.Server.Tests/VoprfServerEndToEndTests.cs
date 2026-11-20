@@ -109,7 +109,10 @@ public class VoprfServerEndToEndTests
         using var factory = new Factory(Settings(hardened: false, requireAuthentication: false));
         var client = ClientFor(factory);
 
-        var publicKey = await client.GetPublicKeyAsync(new VoprfServiceGetPublicKeyRequest());
+        var publicKey = await client.GetPublicKeyAsync(
+            new VoprfServiceGetPublicKeyRequest(),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
         publicKey.KeyId.Should().Be("test-key");
 
         using var request = VoprfClient.Blind(Identifier);
@@ -117,7 +120,10 @@ public class VoprfServerEndToEndTests
         var blindEvaluateRequest = new VoprfServiceBlindEvaluateRequest();
         blindEvaluateRequest.BlindedElements.Add(ByteString.CopyFrom(request.BlindedElement));
 
-        var response = await client.BlindEvaluateAsync(blindEvaluateRequest);
+        var response = await client.BlindEvaluateAsync(
+            blindEvaluateRequest,
+            cancellationToken: TestContext.Current.CancellationToken
+        );
         response.KeyId.Should().Be("test-key");
 
         var output = VoprfClient.Finalize(
@@ -138,7 +144,10 @@ public class VoprfServerEndToEndTests
         using var factory = new Factory(Settings(hardened: false, requireAuthentication: false));
         var client = ClientFor(factory);
 
-        var publicKey = await client.GetPublicKeyAsync(new VoprfServiceGetPublicKeyRequest());
+        var publicKey = await client.GetPublicKeyAsync(
+            new VoprfServiceGetPublicKeyRequest(),
+            cancellationToken: TestContext.Current.CancellationToken
+        );
 
         var inputs = new[] { "one", "two", "three" }.Select(Encoding.UTF8.GetBytes).ToArray();
         var requests = inputs.Select(input => VoprfClient.Blind(input)).ToArray();
@@ -150,7 +159,10 @@ public class VoprfServerEndToEndTests
                 requests.Select(r => ByteString.CopyFrom(r.BlindedElement))
             );
 
-            var response = await client.BlindEvaluateAsync(blindEvaluateRequest);
+            var response = await client.BlindEvaluateAsync(
+                blindEvaluateRequest,
+                cancellationToken: TestContext.Current.CancellationToken
+            );
 
             var outputs = VoprfClient.Finalize(
                 requests,

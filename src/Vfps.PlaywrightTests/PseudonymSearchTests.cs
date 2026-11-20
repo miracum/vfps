@@ -43,7 +43,7 @@ public class PseudonymSearchTests(PlaywrightFixture fixture) : VfpsPageTestBase(
         await FillInputAsync(search, "bob");
 
         // Well past the 300ms the grid's own search box used to wait after the last keystroke.
-        await Task.Delay(1000);
+        await Task.Delay(1000, TestContext.Current.CancellationToken);
         await Expect(OriginalValue("alice")).ToBeVisibleAsync();
 
         await search.PressAsync("Enter");
@@ -98,7 +98,7 @@ public class PseudonymSearchTests(PlaywrightFixture fixture) : VfpsPageTestBase(
 
             await FillInputAsync(search, "bob");
             await search.PressAsync("Enter");
-            await Task.Delay(attempt % 3 * 30);
+            await Task.Delay(attempt % 3 * 30, TestContext.Current.CancellationToken);
             await FillInputAsync(search, "");
             await search.PressAsync("Enter");
 

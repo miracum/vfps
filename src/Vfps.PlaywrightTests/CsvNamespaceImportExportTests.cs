@@ -58,7 +58,8 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
         var csvPath = Path.Join(Path.GetTempPath(), $"vfps-e2e-{UniqueSuffix()}.csv");
         await File.WriteAllTextAsync(
             csvPath,
-            "original,pseudonym\n" + string.Concat(pairs.Select(p => $"{p.Item1},{p.Item2}\n"))
+            "original,pseudonym\n" + string.Concat(pairs.Select(p => $"{p.Item1},{p.Item2}\n")),
+            TestContext.Current.CancellationToken
         );
 
         try
@@ -113,7 +114,11 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
             // editing and nothing restated on the form.
             var secondNamespace = $"e2e-reimport-{UniqueSuffix()}";
             var exportedPath = Path.Join(Path.GetTempPath(), $"vfps-e2e-{UniqueSuffix()}.csv");
-            await File.WriteAllTextAsync(exportedPath, exported);
+            await File.WriteAllTextAsync(
+                exportedPath,
+                exported,
+                TestContext.Current.CancellationToken
+            );
             try
             {
                 await CreateNamespaceAsync(secondNamespace);
@@ -153,7 +158,8 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
         // second is refused, and the job still completes.
         await File.WriteAllTextAsync(
             csvPath,
-            "original,pseudonym\nalice,shared-psn\nbob,shared-psn\n"
+            "original,pseudonym\nalice,shared-psn\nbob,shared-psn\n",
+            TestContext.Current.CancellationToken
         );
 
         try
@@ -228,7 +234,11 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
         // The same header detection the pseudonymize form uses - readHeaderRow reads only the
         // first chunk of the file, so this costs nothing even for a huge upload.
         var csvPath = Path.Join(Path.GetTempPath(), $"vfps-e2e-{UniqueSuffix()}.csv");
-        await File.WriteAllTextAsync(csvPath, "mrn,psn,target_ns\n1,p1,ns-a\n");
+        await File.WriteAllTextAsync(
+            csvPath,
+            "mrn,psn,target_ns\n1,p1,ns-a\n",
+            TestContext.Current.CancellationToken
+        );
 
         try
         {
@@ -261,7 +271,11 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
     public async Task ChoosingANamespaceColumn_ReplacesTheNamespacePicker()
     {
         var csvPath = Path.Join(Path.GetTempPath(), $"vfps-e2e-{UniqueSuffix()}.csv");
-        await File.WriteAllTextAsync(csvPath, "original,pseudonym,namespace\na,p,ns\n");
+        await File.WriteAllTextAsync(
+            csvPath,
+            "original,pseudonym,namespace\na,p,ns\n",
+            TestContext.Current.CancellationToken
+        );
 
         try
         {
@@ -298,7 +312,8 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
                 + $"alice,psn-alice,{first}\n"
                 + $"bob,psn-bob,{second}\n"
                 + $"carol,psn-carol,{first}\n"
-                + "dave,psn-dave,no-such-namespace-here\n"
+                + "dave,psn-dave,no-such-namespace-here\n",
+            TestContext.Current.CancellationToken
         );
 
         try
