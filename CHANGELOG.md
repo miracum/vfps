@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.29.2](https://github.com/miracum/vfps/compare/v1.29.1...v1.29.2) (2026-11-20)
+
+
+### Miscellaneous Chores
+
+* **deps:** consistently bump all deps to v11 ([#448](https://github.com/miracum/vfps/issues/448)) ([b1a6c7d](https://github.com/miracum/vfps/commit/b1a6c7d1afa4c60bfce93842a912884e75886d4d))
+
 ## [1.29.1](https://github.com/miracum/vfps/compare/v1.29.0...v1.29.1) (2026-11-20)
 
 
