@@ -31,7 +31,7 @@ spec:
             severity: warning
           annotations:
             summary: {{`Service account {{ $labels.service_account }}'s token "{{ $labels.token_name }}" expires in {{ printf "%.0f" $value }} day(s).`}}
-            description: {{`Issue a new token for {{ $labels.service_account }} on the vfps Service accounts page, roll it out, then revoke {{ $labels.token_id }} - revoking it is what clears this alert.`}}
+            description: {{`Issue a new token for {{ $labels.service_account }} under Access tokens → Service accounts in the vfps UI, roll it out, then revoke {{ $labels.token_id }} - revoking it is what clears this alert.`}}
         - alert: VfpsServiceAccountTokenExpired
           expr: |
             max by (namespace, service_account, token_id, token_name) (

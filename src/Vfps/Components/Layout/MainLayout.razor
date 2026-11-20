@@ -17,7 +17,7 @@
 
 @* The nav is our own rather than BbResponsiveNav: its desktop links render as role="menuitem"
    tabindex="-1" with no menu around them, so Tab skipped the whole nav and no keyboard user could
-   reach a page from it; and it only collapses below 768px, which left the seven items wider than
+   reach a page from it; and it only collapses below 768px, which left the menu's items wider than
    the screen on anything from a tablet to a small laptop. Plain links in a list, plus a sheet of
    the same links below the breakpoint in .main-nav's rule in wwwroot/app.css. *@
 <header class="bb:flex bb:h-16 bb:shrink-0 bb:items-center bb:gap-4 bb:border-b bb:bg-background bb:px-4">
@@ -312,16 +312,7 @@
                     }
                 );
 
-                if (AuthorizationConfigOptions.Value.AccessTokens.IsEnabled)
-                {
-                    items.Add(
-                        new NavItemDefinition
-                        {
-                            Text = Localizer["App.Nav.ServiceAccounts"],
-                            Href = "/ui/service-accounts",
-                        }
-                    );
-                }
+                // Service accounts have no item of their own: they are a tab of Access tokens.
             }
         }
 

@@ -719,18 +719,29 @@ else
                                        role (see Program.cs), so for anyone else this button
                                        could only ever lead to a 403. A job's own creator still
                                        sees its status, progress and failure reason in this grid
-                                       - the dashboard adds Hangfire's internal view of it. Ghost,
-                                       so it reads as the side route it is next to Download. *@
+                                       - the dashboard adds Hangfire's internal view of it. An icon
+                                       with a tooltip, so a side route repeated on every row
+                                       doesn't outweigh Download. *@
                                     @if (_isAdmin && j.HangfireJobId is not null)
                                     {
-                                        <BbButton
-                                            Variant="ButtonVariant.Ghost"
-                                            Size="ButtonSize.Small"
-                                            Href="@HangfireJobDetailsUrl(j.HangfireJobId)"
-                                            Target="_blank"
-                                        >
-                                            @Localizer["App.CsvJobs.ShowJobDashboard"]
-                                        </BbButton>
+                                        <BbTooltip>
+                                            @* The wrapper-span trigger, not AsChild: a BbButton rendered as a link never
+                                               registers itself as the anchor, so the tooltip stayed
+                                               off-screen. Focusable=false keeps the link the only
+                                               tab stop. *@
+                                            <BbTooltipTrigger Focusable="false">
+                                                <BbButton
+                                                    Variant="ButtonVariant.Ghost"
+                                                    Size="ButtonSize.IconSmall"
+                                                    Href="@HangfireJobDetailsUrl(j.HangfireJobId)"
+                                                    Target="_blank"
+                                                    AriaLabel="@Localizer["App.CsvJobs.ShowJobDashboard"]"
+                                                >
+                                                    <LucideIcon aria-hidden="true" Name="activity" Size="16" />
+                                                </BbButton>
+                                            </BbTooltipTrigger>
+                                            <BbTooltipContent>@Localizer["App.CsvJobs.ShowJobDashboard"]</BbTooltipContent>
+                                        </BbTooltip>
                                     }
                                 </div>
                             </ChildContent>

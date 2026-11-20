@@ -56,7 +56,7 @@ public class AccessTokenAppService(
     }
 
     /// <inheritdoc/>
-    public async Task<NamespacePermissions> GetReachAsync(
+    public async Task<NamespacePermissions> GetPermissionsAsync(
         AccessToken token,
         ClaimsPrincipal user,
         CancellationToken cancellationToken

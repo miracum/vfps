@@ -64,13 +64,17 @@
     private string? _activeTab = RestTab;
     private string? _copiedTab;
 
-    private string Curl => ApiCallExamples.Curl(new Uri(NavigationManager.BaseUri));
+    /// <summary>Which kind of token the examples show - personal unless the page says otherwise.</summary>
+    [Parameter]
+    public Vfps.Data.Models.AccessTokenType TokenType { get; set; } = Vfps.Data.Models.AccessTokenType.Personal;
+
+    private string Curl => ApiCallExamples.Curl(new Uri(NavigationManager.BaseUri), TokenType);
 
     // Same host the browser reached the UI on - right for a local or compose setup. Behind an
     // Ingress the plaintext gRPC port is often reachable only from inside the cluster, at an
     // address this server can't know; the linked docs cover that case.
     private string Grpcurl =>
-        ApiCallExamples.Grpcurl($"{new Uri(NavigationManager.BaseUri).Host}:{GrpcPort}");
+        ApiCallExamples.Grpcurl($"{new Uri(NavigationManager.BaseUri).Host}:{GrpcPort}", TokenType);
 
     private int GrpcPort => ApiCallExamples.GrpcPort(Configuration["Kestrel:Endpoints:HttpGrpc:Url"]);
 

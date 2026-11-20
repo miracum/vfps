@@ -10,11 +10,17 @@
 @inject IStringLocalizer<SharedResources> Localizer
 @inject IJSRuntime JS
 @inject ILogger<AccessTokens> Logger
+@inject NavigationManager Navigation
 
 @*
     Self-service personal access tokens: any signed-in user can mint a credential that carries
-    their own access, for a client that can't get a token from the identity provider. Service
-    accounts - the admin-managed kind, with access of their own - live on their own page.
+    their own access, for a client that can't get a token from the identity provider.
+
+    Admins get two more tabs: service accounts - the admin-managed kind, with access of their own -
+    and every token in the deployment. One page rather than two, because a service account exists
+    only to hold tokens, and the hint steering people from a personal token to one then points
+    next door instead of to another menu item. The tab is in the query string (?tab=...), so it
+    survives a reload and can be linked to.
 *@
 
 <PageTitle>@Localizer["App.Nav.AccessTokens"]</PageTitle>
@@ -25,7 +31,22 @@
             <LucideIcon aria-hidden="true" Name="key-round" Size="24" Class="bb:shrink-0 bb:text-primary" />
             <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Nav.AccessTokens"]</h1>
         </div>
-        @if (IsUsable)
+        @if (IsUsable && _tab == ServiceAccountsTab)
+        {
+            <BbButton
+                id="showCreateServiceAccountButton"
+                IconPosition="IconPosition.Start"
+                OnClick="() => _serviceAccountsPanel?.OpenCreateDialog()"
+            >
+                <Icon>
+                    <LucideIcon aria-hidden="true" Name="plus" Size="16" />
+                </Icon>
+                <ChildContent>
+                    @Localizer["App.ServiceAccounts.CreateAction"]
+                </ChildContent>
+            </BbButton>
+        }
+        else if (IsUsable && _tab == MineTab)
         {
             <BbButton
                 id="showCreateAccessTokenButton"
@@ -187,49 +208,38 @@
                     </BbDialogContent>
                 </BbDialog>
 
-                <BbCard>
-                    <BbCardHeader>
-                        <SectionTitle>@Localizer["App.AccessTokens.MineTitle"]</SectionTitle>
-                        <BbCardDescription>@Localizer["App.AccessTokens.MineDescription"]</BbCardDescription>
-                        @* Where people who want a credential for a service go wrong: a personal
-                           token works, but stops when its owner leaves or their roles change. *@
-                        <p class="bb:mt-2 bb:text-sm bb:text-muted-foreground" id="serviceAccountHint">
-                            @if (_isAdmin)
-                            {
-                                @((MarkupString)
-                                    string.Format(
-                                        System.Net.WebUtility.HtmlEncode(
-                                            Localizer["App.AccessTokens.ServiceAccountHintAdmin"].Value
-                                        ),
-                                        $"<a href=\"/ui/service-accounts\" class=\"bb:underline bb:underline-offset-4\">{System.Net.WebUtility.HtmlEncode(Localizer["App.AccessTokens.ServiceAccountLink"].Value)}</a>"
-                                    ))
-                            }
-                            else
-                            {
-                                @Localizer["App.AccessTokens.ServiceAccountHint"]
-                            }
-                        </p>
-                    </BbCardHeader>
-                    <BbCardContent>
-                        @TokenTable(_myTokens, showOwner: false)
-                    </BbCardContent>
-                </BbCard>
-
                 @if (_isAdmin)
                 {
-                    <BbCard>
-                        <BbCardHeader>
-                            <SectionTitle>@Localizer["App.AccessTokens.AllTitle"]</SectionTitle>
-                            <BbCardDescription>@Localizer["App.AccessTokens.AllDescription"]</BbCardDescription>
-                        </BbCardHeader>
-                        <BbCardContent>
-                            @TokenTable(_allTokens, showOwner: true)
-                        </BbCardContent>
-                    </BbCard>
+                    <BbTabs Value="@_tab" ValueChanged="OnTabChangedAsync">
+                        <BbTabsList>
+                            <BbTabsTrigger Value="@MineTab" id="tab-mine">
+                                @Localizer["App.AccessTokens.MineTitle"]
+                            </BbTabsTrigger>
+                            <BbTabsTrigger Value="@ServiceAccountsTab" id="tab-service-accounts">
+                                @Localizer["App.Nav.ServiceAccounts"]
+                            </BbTabsTrigger>
+                            <BbTabsTrigger Value="@AllTab" id="tab-all">
+                                @Localizer["App.AccessTokens.AllTitle"]
+                            </BbTabsTrigger>
+                        </BbTabsList>
+                        <BbTabsContent Value="@MineTab" Class="bb:mt-4">@MyTokensCard</BbTabsContent>
+                        @* Mounted only while shown, so it loads afresh each time - after a token
+                           was revoked on another tab, say. *@
+                        <BbTabsContent Value="@ServiceAccountsTab" Class="bb:mt-4">
+                            <ServiceAccountsPanel @ref="_serviceAccountsPanel" />
+                        </BbTabsContent>
+                        <BbTabsContent Value="@AllTab" Class="bb:mt-4">@AllTokensCard</BbTabsContent>
+                    </BbTabs>
+                }
+                else
+                {
+                    @MyTokensCard
                 }
             </div>
             <aside class="bb:w-full bb:self-start bb:sticky bb:top-6 bb:md:max-w-[420px]">
-                <AccessTokenUsageExamples />
+                <AccessTokenUsageExamples
+                    TokenType="@(_tab == ServiceAccountsTab ? AccessTokenType.ServiceAccount : AccessTokenType.Personal)"
+                />
             </aside>
         </div>
 
@@ -262,14 +272,25 @@
     [CascadingParameter]
     private Task<AuthenticationState>? AuthenticationState { get; set; }
 
+    internal const string ServiceAccountsHref = "/ui/access-tokens?tab=service-accounts";
+
+    private const string MineTab = "mine";
+    private const string ServiceAccountsTab = "service-accounts";
+    private const string AllTab = "all";
+
+    [SupplyParameterFromQuery(Name = "tab")]
+    private string? TabQuery { get; set; }
+
     private ClaimsPrincipal _user = new();
     private bool _isAdmin;
+    private string _tab = MineTab;
+    private ServiceAccountsPanel? _serviceAccountsPanel;
     private IReadOnlyList<AccessToken> _myTokens = [];
     private IReadOnlyList<AccessToken> _allTokens = [];
 
-    // What each active token reaches right now, by token id - absent for revoked and expired ones,
-    // which reach nothing and say so through their status badge.
-    private Dictionary<Guid, NamespacePermissions> _reach = [];
+    // What each active token can access right now, by token id - absent for revoked and expired ones,
+    // which can access nothing and say so through their status badge.
+    private Dictionary<Guid, NamespacePermissions> _tokenAccess = [];
     private readonly NewTokenModel _newToken = new();
     private bool _isCreating;
     private bool _showCreateDialog;
@@ -309,6 +330,26 @@
         }
     }
 
+    // Also runs when only the query string changed - the hint's link to the Service accounts tab
+    // is this same page. Anyone but an admin has the one tab, whatever the URL says.
+    protected override void OnParametersSet() =>
+        _tab = _isAdmin && TabQuery is ServiceAccountsTab or AllTab ? TabQuery : MineTab;
+
+    private async Task OnTabChangedAsync(string? tab)
+    {
+        _tab = tab is ServiceAccountsTab or AllTab ? tab : MineTab;
+        Navigation.NavigateTo(
+            Navigation.GetUriWithQueryParameter("tab", _tab == MineTab ? null : _tab),
+            replace: true
+        );
+
+        // The token tabs show what the Service accounts tab may just have changed.
+        if (_tab != ServiceAccountsTab)
+        {
+            await LoadAsync();
+        }
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender && IsUsable)
@@ -329,17 +370,17 @@
         }
 
         var now = DateTimeOffset.UtcNow;
-        Dictionary<Guid, NamespacePermissions> reach = [];
+        Dictionary<Guid, NamespacePermissions> access = [];
         foreach (var token in _myTokens.Concat(_allTokens).DistinctBy(t => t.Id).Where(token => token.IsActiveAt(now)))
         {
-            reach[token.Id] = await AccessTokenAppService.GetReachAsync(
+            access[token.Id] = await AccessTokenAppService.GetPermissionsAsync(
                 token,
                 _user,
                 CancellationToken.None
             );
         }
 
-        _reach = reach;
+        _tokenAccess = access;
     }
 
     // Also reached when the dialog closes itself - the overlay, Escape, or its own close button.
@@ -489,6 +530,50 @@
             ? Localizer["App.AccessTokens.Never"].Value
             : BrowserTime.Format(timestamp.Value, _browserTimeZone);
 
+    private RenderFragment MyTokensCard =>
+        @<BbCard>
+            <BbCardHeader>
+                <div class="bb:flex bb:items-center bb:gap-1">
+                    <SectionTitle>@Localizer["App.AccessTokens.MineTitle"]</SectionTitle>
+                    <HelpTip Topic="@Localizer["App.AccessTokens.MineTitle"]">
+                        @Localizer["App.AccessTokens.MineDescription"]
+                    </HelpTip>
+                </div>
+                @* Where people who want a credential for a service go wrong: a personal
+                   token works, but stops when its owner leaves or their roles change. *@
+                <p class="bb:mt-2 bb:text-sm bb:text-muted-foreground" id="serviceAccountHint">
+                    @if (_isAdmin)
+                    {
+                        @((MarkupString)
+                            string.Format(
+                                System.Net.WebUtility.HtmlEncode(
+                                    Localizer["App.AccessTokens.ServiceAccountHintAdmin"].Value
+                                ),
+                                $"<a href=\"{ServiceAccountsHref}\" class=\"bb:underline bb:underline-offset-4\">{System.Net.WebUtility.HtmlEncode(Localizer["App.AccessTokens.ServiceAccountLink"].Value)}</a>"
+                            ))
+                    }
+                    else
+                    {
+                        @Localizer["App.AccessTokens.ServiceAccountHint"]
+                    }
+                </p>
+            </BbCardHeader>
+            <BbCardContent>
+                @TokenTable(_myTokens, showOwner: false)
+            </BbCardContent>
+        </BbCard>;
+
+    private RenderFragment AllTokensCard =>
+        @<BbCard>
+            <BbCardHeader>
+                <SectionTitle>@Localizer["App.AccessTokens.AllTitle"]</SectionTitle>
+                <BbCardDescription>@Localizer["App.AccessTokens.AllDescription"]</BbCardDescription>
+            </BbCardHeader>
+            <BbCardContent>
+                @TokenTable(_allTokens, showOwner: true)
+            </BbCardContent>
+        </BbCard>;
+
     private string Owner(AccessToken token) =>
         token.TokenType == AccessTokenType.ServiceAccount
             ? token.ServiceAccountName ?? string.Empty
@@ -549,9 +634,9 @@
                                 <span>@Localizer["App.AccessTokens.ColumnExpires"]: @Format(token.ExpiresAt)</span>
                                 <span>@Localizer["App.AccessTokens.ColumnLastUsed"]: @Format(token.LastUsedAt)</span>
                             </div>
-                            @if (_reach.TryGetValue(token.Id, out var reach))
+                            @if (_tokenAccess.TryGetValue(token.Id, out var access))
                             {
-                                @TokenReach(token, reach, showOwner)
+                                @TokenAccess(token, access, showOwner)
                             }
                         </div>
                     }
@@ -561,15 +646,15 @@
 
     // One line per token answering "what can this actually do?" - the question a personal token
     // otherwise leaves open, since access is never granted to the token itself.
-    private RenderFragment TokenReach(AccessToken token, NamespacePermissions reach, bool showOwner) =>
-        @<div class="bb:mt-2 bb:text-xs" id="@($"tokenReach-{(showOwner ? "all" : "mine")}-{token.Id}")">
+    private RenderFragment TokenAccess(AccessToken token, NamespacePermissions access, bool showOwner) =>
+        @<div class="bb:mt-2 bb:text-xs" id="@($"tokenAccess-{(showOwner ? "all" : "mine")}-{token.Id}")">
             <div class="bb:flex bb:flex-wrap bb:items-center bb:gap-1">
-                <span class="bb:font-medium">@Localizer["App.AccessTokens.ReachLabel"]:</span>
-                @if (reach.IsAdmin)
+                <span class="bb:font-medium">@Localizer["App.AccessTokens.AccessLabel"]:</span>
+                @if (access.IsAdmin)
                 {
-                    <BbBadge Variant="BadgeVariant.Warning">@Localizer["App.AccessTokens.ReachFull"]</BbBadge>
+                    <BbBadge Variant="BadgeVariant.Warning">@Localizer["App.AccessTokens.AccessFull"]</BbBadge>
                 }
-                else if (ReachEntries(reach) is { Count: > 0 } entries)
+                else if (AccessEntries(access) is { Count: > 0 } entries)
                 {
                     @foreach (var (label, isCode, permissions) in entries)
                     {
@@ -588,41 +673,41 @@
                 }
                 else
                 {
-                    <span class="bb:text-muted-foreground">@Localizer["App.AccessTokens.ReachNone"]</span>
+                    <span class="bb:text-muted-foreground">@Localizer["App.AccessTokens.AccessNone"]</span>
                 }
             </div>
             @* Only beneath the caller's own personal tokens: for anyone else's, "your email address"
                would be the wrong person, and a service account's grants are managed from its page. *@
-            @if (!reach.IsAdmin && !showOwner && token.TokenType == AccessTokenType.Personal && ReachEntries(reach).Count == 0)
+            @if (!access.IsAdmin && !showOwner && token.TokenType == AccessTokenType.Personal && AccessEntries(access).Count == 0)
             {
-                <p class="bb:mt-1 bb:text-muted-foreground">@Localizer["App.AccessTokens.ReachNoneHint"]</p>
+                <p class="bb:mt-1 bb:text-muted-foreground">@Localizer["App.AccessTokens.AccessNoneHint"]</p>
             }
         </div>;
 
     // Grants covering every namespace first, as one entry, then each namespace a grant names.
-    private List<(string Label, bool IsCode, string Permissions)> ReachEntries(NamespacePermissions reach)
+    private List<(string Label, bool IsCode, string Permissions)> AccessEntries(NamespacePermissions access)
     {
         List<(string, bool, string)> entries = [];
 
         var global = PermissionList(
-            reach.HasReadAccessToAllNamespaces,
-            reach.HasWriteAccessToAllNamespaces,
-            reach.HasReverseLookupAccessToAllNamespaces
+            access.HasReadAccessToAllNamespaces,
+            access.HasWriteAccessToAllNamespaces,
+            access.HasReverseLookupAccessToAllNamespaces
         );
         if (global.Length > 0)
         {
-            entries.Add((Localizer["App.AccessTokens.ReachAllNamespaces"].Value, false, global));
+            entries.Add((Localizer["App.AccessTokens.AccessAllNamespaces"].Value, false, global));
         }
 
-        foreach (var name in reach.ExplicitlyGrantedNamespaces)
+        foreach (var name in access.ExplicitlyGrantedNamespaces)
         {
             entries.Add((
                 name,
                 true,
                 PermissionList(
-                    reach.HasReadAccess(name),
-                    reach.HasWriteAccess(name),
-                    reach.HasReverseLookupAccess(name)
+                    access.HasReadAccess(name),
+                    access.HasWriteAccess(name),
+                    access.HasReverseLookupAccess(name)
                 )
             ));
         }

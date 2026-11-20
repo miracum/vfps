@@ -82,10 +82,8 @@ public class StalledPseudonymizationJobWatchdogService(
                 var marked = await jobRepository.MarkStalledAsync(
                     jobId,
                     csvProcessingConfig.Value.StalledJobThreshold,
-                    "Processing appears to have stalled (no progress update in over "
-                        + $"{csvProcessingConfig.Value.StalledJobThreshold}) - the worker may "
-                        + "have crashed, lost its database connection, or been killed by an app "
-                        + "restart. See server logs for details.",
+                    $"No progress for over {csvProcessingConfig.Value.StalledJobThreshold}. "
+                        + "Processing may have stopped; the server logs have details.",
                     cancellationToken
                 );
 

@@ -62,7 +62,7 @@
     <value>Berechtigung konnte nicht angelegt werden</value>
   </data>
   <data name="App.AccessControl.AdminRolesDescription" xml:space="preserve">
-    <value>Vollzugriff auf alle Namespaces, einschließlich Anlegen und Löschen von Namespaces. Wird über {0} gesetzt und ist hier nicht änderbar - damit sich überhaupt jemand anmelden und allen anderen Zugriff erteilen kann.</value>
+    <value>Vollzugriff auf alle Namespaces, einschließlich Anlegen und Löschen. Wird über {0} festgelegt, nicht hier.</value>
   </data>
   <data name="App.AccessControl.AdminRolesTitle" xml:space="preserve">
     <value>Admin-Rollen</value>
@@ -77,13 +77,13 @@
     <value>Alle Namespaces</value>
   </data>
   <data name="App.AccessControl.DisabledDescription" xml:space="preserve">
-    <value>{0} ist {1}, daher hat jede Anfrage vollen Lese-, Schreib- und Reverse-Lookup-Zugriff auf jeden Namespace, unabhängig von der Rolle.</value>
+    <value>{0} ist {1}, daher hat jeder Vollzugriff auf jeden Namespace.</value>
   </data>
   <data name="App.AccessControl.DisabledTitle" xml:space="preserve">
     <value>Autorisierung ist deaktiviert</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessDescription" xml:space="preserve">
-    <value>Wer in welchem vorhandenen Namespace was darf - die Vereinigung der auf ihn bezogenen Berechtigungen und derjenigen für alle Namespaces, genau so aufgelöst wie bei den Zugriffsprüfungen selbst. Berechtigungen werden je Namespace über "Zugriff konfigurieren" auf der Namespaces-Seite verwaltet.</value>
+    <value>Wer in welchem Namespace was darf, einschließlich der Berechtigungen für alle Namespaces. Admins sind nicht aufgeführt. Ändern lässt sich der Zugriff über "Zugriff konfigurieren" auf der Namespaces-Seite.</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessTitle" xml:space="preserve">
     <value>Effektiver Zugriff pro Namespace</value>
@@ -95,22 +95,22 @@
     <value>Berechtigt</value>
   </data>
   <data name="App.AccessControl.GranteeEmailHelp" xml:space="preserve">
-    <value>Eine einzelne Person, über die E-Mail-Adresse, mit der sie sich anmeldet - unabhängig von ihren Rollen. Gilt nur für Benutzer, deren E-Mail-Adresse vom Identity Provider als verifiziert gemeldet wird. Ihre persönlichen Zugriffstoken erhalten diese Rechte ebenfalls.</value>
+    <value>Eine Person, über die verifizierte E-Mail-Adresse, mit der sie sich anmeldet. Ihre persönlichen Zugriffstoken erhalten diesen Zugriff ebenfalls.</value>
   </data>
   <data name="App.AccessControl.GranteeEmailPlaceholder" xml:space="preserve">
     <value>z. B. user@example.org</value>
   </data>
   <data name="App.AccessControl.GranteeRoleHelp" xml:space="preserve">
-    <value>Eine OIDC-Rolle oder -Gruppe, genau so, wie sie der Identity Provider ausstellt. Ein persönliches Zugriffstoken kennt nur die Rollen, die sein Besitzer beim Erstellen hatte.</value>
+    <value>Eine Rolle oder Gruppe, genau so geschrieben, wie der Identity Provider sie sendet. Ein persönliches Zugriffstoken behält die Rollen, die sein Besitzer beim Erstellen hatte.</value>
   </data>
   <data name="App.AccessControl.GranteeRolePlaceholder" xml:space="preserve">
     <value>z. B. vfps-ns-example-read</value>
   </data>
   <data name="App.AccessControl.GranteeServiceAccountHelp" xml:space="preserve">
-    <value>Für einen Dienst oder eine Pipeline, die keiner Person gehört. Gilt für alle Token dieses Service Accounts. Ein Service Account ist nie Admin - er hat genau die Rechte, die ihm hier gegeben werden.</value>
+    <value>Für einen Dienst oder eine Pipeline statt einer Person. Gilt für alle Token des Kontos.</value>
   </data>
   <data name="App.AccessControl.GranteeType" xml:space="preserve">
-    <value>Freigeben für</value>
+    <value>Berechtigung für</value>
   </data>
   <data name="App.AccessControl.GranteeTypeEmail" xml:space="preserve">
     <value>Benutzer (E-Mail)</value>
@@ -125,10 +125,10 @@
     <value>Es sind noch keine Namespaces vorhanden.</value>
   </data>
   <data name="App.AccessControl.NoServiceAccounts" xml:space="preserve">
-    <value>Es existieren noch keine Service Accounts. Legen Sie zuerst einen auf der Seite Service Accounts an.</value>
+    <value>Noch keine Service Accounts. Legen Sie zuerst einen unter Zugriffstoken → Service Accounts an.</value>
   </data>
   <data name="App.AccessTokens.AllDescription" xml:space="preserve">
-    <value>Alle Token dieser Installation, persönliche wie Service Account-Token.</value>
+    <value>Alle Token dieser Installation, damit sich ein abhandengekommenes finden und widerrufen lässt.</value>
   </data>
   <data name="App.AccessTokens.AllTitle" xml:space="preserve">
     <value>Alle Token</value>
@@ -152,7 +152,7 @@
     <value>Token erstellen</value>
   </data>
   <data name="App.AccessTokens.CreateDescription" xml:space="preserve">
-    <value>Ein persönliches Zugriffstoken handelt als Sie: Es übernimmt Ihre verifizierte E-Mail-Adresse und die Rollen, die Sie gerade haben. Eine Freigabe für Ihre E-Mail-Adresse gilt sofort, auch wenn sie erst später erteilt wird. Ändern sich Ihre Rollen beim Identity Provider, gilt das nur für neu erstellte Token - ein bestehendes behält die alten Rollen, bis es abläuft oder Sie es widerrufen.</value>
+    <value>Das Token handelt als Sie, mit Ihrer E-Mail-Adresse und Ihren aktuellen Rollen. Ändern sich Ihre Rollen später, erstellen Sie ein neues Token, um sie zu übernehmen.</value>
   </data>
   <data name="App.AccessTokens.CreateTitle" xml:space="preserve">
     <value>Persönliches Zugriffstoken erstellen</value>
@@ -161,28 +161,28 @@
     <value>Fehler beim Zugriffstoken</value>
   </data>
   <data name="App.AccessTokens.FeatureDisabledDescription" xml:space="preserve">
-    <value>Setzen Sie {0} auf true, damit Benutzer persönliche Zugriffstoken und Administratoren Service Accounts anlegen können. Bis dahin benötigt jeder API-Aufrufer ein Token vom Identity Provider.</value>
+    <value>Setzen Sie {0} auf true, um persönliche Zugriffstoken und Service Accounts zu aktivieren.</value>
   </data>
   <data name="App.AccessTokens.FeatureDisabledTitle" xml:space="preserve">
     <value>Zugriffstoken sind deaktiviert</value>
   </data>
   <data name="App.AccessTokens.IssuedDescription" xml:space="preserve">
-    <value>Das Token wird nur dieses eine Mal angezeigt. Gespeichert wird lediglich sein Hash - geht es verloren, müssen Sie ein neues erstellen.</value>
+    <value>Es wird nicht noch einmal angezeigt. Geht es verloren, erstellen Sie ein neues.</value>
   </data>
   <data name="App.AccessTokens.IssuedTitle" xml:space="preserve">
     <value>Kopieren Sie Ihr neues Token jetzt</value>
   </data>
   <data name="App.AccessTokens.LifetimeHelp" xml:space="preserve">
-    <value>Höchstens {0} Tage. Ein Token läuft immer ab - das begrenzt den Schaden, falls es abhandenkommt.</value>
+    <value>Höchstens {0} Tage.</value>
   </data>
   <data name="App.AccessTokens.LifetimeHelpUncapped" xml:space="preserve">
-    <value>Ein Token läuft immer ab - das begrenzt den Schaden, falls es abhandenkommt.</value>
+    <value>Jedes Token läuft ab, um den Schaden zu begrenzen, falls es abhandenkommt.</value>
   </data>
   <data name="App.AccessTokens.LifetimeLabel" xml:space="preserve">
     <value>Gültig für (Tage)</value>
   </data>
   <data name="App.AccessTokens.MineDescription" xml:space="preserve">
-    <value>Einem Token selbst lässt sich nichts freigeben: Ein persönliches Token erreicht, was Ihrer E-Mail-Adresse oder einer der Rollen freigegeben ist, die Sie beim Erstellen hatten. Bei jedem Token steht, was es gerade erreicht.</value>
+    <value>Ein Token hat den Zugriff, der Ihrer E-Mail-Adresse oder den Rollen gewährt ist, die Sie beim Erstellen hatten.</value>
   </data>
   <data name="App.AccessTokens.MineTitle" xml:space="preserve">
     <value>Meine Token</value>
@@ -224,7 +224,7 @@
     <value>Service Account</value>
   </data>
   <data name="App.AccessTokens.UsageDescription" xml:space="preserve">
-    <value>Senden Sie es im Authorization-Header, genau wie ein Token vom Identity Provider. Setzen Sie VFPS_NAMESPACE auf einen Namespace, in den Sie schreiben dürfen.</value>
+    <value>Senden Sie es im Authorization-Header. Setzen Sie VFPS_NAMESPACE auf einen Namespace, in den Sie schreiben dürfen.</value>
   </data>
   <data name="App.AccessTokens.UsageDocsLink" xml:space="preserve">
     <value>Mehr zu Zugriffstoken in der Dokumentation</value>
@@ -233,10 +233,10 @@
     <value>Die gRPC-API in der Dokumentation</value>
   </data>
   <data name="App.AccessTokens.UsageGrpcNote" xml:space="preserve">
-    <value>Der Server bietet gRPC Reflection an, daher braucht grpcurl keine .proto-Dateien. Unverschlüsseltes gRPC wird auf Port {0} angeboten.</value>
+    <value>grpcurl braucht keine .proto-Dateien: Der Server unterstützt gRPC Reflection. Unverschlüsseltes gRPC läuft auf Port {0}.</value>
   </data>
   <data name="App.AccessTokens.UsageHint" xml:space="preserve">
-    <value>Senden Sie es als {0} an die API, genau wie ein Token vom Identity Provider.</value>
+    <value>Senden Sie es als {0} an die API.</value>
   </data>
   <data name="App.AccessTokens.UsageTitle" xml:space="preserve">
     <value>Token verwenden</value>
@@ -248,7 +248,7 @@
     <value>Unbekannte Werte</value>
   </data>
   <data name="App.CsvJobs.PseudonymizeModeKeepIfMissingHint" xml:space="preserve">
-    <value>Werte, die der Namespace nicht kennt, bleiben als ursprüngliche, identifizierende Werte in der Ausgabe. Der Job zählt sie.</value>
+    <value>Unbekannte Werte bleiben als ursprüngliche, identifizierende Werte in der Ausgabe.</value>
   </data>
   <data name="App.CsvJobs.PseudonymizeModeKeepIfMissingOption" xml:space="preserve">
     <value>Originalwert beibehalten</value>
@@ -266,7 +266,7 @@
     <value>{0} Originalwert beibehalten</value>
   </data>
   <data name="App.CsvJobs.UnresolvedValueTitle" xml:space="preserve">
-    <value>Für diese Werte gab es im Namespace kein Pseudonym, und dieser Job sollte keines erzeugen. Sie bleiben daher als Originalwerte in der Ausgabe.</value>
+    <value>Für diese Werte gab es kein Pseudonym, und der Job sollte keines erzeugen. Sie blieben daher Originalwerte.</value>
   </data>
   <data name="App.Namespaces.ConfigureAccessAction" xml:space="preserve">
     <value>Zugriff konfigurieren</value>
@@ -275,16 +275,16 @@
     <value>Zugriff auf '{0}'</value>
   </data>
   <data name="App.Namespaces.ConfigureAccessDescription" xml:space="preserve">
-    <value>Welche Rollen, Benutzer und Service Accounts in diesem Namespace lesen, schreiben und Pseudonyme zurückauflösen dürfen. Ein persönliches Zugriffstoken hat keine eigenen Rechte - es bekommt, was seinem Besitzer hier gegeben wird. Die Seite Zugriffskontrolle verwaltet dieselben Freigaben über alle Namespaces hinweg.</value>
+    <value>Wer in diesem Namespace Pseudonyme lesen, schreiben und zurückauflösen darf. Persönliche Zugriffstoken erhalten den Zugriff ihres Besitzers.</value>
   </data>
   <data name="App.AccessControl.NoGrantsForNamespace" xml:space="preserve">
-    <value>Noch keine Berechtigungen - nur Administratoren erreichen diesen Namespace.</value>
+    <value>Noch keine Berechtigungen - nur Admins haben Zugriff auf diesen Namespace.</value>
   </data>
   <data name="App.AccessControl.GlobalGrantsTitle" xml:space="preserve">
-    <value>Gilt hier ebenfalls: Berechtigungen für alle Namespaces</value>
+    <value>Berechtigungen für alle Namespaces</value>
   </data>
   <data name="App.AccessControl.GlobalGrantsDescription" xml:space="preserve">
-    <value>Nur zur Orientierung aufgeführt: Sie gelten auch für diesen Namespace, gehören aber zu keinem einzelnen Namespace.</value>
+    <value>Diese gelten auch für diesen Namespace.</value>
   </data>
   <data name="App.AccessControl.AddGrantAction" xml:space="preserve">
     <value>Berechtigung hinzufügen</value>
@@ -329,13 +329,13 @@
     <value>Spaltenzuordnung hinzufügen</value>
   </data>
   <data name="App.CsvJobs.BadDataRowTitle" xml:space="preserve">
-    <value>Diese Zeilen enthielten fehlerhafte CSV-Daten (z. B. ein nicht maskiertes Anführungszeichen) - der betroffene Wert wurde unverändert übernommen, statt den Job fehlschlagen zu lassen.</value>
+    <value>Fehlerhaftes CSV, etwa ein nicht maskiertes Anführungszeichen. Die betroffenen Werte blieben unverändert.</value>
   </data>
   <data name="App.CsvJobs.ClearFinishedJobs" xml:space="preserve">
     <value>Abgeschlossene Jobs löschen</value>
   </data>
   <data name="App.CsvJobs.ClearFinishedJobsConfirmBody" xml:space="preserve">
-    <value>Dadurch werden alle unten angezeigten abgeschlossenen, fehlgeschlagenen und abgebrochenen Jobs dauerhaft aus der Liste und der Datenbank gelöscht - dies kann nicht rückgängig gemacht werden. Ihre Eingabe-/Ausgabedateien im Objektspeicher sind davon nicht betroffen und laufen nach ihrem eigenen Zeitplan ab.</value>
+    <value>Entfernt alle unten angezeigten abgeschlossenen, fehlgeschlagenen und abgebrochenen Jobs aus der Liste. Dies kann nicht rückgängig gemacht werden. Ihre Dateien werden nach der üblichen Aufbewahrungsfrist gelöscht.</value>
   </data>
   <data name="App.CsvJobs.ClearFinishedJobsConfirmTitle" xml:space="preserve">
     <value>Abgeschlossene Jobs löschen?</value>
@@ -344,13 +344,13 @@
     <value>Spaltenzuordnungen</value>
   </data>
   <data name="App.CsvJobs.ColumnMappingsHintDepseudonymize" xml:space="preserve">
-    <value>Jede Zeile ersetzt das Pseudonym einer Quellspalte durch seinen Originalwert im angegebenen Namespace - entweder direkt an Ort und Stelle oder in einer neu angehängten Spalte (lassen Sie "Zielspalte" leer, um direkt zu ersetzen). Ein Pseudonym ohne Treffer in diesem Namespace bleibt unverändert.</value>
+    <value>Jede Zeile wandelt die Pseudonyme einer Spalte in Originalwerte zurück. Lassen Sie die Zielspalte leer, um die Werte direkt zu ersetzen, oder geben Sie eine neue Spalte an. Nicht gefundene Pseudonyme bleiben unverändert.</value>
   </data>
   <data name="App.CsvJobs.ColumnMappingsHintPseudonymize" xml:space="preserve">
-    <value>Jede Zeile ersetzt den Wert einer Quellspalte durch sein Pseudonym im angegebenen Namespace - entweder direkt an Ort und Stelle oder in einer neu angehängten Spalte (lassen Sie "Zielspalte" leer, um direkt zu ersetzen).</value>
+    <value>Jede Zeile pseudonymisiert eine Spalte. Lassen Sie die Zielspalte leer, um die Werte direkt zu ersetzen, oder geben Sie eine neue Spalte an.</value>
   </data>
   <data name="App.CsvJobs.ColumnMappingsHintSuffix" xml:space="preserve">
-    <value>Wählen Sie oben eine CSV-Datei mit aktivierter Option "Datei hat eine Kopfzeile" aus, um Quellspalten anhand ihres Namens statt durch Eingabe auszuwählen.</value>
+    <value>Mit Kopfzeile lassen sich Spalten nach Namen auswählen.</value>
   </data>
   <data name="App.CsvJobs.ColumnNotInFile" xml:space="preserve">
     <value>{0} (nicht in dieser Datei)</value>
@@ -368,7 +368,7 @@
     <value>Trennzeichen</value>
   </data>
   <data name="App.CsvJobs.DepseudonymizeWarning" xml:space="preserve">
-    <value>Ersetzt Pseudonyme in der Datei durch die Originalwerte dahinter; die Ausgabe enthält also identifizierende Daten. Erfordert Reverse-Lookup-Zugriff auf jeden unten verwendeten Namespace.</value>
+    <value>Die Ausgabe enthält ursprüngliche, identifizierende Werte. Erfordert Reverse-Lookup-Zugriff auf jeden unten verwendeten Namespace.</value>
   </data>
   <data name="App.CsvJobs.Direction" xml:space="preserve">
     <value>Richtung</value>
@@ -410,7 +410,7 @@
     <value>Zeichenkodierung</value>
   </data>
   <data name="App.CsvJobs.ExportHint" xml:space="preserve">
-    <value>Schreibt jeden Originalwert des Namespace und sein Pseudonym in eine zweispaltige CSV-Datei, bereit für den Import in einen anderen Namespace oder eine andere Instanz.</value>
+    <value>Schreibt jeden Originalwert und sein Pseudonym in eine zweispaltige CSV-Datei, bereit für den Import an anderer Stelle.</value>
   </data>
   <data name="App.CsvJobs.ExportStarted" xml:space="preserve">
     <value>Namespace {0} wird exportiert.</value>
@@ -419,7 +419,7 @@
     <value>Zu exportierender Namespace</value>
   </data>
   <data name="App.CsvJobs.ExportWarning" xml:space="preserve">
-    <value>Die Ausgabe enthält identifizierende Daten: jeden Originalwert des Namespace. Erfordert Reverse-Lookup-Zugriff auf den Namespace.</value>
+    <value>Die Ausgabe enthält jeden Originalwert des Namespace. Erfordert Reverse-Lookup-Zugriff darauf.</value>
   </data>
   <data name="App.CsvJobs.File" xml:space="preserve">
     <value>Datei</value>
@@ -443,7 +443,7 @@
     <value>Kopfzeile</value>
   </data>
   <data name="App.CsvJobs.ImportHint" xml:space="preserve">
-    <value>Speichert die Paare aus der Datei unverändert, ohne Pseudonyme zu erzeugen. Zeilen, deren Originalwert oder Pseudonym bereits vergeben ist, werden in der herunterladbaren Ergebnisdatei gemeldet und im Namespace unverändert gelassen.</value>
+    <value>Speichert die Paare unverändert. Zeilen, deren Originalwert oder Pseudonym bereits vergeben ist, werden übersprungen und in der Ergebnisdatei aufgeführt.</value>
   </data>
   <data name="App.CsvJobs.ImportTitle" xml:space="preserve">
     <value>Ziel-Namespace für den Import</value>
@@ -467,22 +467,22 @@
     <value>{0} fehlender Wert</value>
   </data>
   <data name="App.CsvJobs.MissingValueTitle" xml:space="preserve">
-    <value>Diese Werte waren leer oder ein gängiger Platzhalter für fehlende Daten (NA/NULL) - sie wurden unverändert belassen, statt pseudonymisiert zu werden.</value>
+    <value>Leer oder ein Platzhalter für fehlende Daten wie NA oder NULL. Unverändert belassen.</value>
   </data>
   <data name="App.CsvJobs.NamespaceColumn" xml:space="preserve">
     <value>Namespace-Spalte</value>
   </data>
   <data name="App.CsvJobs.NamespaceColumnHint" xml:space="preserve">
-    <value>Ohne Namespace-Spalte werden alle Zeilen in den oben ausgewählten Namespace importiert.</value>
+    <value>Ist sie leer, gehen alle Zeilen in den oben ausgewählten Namespace.</value>
   </data>
   <data name="App.CsvJobs.NamespaceColumnPlaceholder" xml:space="preserve">
     <value>Optional</value>
   </data>
   <data name="App.CsvJobs.NamespaceColumnSetHint" xml:space="preserve">
-    <value>Jede Zeile wird in den in dieser Spalte genannten Namespace importiert, sodass eine Datei mehrere Namespaces befüllen kann. Zeilen, die einen nicht existierenden Namespace nennen oder die Spalte leer lassen, werden in der Ergebnisdatei gemeldet und übersprungen. Erfordert Schreibzugriff auf alle Namespaces.</value>
+    <value>Jede Zeile geht in den Namespace, der in dieser Spalte steht. Zeilen mit unbekanntem oder leerem Namespace werden übersprungen und in der Ergebnisdatei aufgeführt. Erfordert Schreibzugriff auf jeden Namespace.</value>
   </data>
   <data name="App.CsvJobs.NewJobDescription" xml:space="preserve">
-    <value>Wählen Sie eine hochzuladende CSV-Datei aus und legen Sie fest, wie ihre Spalten pseudonymisiert oder de-pseudonymisiert werden sollen. Die Ausgabe steht zum Download bereit, sobald der Job abgeschlossen ist.</value>
+    <value>Sobald der Job abgeschlossen ist, steht die Ausgabe zum Download bereit.</value>
   </data>
   <data name="App.CsvJobs.NewJobTitle" xml:space="preserve">
     <value>Neuer Job</value>
@@ -512,10 +512,10 @@
     <value>Zuordnung entfernen</value>
   </data>
   <data name="App.CsvJobs.RetentionNoticePlural" xml:space="preserve">
-    <value>Hochgeladene Dateien und ihre Ausgabe werden {0} Tage nach dem Upload automatisch gelöscht. Laden Sie benötigte Ausgaben vorher herunter.</value>
+    <value>Hochgeladene Dateien und ihre Ausgabe werden {0} Tage nach dem Upload gelöscht. Laden Sie Benötigtes vorher herunter.</value>
   </data>
   <data name="App.CsvJobs.RetentionNoticeSingular" xml:space="preserve">
-    <value>Hochgeladene Dateien und ihre Ausgabe werden 1 Tag nach dem Upload automatisch gelöscht. Laden Sie benötigte Ausgaben vorher herunter.</value>
+    <value>Hochgeladene Dateien und ihre Ausgabe werden 1 Tag nach dem Upload gelöscht. Laden Sie Benötigtes vorher herunter.</value>
   </data>
   <data name="App.CsvJobs.RowsCount" xml:space="preserve">
     <value>{0} Zeilen</value>
@@ -527,7 +527,7 @@
     <value>Namespace auswählen</value>
   </data>
   <data name="App.CsvJobs.ShowJobDashboard" xml:space="preserve">
-    <value>Job-Dashboard</value>
+    <value>Im Job-Dashboard öffnen</value>
   </data>
   <data name="App.CsvJobs.SourceColumn" xml:space="preserve">
     <value>Quellspalte</value>
@@ -626,7 +626,7 @@
     <value>davon {0} bald ablaufend</value>
   </data>
   <data name="App.Home.NamespacesDescription" xml:space="preserve">
-    <value>Die 5 größten Namespaces auf die Sie Zugriff haben.</value>
+    <value>Ihre 5 größten Namespaces, nach Anzahl der Pseudonyme.</value>
   </data>
   <data name="App.Home.NoJobsTitle" xml:space="preserve">
     <value>Noch keine CSV-Jobs</value>
@@ -662,7 +662,7 @@
     <value>E-Mail</value>
   </data>
   <data name="App.MainLayout.ErrorDescription" xml:space="preserve">
-    <value>Beim Anzeigen dieser Seite ist ein Fehler aufgetreten. Der Fehler wurde protokolliert. Laden Sie die Seite neu, um fortzufahren.</value>
+    <value>Beim Anzeigen dieser Seite ist ein Fehler aufgetreten. Laden Sie sie neu, um fortzufahren.</value>
   </data>
   <data name="App.MainLayout.ErrorReload" xml:space="preserve">
     <value>Seite neu laden</value>
@@ -701,13 +701,13 @@
     <value>Keiner (oberste Ebene)</value>
   </data>
   <data name="App.Namespaces.ParentHelp" xml:space="preserve">
-    <value>Macht diesen Namespace zu einem untergeordneten, dessen Originalwerte Pseudonyme des übergeordneten Namespace sind. Nach der Erstellung nicht mehr änderbar.</value>
+    <value>Seine Originalwerte sind Pseudonyme aus dem übergeordneten Namespace. Später nicht änderbar.</value>
   </data>
   <data name="App.Namespaces.EnsureParentPseudonymExists" xml:space="preserve">
     <value>Originalwerte müssen im übergeordneten Namespace vorhanden sein</value>
   </data>
   <data name="App.Namespaces.EnsureParentPseudonymExistsHelp" xml:space="preserve">
-    <value>Lehnt die Pseudonym-Erstellung ab, sofern der Originalwert nicht bereits ein Pseudonym im übergeordneten Namespace ist.</value>
+    <value>Akzeptiert nur Originalwerte, die im übergeordneten Namespace bereits als Pseudonym existieren.</value>
   </data>
   <data name="App.Namespaces.ValidatedBadge" xml:space="preserve">
     <value>(validiert)</value>
@@ -734,7 +734,7 @@
     <value>Kein Namespace passt zu Ihrer Suche.</value>
   </data>
   <data name="App.Namespaces.HierarchyDescription" xml:space="preserve">
-    <value>Alle Namespaces, die Sie lesen dürfen, nach übergeordnetem Namespace gegliedert. Für alle Details auswählen.</value>
+    <value>Alle Namespaces, die Sie lesen dürfen, unter ihrem übergeordneten Namespace.</value>
   </data>
   <data name="App.Namespaces.AllowsMultiplePseudonymsColumn" xml:space="preserve">
     <value>Mehrere Pseudonyme</value>
@@ -746,7 +746,7 @@
     <value>Pseudonyme werden gezählt…</value>
   </data>
   <data name="App.Namespaces.CreateDescription" xml:space="preserve">
-    <value>Bis auf die Beschreibung und den regulären Ausdruck zur Validierung lässt sich ein Namespace nach dem Erstellen nicht mehr ändern - stattdessen löschen und neu erstellen.</value>
+    <value>Nur die Beschreibung und der reguläre Ausdruck zur Validierung lassen sich später ändern.</value>
   </data>
   <data name="App.Namespaces.CreateErrorTitle" xml:space="preserve">
     <value>Namespace konnte nicht erstellt werden</value>
@@ -794,7 +794,7 @@
     <value>Regex zur Validierung der Originalwerte</value>
   </data>
   <data name="App.Namespaces.ValidationRegexHelp" xml:space="preserve">
-    <value>Optional. Wenn gesetzt, muss ein Originalwert diesem regulären Ausdruck entsprechen, bevor ein Pseudonym dafür erzeugt wird.</value>
+    <value>Optional. Originalwerte müssen diesem regulären Ausdruck entsprechen.</value>
   </data>
   <data name="App.Namespaces.ValidationRegexSampleAccepted" xml:space="preserve">
     <value>Würde akzeptiert</value>
@@ -806,7 +806,7 @@
     <value>Würde abgelehnt</value>
   </data>
   <data name="App.Namespaces.ValidationRegexTimeout" xml:space="preserve">
-    <value>Die Auswertung dieses Ausdrucks für diesen Wert hat zu lange gedauert. Er würde bei der Pseudonymerzeugung genauso in einen Timeout laufen - bitte vereinfachen, bevor er verwendet wird.</value>
+    <value>Die Auswertung dieses Ausdrucks dauert zu lange und würde die Pseudonymerzeugung scheitern lassen. Bitte vereinfachen.</value>
   </data>
   <data name="App.Namespaces.ValidationRegexValid" xml:space="preserve">
     <value>Gültiger Ausdruck</value>
@@ -860,7 +860,7 @@
     <value>In einen untergeordneten Namespace pseudonymisieren</value>
   </data>
   <data name="App.Pseudonyms.ChainDescription" xml:space="preserve">
-    <value>Erzeugt ein Pseudonym der nächsthöheren Stufe in einem untergeordneten Namespace und verwendet dieses Pseudonym aus '{0}' als Originalwert.</value>
+    <value>Verwendet dieses Pseudonym aus '{0}' als Originalwert in einem untergeordneten Namespace.</value>
   </data>
   <data name="App.Pseudonyms.ChainOriginalValue" xml:space="preserve">
     <value>Originalwert</value>
@@ -911,7 +911,7 @@
     <value>Reverse-Lookup</value>
   </data>
   <data name="App.Pseudonyms.SearchErrorDescription" xml:space="preserve">
-    <value>Die Pseudonyme konnten nicht geladen werden. Der Fehler wurde protokolliert. Versuchen Sie es erneut oder schränken Sie die Suche ein, falls der Fehler weiterhin auftritt.</value>
+    <value>Die Pseudonyme konnten nicht geladen werden. Versuchen Sie es erneut oder schränken Sie die Suche ein.</value>
   </data>
   <data name="App.Pseudonyms.SearchErrorTitle" xml:space="preserve">
     <value>Suche fehlgeschlagen</value>
@@ -929,7 +929,7 @@
     <value>Service Account erstellen</value>
   </data>
   <data name="App.ServiceAccounts.CreateDescription" xml:space="preserve">
-    <value>Ein Service Account ist ein eigenständiger Client, der zu keiner Person gehören. Erteilen Sie ihm auf der Seite Namespaces Zugriff pro Namespace und stellen Sie ihm anschließend unten ein Token aus.</value>
+    <value>Für einen Dienst oder eine Pipeline statt einer Person. Geben Sie ihm danach auf der Seite Namespaces Zugriff und stellen Sie ihm ein Token aus.</value>
   </data>
   <data name="App.ServiceAccounts.CreateTitle" xml:space="preserve">
     <value>Service Account erstellen</value>
@@ -953,7 +953,7 @@
     <value>Token ausstellen</value>
   </data>
   <data name="App.ServiceAccounts.NameHelp" xml:space="preserve">
-    <value>2-64 Zeichen aus Kleinbuchstaben, Ziffern und Bindestrichen. Später nicht mehr änderbar - die Berechtigungen verweisen namentlich darauf.</value>
+    <value>2-64 Kleinbuchstaben, Ziffern und Bindestriche. Später nicht änderbar.</value>
   </data>
   <data name="App.ServiceAccounts.NameLabel" xml:space="preserve">
     <value>Name</value>
@@ -965,7 +965,7 @@
     <value>Keine Beschreibung.</value>
   </data>
   <data name="App.ServiceAccounts.NoGrants" xml:space="preserve">
-    <value>Noch kein Zugriff erteilt. Verwenden Sie auf der Seite Namespaces die Aktion Zugriff konfigurieren und wählen Sie dieses Konto als Berechtigten aus.</value>
+    <value>Noch kein Zugriff. Erteilen Sie ihn unter Namespaces → Zugriff konfigurieren.</value>
   </data>
   <data name="App.ServiceAccounts.TokensTitle" xml:space="preserve">
     <value>Token</value>
@@ -980,7 +980,7 @@
     <value>'{0}' bearbeiten</value>
   </data>
   <data name="App.Namespaces.EditDescription" xml:space="preserve">
-    <value>Nach dem Erstellen lassen sich nur noch die Beschreibung und der reguläre Ausdruck zur Validierung der Originalwerte ändern. Ein leeres Feld entfernt den Wert. Ein geänderter Ausdruck gilt nur für Originalwerte, die neu in den Namespace kommen: Werte, die bereits ein Pseudonym haben, lassen sich weiterhin auflösen.</value>
+    <value>Ein leeres Feld entfernt den Wert. Ein geänderter Ausdruck gilt nur für neue Originalwerte; vorhandene Pseudonyme bleiben erhalten.</value>
   </data>
   <data name="App.Namespaces.EditErrorTitle" xml:space="preserve">
     <value>Namespace konnte nicht aktualisiert werden</value>
@@ -995,7 +995,7 @@
     <value>Projekte</value>
   </data>
   <data name="App.Namespaces.ProjectsHelp" xml:space="preserve">
-    <value>Die Projekte, zu denen dieser Namespace gehört. Projekte gruppieren Namespaces nur – sie gewähren keinen Zugriff.</value>
+    <value>Projekte gruppieren Namespaces nur. Sie gewähren keinen Zugriff.</value>
   </data>
   <data name="App.Namespaces.ProjectsErrorTitle" xml:space="preserve">
     <value>Der Namespace konnte seinen Projekten nicht hinzugefügt werden</value>
@@ -1022,7 +1022,7 @@
     <value>Die Verbindung zum Server wurde unterbrochen. Verbindung wird wiederhergestellt ...</value>
   </data>
   <data name="App.Projects.Description" xml:space="preserve">
-    <value>Projekte fassen Namespaces zusammen, die zusammengehören, zum Beispiel die Namespaces für Patienten-ID und Fall-ID einer Studie. Ein Namespace kann zu mehreren Projekten gehören. Die Gruppierung ändert nichts daran, wer worauf zugreifen darf – das wird weiterhin pro Namespace vergeben.</value>
+    <value>Fassen Sie zusammengehörige Namespaces zusammen, etwa die Namespaces für Patienten- und Fall-ID einer Studie. Projekte gewähren keinen Zugriff.</value>
   </data>
   <data name="App.Projects.PickerEmpty" xml:space="preserve">
     <value>Es gibt noch keine Projekte.</value>
@@ -1037,7 +1037,7 @@
     <value>Projekt {0} bearbeiten</value>
   </data>
   <data name="App.Projects.EditDescription" xml:space="preserve">
-    <value>Nur die Beschreibung kann geändert werden – der Name identifiziert das Projekt.</value>
+    <value>Nur die Beschreibung kann geändert werden.</value>
   </data>
   <data name="App.Projects.ErrorTitle" xml:space="preserve">
     <value>Das Projekt konnte nicht gespeichert werden</value>
@@ -1046,7 +1046,7 @@
     <value>Projekt {0} löschen?</value>
   </data>
   <data name="App.Projects.DeleteConfirmBody" xml:space="preserve">
-    <value>Die Namespaces in diesem Projekt und deren Pseudonyme sind nicht betroffen – sie gehören lediglich nicht mehr dazu.</value>
+    <value>Seine Namespaces und deren Pseudonyme bleiben erhalten.</value>
   </data>
   <data name="App.Projects.ManageAction" xml:space="preserve">
     <value>Namespaces</value>
@@ -1091,49 +1091,49 @@
     <value>'{0}' widerrufen?</value>
   </data>
   <data name="App.AccessTokens.RevokeConfirmBody" xml:space="preserve">
-    <value>Alles, was es noch verwendet, verliert den Zugriff - auf diesem Replikat sofort, überall sonst innerhalb der Grant-Cache-Dauer. Zuletzt verwendet: {0}. Ein widerrufenes Token lässt sich nicht wiederherstellen; stellen Sie stattdessen ein neues aus.</value>
+    <value>Alles, was es noch verwendet, verliert den Zugriff. Zuletzt verwendet: {0}. Ein widerrufenes Token lässt sich nicht wiederherstellen.</value>
   </data>
   <data name="App.AccessTokens.DeleteConfirmTitle" xml:space="preserve">
     <value>'{0}' löschen?</value>
   </data>
   <data name="App.AccessTokens.DeleteConfirmBody" xml:space="preserve">
-    <value>Das Token funktioniert nicht mehr, und sein Eintrag samt der letzten Verwendung wird endgültig entfernt. Zuletzt verwendet: {0}.</value>
+    <value>Das Token funktioniert nicht mehr und sein Eintrag wird entfernt. Zuletzt verwendet: {0}.</value>
   </data>
   <data name="App.AccessTokens.ServiceAccountHintAdmin" xml:space="preserve">
-    <value>Sie richten einen Dienst oder eine Pipeline ein, etwa einen Pseudonymizer? Nehmen Sie dafür besser einen {0}: Er hat eigene Rechte und funktioniert weiter, wenn Personen ausscheiden.</value>
+    <value>Sie richten einen Dienst oder eine Pipeline ein? Nehmen Sie besser einen {0}: Er funktioniert weiter, wenn Personen ausscheiden.</value>
   </data>
   <data name="App.AccessTokens.ServiceAccountHint" xml:space="preserve">
-    <value>Sie richten einen Dienst oder eine Pipeline ein, etwa einen Pseudonymizer? Bitten Sie dafür besser einen Admin um einen Service Account: Er hat eigene Rechte und funktioniert weiter, wenn Personen ausscheiden.</value>
+    <value>Sie richten einen Dienst oder eine Pipeline ein? Bitten Sie besser einen Admin um einen Service Account: Er funktioniert weiter, wenn Personen ausscheiden.</value>
   </data>
   <data name="App.AccessTokens.ServiceAccountLink" xml:space="preserve">
     <value>Service Account</value>
   </data>
   <data name="App.AccessTokens.AdminTokenWarning" xml:space="preserve">
-    <value>Sie haben eine Admin-Rolle, daher bekommt dieses Token Vollzugriff: alle Namespaces und zusätzlich Admin-Operationen der API wie das Anlegen und Löschen von Namespaces. Für eingeschränkten Zugriff verwenden Sie einen Service Account.</value>
+    <value>Sie sind Admin, daher bekommt dieses Token Vollzugriff, einschließlich Admin-Operationen wie dem Löschen von Namespaces. Für eingeschränkten Zugriff verwenden Sie einen Service Account.</value>
   </data>
-  <data name="App.AccessTokens.ReachLabel" xml:space="preserve">
-    <value>Erreicht</value>
+  <data name="App.AccessTokens.AccessLabel" xml:space="preserve">
+    <value>Zugriff</value>
   </data>
-  <data name="App.AccessTokens.ReachFull" xml:space="preserve">
-    <value>alle Namespaces, mit Admin-Rechten</value>
+  <data name="App.AccessTokens.AccessFull" xml:space="preserve">
+    <value>alle Namespaces, mit Admin-Berechtigungen</value>
   </data>
-  <data name="App.AccessTokens.ReachAllNamespaces" xml:space="preserve">
+  <data name="App.AccessTokens.AccessAllNamespaces" xml:space="preserve">
     <value>alle Namespaces</value>
   </data>
-  <data name="App.AccessTokens.ReachNone" xml:space="preserve">
-    <value>noch keinen Namespace</value>
+  <data name="App.AccessTokens.AccessNone" xml:space="preserve">
+    <value>noch keiner</value>
   </data>
-  <data name="App.AccessTokens.ReachNoneHint" xml:space="preserve">
-    <value>Bitten Sie einen Admin, Ihrer E-Mail-Adresse oder einer Ihrer Rollen unter Namespaces → Zugriff konfigurieren Zugriff zu geben.</value>
+  <data name="App.AccessTokens.AccessNoneHint" xml:space="preserve">
+    <value>Bitten Sie einen Admin, Ihrer E-Mail-Adresse oder einer Ihrer Rollen Zugriff zu geben.</value>
   </data>
   <data name="App.ServiceAccounts.DeleteConfirmBody" xml:space="preserve">
-    <value>Seine Berechtigungen und alle dafür ausgestellten Token werden mitgelöscht; alles, was sich damit anmeldet, funktioniert danach nicht mehr.</value>
+    <value>Seine Berechtigungen und Token werden mitgelöscht; alles, was sie verwendet, funktioniert danach nicht mehr.</value>
   </data>
   <data name="App.AccessControl.DeleteGrantConfirm" xml:space="preserve">
     <value>Diese Berechtigung löschen? {0} verliert {1} für diesen Namespace.</value>
   </data>
   <data name="App.AccessControl.ReverseLookupWarning" xml:space="preserve">
-    <value>Reverse-Lookup erlaubt es, Pseudonyme in diesem Namespace wieder in die ursprünglichen, identifizierenden Werte zurückzuverwandeln - einzeln in der Oberfläche oder in großen Mengen über De-Pseudonymisierungsjobs und die API.</value>
+    <value>Reverse-Lookup erlaubt es, Pseudonyme in diesem Namespace wieder in die ursprünglichen, identifizierenden Werte umzuwandeln, einzeln oder in großen Mengen.</value>
   </data>
   <data name="App.AccessControl.ReverseLookupConfirmAction" xml:space="preserve">
     <value>Reverse-Lookup erlauben</value>
@@ -1181,7 +1181,7 @@
     <value>Ersetzt Originalwerte in der Datei durch ihre Pseudonyme.</value>
   </data>
   <data name="App.CsvJobs.DirectionHintImport" xml:space="preserve">
-    <value>Lädt bereits vorhandene Paare aus Originalwert und Pseudonym in einen Namespace, statt neue Pseudonyme zu erzeugen.</value>
+    <value>Lädt vorhandene Paare aus Originalwert und Pseudonym in einen Namespace.</value>
   </data>
   <data name="App.CsvJobs.NamespaceLabel" xml:space="preserve">
     <value>Namespace</value>
@@ -1199,7 +1199,7 @@
     <value>Noch keine Pseudonyme</value>
   </data>
   <data name="App.Pseudonyms.EmptyDescription" xml:space="preserve">
-    <value>Erstellen Sie hier eines oder pseudonymisieren Sie eine ganze CSV-Datei auf der Seite CSV-Verarbeitung.</value>
+    <value>Erstellen Sie hier eines oder pseudonymisieren Sie eine ganze CSV-Datei auf der Seite CSV-Jobs.</value>
   </data>
   <data name="App.Pseudonyms.NoMatchesTitle" xml:space="preserve">
     <value>Nichts passt zu '{0}'</value>
@@ -1211,7 +1211,7 @@
     <value>Ein Wert, den der Namespace noch nicht kennt, erhält ein neues Pseudonym.</value>
   </data>
   <data name="App.CsvJobs.PseudonymizeModeFailIfMissingHint" xml:space="preserve">
-    <value>Der Job stoppt beim ersten Wert, den der Namespace nicht kennt, und meldet dessen Position. Es entsteht keine Ausgabedatei.</value>
+    <value>Der Job stoppt beim ersten unbekannten Wert und erzeugt keine Ausgabe.</value>
   </data>
   <data name="App.MainLayout.SkipToContent" xml:space="preserve">
     <value>Zum Inhalt springen</value>
@@ -1227,5 +1227,8 @@
   </data>
   <data name="App.Common.Yes" xml:space="preserve">
     <value>Ja</value>
+  </data>
+  <data name="App.Common.MoreAbout" xml:space="preserve">
+    <value>Mehr zu {0}</value>
   </data>
 </root>

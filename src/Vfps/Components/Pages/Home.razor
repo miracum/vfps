@@ -453,7 +453,7 @@
         kind switch
         {
             AttentionKind.PersonalTokenExpiring => "/ui/access-tokens",
-            AttentionKind.ServiceAccountTokenExpiring => "/ui/service-accounts",
+            AttentionKind.ServiceAccountTokenExpiring => AccessTokens.ServiceAccountsHref,
             _ => "/ui/csv-jobs",
         };
 

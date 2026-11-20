@@ -106,10 +106,12 @@
 
         <BbCard>
             <BbCardHeader>
-                <SectionTitle>@Localizer["App.AccessControl.EffectiveAccessTitle"]</SectionTitle>
-                <BbCardDescription>
-                    @Localizer["App.AccessControl.EffectiveAccessDescription"]
-                </BbCardDescription>
+                <div class="bb:flex bb:items-center bb:gap-1">
+                    <SectionTitle>@Localizer["App.AccessControl.EffectiveAccessTitle"]</SectionTitle>
+                    <HelpTip Topic="@Localizer["App.AccessControl.EffectiveAccessTitle"]">
+                        @Localizer["App.AccessControl.EffectiveAccessDescription"]
+                    </HelpTip>
+                </div>
             </BbCardHeader>
             <BbCardContent>
                 @if (_namespaces.Count == 0)
