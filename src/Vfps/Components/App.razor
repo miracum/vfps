@@ -30,7 +30,9 @@
         // Applied before first paint to avoid a flash of the wrong theme.
         vfpsApplyTheme();
     </script>
-    <HeadOutlet />
+    @* Same render mode as Routes: each page's PageTitle is section content aimed at this outlet,
+       and sections cannot connect across a render-mode boundary. *@
+    <HeadOutlet @rendermode="InteractiveServer" />
 </head>
 <body>
     <Routes @rendermode="InteractiveServer" />

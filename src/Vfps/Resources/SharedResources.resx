@@ -62,7 +62,7 @@
     <value>Could not create the access grant</value>
   </data>
   <data name="App.AccessControl.AdminRolesDescription" xml:space="preserve">
-    <value>Full access to every namespace, including namespace create/delete. Set with {0} and not editable here - it is the bootstrap that lets somebody sign in and grant everyone else their access.</value>
+    <value>Full access to every namespace, including creating and deleting them. Configured with {0}, not here.</value>
   </data>
   <data name="App.AccessControl.AdminRolesTitle" xml:space="preserve">
     <value>Admin roles</value>
@@ -77,13 +77,13 @@
     <value>All namespaces</value>
   </data>
   <data name="App.AccessControl.DisabledDescription" xml:space="preserve">
-    <value>{0} is {1}, so every request has full read, write, and reverse-lookup access to every namespace regardless of role.</value>
+    <value>{0} is {1}, so everyone has full access to every namespace.</value>
   </data>
   <data name="App.AccessControl.DisabledTitle" xml:space="preserve">
     <value>Authorization is disabled</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessDescription" xml:space="preserve">
-    <value>Who can do what in each existing namespace - the union of the grants scoped to it and the grants that apply to all namespaces, the same resolution the access checks themselves use. Admins always have full access and are not listed here. This page is read-only: grants are managed one namespace at a time, under Configure access on the Namespaces page.</value>
+    <value>Who can do what in each namespace, counting grants for all namespaces too. Admins aren't listed. To change access, use Configure access on the Namespaces page.</value>
   </data>
   <data name="App.AccessControl.EffectiveAccessTitle" xml:space="preserve">
     <value>Effective access per namespace</value>
@@ -95,19 +95,19 @@
     <value>Grantee</value>
   </data>
   <data name="App.AccessControl.GranteeEmailHelp" xml:space="preserve">
-    <value>One person, by the email address they sign in with, regardless of which roles they hold. Only applies to users whose identity provider reports their email address as verified. Their personal access tokens get this access too.</value>
+    <value>One person, by the verified email address they sign in with. Their personal access tokens get this access too.</value>
   </data>
   <data name="App.AccessControl.GranteeEmailPlaceholder" xml:space="preserve">
     <value>e.g. user@example.org</value>
   </data>
   <data name="App.AccessControl.GranteeRoleHelp" xml:space="preserve">
-    <value>An OIDC role or group, exactly as your identity provider emits it. A personal access token only knows the roles its owner held when they created it.</value>
+    <value>A role or group, spelled exactly as your identity provider sends it. A personal access token keeps the roles its owner had when creating it.</value>
   </data>
   <data name="App.AccessControl.GranteeRolePlaceholder" xml:space="preserve">
     <value>e.g. vfps-ns-example-read</value>
   </data>
   <data name="App.AccessControl.GranteeServiceAccountHelp" xml:space="preserve">
-    <value>For a service or pipeline that belongs to no person. Applies to every token issued for this service account. A service account is never an admin - it holds exactly the access granted to it here.</value>
+    <value>For a service or pipeline rather than a person. Applies to all of the account's tokens.</value>
   </data>
   <data name="App.AccessControl.GranteeType" xml:space="preserve">
     <value>Grant to</value>
@@ -125,10 +125,10 @@
     <value>No namespaces exist yet.</value>
   </data>
   <data name="App.AccessControl.NoServiceAccounts" xml:space="preserve">
-    <value>No service accounts exist yet. Create one on the Service accounts page first.</value>
+    <value>No service accounts yet. Create one under Access tokens → Service accounts first.</value>
   </data>
   <data name="App.AccessTokens.AllDescription" xml:space="preserve">
-    <value>Every token in this deployment, personal and service-account alike. Shown to admins so a leaked credential can be found and revoked.</value>
+    <value>Every token in this deployment, so a leaked one can be found and revoked.</value>
   </data>
   <data name="App.AccessTokens.AllTitle" xml:space="preserve">
     <value>All tokens</value>
@@ -152,7 +152,7 @@
     <value>Create token</value>
   </data>
   <data name="App.AccessTokens.CreateDescription" xml:space="preserve">
-    <value>A personal access token acts as you: it takes your verified email address and the roles you hold right now. A grant to your email address applies to it at once, even one made later. If your roles change at the identity provider, only a newly created token picks that up - an existing one keeps the old roles until it expires or you revoke it.</value>
+    <value>The token acts as you, with your email address and the roles you hold now. If your roles change later, create a new token to pick them up.</value>
   </data>
   <data name="App.AccessTokens.CreateTitle" xml:space="preserve">
     <value>Create a personal access token</value>
@@ -161,28 +161,28 @@
     <value>Access token error</value>
   </data>
   <data name="App.AccessTokens.FeatureDisabledDescription" xml:space="preserve">
-    <value>Set {0} to true to let users create personal access tokens and admins create service accounts. Until then, every API caller needs a token from the identity provider.</value>
+    <value>Set {0} to true to enable personal access tokens and service accounts.</value>
   </data>
   <data name="App.AccessTokens.FeatureDisabledTitle" xml:space="preserve">
     <value>Access tokens are disabled</value>
   </data>
   <data name="App.AccessTokens.IssuedDescription" xml:space="preserve">
-    <value>This is the only time the token is shown. Only its hash is stored, so if you lose it you will have to create a new one.</value>
+    <value>It won't be shown again. If you lose it, create a new one.</value>
   </data>
   <data name="App.AccessTokens.IssuedTitle" xml:space="preserve">
     <value>Copy your new token now</value>
   </data>
   <data name="App.AccessTokens.LifetimeHelp" xml:space="preserve">
-    <value>At most {0} days. A token always expires - that is what limits the damage if it leaks.</value>
+    <value>At most {0} days.</value>
   </data>
   <data name="App.AccessTokens.LifetimeHelpUncapped" xml:space="preserve">
-    <value>A token always expires - that is what limits the damage if it leaks.</value>
+    <value>Every token expires, to limit the damage if it leaks.</value>
   </data>
   <data name="App.AccessTokens.LifetimeLabel" xml:space="preserve">
     <value>Valid for (days)</value>
   </data>
   <data name="App.AccessTokens.MineDescription" xml:space="preserve">
-    <value>Access isn't granted to a token itself: a personal token reaches what is granted to your email address or to one of the roles you held when you created it. Each token shows what it reaches right now.</value>
+    <value>A token has the access granted to your email address, or to the roles you had when you created it.</value>
   </data>
   <data name="App.AccessTokens.MineTitle" xml:space="preserve">
     <value>My tokens</value>
@@ -224,7 +224,7 @@
     <value>Service account</value>
   </data>
   <data name="App.AccessTokens.UsageDescription" xml:space="preserve">
-    <value>Send it in the Authorization header, exactly like a token from the identity provider. Set VFPS_NAMESPACE to a namespace you can write to.</value>
+    <value>Send it in the Authorization header. Set VFPS_NAMESPACE to a namespace you can write to.</value>
   </data>
   <data name="App.AccessTokens.UsageDocsLink" xml:space="preserve">
     <value>More on access tokens in the documentation</value>
@@ -233,10 +233,10 @@
     <value>The gRPC API in the documentation</value>
   </data>
   <data name="App.AccessTokens.UsageGrpcNote" xml:space="preserve">
-    <value>The server offers gRPC reflection, so grpcurl needs no .proto files. Plaintext gRPC is served on port {0}.</value>
+    <value>grpcurl needs no .proto files: the server supports gRPC reflection. Plaintext gRPC is on port {0}.</value>
   </data>
   <data name="App.AccessTokens.UsageHint" xml:space="preserve">
-    <value>Send it to the API as {0}, exactly like a token from the identity provider.</value>
+    <value>Send it to the API as {0}.</value>
   </data>
   <data name="App.AccessTokens.UsageTitle" xml:space="preserve">
     <value>Use a token</value>
@@ -248,7 +248,7 @@
     <value>Unknown values</value>
   </data>
   <data name="App.CsvJobs.PseudonymizeModeKeepIfMissingHint" xml:space="preserve">
-    <value>Values the namespace doesn't know stay in the output as original, identifying values. The job counts them.</value>
+    <value>Unknown values stay in the output as original, identifying values.</value>
   </data>
   <data name="App.CsvJobs.PseudonymizeModeKeepIfMissingOption" xml:space="preserve">
     <value>Keep the original value</value>
@@ -266,7 +266,7 @@
     <value>{0} original value kept</value>
   </data>
   <data name="App.CsvJobs.UnresolvedValueTitle" xml:space="preserve">
-    <value>These values had no pseudonym in their namespace and this job was set not to create one, so they stay in the output as original values.</value>
+    <value>These values had no pseudonym, and the job was set not to create one, so they stayed as original values.</value>
   </data>
   <data name="App.Namespaces.ConfigureAccessAction" xml:space="preserve">
     <value>Configure access</value>
@@ -275,16 +275,16 @@
     <value>Access to '{0}'</value>
   </data>
   <data name="App.Namespaces.ConfigureAccessDescription" xml:space="preserve">
-    <value>Which roles, users and service accounts may read, write and reverse-look-up pseudonyms in this namespace. A personal access token has no grants of its own - it gets whatever its owner is granted here. The Access Control page manages the same grants across every namespace at once.</value>
+    <value>Who may read, write and reverse-look-up pseudonyms in this namespace. Personal access tokens get their owner's access.</value>
   </data>
   <data name="App.AccessControl.NoGrantsForNamespace" xml:space="preserve">
-    <value>No grants yet - only admins can reach this namespace.</value>
+    <value>No grants yet - only admins can access this namespace.</value>
   </data>
   <data name="App.AccessControl.GlobalGrantsTitle" xml:space="preserve">
-    <value>Also applies here: grants covering every namespace</value>
+    <value>Grants for all namespaces</value>
   </data>
   <data name="App.AccessControl.GlobalGrantsDescription" xml:space="preserve">
-    <value>Listed for context only: they cover this namespace as well, but belong to no single namespace.</value>
+    <value>These apply to this namespace as well.</value>
   </data>
   <data name="App.AccessControl.AddGrantAction" xml:space="preserve">
     <value>Add grant</value>
@@ -329,13 +329,13 @@
     <value>Add column mapping</value>
   </data>
   <data name="App.CsvJobs.BadDataRowTitle" xml:space="preserve">
-    <value>These rows contained malformed CSV data (e.g. an unescaped quote) - the affected value was kept as-is rather than failing the job.</value>
+    <value>Malformed CSV, such as an unescaped quote. The affected values were left unchanged.</value>
   </data>
   <data name="App.CsvJobs.ClearFinishedJobs" xml:space="preserve">
     <value>Clear finished jobs</value>
   </data>
   <data name="App.CsvJobs.ClearFinishedJobsConfirmBody" xml:space="preserve">
-    <value>This permanently deletes every completed, failed, and cancelled job shown below from the list and the database - this cannot be undone. Their input/output files in object storage are unaffected and expire on their own schedule.</value>
+    <value>Removes every completed, failed and cancelled job below from the list. This can't be undone. Their files are deleted on the usual retention schedule.</value>
   </data>
   <data name="App.CsvJobs.ClearFinishedJobsConfirmTitle" xml:space="preserve">
     <value>Clear finished jobs?</value>
@@ -344,13 +344,13 @@
     <value>Column mappings</value>
   </data>
   <data name="App.CsvJobs.ColumnMappingsHintDepseudonymize" xml:space="preserve">
-    <value>Each row replaces a source column's pseudonym with its original value in the given namespace - either in place, or into a new appended column (leave "target column" empty to replace in place). A pseudonym with no match in that namespace is left unchanged.</value>
+    <value>Each row turns one column's pseudonyms back into original values. Leave the target column empty to replace values in place, or name a new column to add. Pseudonyms that aren't found stay unchanged.</value>
   </data>
   <data name="App.CsvJobs.ColumnMappingsHintPseudonymize" xml:space="preserve">
-    <value>Each row replaces a source column's value with its pseudonym in the given namespace - either in place, or into a new appended column (leave "target column" empty to replace in place).</value>
+    <value>Each row pseudonymizes one column. Leave the target column empty to replace values in place, or name a new column to add.</value>
   </data>
   <data name="App.CsvJobs.ColumnMappingsHintSuffix" xml:space="preserve">
-    <value>Pick a CSV file above with "File has a header row" checked to select source columns by name instead of typing them.</value>
+    <value>With a header row, you can pick columns by name.</value>
   </data>
   <data name="App.CsvJobs.ColumnNotInFile" xml:space="preserve">
     <value>{0} (not in this file)</value>
@@ -368,7 +368,7 @@
     <value>Delimiter</value>
   </data>
   <data name="App.CsvJobs.DepseudonymizeWarning" xml:space="preserve">
-    <value>Replaces pseudonyms in the file with the original values they stand for, so the output contains identifying data. Needs reverse-lookup access to every namespace used below.</value>
+    <value>The output will contain original, identifying values. Needs reverse-lookup access to every namespace used below.</value>
   </data>
   <data name="App.CsvJobs.Direction" xml:space="preserve">
     <value>Direction</value>
@@ -410,7 +410,7 @@
     <value>Encoding</value>
   </data>
   <data name="App.CsvJobs.ExportHint" xml:space="preserve">
-    <value>Writes every original value in the namespace and its pseudonym to a two-column CSV file, ready to be imported into another namespace or instance.</value>
+    <value>Writes every original value and its pseudonym to a two-column CSV file, ready to import elsewhere.</value>
   </data>
   <data name="App.CsvJobs.ExportStarted" xml:space="preserve">
     <value>Exporting namespace {0}.</value>
@@ -419,7 +419,7 @@
     <value>Namespace to export</value>
   </data>
   <data name="App.CsvJobs.ExportWarning" xml:space="preserve">
-    <value>The output contains identifying data: every original value in the namespace. Needs reverse-lookup access to the namespace.</value>
+    <value>The output contains every original value in the namespace. Needs reverse-lookup access to it.</value>
   </data>
   <data name="App.CsvJobs.File" xml:space="preserve">
     <value>File</value>
@@ -443,7 +443,7 @@
     <value>Header row</value>
   </data>
   <data name="App.CsvJobs.ImportHint" xml:space="preserve">
-    <value>Stores the pairs in the file as they are, without generating pseudonyms. Rows whose original value or pseudonym is already taken are reported in the downloadable result file and left untouched in the namespace.</value>
+    <value>Stores the pairs as they are. Rows whose original value or pseudonym is already taken are skipped and listed in the result file.</value>
   </data>
   <data name="App.CsvJobs.ImportTitle" xml:space="preserve">
     <value>Namespace to import into</value>
@@ -467,22 +467,22 @@
     <value>{0} missing value</value>
   </data>
   <data name="App.CsvJobs.MissingValueTitle" xml:space="preserve">
-    <value>These values were blank or a common missing-data placeholder (NA/NULL) - left as-is rather than pseudonymized.</value>
+    <value>Blank, or a missing-data placeholder such as NA or NULL. Left unchanged.</value>
   </data>
   <data name="App.CsvJobs.NamespaceColumn" xml:space="preserve">
     <value>Namespace column</value>
   </data>
   <data name="App.CsvJobs.NamespaceColumnHint" xml:space="preserve">
-    <value>Leave the namespace column empty to import every row into the single namespace selected above.</value>
+    <value>If empty, every row goes into the namespace selected above.</value>
   </data>
   <data name="App.CsvJobs.NamespaceColumnPlaceholder" xml:space="preserve">
     <value>Optional</value>
   </data>
   <data name="App.CsvJobs.NamespaceColumnSetHint" xml:space="preserve">
-    <value>Each row is imported into the namespace named in this column, so one file can populate several namespaces. Rows naming a namespace that does not exist, or leaving the column empty, are reported in the result file and skipped. Requires write access to every namespace.</value>
+    <value>Each row goes into the namespace named in this column. Rows with an unknown or empty namespace are skipped and listed in the result file. Needs write access to each namespace.</value>
   </data>
   <data name="App.CsvJobs.NewJobDescription" xml:space="preserve">
-    <value>Select a CSV file to upload, and specify how its columns should be pseudonymized or de-pseudonymized. The output will be available for download once the job completes.</value>
+    <value>Once the job completes, its output is ready to download.</value>
   </data>
   <data name="App.CsvJobs.NewJobTitle" xml:space="preserve">
     <value>New job</value>
@@ -512,10 +512,10 @@
     <value>Remove mapping</value>
   </data>
   <data name="App.CsvJobs.RetentionNoticePlural" xml:space="preserve">
-    <value>Uploaded files and their output are deleted automatically {0} days after upload. Download any output you need to keep before then.</value>
+    <value>Uploaded files and their output are deleted {0} days after upload. Download what you need before then.</value>
   </data>
   <data name="App.CsvJobs.RetentionNoticeSingular" xml:space="preserve">
-    <value>Uploaded files and their output are deleted automatically 1 day after upload. Download any output you need to keep before then.</value>
+    <value>Uploaded files and their output are deleted 1 day after upload. Download what you need before then.</value>
   </data>
   <data name="App.CsvJobs.RowsCount" xml:space="preserve">
     <value>{0} rows</value>
@@ -527,7 +527,7 @@
     <value>Select a namespace</value>
   </data>
   <data name="App.CsvJobs.ShowJobDashboard" xml:space="preserve">
-    <value>Job dashboard</value>
+    <value>Open in job dashboard</value>
   </data>
   <data name="App.CsvJobs.SourceColumn" xml:space="preserve">
     <value>Source column</value>
@@ -620,13 +620,13 @@
     <value>Needs your attention</value>
   </data>
   <data name="App.Home.CsvProcessingDescription" xml:space="preserve">
-    <value>Pseudonymize columns in a CSV file asynchronously.</value>
+    <value>Pseudonymize columns in a CSV file.</value>
   </data>
   <data name="App.Home.ExpiringTokensCaption" xml:space="preserve">
     <value>{0} expiring soon</value>
   </data>
   <data name="App.Home.NamespacesDescription" xml:space="preserve">
-    <value>The 5 largest namespaces you can access, by number of pseudonyms.</value>
+    <value>Your 5 largest namespaces, by number of pseudonyms.</value>
   </data>
   <data name="App.Home.NoJobsTitle" xml:space="preserve">
     <value>No CSV jobs yet</value>
@@ -662,7 +662,7 @@
     <value>Email</value>
   </data>
   <data name="App.MainLayout.ErrorDescription" xml:space="preserve">
-    <value>Something went wrong while displaying this page. The error has been logged. Reload the page to continue.</value>
+    <value>Something went wrong while displaying this page. Reload it to continue.</value>
   </data>
   <data name="App.MainLayout.ErrorReload" xml:space="preserve">
     <value>Reload page</value>
@@ -701,13 +701,13 @@
     <value>None (root namespace)</value>
   </data>
   <data name="App.Namespaces.ParentHelp" xml:space="preserve">
-    <value>Makes this a child namespace whose original values are pseudonyms of the parent. Cannot be changed after creation.</value>
+    <value>Its original values are pseudonyms from the parent namespace. Can't be changed later.</value>
   </data>
   <data name="App.Namespaces.EnsureParentPseudonymExists" xml:space="preserve">
     <value>Require original values to exist in the parent</value>
   </data>
   <data name="App.Namespaces.EnsureParentPseudonymExistsHelp" xml:space="preserve">
-    <value>Rejects pseudonym creation unless the original value is already a pseudonym in the parent namespace.</value>
+    <value>Only accepts original values that already exist as pseudonyms in the parent.</value>
   </data>
   <data name="App.Namespaces.ValidatedBadge" xml:space="preserve">
     <value>(validated)</value>
@@ -734,7 +734,7 @@
     <value>No namespace matches your search.</value>
   </data>
   <data name="App.Namespaces.HierarchyDescription" xml:space="preserve">
-    <value>Every namespace you can read, arranged under its parent. Select one to see its full details.</value>
+    <value>Every namespace you can read, nested under its parent.</value>
   </data>
   <data name="App.Namespaces.AllowsMultiplePseudonymsColumn" xml:space="preserve">
     <value>Multiple pseudonyms</value>
@@ -746,7 +746,7 @@
     <value>Counting pseudonyms…</value>
   </data>
   <data name="App.Namespaces.CreateDescription" xml:space="preserve">
-    <value>Apart from the description and the validation regex, a namespace cannot be changed once created - delete and re-create it instead.</value>
+    <value>Only the description and validation regex can be changed later.</value>
   </data>
   <data name="App.Namespaces.CreateErrorTitle" xml:space="preserve">
     <value>Could not create namespace</value>
@@ -794,7 +794,7 @@
     <value>Original value validation regex</value>
   </data>
   <data name="App.Namespaces.ValidationRegexHelp" xml:space="preserve">
-    <value>Optional. If set, an original value must match this regular expression before a pseudonym is generated for it.</value>
+    <value>Optional. Original values must match this regular expression.</value>
   </data>
   <data name="App.Namespaces.ValidationRegexSampleAccepted" xml:space="preserve">
     <value>Would be accepted</value>
@@ -806,7 +806,7 @@
     <value>Would be rejected</value>
   </data>
   <data name="App.Namespaces.ValidationRegexTimeout" xml:space="preserve">
-    <value>This pattern took too long to evaluate against that value. It would time out and fail pseudonym creation the same way - simplify it before using it.</value>
+    <value>This pattern takes too long to evaluate and would make pseudonym creation fail. Simplify it.</value>
   </data>
   <data name="App.Namespaces.ValidationRegexValid" xml:space="preserve">
     <value>Valid pattern</value>
@@ -860,7 +860,7 @@
     <value>Pseudonymize into a child namespace</value>
   </data>
   <data name="App.Pseudonyms.ChainDescription" xml:space="preserve">
-    <value>Creates a next-level pseudonym in a child namespace, using this pseudonym from '{0}' as the original value.</value>
+    <value>Uses this pseudonym from '{0}' as the original value in a child namespace.</value>
   </data>
   <data name="App.Pseudonyms.ChainOriginalValue" xml:space="preserve">
     <value>Original value</value>
@@ -911,7 +911,7 @@
     <value>Reverse lookup</value>
   </data>
   <data name="App.Pseudonyms.SearchErrorDescription" xml:space="preserve">
-    <value>The pseudonyms could not be loaded. The error has been logged. Try again, or narrow down the search if it keeps failing.</value>
+    <value>The pseudonyms could not be loaded. Try again, or narrow the search.</value>
   </data>
   <data name="App.Pseudonyms.SearchErrorTitle" xml:space="preserve">
     <value>Search failed</value>
@@ -929,7 +929,7 @@
     <value>Create service account</value>
   </data>
   <data name="App.ServiceAccounts.CreateDescription" xml:space="preserve">
-    <value>A service account is a principal of its own, for a client that belongs to no person. Grant it access per namespace on the Namespaces page, then issue it a token below.</value>
+    <value>For a service or pipeline rather than a person. Next, grant it access on the Namespaces page and issue it a token.</value>
   </data>
   <data name="App.ServiceAccounts.CreateTitle" xml:space="preserve">
     <value>Create a service account</value>
@@ -953,7 +953,7 @@
     <value>Issue token</value>
   </data>
   <data name="App.ServiceAccounts.NameHelp" xml:space="preserve">
-    <value>2-64 characters of lower-case letters, digits and hyphens. Cannot be changed later - the access grants name it by value.</value>
+    <value>2-64 lowercase letters, digits and hyphens. Can't be changed later.</value>
   </data>
   <data name="App.ServiceAccounts.NameLabel" xml:space="preserve">
     <value>Name</value>
@@ -965,7 +965,7 @@
     <value>No description.</value>
   </data>
   <data name="App.ServiceAccounts.NoGrants" xml:space="preserve">
-    <value>No access granted yet. Use Configure access on the Namespaces page and pick this account as the grantee.</value>
+    <value>No access yet. Grant it under Namespaces → Configure access.</value>
   </data>
   <data name="App.ServiceAccounts.TokensTitle" xml:space="preserve">
     <value>Tokens</value>
@@ -980,7 +980,7 @@
     <value>Edit '{0}'</value>
   </data>
   <data name="App.Namespaces.EditDescription" xml:space="preserve">
-    <value>Only the description and the original value validation regex can be changed after a namespace was created. Leave a field empty to remove it. A changed pattern only applies to original values new to the namespace: values that already have a pseudonym keep resolving to it.</value>
+    <value>Leave a field empty to remove it. A changed pattern only applies to new original values; existing pseudonyms are kept.</value>
   </data>
   <data name="App.Namespaces.EditErrorTitle" xml:space="preserve">
     <value>Could not update the namespace</value>
@@ -995,7 +995,7 @@
     <value>Projects</value>
   </data>
   <data name="App.Namespaces.ProjectsHelp" xml:space="preserve">
-    <value>The projects this namespace belongs to. Projects only group namespaces - they grant no access.</value>
+    <value>Projects only group namespaces. They don't grant access.</value>
   </data>
   <data name="App.Namespaces.ProjectsErrorTitle" xml:space="preserve">
     <value>The namespace could not be added to its projects</value>
@@ -1022,7 +1022,7 @@
     <value>The connection to the server was lost. Reconnecting...</value>
   </data>
   <data name="App.Projects.Description" xml:space="preserve">
-    <value>Projects group the namespaces that belong together, for example the patient ID and encounter ID namespaces of one study. A namespace can be part of several projects. Grouping does not change who can access what - that is still granted per namespace.</value>
+    <value>Group the namespaces that belong together, such as the patient and encounter ID namespaces of one study. Projects don't grant access.</value>
   </data>
   <data name="App.Projects.PickerEmpty" xml:space="preserve">
     <value>There are no projects yet.</value>
@@ -1037,7 +1037,7 @@
     <value>Edit project {0}</value>
   </data>
   <data name="App.Projects.EditDescription" xml:space="preserve">
-    <value>Only the description can be changed - the name identifies the project.</value>
+    <value>Only the description can be changed.</value>
   </data>
   <data name="App.Projects.ErrorTitle" xml:space="preserve">
     <value>The project could not be saved</value>
@@ -1046,7 +1046,7 @@
     <value>Delete project {0}?</value>
   </data>
   <data name="App.Projects.DeleteConfirmBody" xml:space="preserve">
-    <value>The namespaces in this project, and the pseudonyms in them, are not affected - they just stop being part of it.</value>
+    <value>Its namespaces and their pseudonyms are kept.</value>
   </data>
   <data name="App.Projects.ManageAction" xml:space="preserve">
     <value>Namespaces</value>
@@ -1091,49 +1091,49 @@
     <value>Revoke '{0}'?</value>
   </data>
   <data name="App.AccessTokens.RevokeConfirmBody" xml:space="preserve">
-    <value>Anything still using it loses access - at once on this replica, everywhere else within the grant cache duration. Last used: {0}. A revoked token can't be reinstated; issue a new one instead.</value>
+    <value>Anything still using it loses access. Last used: {0}. A revoked token can't be restored.</value>
   </data>
   <data name="App.AccessTokens.DeleteConfirmTitle" xml:space="preserve">
     <value>Delete '{0}'?</value>
   </data>
   <data name="App.AccessTokens.DeleteConfirmBody" xml:space="preserve">
-    <value>The token stops working, and its record, including when it was last used, is removed for good. Last used: {0}.</value>
+    <value>The token stops working and its record is removed. Last used: {0}.</value>
   </data>
   <data name="App.AccessTokens.ServiceAccountHintAdmin" xml:space="preserve">
-    <value>Setting up a service or pipeline, such as a pseudonymizer? Use a {0} instead: it holds access of its own and keeps working when people leave.</value>
+    <value>Setting up a service or pipeline? Use a {0} instead: it keeps working when people leave.</value>
   </data>
   <data name="App.AccessTokens.ServiceAccountHint" xml:space="preserve">
-    <value>Setting up a service or pipeline, such as a pseudonymizer? Ask an admin for a service account instead: it holds access of its own and keeps working when people leave.</value>
+    <value>Setting up a service or pipeline? Ask an admin for a service account instead: it keeps working when people leave.</value>
   </data>
   <data name="App.AccessTokens.ServiceAccountLink" xml:space="preserve">
     <value>service account</value>
   </data>
   <data name="App.AccessTokens.AdminTokenWarning" xml:space="preserve">
-    <value>You hold an admin role, so this token gets full access: every namespace, plus admin-only API operations such as creating and deleting namespaces. For anything narrower, use a service account.</value>
+    <value>You're an admin, so this token gets full access, including admin operations such as deleting namespaces. For narrower access, use a service account.</value>
   </data>
-  <data name="App.AccessTokens.ReachLabel" xml:space="preserve">
-    <value>Reaches</value>
+  <data name="App.AccessTokens.AccessLabel" xml:space="preserve">
+    <value>Access</value>
   </data>
-  <data name="App.AccessTokens.ReachFull" xml:space="preserve">
+  <data name="App.AccessTokens.AccessFull" xml:space="preserve">
     <value>every namespace, with admin rights</value>
   </data>
-  <data name="App.AccessTokens.ReachAllNamespaces" xml:space="preserve">
+  <data name="App.AccessTokens.AccessAllNamespaces" xml:space="preserve">
     <value>every namespace</value>
   </data>
-  <data name="App.AccessTokens.ReachNone" xml:space="preserve">
-    <value>no namespace yet</value>
+  <data name="App.AccessTokens.AccessNone" xml:space="preserve">
+    <value>none yet</value>
   </data>
-  <data name="App.AccessTokens.ReachNoneHint" xml:space="preserve">
-    <value>Ask an admin to grant access to your email address, or to one of your roles, under Namespaces → Configure access.</value>
+  <data name="App.AccessTokens.AccessNoneHint" xml:space="preserve">
+    <value>Ask an admin to grant access to your email address or one of your roles.</value>
   </data>
   <data name="App.ServiceAccounts.DeleteConfirmBody" xml:space="preserve">
-    <value>Its access grants and every token issued for it are deleted with it, so anything that authenticates as it stops working.</value>
+    <value>Its grants and tokens are deleted too, so anything using them stops working.</value>
   </data>
   <data name="App.AccessControl.DeleteGrantConfirm" xml:space="preserve">
     <value>Delete this grant? {0} loses {1} on this namespace.</value>
   </data>
   <data name="App.AccessControl.ReverseLookupWarning" xml:space="preserve">
-    <value>Reverse lookup lets the grantee turn pseudonyms in this namespace back into the original, identifying values - one at a time in the UI, or in bulk through de-pseudonymization jobs and the API.</value>
+    <value>Reverse lookup lets the grantee turn pseudonyms in this namespace back into original, identifying values, one at a time or in bulk.</value>
   </data>
   <data name="App.AccessControl.ReverseLookupConfirmAction" xml:space="preserve">
     <value>Allow reverse lookup</value>
@@ -1181,7 +1181,7 @@
     <value>Replaces original values in the file with their pseudonyms.</value>
   </data>
   <data name="App.CsvJobs.DirectionHintImport" xml:space="preserve">
-    <value>Loads pairs of original values and pseudonyms you already have into a namespace, instead of generating new pseudonyms.</value>
+    <value>Loads pairs of original values and pseudonyms you already have into a namespace.</value>
   </data>
   <data name="App.CsvJobs.NamespaceLabel" xml:space="preserve">
     <value>Namespace</value>
@@ -1199,7 +1199,7 @@
     <value>No pseudonyms yet</value>
   </data>
   <data name="App.Pseudonyms.EmptyDescription" xml:space="preserve">
-    <value>Create one here, or pseudonymize a whole CSV file on the CSV processing page.</value>
+    <value>Create one here, or pseudonymize a whole CSV file on the CSV jobs page.</value>
   </data>
   <data name="App.Pseudonyms.NoMatchesTitle" xml:space="preserve">
     <value>Nothing matches '{0}'</value>
@@ -1211,7 +1211,7 @@
     <value>A value the namespace doesn't know yet gets a new pseudonym.</value>
   </data>
   <data name="App.CsvJobs.PseudonymizeModeFailIfMissingHint" xml:space="preserve">
-    <value>The job stops at the first value the namespace doesn't know and reports where it is. No output file is produced.</value>
+    <value>The job stops at the first unknown value and produces no output.</value>
   </data>
   <data name="App.MainLayout.SkipToContent" xml:space="preserve">
     <value>Skip to content</value>
@@ -1227,5 +1227,8 @@
   </data>
   <data name="App.Common.Yes" xml:space="preserve">
     <value>Yes</value>
+  </data>
+  <data name="App.Common.MoreAbout" xml:space="preserve">
+    <value>More about {0}</value>
   </data>
 </root>

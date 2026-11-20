@@ -28,6 +28,22 @@ public class ApiCallExamplesTests
     }
 
     [Fact]
+    public void Examples_ForAServiceAccountToken_ShouldShowItsPrefix()
+    {
+        var curl = ApiCallExamples.Curl(
+            new Uri("http://localhost:8080/ui/"),
+            Vfps.Data.Models.AccessTokenType.ServiceAccount
+        );
+        var grpcurl = ApiCallExamples.Grpcurl(
+            "localhost:8081",
+            Vfps.Data.Models.AccessTokenType.ServiceAccount
+        );
+
+        curl.Should().StartWith("export VFPS_TOKEN=\"vfps_sat_...\"\n");
+        grpcurl.Should().StartWith("export VFPS_TOKEN=\"vfps_sat_...\"\n");
+    }
+
+    [Fact]
     public void Grpcurl_ShouldPutTheExportedNamespaceIntoADoubleQuotedRequestBody()
     {
         // Double quotes, not single: inside single quotes the shell wouldn't expand the variable

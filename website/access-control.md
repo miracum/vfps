@@ -81,14 +81,15 @@ moment - their subject, their verified email address and their roles - and every
 with it resolves against the same grants their browser session does. Nobody can grant themselves
 anything by creating one, which is why no admin role is needed to do it. Access is therefore never
 granted to a personal token itself: to give one access, grant it to its owner's email address or to
-one of their roles. The Access tokens page shows beneath each active token what it reaches right
-now.
+one of their roles. The Access tokens page shows beneath each active token what it can access
+right now.
 
 **Service accounts** are the other half, and are admin-only: they are principals of their own, for
-a client that belongs to no person. Create one on the **Service accounts** page, then grant it
-access exactly like a role or a user - _Configure access_ on the Namespaces page, with **Service
-account** as the grantee type - and issue it a token. Rotating that token is issuing a second one,
-rolling it out, and revoking the first; the grants belong to the account, so they never move.
+a client that belongs to no person. Create one on the **Service accounts** tab of the Access tokens
+page, then grant it access exactly like a role or a user - _Configure access_ on the Namespaces
+page, with **Service account** as the grantee type - and issue it a token. Rotating that token is
+issuing a second one, rolling it out, and revoking the first; the grants belong to the account, so
+they never move.
 
 Both kinds are presented the same way as an identity provider's token, so no client needs changing:
 
@@ -140,8 +141,8 @@ re-created under the same name doesn't silently inherit them.
 
 ### Noticing a token before it expires
 
-A token close to its expiry is marked **Expires soon** on the Access tokens and Service accounts
-pages, `Authorization__AccessTokens__ExpiryWarningPeriod` (14 days by default) ahead. That's enough
+A token close to its expiry is marked **Expires soon** on the Access tokens page, on every tab,
+`Authorization__AccessTokens__ExpiryWarningPeriod` (14 days by default) ahead. That's enough
 for a personal token, since its owner is the one using it. A service-account token usually sits in
 a pipeline that nobody watches, so it is also exported as a metric to alert on:
 

@@ -1,4 +1,6 @@
 using Microsoft.AspNetCore.Http;
+using Vfps.Authorization;
+using Vfps.Data.Models;
 
 namespace Vfps.Components;
 
@@ -17,8 +19,9 @@ public static class ApiCallExamples
     /// </summary>
     public const int DefaultGrpcPort = 8081;
 
-    private const string Exports = """
-        export VFPS_TOKEN="vfps_pat_..."
+    private static string Exports(AccessTokenType tokenType) =>
+        $$"""
+        export VFPS_TOKEN="{{AccessTokenSecret.PrefixFor(tokenType)}}..."
         export VFPS_NAMESPACE="..."
         """;
 
@@ -26,12 +29,13 @@ public static class ApiCallExamples
     /// Any URL on this deployment - only its scheme, host and port are used. The API is served
     /// from the root, not from under the UI's /ui path base.
     /// </param>
-    public static string Curl(Uri apiBaseUrl)
+    /// <param name="tokenType">Which kind of token the example shows, by its prefix.</param>
+    public static string Curl(Uri apiBaseUrl, AccessTokenType tokenType = AccessTokenType.Personal)
     {
         var origin = apiBaseUrl.GetLeftPart(UriPartial.Authority);
 
         return $$"""
-            {{Exports}}
+            {{Exports(tokenType)}}
 
             curl -X POST \
               -H "Authorization: Bearer $VFPS_TOKEN" \
@@ -42,12 +46,16 @@ public static class ApiCallExamples
     }
 
     /// <param name="grpcAddress">host:port of the plaintext gRPC endpoint.</param>
-    public static string Grpcurl(string grpcAddress) =>
+    /// <param name="tokenType">Which kind of token the example shows, by its prefix.</param>
+    public static string Grpcurl(
+        string grpcAddress,
+        AccessTokenType tokenType = AccessTokenType.Personal
+    ) =>
             // No -proto: the server offers reflection (see Program.cs), and grpcurl sends the -H
             // header with its reflection requests too, which take the same token as the call. The
             // request body is double-quoted so the shell expands $VFPS_NAMESPACE inside it.
             $$"""
-            {{Exports}}
+            {{Exports(tokenType)}}
 
             grpcurl -plaintext \
               -H "authorization: Bearer $VFPS_TOKEN" \

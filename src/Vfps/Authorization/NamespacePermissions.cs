@@ -106,7 +106,7 @@ public sealed class NamespacePermissions
     /// <summary>
     /// The namespaces some applicable grant names explicitly, in ordinal order - empty for
     /// <see cref="Unrestricted"/>, which names none. Together with the <c>...ToAllNamespaces</c>
-    /// flags this is the whole of what the caller can reach, which is what lets the Access tokens
+    /// flags this is the whole of what the caller can access, which is what lets the Access tokens
     /// page show it without walking every namespace in the deployment.
     /// </summary>
     public IReadOnlyList<string> ExplicitlyGrantedNamespaces =>

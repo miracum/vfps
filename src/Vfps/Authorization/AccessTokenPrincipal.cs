@@ -7,7 +7,7 @@ namespace Vfps.Authorization;
 /// The principal a vfps-issued access token authenticates as. One place for it because two
 /// callers have to agree on it exactly: <see cref="AccessTokenAuthenticationHandler"/>, which
 /// presents it on every request, and the Access tokens page, which resolves it against the grants
-/// to show what a token can reach. Were the two built separately, the page could show access the
+/// to show what a token can access. Were the two built separately, the page could show access the
 /// token doesn't actually have.
 /// </summary>
 public static class AccessTokenPrincipal

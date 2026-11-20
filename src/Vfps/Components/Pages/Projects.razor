@@ -43,6 +43,7 @@
             <div class="bb:flex bb:items-center bb:gap-2">
                 <LucideIcon aria-hidden="true" Name="folder" Size="24" Class="bb:shrink-0 bb:text-primary" />
                 <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Nav.Projects"]</h1>
+                <HelpTip Topic="@Localizer["App.Nav.Projects"]">@Localizer["App.Projects.Description"]</HelpTip>
             </div>
         }
         @if (_isAdmin && !IsSingleProject)
@@ -62,11 +63,6 @@
             </BbButton>
         }
     </div>
-
-    @if (!IsSingleProject)
-    {
-        <p class="bb:text-sm bb:text-muted-foreground">@Localizer["App.Projects.Description"]</p>
-    }
 
     @* A link to a project that is gone, or that the caller can't see. *@
     @if (_unavailableMessage is not null)

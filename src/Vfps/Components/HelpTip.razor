@@ -1,0 +1,31 @@
+@*
+    A help icon next to a heading that opens a short explanation on click. For background a
+    first-time reader needs but a regular one doesn't: what a section shows, how a concept works.
+    Anything that changes what the reader is about to decide stays visible instead.
+
+    A popover, not a tooltip: hover-only text is unreachable on touch screens, and a click-opened
+    popover is a real button with aria-expanded that Escape closes.
+*@
+@inject IStringLocalizer<SharedResources> Localizer
+
+<BbPopover>
+    <BbPopoverTrigger
+        AsChild="false"
+        class="bb:inline-flex bb:size-7 bb:shrink-0 bb:items-center bb:justify-center bb:rounded-full bb:text-muted-foreground bb:cursor-pointer bb:hover:bg-accent bb:hover:text-foreground"
+        aria-label="@Localizer["App.Common.MoreAbout", Topic]"
+    >
+        <LucideIcon aria-hidden="true" Name="circle-question-mark" Size="16" />
+    </BbPopoverTrigger>
+    <BbPopoverContent Align="PopoverAlign.Start" Class="bb:text-sm bb:text-muted-foreground">
+        @ChildContent
+    </BbPopoverContent>
+</BbPopover>
+
+@code {
+    /// <summary>What the explanation is about, usually the heading it sits next to.</summary>
+    [Parameter, EditorRequired]
+    public string Topic { get; set; } = "";
+
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+}

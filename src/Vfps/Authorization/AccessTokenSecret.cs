@@ -37,11 +37,15 @@ public static class AccessTokenSecret
     /// </summary>
     public readonly record struct GeneratedToken(string TokenId, byte[] Hash, string Presented);
 
+    /// <summary>What a token of <paramref name="tokenType"/> starts with.</summary>
+    public static string PrefixFor(AccessTokenType tokenType) =>
+        tokenType == AccessTokenType.Personal ? PersonalPrefix : ServiceAccountPrefix;
+
     public static GeneratedToken Generate(AccessTokenType tokenType)
     {
         var tokenId = RandomBase64Url(TokenIdBytes);
         var secret = RandomBase64Url(SecretBytes);
-        var prefix = tokenType == AccessTokenType.Personal ? PersonalPrefix : ServiceAccountPrefix;
+        var prefix = PrefixFor(tokenType);
 
         return new GeneratedToken(
             tokenId,
