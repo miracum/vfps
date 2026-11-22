@@ -696,14 +696,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../csv-jobs/" class="md-nav__link">
+      <a href="../batches/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  CSV jobs
+  CSV processing
 
     
   </span>
@@ -1375,7 +1375,7 @@ per original value, in which case the new one is appended), or the pseudonym val
 to a different original value. The error doesn't say which original value holds it. An original
 value that doesn't match the namespace's validation regex fails with <code>INVALID_ARGUMENT</code>, and one
 missing from a validating parent namespace with <code>FAILED_PRECONDITION</code>.</p>
-<p>To load many pairs at once, use a <a href="../csv-jobs/">CSV import job</a> instead.</p>
+<p>To load many pairs at once, use an <a href="../batches/#import-and-export">import batch</a> instead.</p>
 <h2 id="multiple-pseudonyms-per-original-value">Multiple pseudonyms per original value<a class="headerlink" href="#multiple-pseudonyms-per-original-value" title="Permanent link">&para;</a></h2>
 <p>A namespace created with <code>"allowsMultiplePseudonyms": true</code> lets a single <code>Create</code> call store more
 than one distinct pseudonym for the same original value, via the request's optional <code>count</code> field
@@ -1396,7 +1396,7 @@ than one distinct pseudonym for the same original value, via the request's optio
 first one, for callers that only read a single value). The stored set for a given original value
 only ever grows: calling <code>Create</code> again with a <code>count</code> at or below what's already stored returns
 the existing set unchanged, while a larger <code>count</code> adds exactly the missing pseudonyms, up to a
-maximum <code>count</code> of 10,000. CSV pseudonymization jobs and the <code>/v1/fhir</code> <code>$create-pseudonym</code>
+maximum <code>count</code> of 10,000. Batches and the <code>/v1/fhir</code> <code>$create-pseudonym</code>
 operation don't support requesting more than one pseudonym - both always operate on the first
 (<code>sequenceNumber: 0</code>) pseudonym for a multi-psn namespace. The
 <a href="../fhir/#operations">MII FHIR API</a> has <code>$pseudonymize-multiple</code> for multi-psn namespaces instead.</p>

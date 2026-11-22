@@ -12,7 +12,7 @@
         <meta name="author" content="The vfps developers">
       
       
-        <link rel="canonical" href="https://miracum.github.io/vfps/csv-jobs/">
+        <link rel="canonical" href="https://miracum.github.io/vfps/batches/">
       
       
       
@@ -30,7 +30,7 @@
     
     
       
-        <title>CSV jobs - vfps</title>
+        <title>CSV processing - vfps</title>
       
     
     
@@ -120,7 +120,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              CSV jobs
+              CSV processing
             
           </span>
         </div>
@@ -576,7 +576,7 @@
   <span class="md-ellipsis">
     
   
-  CSV jobs
+  CSV processing
 
     
   </span>
@@ -593,7 +593,7 @@
   <span class="md-ellipsis">
     
   
-  CSV jobs
+  CSV processing
 
     
   </span>
@@ -634,6 +634,17 @@
     <span class="md-ellipsis">
       <span class="md-typeset">
         Import and export
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#using-the-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Using the API
       </span>
     </span>
   </a>
@@ -1079,6 +1090,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#using-the-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      <span class="md-typeset">
+        Using the API
+      </span>
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
@@ -1177,7 +1199,7 @@
                   
 
   
-    <a href="https://github.com/miracum/vfps/edit/master/website/csv-jobs.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
+    <a href="https://github.com/miracum/vfps/edit/master/website/batches.md" title="Edit this page" class="md-content__button md-icon" rel="edit">
       
       <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" class="lucide lucide-file-pen" viewBox="0 0 24 24"><path d="M12.659 22H18a2 2 0 0 0 2-2V8a2.4 2.4 0 0 0-.706-1.706l-3.588-3.588A2.4 2.4 0 0 0 14 2H6a2 2 0 0 0-2 2v9.34"/><path d="M14 2v5a1 1 0 0 0 1 1h5M10.378 12.622a1 1 0 0 1 3 3.003L8.36 20.637a2 2 0 0 1-.854.506l-2.867.837a.5.5 0 0 1-.62-.62l.836-2.869a2 2 0 0 1 .506-.853z"/></svg>
     </a>
@@ -1185,44 +1207,51 @@
   
 
 
-<h1 id="csv-jobs">CSV jobs<a class="headerlink" href="#csv-jobs" title="Permanent link">&para;</a></h1>
-<p>Upload a CSV file to pseudonymize or de-pseudonymize one or more columns as a background job. Files are streamed directly to and from S3-compatible object storage.</p>
-<p><img alt="CSV pseudonymization jobs page" src="../img/ui/ui-jobs-light.png#only-light" />
-<img alt="CSV pseudonymization jobs page" src="../img/ui/ui-jobs-dark.png#only-dark" /></p>
-<p>CSV job input/output bytes never pass through the vfps process itself: the admin UI uploads directly to a presigned S3 PUT URL and downloads directly from a presigned S3 GET URL, and the Hangfire background job (running in-process, no separate worker deployment) streams the file S3-to-S3. See <code>compose.yaml</code>'s <code>s3</code> profile for a local SeaweedFS setup usable for manual testing.</p>
-<p>Each job runs in one of two directions: <strong>Pseudonymize</strong> (replace original values with their pseudonym - requires write access to every namespace used) or <strong>De-pseudonymize</strong> (replace pseudonym values with their original value - requires reverse-lookup access, since this reveals data). A pseudonym with no match in its namespace during de-pseudonymization is left unchanged in the output rather than failing the job.</p>
-<p>A file's delimiter must be a single ASCII character or a tab. A job with any other delimiter is
+<h1 id="csv-processing">CSV processing<a class="headerlink" href="#csv-processing" title="Permanent link">&para;</a></h1>
+<p>vfps processes whole CSV files in the background: it pseudonymizes or de-pseudonymizes one or more
+columns, or imports or exports a namespace. Each file processed this way is a <em>batch</em>. Start one on
+the admin UI's <em>CSV processing</em> page, or
+<a href="#using-the-api">through the API</a>. Files are streamed directly to and from S3-compatible object
+storage.</p>
+<p><img alt="CSV processing page" src="../img/ui/ui-jobs-light.png#only-light" />
+<img alt="CSV processing page" src="../img/ui/ui-jobs-dark.png#only-dark" /></p>
+<p>A batch's input and output bytes never pass through the vfps process itself: the admin UI, or an
+API client, uploads directly to a presigned S3 PUT URL and downloads directly from a presigned S3
+GET URL, and a Hangfire background job streams the file S3-to-S3. See <code>compose.yaml</code>'s <code>s3</code> profile
+for a local SeaweedFS setup usable for manual testing.</p>
+<p>A batch transforming a file runs in one of two directions: <strong>Pseudonymize</strong> (replace original values with their pseudonym - requires write access to every namespace used) or <strong>De-pseudonymize</strong> (replace pseudonym values with their original value - requires reverse-lookup access, since this reveals data). A pseudonym with no match in its namespace during de-pseudonymization is left unchanged in the output rather than failing the batch.</p>
+<p>A file's delimiter must be a single ASCII character or a tab. A batch with any other delimiter is
 refused when it's created.</p>
 <h2 id="unknown-values">Unknown values<a class="headerlink" href="#unknown-values" title="Permanent link">&para;</a></h2>
-<p>A <strong>pseudonymize</strong> job normally creates a pseudonym for any value the namespace doesn't know yet.
+<p>A <strong>pseudonymizing</strong> batch normally creates a pseudonym for any value the namespace doesn't know yet.
 Where that is wrong - a file that is supposed to contain only subjects already in a cohort, where a
 new pseudonym would silently record one that was never meant to be there - the <strong>unknown values</strong>
 setting changes what happens instead:</p>
 <ul>
-<li><strong>Fail the job</strong> stops at the first value the namespace doesn't know, before writing any part of
+<li><strong>Fail the batch</strong> stops at the first value the namespace doesn't know, before writing any part of
   the chunk it was found in, and reports the data row, column and namespace it stopped at. The
   value itself is never recorded in the error, only where it was.</li>
 <li><strong>Keep the original value</strong> leaves each unknown value in the output exactly as the input had it,
   counts them, and carries on - for a file where some rows simply have no counterpart yet, and
-  losing the value to a blank cell would be worse. The count is shown on the job, separately from
+  losing the value to a blank cell would be worse. The count is shown on the batch, separately from
   the "missing value" count: both leave the cell as the input had it and mean opposite things - "the
   input had nothing here" versus "the input had a value this namespace has never seen, and it is
   still there".</li>
 </ul>
 <div class="admonition warning">
 <p class="admonition-title">Warning</p>
-<p>The output of a job with <strong>Keep the original value</strong> is not fully pseudonymized: every value it
-counted is still the original, identifying value, in the very column the job was asked to
+<p>The output of a batch with <strong>Keep the original value</strong> is not fully pseudonymized: every value it
+counted is still the original, identifying value, in the very column the batch was asked to
 replace. De-pseudonymization also leaves a value it can't resolve in place, but there the field
-harmlessly stays a pseudonym. Treat the file accordingly, or use <strong>Fail the job</strong> where that
+harmlessly stays a pseudonym. Treat the file accordingly, or use <strong>Fail the batch</strong> where that
 isn't acceptable.</p>
 </div>
-<p>The setting applies to pseudonymize jobs only, and is rejected rather than ignored on any other
+<p>The setting applies to pseudonymizing batches only, and is rejected rather than ignored on any other
 direction - the other three either read pseudonyms or store pairs the caller already holds, so
 there is nothing for it to guard. The equivalent single-value API operation is
 <code>PseudonymService.Resolve</code>.</p>
 <h2 id="import-and-export">Import and export<a class="headerlink" href="#import-and-export" title="Permanent link">&para;</a></h2>
-<p>The same page also moves a whole namespace in and out as CSV, as two further job directions:</p>
+<p>The same page also moves a whole namespace in and out as CSV, as two further kinds of batch:</p>
 <ul>
 <li><strong>Import</strong> loads already-known pairs instead of generating pseudonyms for them - for migrating a
   mapping table that predates vfps, or moving namespaces between instances. The file needs an
@@ -1231,16 +1260,16 @@ there is nothing for it to guard. The equivalent single-value API operation is
   Requires <strong>write</strong> access to the namespace.</li>
 </ul>
 <p>Optionally a third, <strong>namespace column</strong> can be chosen. Each row is then imported into the
-  namespace named in that column, so a whole instance's export loads in one job rather than one per
+  namespace named in that column, so a whole instance's export loads in one batch rather than one per
   namespace; the single-namespace picker disappears, since there is no longer one to pick. Rows
   naming a namespace that doesn't exist - or leaving the column empty - are reported and skipped
-  rather than failing the job or landing somewhere unintended. This needs <strong>write access to every
+  rather than failing the batch or landing somewhere unintended. This needs <strong>write access to every
   namespace</strong> (an admin, or a grant made without a namespace): the namespaces a file names are only
   known once it is processed, long after the caller who submitted it is gone, so there is no
   narrower permission that can honestly be checked up front.</p>
 <p>Nothing is ever overwritten: an original value that already has a pseudonym keeps it, and a
   pseudonym already in use for a different original value is refused rather than left ambiguous to
-  reverse-lookup. Every row - accepted or not - comes back in the job's downloadable report as the
+  reverse-lookup. Every row - accepted or not - comes back in the batch's downloadable report as the
   input row plus a <code>status</code> column (<code>Imported</code>, <code>AlreadyPresent</code>, <code>OriginalValueConflict</code>,
   <code>PseudonymValueConflict</code>, <code>InvalidOriginalValue</code>, <code>ParentValueMissing</code>, <code>UnknownNamespace</code>, or
   <code>MissingValue</code> for a blank/placeholder cell), so re-running the same file is a clean no-op and a
@@ -1248,14 +1277,105 @@ there is nothing for it to guard. The equivalent single-value API operation is
   instead of conflicting, exactly as its generating create path does.</p>
 <ul>
 <li><strong>Export</strong> writes every original value in a namespace and its pseudonym to a two-column CSV,
-  ready to be imported elsewhere. It is the one direction with no file to upload - the job is
+  ready to be imported elsewhere. It is the one kind with no file to upload - the batch is
   queued as soon as it is created. Requires <strong>reverse-lookup</strong> access: the output is the
   namespace's original values, in bulk, so it is gated like de-pseudonymization rather than like a
   read.</li>
 </ul>
+<h2 id="using-the-api">Using the API<a class="headerlink" href="#using-the-api" title="Permanent link">&para;</a></h2>
+<p><code>BatchService</code> offers the same batches over gRPC and the JSON-transcoded REST API, under
+<code>/v1/batches</code>. See the <a href="../api-reference/#batchservice">API reference</a> for every field.
+Like the page, it is only there when object storage is configured - otherwise its routes answer
+<code>404</code>, and its gRPC methods <code>UNIMPLEMENTED</code>.</p>
+<p>The file never goes through the API itself. A batch takes two API calls and two plain HTTP
+transfers:</p>
+<ol>
+<li><code>POST /v1/batches</code> creates the batch and returns an <code>upload</code> target: a presigned URL, and the
+   headers to send with it.</li>
+<li><code>PUT</code> the file to that URL, straight into object storage.</li>
+<li>Poll <code>GET /v1/batches/{id}</code>. The first poll after the upload notices the file and queues the
+   batch - there is no separate "upload finished" call. Once the batch is completed, the response
+   carries a <code>download</code> target.</li>
+<li><code>GET</code> the output from that URL.</li>
+</ol>
+<p>Using the <code>development</code> namespace from the local setup, pseudonymizing a file's <code>patient_id</code>
+column looks like this:</p>
+<div class="language-sh highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nv">VFPS</span><span class="o">=</span>http://127.0.0.1:8080
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="nb">printf</span><span class="w"> </span><span class="s1">'patient_id,age\nP-001,42\nP-002,57\n'</span><span class="w"> </span>&gt;<span class="w"> </span>patients.csv
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="c1"># 1. create the batch</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>curl<span class="w"> </span>-sS<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span><span class="s2">"</span><span class="nv">$VFPS</span><span class="s2">/v1/batches"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">  </span>-H<span class="w"> </span><span class="s1">'content-type: application/json'</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">  </span>-d<span class="w"> </span><span class="s1">'{</span>
+</span><span id="__span-0-9"><a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="s1">    "originalFileName": "patients.csv",</span>
+</span><span id="__span-0-10"><a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="s1">    "transform": {</span>
+</span><span id="__span-0-11"><a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="s1">      "direction": "BATCH_TRANSFORM_DIRECTION_PSEUDONYMIZE",</span>
+</span><span id="__span-0-12"><a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="s1">      "columnMappings": [{ "sourceColumn": "patient_id", "namespace": "development" }]</span>
+</span><span id="__span-0-13"><a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="s1">    }</span>
+</span><span id="__span-0-14"><a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="s1">  }'</span><span class="w"> </span>&gt;<span class="w"> </span>batch.json
+</span><span id="__span-0-15"><a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>
+</span><span id="__span-0-16"><a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="nv">BATCH_ID</span><span class="o">=</span><span class="k">$(</span>jq<span class="w"> </span>-r<span class="w"> </span>.batch.id<span class="w"> </span>batch.json<span class="k">)</span>
+</span><span id="__span-0-17"><a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>
+</span><span id="__span-0-18"><a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="c1"># 2. upload the file, with the header the upload URL was signed with</span>
+</span><span id="__span-0-19"><a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>curl<span class="w"> </span>-sS<span class="w"> </span>-f<span class="w"> </span>-X<span class="w"> </span>PUT<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>jq<span class="w"> </span>-r<span class="w"> </span>.upload.uri<span class="w"> </span>batch.json<span class="k">)</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-20"><a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">  </span>-H<span class="w"> </span><span class="s2">"Content-Type: </span><span class="k">$(</span>jq<span class="w"> </span>-r<span class="w"> </span><span class="s1">'.upload.headers["Content-Type"]'</span><span class="w"> </span>batch.json<span class="k">)</span><span class="s2">"</span><span class="w"> </span><span class="se">\</span>
+</span><span id="__span-0-21"><a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">  </span>--data-binary<span class="w"> </span>@patients.csv
+</span><span id="__span-0-22"><a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>
+</span><span id="__span-0-23"><a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="c1"># 3. poll until the batch has finished</span>
+</span><span id="__span-0-24"><a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="k">while</span><span class="w"> </span>:<span class="p">;</span><span class="w"> </span><span class="k">do</span>
+</span><span id="__span-0-25"><a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="w">  </span>curl<span class="w"> </span>-sS<span class="w"> </span>-f<span class="w"> </span><span class="s2">"</span><span class="nv">$VFPS</span><span class="s2">/v1/batches/</span><span class="nv">$BATCH_ID</span><span class="s2">"</span><span class="w"> </span>&gt;<span class="w"> </span>batch.json
+</span><span id="__span-0-26"><a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a><span class="w">  </span><span class="nv">STATE</span><span class="o">=</span><span class="k">$(</span>jq<span class="w"> </span>-r<span class="w"> </span>.batch.state<span class="w"> </span>batch.json<span class="k">)</span>
+</span><span id="__span-0-27"><a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a><span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">"</span><span class="nv">$STATE</span><span class="s2">"</span>
+</span><span id="__span-0-28"><a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a><span class="w">  </span><span class="k">case</span><span class="w"> </span><span class="s2">"</span><span class="nv">$STATE</span><span class="s2">"</span><span class="w"> </span><span class="k">in</span>
+</span><span id="__span-0-29"><a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a><span class="w">    </span>BATCH_STATE_AWAITING_UPLOAD<span class="w"> </span><span class="p">|</span><span class="w"> </span>BATCH_STATE_QUEUED<span class="w"> </span><span class="p">|</span><span class="w"> </span>BATCH_STATE_RUNNING<span class="o">)</span><span class="w"> </span>sleep<span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="p">;;</span>
+</span><span id="__span-0-30"><a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="w">    </span>*<span class="o">)</span><span class="w"> </span><span class="k">break</span><span class="w"> </span><span class="p">;;</span>
+</span><span id="__span-0-31"><a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a><span class="w">  </span><span class="k">esac</span>
+</span><span id="__span-0-32"><a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a><span class="k">done</span>
+</span><span id="__span-0-33"><a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>
+</span><span id="__span-0-34"><a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a><span class="c1"># 4. download the output - only a completed batch has one</span>
+</span><span id="__span-0-35"><a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>curl<span class="w"> </span>-sS<span class="w"> </span>-f<span class="w"> </span><span class="s2">"</span><span class="k">$(</span>jq<span class="w"> </span>-r<span class="w"> </span>.download.uri<span class="w"> </span>batch.json<span class="k">)</span><span class="s2">"</span><span class="w"> </span>-o<span class="w"> </span>patients-pseudonymized.csv
+</span></code></pre></div>
+<p><code>Get</code> also reports the batch's progress - bytes and rows processed, and the counts of malformed
+rows, missing and unresolved values shown on the page. A failed batch says why in <code>errorMessage</code>.</p>
+<p>Other kinds of batch only differ in the request body:</p>
+<div class="language-json highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">"transform"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"direction"</span><span class="p">:</span><span class="w"> </span><span class="s2">"BATCH_TRANSFORM_DIRECTION_DEPSEUDONYMIZE"</span><span class="p">,</span>
+</span><span id="__span-1-2"><a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">                 </span><span class="nt">"columnMappings"</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="w"> </span><span class="nt">"sourceColumn"</span><span class="p">:</span><span class="w"> </span><span class="s2">"patient_id"</span><span class="p">,</span><span class="w"> </span><span class="nt">"namespace"</span><span class="p">:</span><span class="w"> </span><span class="s2">"development"</span><span class="w"> </span><span class="p">}]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-1-3"><a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+</span><span id="__span-1-4"><a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="p">{</span><span class="w"> </span><span class="nt">"import"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"namespace"</span><span class="p">:</span><span class="w"> </span><span class="s2">"development"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</span><span id="__span-1-5"><a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+</span><span id="__span-1-6"><a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="p">{</span><span class="w"> </span><span class="nt">"export"</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">"namespace"</span><span class="p">:</span><span class="w"> </span><span class="s2">"development"</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</span></code></pre></div>
+<p>Every kind takes an optional <code>format</code> (<code>encoding</code>, <code>delimiter</code>, <code>hasHeaderRow</code>), defaulting to a
+UTF-8, comma-separated file with a header row. <code>encoding</code> is one of <code>CSV_ENCODING_UTF_8</code>,
+<code>CSV_ENCODING_UTF_16_LE</code>, <code>CSV_ENCODING_UTF_16_BE</code>, <code>CSV_ENCODING_ISO_8859_1</code>,
+<code>CSV_ENCODING_WINDOWS_1252</code> and <code>CSV_ENCODING_US_ASCII</code> - the same choices the page offers. Pick
+Windows-1252 for a file saved as CSV by Excel on Windows. The output is written in the same
+format, without a byte-order mark - an input may have one. An export has no file to upload: it is
+queued right away, and its response has no <code>upload</code> target.</p>
+<p>A few things to know:</p>
+<ul>
+<li><strong>Upload and download URLs are short-lived credentials.</strong> Anyone holding one can use it until it
+  expires (<code>S3__PresignedUrlExpiry</code>, 15 minutes by default), so don't log them. If a download URL
+  expires, call <code>Get</code> again for a fresh one. An upload URL can't be renewed - create a new batch.</li>
+<li><strong>Send the upload headers exactly as given.</strong> They are part of the URL's signature, and object
+  storage rejects a <code>PUT</code> without them.</li>
+<li><strong>API clients must be able to reach object storage.</strong> The URLs point at <code>S3__ServiceUrl</code>, which
+  then has to resolve and be reachable from wherever the client runs, not only from vfps.</li>
+<li><strong>Access is checked again on every call.</strong> <code>Get</code> requires the access the batch's namespaces
+  demand, as <code>Create</code> did, so revoking a grant also stops its holder from downloading output they
+  created earlier.</li>
+<li><strong>Cleaning up:</strong> <code>POST /v1/batches/{id}:cancel</code> stops a batch, and <code>DELETE /v1/batches/{id}</code>
+  removes a finished one from the list. Its files expire with the bucket's retention period either
+  way (<code>S3__ObjectRetentionDays</code>). <code>GET /v1/batches</code> lists your own batches, or everyone's for an
+  admin.</li>
+</ul>
+<p>With <a href="../access-control/">access control</a> on, every call to vfps needs a bearer token, as for any
+other API call - add <code>-H "authorization: Bearer $VFPS_TOKEN"</code> to the <code>/v1/batches</code> requests. The
+upload and download URLs are presigned, and need no token.</p>
 <h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
-<p>CSV jobs are off by default. Enabling them, and the object storage they use, is described under
-<a href="../configuration/#csv-jobs-and-object-storage">CSV jobs and object storage</a> in the configuration
+<p>Batches are off by default. Enabling them, and the object storage they use, is described under
+<a href="../configuration/#csv-processing-and-object-storage">CSV processing and object storage</a> in the configuration
 reference.</p>
 
 

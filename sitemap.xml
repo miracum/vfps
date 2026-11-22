@@ -13,13 +13,13 @@
         <loc>https://miracum.github.io/vfps/api-reference/</loc>
       </url>
       <url>
+        <loc>https://miracum.github.io/vfps/batches/</loc>
+      </url>
+      <url>
         <loc>https://miracum.github.io/vfps/benchmarks/</loc>
       </url>
       <url>
         <loc>https://miracum.github.io/vfps/configuration/</loc>
-      </url>
-      <url>
-        <loc>https://miracum.github.io/vfps/csv-jobs/</loc>
       </url>
       <url>
         <loc>https://miracum.github.io/vfps/deployment/data-protection/</loc>

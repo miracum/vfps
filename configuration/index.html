@@ -558,14 +558,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../csv-jobs/" class="md-nav__link">
+      <a href="../batches/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  CSV jobs
+  CSV processing
 
     
   </span>
@@ -798,10 +798,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#csv-jobs-and-object-storage" class="md-nav__link">
+  <a href="#csv-processing-and-object-storage" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        CSV jobs and object storage
+        CSV processing and object storage
       </span>
     </span>
   </a>
@@ -1035,10 +1035,10 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#csv-jobs-and-object-storage" class="md-nav__link">
+  <a href="#csv-processing-and-object-storage" class="md-nav__link">
     <span class="md-ellipsis">
       <span class="md-typeset">
-        CSV jobs and object storage
+        CSV processing and object storage
       </span>
     </span>
   </a>
@@ -1223,7 +1223,7 @@
 <td><code>Pseudonymization__Caching__Pseudonyms__IsEnabled</code></td>
 <td><code>bool</code></td>
 <td><code>false</code></td>
-<td>Set to <code>true</code> to keep each original value's pseudonym in memory once it has been looked up, so repeated Create/Resolve calls for it skip the database. Only applies to namespaces that allow a single pseudonym per original value; CSV jobs are unaffected.</td>
+<td>Set to <code>true</code> to keep each original value's pseudonym in memory once it has been looked up, so repeated Create/Resolve calls for it skip the database. Only applies to namespaces that allow a single pseudonym per original value; batches are unaffected.</td>
 </tr>
 <tr>
 <td><code>Pseudonymization__Caching__SizeLimit</code></td>
@@ -1330,7 +1330,7 @@ admin UI's <a href="../access-control/">Access Control</a> page. Earlier release
 <p>With <code>Authorization__IsEnabled</code> set, the API accepts bearer tokens only - see
 <a href="../access-control/#authenticating-api-calls">Authenticating API calls</a>. The settings of the
 <a href="../voprf/">VOPRF</a> client are listed on its own page.</p>
-<h2 id="csv-jobs-and-object-storage">CSV jobs and object storage<a class="headerlink" href="#csv-jobs-and-object-storage" title="Permanent link">&para;</a></h2>
+<h2 id="csv-processing-and-object-storage">CSV processing and object storage<a class="headerlink" href="#csv-processing-and-object-storage" title="Permanent link">&para;</a></h2>
 <table>
 <thead>
 <tr>
@@ -1345,7 +1345,7 @@ admin UI's <a href="../access-control/">Access Control</a> page. Earlier release
 <td><code>S3__IsEnabled</code></td>
 <td><code>bool</code></td>
 <td><code>false</code></td>
-<td>Enable CSV pseudonymization jobs (admin UI upload/download + the Hangfire job runner). <strong>Off by default</strong> - also requires <code>ConnectionStrings__PostgreSQL</code>, since Hangfire reuses the same database for its job storage. Note that Hangfire itself (and its <code>/hangfire</code> dashboard) is enabled by any deployment with a PostgreSQL connection string, independent of this setting - it also schedules internal housekeeping such as the pseudonym-count metric recompute.</td>
+<td>Enable <a href="../batches/">CSV processing</a> (the admin UI's CSV processing page, <code>BatchService</code>, and the Hangfire job runner). <strong>Off by default</strong> - also requires <code>ConnectionStrings__PostgreSQL</code>, since Hangfire reuses the same database for its job storage. Note that Hangfire itself (and its <code>/hangfire</code> dashboard) is enabled by any deployment with a PostgreSQL connection string, independent of this setting - it also schedules internal housekeeping such as the pseudonym-count metric recompute.</td>
 </tr>
 <tr>
 <td><code>S3__ServiceUrl</code></td>
@@ -1369,7 +1369,7 @@ admin UI's <a href="../access-control/">Access Control</a> page. Earlier release
 <td><code>S3__Bucket</code></td>
 <td><code>string</code></td>
 <td><code>""</code></td>
-<td>Bucket CSV job input/output files are stored in.</td>
+<td>Bucket batch input/output files are stored in.</td>
 </tr>
 <tr>
 <td><code>S3__Region</code></td>
@@ -1393,7 +1393,13 @@ admin UI's <a href="../access-control/">Access Control</a> page. Earlier release
 <td><code>S3__ObjectRetentionDays</code></td>
 <td><code>int</code></td>
 <td><code>30</code></td>
-<td>Days before an S3 bucket lifecycle rule expires (deletes) a CSV job's input/output objects. Applied on startup, scoped to the <code>csv-jobs/</code> prefix. Job records themselves are never deleted, so without this the original, unpseudonymized input would otherwise live in the bucket forever. Set to <code>0</code> to leave the bucket's lifecycle configuration untouched. <strong>Overwrites the bucket's entire existing lifecycle configuration</strong> - use a bucket dedicated to vfps.</td>
+<td>Days before an S3 bucket lifecycle rule expires (deletes) a batch's input/output objects. Applied on startup, scoped to <code>S3__ObjectKeyPrefix</code>. Batch records themselves are never deleted, so without this the original, unpseudonymized input would otherwise live in the bucket forever. Set to <code>0</code> to leave the bucket's lifecycle configuration untouched. <strong>Overwrites the bucket's entire existing lifecycle configuration</strong> - use a bucket dedicated to vfps.</td>
+</tr>
+<tr>
+<td><code>S3__ObjectKeyPrefix</code></td>
+<td><code>string</code></td>
+<td><code>"csv-jobs/"</code></td>
+<td>Key prefix batch input/output objects are stored under, as <code>{prefix}{batch id}/input.csv</code> and <code>.../output.csv</code>, and the prefix the retention lifecycle rule is scoped to. A trailing slash is added if missing; empty stores objects at the bucket's root, and the lifecycle rule then covers the whole bucket. Changing it doesn't break existing batches, which keep their own object keys, but objects under the old prefix are no longer expired automatically.</td>
 </tr>
 <tr>
 <td><code>S3__AllowedOrigins</code></td>
@@ -1402,40 +1408,40 @@ admin UI's <a href="../access-control/">Access Control</a> page. Earlier release
 <td>Origins (e.g. <code>https://vfps.example.org</code>) allowed to PUT/GET objects directly against the bucket via presigned URLs, applied as an S3 bucket CORS rule on startup. The browser talks to the bucket on a different origin than vfps itself, so without this the browser blocks the upload with a CORS error before it reaches S3. Empty (the default) leaves the bucket's CORS configuration untouched. <strong>Overwrites the bucket's entire existing CORS configuration</strong> - use a bucket dedicated to vfps.</td>
 </tr>
 <tr>
-<td><code>CsvProcessing__PseudonymizeBatchSize</code></td>
+<td><code>CsvProcessing__ChunkSize</code></td>
 <td><code>int</code></td>
 <td><code>1000</code></td>
-<td>How many rows' worth of values go into one batched upsert round trip when pseudonymizing a CSV job. Doesn't apply to de-pseudonymization, which resolves concurrently instead.</td>
+<td>How many rows a batch reads, resolves against the database in one round trip, and writes out at a time. Applies to every kind of batch except an export. Formerly <code>CsvProcessing__PseudonymizeBatchSize</code>.</td>
 </tr>
 <tr>
 <td><code>CsvProcessing__StalledJobThreshold</code></td>
 <td><code>TimeSpan</code></td>
 <td><code>"0.00:10:00"</code></td>
-<td>How long a CSV job can sit <code>Running</code> with no progress update before it's marked <code>Stalled</code> (its worker likely crashed, lost its database connection, or was killed by an app restart).</td>
+<td>How long a batch can sit <code>Running</code> with no progress update before it's marked <code>Stalled</code> (its worker likely crashed, lost its database connection, or was killed by an app restart).</td>
 </tr>
 <tr>
 <td><code>CsvProcessing__ProcessJobs</code></td>
 <td><code>bool</code></td>
 <td><code>true</code></td>
-<td>Whether this instance runs CSV jobs, as opposed to only accepting them. Enqueueing and the Hangfire dashboard work either way - this controls only which Hangfire queues the instance serves (<code>false</code> serves internal housekeeping such as the pseudonym-count recompute, but not the queue CSV jobs land in), which is what allows dedicated worker pods: set it to <code>false</code> on the pods serving the API and admin UI, and <code>true</code> on a second deployment of the same image. <strong>If every instance sets it to <code>false</code>, jobs queue forever</strong> with no error.</td>
+<td>Whether this instance runs batches, as opposed to only accepting them. Enqueueing and the Hangfire dashboard work either way - this controls only which Hangfire queues the instance serves (<code>false</code> serves internal housekeeping such as the pseudonym-count recompute, but not the queue batches land in), which is what allows dedicated worker pods: set it to <code>false</code> on the pods serving the API and admin UI, and <code>true</code> on a second deployment of the same image. <strong>If every instance sets it to <code>false</code>, jobs queue forever</strong> with no error.</td>
 </tr>
 <tr>
 <td><code>CsvProcessing__WorkerCount</code></td>
 <td><code>int</code></td>
 <td><code>4</code></td>
-<td>How many CSV jobs one replica processes concurrently. Pinned rather than left at Hangfire's own default (<code>min(cores * 5, 20)</code>), which knows nothing about the shared Npgsql connection pool: a de-pseudonymizing job resolves each chunk via up to 20 concurrent lookups, so 20 workers would be up to 400 concurrent connection requests from one replica against a pool whose default maximum is 100. Raise it in step with <code>Maximum Pool Size</code>, and remember it multiplies by replica count against one shared database.</td>
+<td>How many batches one replica processes concurrently. Pinned rather than left at Hangfire's own default (<code>min(cores * 5, 20)</code>), which knows nothing about the shared Npgsql connection pool: a de-pseudonymizing job resolves each chunk via up to 20 concurrent lookups, so 20 workers would be up to 400 concurrent connection requests from one replica against a pool whose default maximum is 100. Raise it in step with <code>Maximum Pool Size</code>, and remember it multiplies by replica count against one shared database.</td>
 </tr>
 <tr>
 <td><code>CsvProcessing__JobServerShutdownTimeout</code></td>
 <td><code>TimeSpan</code></td>
 <td><code>"0.00:00:15"</code></td>
-<td>How long the Hangfire job server waits for in-flight jobs to wind down on shutdown. A CSV job can't checkpoint and resume, so this doesn't let one finish - it buys time to unwind cleanly and record its own outcome. Must stay comfortably below <code>ShutdownTimeout</code>.</td>
+<td>How long the Hangfire job server waits for in-flight jobs to wind down on shutdown. A batch can't checkpoint and resume, so this doesn't let one finish - it buys time to unwind cleanly and record its own outcome. Must stay comfortably below <code>ShutdownTimeout</code>.</td>
 </tr>
 <tr>
 <td><code>CsvProcessing__OrphanedJobRecoveryDelay</code></td>
 <td><code>TimeSpan</code></td>
 <td><code>"0.00:02:00"</code></td>
-<td>How long a job orphaned by a replica disappearing (rolling upgrade, OOM kill, node failure) waits before another replica picks it up and reprocesses it from the start. Hangfire's own default is 5 minutes, which races uncomfortably closely with <code>CsvProcessing__StalledJobThreshold</code>; 2 minutes makes re-dispatch the reliable winner, so an upgrade costs a job a couple of minutes rather than a <code>Stalled</code> status. Hangfire's heartbeat and server-check intervals are derived from this; values below 30s are clamped.</td>
+<td>How long a batch orphaned by a replica disappearing (rolling upgrade, OOM kill, node failure) waits before another replica picks it up and reprocesses it from the start. Hangfire's own default is 5 minutes, which races uncomfortably closely with <code>CsvProcessing__StalledJobThreshold</code>; 2 minutes makes re-dispatch the reliable winner, so an upgrade costs a batch a couple of minutes rather than a <code>Stalled</code> status. Hangfire's heartbeat and server-check intervals are derived from this; values below 30s are clamped.</td>
 </tr>
 <tr>
 <td><code>CsvProcessing__MissingValuePlaceholders</code></td>

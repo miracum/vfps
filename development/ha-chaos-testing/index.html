@@ -556,14 +556,14 @@
   
   
     <li class="md-nav__item">
-      <a href="../../csv-jobs/" class="md-nav__link">
+      <a href="../../batches/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
     
   
-  CSV jobs
+  CSV processing
 
     
   </span>
@@ -1955,10 +1955,10 @@ P1, P2 or P3 - which is the run you actually want it for.</p>
 </ol>
 <h2 id="10-deliberately-out-of-scope">10. Deliberately out of scope<a class="headerlink" href="#10-deliberately-out-of-scope" title="Permanent link">&para;</a></h2>
 <ul>
-<li><strong>CSV job resilience.</strong> On master a job killed mid-processing restarts from row 0 <em>by design</em> -
-  resumable CSV jobs exist only on the unmerged <code>resumable-csv</code> branch - so a test asserting
+<li><strong>Batch resilience.</strong> On master a batch killed mid-processing restarts from row 0 <em>by design</em> -
+  resumable batches exist only on the unmerged <code>resumable-csv</code> branch - so a test asserting
   otherwise would fail correctly and tell us nothing. Revisit if that lands.</li>
-<li><strong>S3 / object storage</strong>, which CSV jobs need and nothing else does.</li>
+<li><strong>S3 / object storage</strong>, which batches need and nothing else does.</li>
 <li><strong>NetworkPolicy.</strong> The chart can render one; enabling it here would require allowing the
   cross-namespace loadgen traffic. A follow-up scenario of its own.</li>
 <li><strong>The admin UI.</strong> Blazor Server circuits under failover are a Playwright problem, not a
