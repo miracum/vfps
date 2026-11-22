@@ -13,8 +13,8 @@ It covers:
 
 - **Overview** - request rate, 5xx ratio, request and database latency, connection-pool usage, stored pseudonyms,
   the next service-account token expiry, running versions and scrape health
-- **HTTP & gRPC** - traffic, status codes and latency per route, a latency heatmap, Kestrel queueing, and
-  exceptions by type
+- **HTTP & gRPC** - traffic, HTTP and gRPC status codes, failing gRPC methods, latency per route, a latency
+  heatmap, Kestrel queueing, and exceptions by type
 - **Database** - connection pool usage and waits, command and upsert latency, connection churn, and network I/O
 - **Pseudonyms, cache & access tokens** - pseudonyms and growth per namespace, cache hit ratio, and every
   service-account token's remaining lifetime
@@ -24,9 +24,10 @@ It covers:
 
 The _Job_ variable lists every scrape job that exposes vfps' own metrics, so it needs no relabelling and picks up
 the worker Deployment's metrics as well when `worker.enabled` is set. Native gRPC calls complete with HTTP 200
-whatever their gRPC status, so their failures don't show up in the status-code panels. vfps adds the gRPC status to
+whatever their gRPC status, so their failures don't show up in the HTTP status-code panels. vfps adds the gRPC status to
 the same request metric instead, as the `rpc_grpc_status_code` label (`0` is OK, see the
-[gRPC status codes](https://grpc.io/docs/guides/status-codes/)), which the alerts below use.
+[gRPC status codes](https://grpc.io/docs/guides/status-codes/)), which the _gRPC calls by status_ and _gRPC errors
+by method_ panels and the alerts below use.
 
 ## Alerts
 
