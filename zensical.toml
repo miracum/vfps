@@ -29,7 +29,7 @@ nav = [
     { "gRPC API" = "grpc.md" },
     { "API reference" = "api-reference.md" },
     { "FHIR API" = "fhir.md" },
-    { "CSV jobs" = "csv-jobs.md" },
+    { "CSV processing" = "batches.md" },
   ] },
   { "Operations" = [
     { "Production deployment" = "deployment/production.md" },

@@ -189,7 +189,7 @@ public class PseudonymizationJob : TracksCreationAndUpdates
     /// The uploaded file's original browser-side name (e.g. "patients_2026.csv") - display only,
     /// so the jobs list is recognizable at a glance instead of showing only <see cref="Id"/>.
     /// Never used to derive <see cref="InputObjectKey"/> or any other path - that's always the
-    /// deterministic "csv-jobs/{Id}/input.csv" pattern, regardless of what this is. Null for jobs
+    /// deterministic "{S3:ObjectKeyPrefix}{Id}/input.csv" pattern, regardless of what this is. Null for jobs
     /// created before this field existed, or if the browser-side lookup failed for any reason -
     /// treat as optional everywhere.
     /// </summary>

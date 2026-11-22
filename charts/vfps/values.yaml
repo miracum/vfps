@@ -102,9 +102,10 @@ serviceMonitor:
   # scrapeTimeout: 10s
 
 prometheusRule:
-  # -- if enabled, creates a PrometheusRule with alerts for service-account access tokens that are
-  # about to expire or already have. Needs the metrics scraped, e.g. via `serviceMonitor.enabled`,
-  # and only ever fires once `Authorization__AccessTokens__IsEnabled` is on.
+  # -- if enabled, creates a PrometheusRule with alerts for vfps' availability, API errors and
+  # latency, its database, batches, the services it calls and service-account access tokens. Needs
+  # the metrics scraped, e.g. via `serviceMonitor.enabled`. Each group below can be turned off on its
+  # own. Critical alerts are meant to page, warnings to open a ticket.
   enabled: false
   # -- additional labels to apply to the PrometheusRule object, e.g. `release: prometheus`
   additionalLabels: {}
@@ -114,6 +115,59 @@ prometheusRule:
     # starts firing. Once the token has expired, `VfpsServiceAccountTokenExpired` takes over. Both
     # stay firing until the token is revoked or deleted, which is how a rotation clears them.
     warningDays: 14
+  availability:
+    # -- `VfpsDown` (critical) when no API pod can be scraped for 5 minutes, and `VfpsWorkersDown`
+    # (critical) likewise for the worker pods when `worker.enabled` is set
+    enabled: true
+  api:
+    # -- `VfpsHighErrorRate` (critical) and `VfpsHighLatency` (warning). Errors count HTTP 5xx and
+    # gRPC calls that failed on the server's side (UNKNOWN, DEADLINE_EXCEEDED, UNIMPLEMENTED,
+    # INTERNAL, UNAVAILABLE, DATA_LOSS) - not a caller's own mistakes such as INVALID_ARGUMENT,
+    # NOT_FOUND or PERMISSION_DENIED.
+    enabled: true
+    # -- share of requests failing, over 5 minutes, above which `VfpsHighErrorRate` fires
+    errorRatio: 0.05
+    # -- fewer requests than this in 5 minutes never trigger `VfpsHighErrorRate` or
+    # `VfpsHighLatency`, so a single failed call on an idle instance doesn't page anyone
+    minRequests: 20
+    # -- 95th percentile request duration, in seconds, above which `VfpsHighLatency` fires after
+    # 15 minutes
+    latencyP95Seconds: 1
+  database:
+    # -- `VfpsDatabaseConnectionTimeouts` (critical) when requests time out waiting for a pooled
+    # connection, `VfpsDatabasePoolNearlyExhausted` and `VfpsSlowDatabase` (warnings)
+    enabled: true
+    # -- share of a connection pool in use, for 10 minutes, above which
+    # `VfpsDatabasePoolNearlyExhausted` fires
+    poolUsageRatio: 0.9
+    # -- 95th percentile database command duration, in seconds, above which `VfpsSlowDatabase`
+    # fires after 15 minutes
+    latencyP95Seconds: 0.5
+  batches:
+    # -- `VfpsBatchesNotProcessed` (critical) when batches are queued and none is running,
+    # `VfpsBatchWaitingTooLong`, `VfpsBatchesFailing` and `VfpsBatchStalled` (warnings). Silent while
+    # batches are off, since their metrics then don't exist.
+    enabled: true
+    # -- how long batches have to sit queued with none running before `VfpsBatchesNotProcessed`
+    # fires. The classic cause: no instance processes batches at all (`worker.replicaCount: 0`, or
+    # `CsvProcessing__ProcessJobs=false` everywhere), which otherwise fails silently.
+    notProcessedFor: 30m
+    # -- seconds the longest-waiting batch may stay queued before `VfpsBatchWaitingTooLong` fires -
+    # workers that run, but can't keep up
+    maxQueuedSeconds: 3600
+  dependencies:
+    # -- `VfpsDependencyErrors` (warning) when calls to a service vfps depends on - object storage,
+    # the identity provider, a VOPRF key server - fail, per destination host
+    enabled: true
+    # -- share of calls to one host failing (connection errors, timeouts, 5xx), over 5 minutes, above
+    # which `VfpsDependencyErrors` fires after 10 minutes
+    errorRatio: 0.1
+  runtime:
+    # -- `VfpsThreadPoolStarvation` (warning) when work queues up for the .NET thread pool
+    enabled: true
+    # -- thread pool queue length, sustained for 5 minutes, above which `VfpsThreadPoolStarvation`
+    # fires
+    threadPoolQueueLength: 100
 
 # -- image pull secrets used by the main deployment container
 imagePullSecrets: []
@@ -275,7 +329,7 @@ networkPolicy:
     ingressNSMatchLabels: {}
     ingressNSPodMatchLabels: {}
   # -- when `true` (the default), egress from vfps pods is unrestricted. vfps always needs to
-  # reach its PostgreSQL database and, once CSV jobs are enabled, S3-compatible object storage -
+  # reach its PostgreSQL database and, once batches are enabled, S3-compatible object storage -
   # since both can be in- or out-of-cluster depending on the deployment, there's no one selector
   # that fits every setup. Set to `false` and use `extraEgress` to lock egress down to your own
   # database/object storage/DNS endpoints.
@@ -445,7 +499,7 @@ database:
   # `Maximum Pool Size` is set explicitly because Npgsql's own default (100) is **per replica**:
   # scaling to 5 replicas would allow 500 connections against a PostgreSQL whose own
   # `max_connections` commonly defaults to 100, and connection exhaustion looks like a total
-  # outage. Budget roughly `replicaCount * (Maximum Pool Size)` plus the CSV job workers, and raise
+  # outage. Budget roughly `replicaCount * (Maximum Pool Size)` plus the batch workers, and raise
   # both this and the server's `max_connections` together (or put PgBouncer in front).
   # `Gss Encryption Mode=Disable` stops Npgsql from probing for Kerberos/GSSAPI encryption, which
   # the container image ships no `libgssapi_krb5` for - left at its `Prefer` default, every start
@@ -516,14 +570,14 @@ dataProtection:
   #     passwordKey: ""
 
 s3:
-  # -- enable CSV pseudonymization jobs, which store their input and output files in
+  # -- enable batches, which store their input and output files in
   # S3-compatible object storage. Also requires a database (Hangfire reuses the same one for its
-  # job storage). When this is off, the CSV jobs feature is disabled entirely and the admin UI
+  # job storage). When this is off, the batches feature is disabled entirely and the admin UI
   # hides it.
   enabled: false
   # -- S3-compatible endpoint URL, e.g. a MinIO instance or a real AWS/S3-compatible endpoint
   serviceUrl: ""
-  # -- bucket CSV job input/output files are stored in. Use a bucket dedicated to vfps: the
+  # -- bucket batch input/output files are stored in. Use a bucket dedicated to vfps: the
   # application replaces the bucket's entire lifecycle and CORS configuration on startup.
   bucket: ""
   # -- region passed to the S3 client. Not cosmetic even against a non-AWS endpoint - it forms
@@ -534,10 +588,14 @@ s3:
   forcePathStyle: true
   # -- how long presigned upload/download URLs remain valid
   presignedUrlExpiry: "0.00:15:00"
-  # -- days before a lifecycle rule expires a job's input/output objects. Job records themselves
+  # -- days before a lifecycle rule expires a batch's input/output objects. Batch records themselves
   # are never deleted, so without this the original, unpseudonymized input would live in the
   # bucket forever. Set to `0` to leave the bucket's lifecycle configuration untouched.
   objectRetentionDays: 30
+  # -- key prefix batch input/output objects are stored under, and the prefix the retention
+  # lifecycle rule is scoped to. Empty stores them at the bucket's root. Changing it doesn't break
+  # existing batches, but objects under the old prefix are then no longer expired automatically.
+  objectKeyPrefix: "csv-jobs/"
   # -- origins allowed to PUT/GET objects directly against the bucket via presigned URLs, applied
   # as a bucket CORS rule on startup. The browser talks to the bucket on a different origin than
   # vfps itself, so without the admin UI's own origin here (e.g. `https://vfps.example.org`, the
@@ -559,24 +617,24 @@ s3:
     secretAccessKeyKey: "AWS_SECRET_ACCESS_KEY"
 
 worker:
-  # -- run CSV pseudonymization jobs in a dedicated Deployment instead of in the API pods.
-  # Only meaningful when CSV jobs are enabled at all (`S3__IsEnabled=true`, set via `extraEnv`),
+  # -- run batches in a dedicated Deployment instead of in the API pods.
+  # Only meaningful when batches are enabled at all (`S3__IsEnabled=true`, set via `extraEnv`),
   # which this chart cannot verify for you.
   #
-  # Worth turning on once job load starts competing with API latency, or when you want jobs to
+  # Worth turning on once batch load starts competing with API latency, or when you want batches to
   # drain slowly on shutdown while API pods roll quickly - a single Deployment can only have one
   # shutdown window and one resource budget. When enabled, the API pods are automatically switched
   # to accept-only (`CsvProcessing__ProcessJobs=false`); enqueueing and the Hangfire dashboard keep
   # working there, since neither needs a local job server.
   enabled: false
   # -- number of worker replicas. Hangfire coordinates through the database, so replicas pick up
-  # jobs independently with no further configuration.
+  # batches independently with no further configuration.
   replicaCount: 1
   # -- how long Kubernetes waits after `SIGTERM` before `SIGKILL`. Deliberately much longer than
-  # the API pods': a CSV job that is cut short has to be re-dispatched and reprocessed, so it is
+  # the API pods': a batch that is cut short has to be re-dispatched and reprocessed, so it is
   # worth waiting for one to finish. Keep it above `CsvProcessing__JobServerShutdownTimeout`.
   terminationGracePeriodSeconds: 600
-  # -- update strategy for the worker Deployment. `maxUnavailable: 0` avoids taking job capacity
+  # -- update strategy for the worker Deployment. `maxUnavailable: 0` avoids taking batch capacity
   # down to nothing mid-rollout.
   updateStrategy:
     type: RollingUpdate

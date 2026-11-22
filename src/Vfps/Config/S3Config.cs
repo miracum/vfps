@@ -26,9 +26,30 @@ public class S3Config
     public TimeSpan PresignedUrlExpiry { get; set; } = TimeSpan.FromMinutes(15);
 
     /// <summary>
+    /// The key prefix every batch's input and output objects are stored under, as
+    /// "{prefix}{batch id}/input.csv" and ".../output.csv", and the prefix the retention lifecycle
+    /// rule (see <see cref="ObjectRetentionDays"/>) is scoped to. Read through
+    /// <see cref="NormalizedObjectKeyPrefix"/>, so "batches" and "/batches/" mean the same thing.
+    /// Empty stores objects at the bucket's root, and the lifecycle rule then covers the whole
+    /// bucket.
+    ///
+    /// Changing it doesn't move or break existing batches - each stores its own object keys - but
+    /// the lifecycle rule follows the new prefix, so objects under the old one are no longer
+    /// expired automatically.
+    /// </summary>
+    public string ObjectKeyPrefix { get; set; } = "csv-jobs/";
+
+    /// <summary>
+    /// <see cref="ObjectKeyPrefix"/> without leading slashes and with exactly one trailing slash -
+    /// or empty, for objects at the bucket's root.
+    /// </summary>
+    public string NormalizedObjectKeyPrefix =>
+        ObjectKeyPrefix.Trim().Trim('/') is { Length: > 0 } prefix ? $"{prefix}/" : string.Empty;
+
+    /// <summary>
     /// How many days an uploaded CSV or its pseudonymized output is kept before an S3 bucket
-    /// lifecycle rule expires (deletes) it. Applied on startup, scoped to the "csv-jobs/" prefix
-    /// only. Job records themselves are never deleted, so without this the objects they
+    /// lifecycle rule expires (deletes) it. Applied on startup, scoped to
+    /// <see cref="ObjectKeyPrefix"/>. Job records themselves are never deleted, so without this the objects they
     /// reference - the original, unpseudonymized input included - would otherwise live in the
     /// bucket forever. Set to 0 to leave the bucket's lifecycle configuration untouched.
     /// </summary>

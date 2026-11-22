@@ -17,13 +17,13 @@
     private string LabelFor(PseudonymizationJobStatus status) =>
         status switch
         {
-            PseudonymizationJobStatus.AwaitingUpload => Localizer["App.CsvJobs.StatusAwaitingUpload"],
-            PseudonymizationJobStatus.Queued => Localizer["App.CsvJobs.StatusQueued"],
-            PseudonymizationJobStatus.Running => Localizer["App.CsvJobs.StatusRunning"],
-            PseudonymizationJobStatus.Completed => Localizer["App.CsvJobs.StatusCompleted"],
-            PseudonymizationJobStatus.Failed => Localizer["App.CsvJobs.StatusFailed"],
-            PseudonymizationJobStatus.Cancelled => Localizer["App.CsvJobs.StatusCancelled"],
-            PseudonymizationJobStatus.Stalled => Localizer["App.CsvJobs.StatusStalled"],
+            PseudonymizationJobStatus.AwaitingUpload => Localizer["App.Batches.StatusAwaitingUpload"],
+            PseudonymizationJobStatus.Queued => Localizer["App.Batches.StatusQueued"],
+            PseudonymizationJobStatus.Running => Localizer["App.Batches.StatusRunning"],
+            PseudonymizationJobStatus.Completed => Localizer["App.Batches.StatusCompleted"],
+            PseudonymizationJobStatus.Failed => Localizer["App.Batches.StatusFailed"],
+            PseudonymizationJobStatus.Cancelled => Localizer["App.Batches.StatusCancelled"],
+            PseudonymizationJobStatus.Stalled => Localizer["App.Batches.StatusStalled"],
             _ => status.ToString(),
         };
 

@@ -1,3 +1,5 @@
+@page "/batches"
+@* the page's former address, kept so existing bookmarks still land here *@
 @page "/csv-jobs"
 @rendermode InteractiveServer
 @implements IAsyncDisposable
@@ -5,6 +7,7 @@
 @using Microsoft.Extensions.DependencyInjection
 @using Microsoft.Extensions.Options
 @using Vfps.Config
+@using Vfps.CsvProcessing
 @using Vfps.Data.Models
 @inject IOptions<S3Config> S3ConfigOptions
 @inject IServiceProvider ServiceProvider
@@ -12,21 +15,21 @@
 @inject INamespacePermissionChecker PermissionChecker
 @inject IJSRuntime JS
 @inject NavigationManager NavigationManager
-@inject ILogger<CsvJobs> Logger
+@inject ILogger<Batches> Logger
 @inject ToastService Toast
 @inject IStringLocalizer<SharedResources> Localizer
 
-<PageTitle>@Localizer["App.CsvJobs.PageTitle"]</PageTitle>
+<PageTitle>@Localizer["App.Batches.PageTitle"]</PageTitle>
 
 @if (!S3ConfigOptions.Value.IsEnabled)
 {
     <div class="bb:mx-auto">
         <BbAlert Variant="AlertVariant.Warning">
-            <BbAlertTitle As="p">@Localizer["App.CsvJobs.DisabledTitle"]</BbAlertTitle>
+            <BbAlertTitle As="p">@Localizer["App.Batches.DisabledTitle"]</BbAlertTitle>
             <BbAlertDescription>
                 @((MarkupString)
                     string.Format(
-                        Localizer["App.CsvJobs.DisabledDescription"].Value,
+                        Localizer["App.Batches.DisabledDescription"].Value,
                         "<code>S3__IsEnabled=true</code>",
                         "<code>S3__*</code>"
                     ))
@@ -40,10 +43,10 @@ else
         <div class="bb:flex bb:flex-wrap bb:items-center bb:justify-between bb:gap-2">
             <div class="bb:flex bb:items-center bb:gap-2">
                 <LucideIcon aria-hidden="true" Name="file-spreadsheet" Size="24" Class="bb:shrink-0 bb:text-primary" />
-                <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.CsvJobs.PageTitle"]</h1>
+                <h1 class="bb:text-2xl bb:font-semibold bb:tracking-tight">@Localizer["App.Batches.PageTitle"]</h1>
             </div>
             <BbButton
-                id="showNewJobButton"
+                id="showNewBatchButton"
                 IconPosition="IconPosition.Start"
                 OnClick="() => OnNewJobDialogOpenChanged(true)"
             >
@@ -51,7 +54,7 @@ else
                     <LucideIcon aria-hidden="true" Name="plus" Size="16" />
                 </Icon>
                 <ChildContent>
-                    @Localizer["App.CsvJobs.NewJobTitle"]
+                    @Localizer["App.Batches.NewBatchTitle"]
                 </ChildContent>
             </BbButton>
         </div>
@@ -61,8 +64,8 @@ else
             <BbAlert Variant="AlertVariant.Info">
                 <BbAlertDescription>
                     @(S3ConfigOptions.Value.ObjectRetentionDays == 1
-                        ? Localizer["App.CsvJobs.RetentionNoticeSingular"].Value
-                        : Localizer["App.CsvJobs.RetentionNoticePlural", S3ConfigOptions.Value.ObjectRetentionDays].Value)
+                        ? Localizer["App.Batches.RetentionNoticeSingular"].Value
+                        : Localizer["App.Batches.RetentionNoticePlural", S3ConfigOptions.Value.ObjectRetentionDays].Value)
                 </BbAlertDescription>
             </BbAlert>
         }
@@ -75,9 +78,9 @@ else
         <BbDialog Open="_showNewJobDialog" OpenChanged="OnNewJobDialogOpenChanged">
             <BbDialogContent style="max-width: 56rem;">
                 <BbDialogHeader>
-                    <BbDialogTitle Class="bb:leading-tight">@Localizer["App.CsvJobs.NewJobTitle"]</BbDialogTitle>
+                    <BbDialogTitle Class="bb:leading-tight">@Localizer["App.Batches.NewBatchTitle"]</BbDialogTitle>
                     <BbDialogDescription Class="job-dialog-intro">
-                        @Localizer["App.CsvJobs.NewJobDescription"]
+                        @Localizer["App.Batches.NewBatchDescription"]
                     </BbDialogDescription>
                 </BbDialogHeader>
 
@@ -85,7 +88,7 @@ else
                 @if (_createError is not null)
                 {
                     <BbAlert Variant="AlertVariant.Danger">
-                        <BbAlertTitle As="p">@Localizer["App.CsvJobs.CreateErrorTitle"]</BbAlertTitle>
+                        <BbAlertTitle As="p">@Localizer["App.Batches.CreateErrorTitle"]</BbAlertTitle>
                         <BbAlertDescription>@_createError</BbAlertDescription>
                     </BbAlert>
                 }
@@ -96,7 +99,7 @@ else
                 <div class="dialog-body bb:space-y-6 bb:py-2" hidden="@_isReviewing">
                 <div class="bb:grid bb:grid-cols-1 bb:gap-4 bb:sm:grid-cols-2">
                     <BbField>
-                        <BbFieldLabel For="direction">@Localizer["App.CsvJobs.Direction"]</BbFieldLabel>
+                        <BbFieldLabel For="direction">@Localizer["App.Batches.Direction"]</BbFieldLabel>
                         <BbFieldContent>
                             <select
                                 @bind="_direction"
@@ -105,16 +108,16 @@ else
                                 class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                             >
                                 <option value="@nameof(PseudonymizationJobDirection.Pseudonymize)">
-                                    @Localizer["App.CsvJobs.DirectionPseudonymizeOption"]
+                                    @Localizer["App.Batches.DirectionPseudonymizeOption"]
                                 </option>
                                 <option value="@nameof(PseudonymizationJobDirection.Depseudonymize)">
-                                    @Localizer["App.CsvJobs.DirectionDepseudonymizeOption"]
+                                    @Localizer["App.Batches.DirectionDepseudonymizeOption"]
                                 </option>
                                 <option value="@nameof(PseudonymizationJobDirection.Import)">
-                                    @Localizer["App.CsvJobs.DirectionImportOption"]
+                                    @Localizer["App.Batches.DirectionImportOption"]
                                 </option>
                                 <option value="@nameof(PseudonymizationJobDirection.Export)">
-                                    @Localizer["App.CsvJobs.DirectionExportOption"]
+                                    @Localizer["App.Batches.DirectionExportOption"]
                                 </option>
                             </select>
                             @* The options are short names - a full sentence each got cut off in
@@ -135,7 +138,7 @@ else
                     @if (RequiresInputFile)
                     {
                         <BbField>
-                            <BbFieldLabel For="csvFileInput">@Localizer["App.CsvJobs.CsvFile"]</BbFieldLabel>
+                            <BbFieldLabel For="csvFileInput">@Localizer["App.Batches.CsvFile"]</BbFieldLabel>
                             <BbFieldContent>
                                 <input
                                     type="file"
@@ -157,8 +160,8 @@ else
                     <BbAlert Variant="AlertVariant.Warning">
                         <BbAlertDescription>
                             @(SelectedDirection == PseudonymizationJobDirection.Export
-                                ? Localizer["App.CsvJobs.ExportWarning"].Value
-                                : Localizer["App.CsvJobs.DepseudonymizeWarning"].Value)
+                                ? Localizer["App.Batches.ExportWarning"].Value
+                                : Localizer["App.Batches.DepseudonymizeWarning"].Value)
                         </BbAlertDescription>
                     </BbAlert>
                 }
@@ -172,18 +175,27 @@ else
                 <details class="file-format">
                     <summary>
                         <LucideIcon aria-hidden="true" Name="chevron-right" Size="16" Class="file-format-chevron" />
-                        <span class="bb:text-sm bb:font-medium">@Localizer["App.CsvJobs.FileFormat"]</span>
+                        <span class="bb:text-sm bb:font-medium">@Localizer["App.Batches.FileFormat"]</span>
                         <span class="bb:text-sm bb:text-muted-foreground" id="fileFormatSummary">@FileFormatSummary</span>
                     </summary>
                     <div class="bb:mt-3 bb:grid bb:grid-cols-1 bb:gap-4 bb:sm:grid-cols-3">
                         <BbField>
-                            <BbFieldLabel For="encoding">@Localizer["App.CsvJobs.Encoding"]</BbFieldLabel>
+                            <BbFieldLabel For="encoding">@Localizer["App.Batches.Encoding"]</BbFieldLabel>
                             <BbFieldContent>
-                                <BbInput @bind-Value="_encoding" Id="encoding" />
+                                <select
+                                    @bind="_encoding"
+                                    id="encoding"
+                                    class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
+                                >
+                                    @foreach (var encoding in Enum.GetValues<CsvFileEncoding>())
+                                    {
+                                        <option value="@encoding">@CsvFileEncodings.ToDisplayName(encoding)</option>
+                                    }
+                                </select>
                             </BbFieldContent>
                         </BbField>
                         <BbField>
-                            <BbFieldLabel For="delimiter">@Localizer["App.CsvJobs.Delimiter"]</BbFieldLabel>
+                            <BbFieldLabel For="delimiter">@Localizer["App.Batches.Delimiter"]</BbFieldLabel>
                             <BbFieldContent>
                                 <BbInput
                                     @bind-Value="_delimiter"
@@ -195,7 +207,7 @@ else
                         @if (RequiresInputFile)
                         {
                             <BbField>
-                                <BbFieldLabel For="hasHeaderRow">@Localizer["App.CsvJobs.HeaderRow"]</BbFieldLabel>
+                                <BbFieldLabel For="hasHeaderRow">@Localizer["App.Batches.HeaderRow"]</BbFieldLabel>
                                 <BbFieldContent>
                                     <div class="bb:flex bb:h-10 bb:items-center bb:gap-2">
                                         <BbCheckbox
@@ -203,7 +215,7 @@ else
                                             CheckedChanged="OnHasHeaderRowChangedAsync"
                                             Id="hasHeaderRow"
                                         />
-                                        <label for="hasHeaderRow" class="bb:text-sm">@Localizer["App.CsvJobs.HasHeaderRow"]</label>
+                                        <label for="hasHeaderRow" class="bb:text-sm">@Localizer["App.Batches.HasHeaderRow"]</label>
                                     </div>
                                 </BbFieldContent>
                             </BbField>
@@ -219,7 +231,7 @@ else
                 {
                     <BbField>
                         <BbFieldLabel For="pseudonymizeMode">
-                            @Localizer["App.CsvJobs.PseudonymizeMode"]
+                            @Localizer["App.Batches.PseudonymizeMode"]
                         </BbFieldLabel>
                         <div class="field-with-note">
                             <BbFieldContent>
@@ -229,13 +241,13 @@ else
                                     class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                                 >
                                     <option value="@nameof(PseudonymizeMode.CreateIfMissing)">
-                                        @Localizer["App.CsvJobs.PseudonymizeModeCreateIfMissingOption"]
+                                        @Localizer["App.Batches.PseudonymizeModeCreateIfMissingOption"]
                                     </option>
                                     <option value="@nameof(PseudonymizeMode.FailIfMissing)">
-                                        @Localizer["App.CsvJobs.PseudonymizeModeFailIfMissingOption"]
+                                        @Localizer["App.Batches.PseudonymizeModeFailIfMissingOption"]
                                     </option>
                                     <option value="@nameof(PseudonymizeMode.KeepIfMissing)">
-                                        @Localizer["App.CsvJobs.PseudonymizeModeKeepIfMissingOption"]
+                                        @Localizer["App.Batches.PseudonymizeModeKeepIfMissingOption"]
                                     </option>
                                 </select>
                             </BbFieldContent>
@@ -245,15 +257,15 @@ else
                             @if (SelectedPseudonymizeMode == PseudonymizeMode.KeepIfMissing)
                             {
                                 <p class="reveal-note bb:text-xs" id="pseudonymizeModeHint">
-                                    @Localizer["App.CsvJobs.PseudonymizeModeKeepIfMissingHint"]
+                                    @Localizer["App.Batches.PseudonymizeModeKeepIfMissingHint"]
                                 </p>
                             }
                             else
                             {
                                 <p class="bb:text-xs bb:text-muted-foreground" id="pseudonymizeModeHint">
                                     @(SelectedPseudonymizeMode == PseudonymizeMode.FailIfMissing
-                                        ? Localizer["App.CsvJobs.PseudonymizeModeFailIfMissingHint"]
-                                        : Localizer["App.CsvJobs.PseudonymizeModeCreateIfMissingHint"])
+                                        ? Localizer["App.Batches.PseudonymizeModeFailIfMissingHint"]
+                                        : Localizer["App.Batches.PseudonymizeModeCreateIfMissingHint"])
                                 </p>
                             }
                         </div>
@@ -267,12 +279,12 @@ else
                 @if (IsColumnTransform)
                 {
                     <div>
-                        <h3 class="bb:text-sm bb:font-medium">@Localizer["App.CsvJobs.ColumnMappings"]</h3>
+                        <h3 class="bb:text-sm bb:font-medium">@Localizer["App.Batches.ColumnMappings"]</h3>
                         @* Both sentences on one line, with the space between them written out:
                            split across a @if block, Razor dropped the whitespace and the two ran
                            together ("...in place).Pick a CSV file"). *@
                         <p class="bb:mt-1 bb:text-sm bb:text-muted-foreground">
-                            @(_direction == nameof(PseudonymizationJobDirection.Depseudonymize) ? Localizer["App.CsvJobs.ColumnMappingsHintDepseudonymize"] : Localizer["App.CsvJobs.ColumnMappingsHintPseudonymize"]) @Localizer["App.CsvJobs.ColumnMappingsHintSuffix"]
+                            @(_direction == nameof(PseudonymizationJobDirection.Depseudonymize) ? Localizer["App.Batches.ColumnMappingsHintDepseudonymize"] : Localizer["App.Batches.ColumnMappingsHintPseudonymize"]) @Localizer["App.Batches.ColumnMappingsHintSuffix"]
                         </p>
 
                         <div class="bb:mt-3 bb:space-y-3">
@@ -281,7 +293,7 @@ else
                                 <div class="field-box mapping-row">
                                     <BbField>
                                         <BbFieldLabel For="@row.SourceColumnId">
-                                            @Localizer["App.CsvJobs.SourceColumn"]
+                                            @Localizer["App.Batches.SourceColumn"]
                                         </BbFieldLabel>
                                         <BbFieldContent>
                                             <CsvColumnSelector
@@ -289,31 +301,31 @@ else
                                                 ValueChanged="@(value => row.SourceColumn = value ?? string.Empty)"
                                                 Columns="_detectedColumns"
                                                 Id="@row.SourceColumnId"
-                                                Placeholder="@Localizer["App.CsvJobs.SourceColumnPlaceholder"]"
+                                                Placeholder="@Localizer["App.Batches.SourceColumnPlaceholder"]"
                                             />
                                         </BbFieldContent>
                                     </BbField>
                                     <BbField>
                                         <BbFieldLabel For="@row.TargetColumnId">
-                                            @Localizer["App.CsvJobs.TargetColumn"]
+                                            @Localizer["App.Batches.TargetColumn"]
                                         </BbFieldLabel>
                                         <BbFieldContent>
                                             <BbInput
                                                 @bind-Value="row.TargetColumn"
                                                 Id="@row.TargetColumnId"
-                                                Placeholder="@Localizer["App.CsvJobs.TargetColumnPlaceholder"]"
+                                                Placeholder="@Localizer["App.Batches.TargetColumnPlaceholder"]"
                                             />
                                         </BbFieldContent>
                                     </BbField>
                                     <BbField>
-                                        <BbFieldLabel For="@row.NamespaceId">@Localizer["App.CsvJobs.NamespaceLabel"]</BbFieldLabel>
+                                        <BbFieldLabel For="@row.NamespaceId">@Localizer["App.Batches.NamespaceLabel"]</BbFieldLabel>
                                         <BbFieldContent>
                                             <select
                                                 @bind="row.Namespace"
                                                 id="@row.NamespaceId"
                                                 class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                                             >
-                                                <option value="">@Localizer["App.CsvJobs.SelectNamespace"]</option>
+                                                <option value="">@Localizer["App.Batches.SelectNamespace"]</option>
                                                 @foreach (var ns in _namespaces)
                                                 {
                                                     <option value="@ns.Name">@ns.Name</option>
@@ -326,7 +338,7 @@ else
                                         Size="ButtonSize.Icon"
                                         OnClick="() => RemoveMappingRow(row)"
                                         Disabled="@(_columnMappings.Count == 1)"
-                                        AriaLabel="@Localizer["App.CsvJobs.RemoveMapping"]"
+                                        AriaLabel="@Localizer["App.Batches.RemoveMapping"]"
                                     >
                                         <LucideIcon aria-hidden="true" Name="x" Size="16" />
                                     </BbButton>
@@ -336,7 +348,7 @@ else
 
                         <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" OnClick="AddMappingRow" Class="bb:mt-3">
                             <LucideIcon aria-hidden="true" Name="plus" Size="16" />
-                            @Localizer["App.CsvJobs.AddColumnMapping"]
+                            @Localizer["App.Batches.AddColumnMapping"]
                         </BbButton>
                     </div>
                 }
@@ -347,17 +359,17 @@ else
                     <div>
                         <h3 class="bb:text-sm bb:font-medium">
                             @(!IsImport
-                                ? Localizer["App.CsvJobs.ExportTitle"].Value
+                                ? Localizer["App.Batches.ExportTitle"].Value
                                 : ImportsIntoNamespaceColumn
                                     // There is no single namespace to name once each row carries
                                     // its own, so the heading stops promising one.
-                                    ? Localizer["App.CsvJobs.ImportTitleNamespaceColumn"].Value
-                                    : Localizer["App.CsvJobs.ImportTitle"].Value)
+                                    ? Localizer["App.Batches.ImportTitleNamespaceColumn"].Value
+                                    : Localizer["App.Batches.ImportTitle"].Value)
                         </h3>
                         <p class="bb:mt-1 bb:text-sm bb:text-muted-foreground">
                             @(IsImport
-                                ? Localizer["App.CsvJobs.ImportHint"].Value
-                                : Localizer["App.CsvJobs.ExportHint"].Value)
+                                ? Localizer["App.Batches.ImportHint"].Value
+                                : Localizer["App.Batches.ExportHint"].Value)
                         </p>
 
                         <div class="field-box bb:mt-3">
@@ -367,14 +379,14 @@ else
                             @if (!ImportsIntoNamespaceColumn)
                             {
                                 <BbField>
-                                    <BbFieldLabel For="jobNamespace">@Localizer["App.CsvJobs.NamespaceLabel"]</BbFieldLabel>
+                                    <BbFieldLabel For="batchNamespace">@Localizer["App.Batches.NamespaceLabel"]</BbFieldLabel>
                                     <BbFieldContent>
                                         <select
                                             @bind="_namespaceMapping.Namespace"
-                                            id="jobNamespace"
+                                            id="batchNamespace"
                                             class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
                                         >
-                                            <option value="">@Localizer["App.CsvJobs.SelectNamespace"]</option>
+                                            <option value="">@Localizer["App.Batches.SelectNamespace"]</option>
                                             @foreach (var ns in _namespaces)
                                             {
                                                 <option value="@ns.Name">@ns.Name</option>
@@ -391,7 +403,7 @@ else
                             {
                                 <BbField>
                                     <BbFieldLabel For="originalValueColumn">
-                                        @Localizer["App.CsvJobs.OriginalValueColumn"]
+                                        @Localizer["App.Batches.OriginalValueColumn"]
                                     </BbFieldLabel>
                                     <BbFieldContent>
                                         <CsvColumnSelector
@@ -404,7 +416,7 @@ else
                                 </BbField>
                                 <BbField>
                                     <BbFieldLabel For="pseudonymValueColumn">
-                                        @Localizer["App.CsvJobs.PseudonymValueColumn"]
+                                        @Localizer["App.Batches.PseudonymValueColumn"]
                                     </BbFieldLabel>
                                     <BbFieldContent>
                                         <CsvColumnSelector
@@ -417,7 +429,7 @@ else
                                 </BbField>
                                 <BbField>
                                     <BbFieldLabel For="namespaceColumn">
-                                        @Localizer["App.CsvJobs.NamespaceColumn"]
+                                        @Localizer["App.Batches.NamespaceColumn"]
                                     </BbFieldLabel>
                                     <BbFieldContent>
                                         <CsvColumnSelector
@@ -425,7 +437,7 @@ else
                                             ValueChanged="@(value => _namespaceMapping.NamespaceColumn = value)"
                                             Columns="_detectedColumns"
                                             Id="namespaceColumn"
-                                            Placeholder="@Localizer["App.CsvJobs.NamespaceColumnPlaceholder"]"
+                                            Placeholder="@Localizer["App.Batches.NamespaceColumnPlaceholder"]"
                                         />
                                     </BbFieldContent>
                                 </BbField>
@@ -435,8 +447,8 @@ else
                         {
                             <p class="bb:mt-2 bb:text-sm bb:text-muted-foreground">
                                 @(ImportsIntoNamespaceColumn
-                                    ? Localizer["App.CsvJobs.NamespaceColumnSetHint"].Value
-                                    : Localizer["App.CsvJobs.NamespaceColumnHint"].Value)
+                                    ? Localizer["App.Batches.NamespaceColumnSetHint"].Value
+                                    : Localizer["App.Batches.NamespaceColumnHint"].Value)
                             </p>
                         }
                     </div>
@@ -452,9 +464,9 @@ else
                 {
                     <div class="bb:space-y-1" id="uploadProgress">
                         <p class="bb:text-sm bb:text-muted-foreground">
-                            @Localizer["App.CsvJobs.Uploading"]
+                            @Localizer["App.Batches.Uploading"]
                         </p>
-                        <BbProgress Value="@CsvJobDisplay.ProgressValue(uploadProgressPercent)" ShowLabel="true" aria-label="@Localizer["App.CsvJobs.Uploading"]" />
+                        <BbProgress Value="@BatchDisplay.ProgressValue(uploadProgressPercent)" ShowLabel="true" aria-label="@Localizer["App.Batches.Uploading"]" />
                     </div>
                 }
 
@@ -468,33 +480,33 @@ else
                         <div class="reveal-note bb:space-y-1">
                             <p class="bb:flex bb:items-center bb:gap-2 bb:font-medium">
                                 <LucideIcon aria-hidden="true" Name="eye" Size="16" />
-                                @Localizer["App.CsvJobs.ReviewTitle"]
+                                @Localizer["App.Batches.ReviewTitle"]
                             </p>
                             <p class="bb:text-sm">
                                 @(isExport
-                                    ? Localizer["App.CsvJobs.ReviewExportBody"].Value
-                                    : Localizer["App.CsvJobs.ReviewDepseudonymizeBody"].Value)
+                                    ? Localizer["App.Batches.ReviewExportBody"].Value
+                                    : Localizer["App.Batches.ReviewDepseudonymizeBody"].Value)
                             </p>
                         </div>
                         @if (isExport)
                         {
                             <dl class="detail-list bb:text-sm">
-                                <dt>@Localizer["App.CsvJobs.ReviewNamespace"]</dt>
+                                <dt>@Localizer["App.Batches.ReviewNamespace"]</dt>
                                 <dd class="bb:font-mono">@_namespaceMapping.Namespace</dd>
                             </dl>
                         }
                         else
                         {
                             <dl class="detail-list bb:text-sm">
-                                <dt>@Localizer["App.CsvJobs.ReviewFile"]</dt>
+                                <dt>@Localizer["App.Batches.ReviewFile"]</dt>
                                 <dd class="bb:font-mono">@_fileName</dd>
                             </dl>
                             <table class="review-table bb:text-sm">
                                 <thead>
                                     <tr>
-                                        <th scope="col">@Localizer["App.CsvJobs.SourceColumn"]</th>
-                                        <th scope="col">@Localizer["App.CsvJobs.TargetColumn"]</th>
-                                        <th scope="col">@Localizer["App.CsvJobs.ReviewNamespace"]</th>
+                                        <th scope="col">@Localizer["App.Batches.SourceColumn"]</th>
+                                        <th scope="col">@Localizer["App.Batches.TargetColumn"]</th>
+                                        <th scope="col">@Localizer["App.Batches.ReviewNamespace"]</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -503,7 +515,7 @@ else
                                         <tr>
                                             <td class="bb:font-mono">@mapping.SourceColumn</td>
                                             <td class="@(mapping.TargetColumn is null ? "bb:text-muted-foreground" : "bb:font-mono")">
-                                                @(mapping.TargetColumn ?? Localizer["App.CsvJobs.ReviewInPlace"].Value)
+                                                @(mapping.TargetColumn ?? Localizer["App.Batches.ReviewInPlace"].Value)
                                             </td>
                                             <td class="bb:font-mono">@mapping.Namespace</td>
                                         </tr>
@@ -520,10 +532,10 @@ else
                         <BbButton Variant="ButtonVariant.Outline" Disabled="_isCreating" OnClick="() => _isReviewing = false">
                             @Localizer["App.Common.Back"]
                         </BbButton>
-                        <BbButton id="confirmRevealJobButton" OnClick="SubmitJobAsync" Loading="_isCreating">
+                        <BbButton id="confirmRevealBatchButton" OnClick="SubmitJobAsync" Loading="_isCreating">
                             @(SelectedDirection == PseudonymizationJobDirection.Export
-                                ? Localizer["App.CsvJobs.ReviewConfirmExport"].Value
-                                : Localizer["App.CsvJobs.ReviewConfirmDepseudonymize"].Value)
+                                ? Localizer["App.Batches.ReviewConfirmExport"].Value
+                                : Localizer["App.Batches.ReviewConfirmDepseudonymize"].Value)
                         </BbButton>
                     }
                     else
@@ -531,10 +543,10 @@ else
                         <BbButton Variant="ButtonVariant.Outline" OnClick="() => OnNewJobDialogOpenChanged(false)">
                             @Localizer["App.Common.Cancel"]
                         </BbButton>
-                        <BbButton id="submitJobButton" OnClick="SubmitJobAsync" Loading="_isCreating">
+                        <BbButton id="submitBatchButton" OnClick="SubmitJobAsync" Loading="_isCreating">
                             @(RequiresInputFile
-                                ? Localizer["App.CsvJobs.UploadAndProcess"].Value
-                                : Localizer["App.CsvJobs.StartExport"].Value)
+                                ? Localizer["App.Batches.UploadAndProcess"].Value
+                                : Localizer["App.Batches.StartExport"].Value)
                         </BbButton>
                     }
                 </BbDialogFooter>
@@ -547,7 +559,7 @@ else
                    the shipped stylesheet lacks the grid utilities that put the action on the
                    title's right, so it stacked underneath it instead. *@
                 <div class="bb:flex bb:items-center bb:justify-between bb:gap-4">
-                    <SectionTitle>@Localizer["App.CsvJobs.JobsTitle"]</SectionTitle>
+                    <SectionTitle>@Localizer["App.Batches.BatchesTitle"]</SectionTitle>
                     @if (_jobs.Any(j => IsFinished(j.Status)))
                     {
                         <BbButton
@@ -556,7 +568,7 @@ else
                             Class="bb:shrink-0"
                             OnClick="() => _showClearFinishedConfirm = true"
                         >
-                            @Localizer["App.CsvJobs.ClearFinishedJobs"]
+                            @Localizer["App.Batches.ClearFinishedBatches"]
                         </BbButton>
                     }
                 </div>
@@ -570,8 +582,8 @@ else
                     <EmptyTemplate>
                         <BbEmpty
                             Size="EmptySize.Small"
-                            Title="@Localizer["App.Home.NoJobsTitle"]"
-                            Description="@Localizer["App.CsvJobs.EmptyDescription"]"
+                            Title="@Localizer["App.Home.NoBatchesTitle"]"
+                            Description="@Localizer["App.Batches.EmptyDescription"]"
                         >
                             <Icon>
                                 <LucideIcon aria-hidden="true" Name="file-spreadsheet" />
@@ -585,12 +597,12 @@ else
                        turns into a stack of these same cells, which is why none of them relies on
                        its column heading to be understood. *@
                     <Columns>
-                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.File"]">
+                        <BbDataGridTemplateColumn Title="@Localizer["App.Batches.File"]">
                             <ChildContent Context="j">
-                                <div class="job-subject">
-                                    <div class="bb:text-sm bb:font-medium">@(CsvJobDisplay.Subject(j) ?? "—")</div>
+                                <div class="batch-subject">
+                                    <div class="bb:text-sm bb:font-medium">@(BatchDisplay.Subject(j) ?? "—")</div>
                                     <div class="bb:text-xs bb:text-muted-foreground">
-                                        @CsvJobDisplay.DirectionLabel(j.Direction, Localizer) · <code>@j.Id.ToString()[..8]</code>
+                                        @BatchDisplay.DirectionLabel(j.Direction, Localizer) · <code>@j.Id.ToString()[..8]</code>
                                     </div>
                                     @if (
                                         (j.Status == PseudonymizationJobStatus.Failed
@@ -612,26 +624,26 @@ else
                                 </div>
                             </ChildContent>
                         </BbDataGridTemplateColumn>
-                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Status"]">
+                        <BbDataGridTemplateColumn Title="@Localizer["App.Batches.Status"]">
                             <ChildContent Context="j">
-                                <CsvJobStatusBadge Status="j.Status" />
+                                <BatchStatusBadge Status="j.Status" />
                             </ChildContent>
                         </BbDataGridTemplateColumn>
-                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.Progress"]">
+                        <BbDataGridTemplateColumn Title="@Localizer["App.Batches.Progress"]">
                             <ChildContent Context="j">
                                 @if (j.TotalBytes > 0)
                                 {
-                                    <div class="job-progress">
-                                        <BbProgress Value="@CsvJobDisplay.ProgressValue(100.0 * j.BytesProcessed / j.TotalBytes)" Class="bb:w-24" aria-label="@Localizer["App.CsvJobs.Progress"]" />
+                                    <div class="batch-progress">
+                                        <BbProgress Value="@BatchDisplay.ProgressValue(100.0 * j.BytesProcessed / j.TotalBytes)" Class="bb:w-24" aria-label="@Localizer["App.Batches.Progress"]" />
                                         <span class="bb:text-xs bb:text-muted-foreground">
-                                            @Localizer["App.CsvJobs.RowsCount", j.RowsProcessed.ToString("N0")]
+                                            @Localizer["App.Batches.RowsCount", j.RowsProcessed.ToString("N0")]
                                         </span>
                                     </div>
                                 }
                                 else
                                 {
                                     <span class="bb:text-xs bb:text-muted-foreground">
-                                        @Localizer["App.CsvJobs.RowsCount", j.RowsProcessed.ToString("N0")]
+                                        @Localizer["App.Batches.RowsCount", j.RowsProcessed.ToString("N0")]
                                     </span>
                                 }
                                 @if (ThroughputTextFor(j) is { } throughputText)
@@ -642,24 +654,24 @@ else
                                 }
                                 @if (j.BadDataRowCount > 0 || j.MissingValueCount > 0 || j.UnresolvedValueCount > 0)
                                 {
-                                    <div class="job-badges">
+                                    <div class="batch-badges">
                                         @if (j.BadDataRowCount > 0)
                                         {
-                                            <div title="@Localizer["App.CsvJobs.BadDataRowTitle"]">
+                                            <div title="@Localizer["App.Batches.BadDataRowTitle"]">
                                                 <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
                                                     @(j.BadDataRowCount == 1
-                                                        ? Localizer["App.CsvJobs.WarningCountSingular", j.BadDataRowCount].Value
-                                                        : Localizer["App.CsvJobs.WarningCountPlural", j.BadDataRowCount].Value)
+                                                        ? Localizer["App.Batches.WarningCountSingular", j.BadDataRowCount].Value
+                                                        : Localizer["App.Batches.WarningCountPlural", j.BadDataRowCount].Value)
                                                 </BbBadge>
                                             </div>
                                         }
                                         @if (j.MissingValueCount > 0)
                                         {
-                                            <div title="@Localizer["App.CsvJobs.MissingValueTitle"]">
+                                            <div title="@Localizer["App.Batches.MissingValueTitle"]">
                                                 <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
                                                     @(j.MissingValueCount == 1
-                                                        ? Localizer["App.CsvJobs.MissingValueCountSingular", j.MissingValueCount].Value
-                                                        : Localizer["App.CsvJobs.MissingValueCountPlural", j.MissingValueCount].Value)
+                                                        ? Localizer["App.Batches.MissingValueCountSingular", j.MissingValueCount].Value
+                                                        : Localizer["App.Batches.MissingValueCountPlural", j.MissingValueCount].Value)
                                                 </BbBadge>
                                             </div>
                                         }
@@ -669,11 +681,11 @@ else
                                            value this namespace has never seen, and it is still there". *@
                                         @if (j.UnresolvedValueCount > 0)
                                         {
-                                            <div title="@Localizer["App.CsvJobs.UnresolvedValueTitle"]">
+                                            <div title="@Localizer["App.Batches.UnresolvedValueTitle"]">
                                                 <BbBadge Variant="BadgeVariant.Outline" Class="badge-warning-amber">
                                                     @(j.UnresolvedValueCount == 1
-                                                        ? Localizer["App.CsvJobs.UnresolvedValueCountSingular", j.UnresolvedValueCount].Value
-                                                        : Localizer["App.CsvJobs.UnresolvedValueCountPlural", j.UnresolvedValueCount].Value)
+                                                        ? Localizer["App.Batches.UnresolvedValueCountSingular", j.UnresolvedValueCount].Value
+                                                        : Localizer["App.Batches.UnresolvedValueCountPlural", j.UnresolvedValueCount].Value)
                                                 </BbBadge>
                                             </div>
                                         }
@@ -681,16 +693,16 @@ else
                                 }
                             </ChildContent>
                         </BbDataGridTemplateColumn>
-                        <BbDataGridTemplateColumn Title="@Localizer["App.CsvJobs.CreatedAt"]">
+                        <BbDataGridTemplateColumn Title="@Localizer["App.Batches.CreatedAt"]">
                             <ChildContent Context="j">
-                                <span class="job-created bb:tabular-nums">
+                                <span class="batch-created bb:tabular-nums">
                                     @BrowserTime.Format(j.CreatedAt, _browserTimeZone)
                                 </span>
                             </ChildContent>
                         </BbDataGridTemplateColumn>
                         <BbDataGridTemplateColumn Title="@Localizer["App.Common.Actions"]">
                             <ChildContent Context="j">
-                                <div class="job-actions">
+                                <div class="batch-actions">
                                     @if (j.Status == PseudonymizationJobStatus.Completed)
                                     {
                                         <BbButton
@@ -698,7 +710,7 @@ else
                                             Size="ButtonSize.Small"
                                             OnClick="() => DownloadAsync(j.Id)"
                                         >
-                                            @Localizer["App.CsvJobs.Download"]
+                                            @Localizer["App.Batches.Download"]
                                         </BbButton>
                                     }
                                     @if (
@@ -735,12 +747,12 @@ else
                                                     Size="ButtonSize.IconSmall"
                                                     Href="@HangfireJobDetailsUrl(j.HangfireJobId)"
                                                     Target="_blank"
-                                                    AriaLabel="@Localizer["App.CsvJobs.ShowJobDashboard"]"
+                                                    AriaLabel="@Localizer["App.Batches.ShowJobDashboard"]"
                                                 >
                                                     <LucideIcon aria-hidden="true" Name="activity" Size="16" />
                                                 </BbButton>
                                             </BbTooltipTrigger>
-                                            <BbTooltipContent>@Localizer["App.CsvJobs.ShowJobDashboard"]</BbTooltipContent>
+                                            <BbTooltipContent>@Localizer["App.Batches.ShowJobDashboard"]</BbTooltipContent>
                                         </BbTooltip>
                                     }
                                 </div>
@@ -753,14 +765,14 @@ else
 
         <ConfirmDialog
             Open="_showClearFinishedConfirm"
-            Title="@Localizer["App.CsvJobs.ClearFinishedJobsConfirmTitle"]"
+            Title="@Localizer["App.Batches.ClearFinishedBatchesConfirmTitle"]"
             ConfirmLabel="@Localizer["App.Common.Clear"]"
             ConfirmButtonId="confirmClearFinishedJobsButton"
             IsBusy="_isClearingFinished"
             OnConfirm="ConfirmClearFinishedJobsAsync"
             OnCancel="() => _showClearFinishedConfirm = false"
         >
-            @Localizer["App.CsvJobs.ClearFinishedJobsConfirmBody"]
+            @Localizer["App.Batches.ClearFinishedBatchesConfirmBody"]
         </ConfirmDialog>
     </div>
 }
@@ -790,7 +802,7 @@ else
     // Defaults to today's behavior, which is also what the create-if-not-exist API does: a job
     // submitted without thinking about this question behaves exactly as it always has.
     private string _pseudonymizeMode = nameof(PseudonymizeMode.CreateIfMissing);
-    private string _encoding = "utf-8";
+    private CsvFileEncoding _encoding = CsvFileEncoding.Utf8;
     private string _delimiter = ",";
     private bool _hasHeaderRow = true;
     private string? _fileName;
@@ -976,7 +988,7 @@ else
     private string? ThroughputTextFor(PseudonymizationJob job) =>
         job.Status == PseudonymizationJobStatus.Running
         && _throughputByJobId.TryGetValue(job.Id, out var rowsPerSecond)
-            ? Localizer["App.CsvJobs.ThroughputRowsPerSecond", rowsPerSecond.ToString("N0")].Value
+            ? Localizer["App.Batches.ThroughputRowsPerSecond", rowsPerSecond.ToString("N0")].Value
             : null;
 
     // NavigationManager.BaseUri already includes the "/ui/" path base (App.razor's <base href>),
@@ -1088,9 +1100,9 @@ else
         SelectedDirection switch
         {
             PseudonymizationJobDirection.Pseudonymize =>
-                Localizer["App.CsvJobs.DirectionHintPseudonymize"].Value,
+                Localizer["App.Batches.DirectionHintPseudonymize"].Value,
             PseudonymizationJobDirection.Import =>
-                Localizer["App.CsvJobs.DirectionHintImport"].Value,
+                Localizer["App.Batches.DirectionHintImport"].Value,
             _ => null,
         };
 
@@ -1102,16 +1114,16 @@ else
         {
             var parts = new List<string>
             {
-                _encoding,
-                Localizer["App.CsvJobs.FileFormatDelimiter", _delimiter].Value,
+                CsvFileEncodings.ToDisplayName(_encoding),
+                Localizer["App.Batches.FileFormatDelimiter", _delimiter].Value,
             };
 
             if (RequiresInputFile)
             {
                 parts.Add(
                     _hasHeaderRow
-                        ? Localizer["App.CsvJobs.FileFormatHasHeader"].Value
-                        : Localizer["App.CsvJobs.FileFormatNoHeader"].Value
+                        ? Localizer["App.Batches.FileFormatHasHeader"].Value
+                        : Localizer["App.Batches.FileFormatNoHeader"].Value
                 );
             }
 
@@ -1151,7 +1163,7 @@ else
         {
             if (string.IsNullOrWhiteSpace(_namespaceMapping.Namespace))
             {
-                _createError = Localizer["App.CsvJobs.NoNamespaceError"];
+                _createError = Localizer["App.Batches.NoNamespaceError"];
                 return false;
             }
 
@@ -1161,7 +1173,7 @@ else
 
         if (string.IsNullOrEmpty(_fileName))
         {
-            _createError = Localizer["App.CsvJobs.NoFileError"];
+            _createError = Localizer["App.Batches.NoFileError"];
             return false;
         }
 
@@ -1217,7 +1229,7 @@ else
         }
         catch (Microsoft.JSInterop.JSException ex)
         {
-            _createError = Localizer["App.CsvJobs.UploadFailed", ex.Message];
+            _createError = Localizer["App.Batches.UploadFailed", ex.Message];
         }
         finally
         {
@@ -1245,7 +1257,7 @@ else
             _fileName,
             SelectedPseudonymizeMode
         );
-        var (job, uploadUrl) = await _jobAppService!.CreateJobAsync(
+        var (job, upload) = await _jobAppService!.CreateJobAsync(
             request,
             user,
             CancellationToken.None
@@ -1257,7 +1269,7 @@ else
         // not hardcoded - see Program.cs's own comment on why every server-side route in this app
         // is written without that prefix and added back at the middleware level.
         var completeUrl = NavigationManager
-            .ToAbsoluteUri($"csv-jobs/{job.Id}/upload-complete")
+            .ToAbsoluteUri($"batches/{job.Id}/upload-complete")
             .ToString();
 
         using (var dotNetRef = DotNetObjectReference.Create(this))
@@ -1273,7 +1285,7 @@ else
                 // what actually bounds how long this may run is the presigned URL's own expiry
                 // (S3Config.PresignedUrlExpiry), not this call.
                 //
-                // vfpsCsvUpload.uploadFile itself now also calls the /csv-jobs/{id}/upload-complete
+                // vfpsCsvUpload.uploadFile itself now also calls the /batches/{id}/upload-complete
                 // endpoint directly (a plain HTTP request, not routed through this interop call)
                 // right after its PUT succeeds - see that JS function and endpoint for why: the
                 // job must still get queued even if the circuit dies mid-upload, which this await
@@ -1285,7 +1297,7 @@ else
                     "vfpsCsvUpload.uploadFile",
                     CancellationToken.None,
                     "csvFileInput",
-                    uploadUrl,
+                    upload.Url,
                     completeUrl,
                     dotNetRef
                 );
@@ -1301,9 +1313,9 @@ else
 
         Toast.Success(
             job.OriginalFileName is null
-                ? Localizer["App.CsvJobs.UploadedNoFileName"].Value
-                : Localizer["App.CsvJobs.UploadedWithFileName", job.OriginalFileName].Value,
-            Localizer["App.CsvJobs.JobCreated"]
+                ? Localizer["App.Batches.UploadedNoFileName"].Value
+                : Localizer["App.Batches.UploadedWithFileName", job.OriginalFileName].Value,
+            Localizer["App.Batches.BatchCreated"]
         );
 
         if (IsColumnTransform)
@@ -1323,7 +1335,7 @@ else
     {
         if (string.IsNullOrWhiteSpace(_namespaceMapping.Namespace))
         {
-            _createError = Localizer["App.CsvJobs.NoNamespaceError"];
+            _createError = Localizer["App.Batches.NoNamespaceError"];
             return;
         }
 
@@ -1334,8 +1346,8 @@ else
         );
 
         Toast.Success(
-            Localizer["App.CsvJobs.ExportStarted", _namespaceMapping.Namespace].Value,
-            Localizer["App.CsvJobs.JobCreated"]
+            Localizer["App.Batches.ExportStarted", _namespaceMapping.Namespace].Value,
+            Localizer["App.Batches.BatchCreated"]
         );
 
         _showNewJobDialog = false;
@@ -1355,7 +1367,7 @@ else
                 && string.IsNullOrWhiteSpace(_namespaceMapping.Namespace)
             )
             {
-                _createError = Localizer["App.CsvJobs.NoNamespaceError"];
+                _createError = Localizer["App.Batches.NoNamespaceError"];
                 return null;
             }
 
@@ -1364,7 +1376,7 @@ else
                 || string.IsNullOrWhiteSpace(_namespaceMapping.TargetColumn)
             )
             {
-                _createError = Localizer["App.CsvJobs.NoImportColumnsError"];
+                _createError = Localizer["App.Batches.NoImportColumnsError"];
                 return null;
             }
 
@@ -1401,7 +1413,7 @@ else
 
         if (mappings.Count == 0)
         {
-            _createError = Localizer["App.CsvJobs.NoMappingsError"];
+            _createError = Localizer["App.Batches.NoMappingsError"];
             return null;
         }
 
@@ -1439,7 +1451,7 @@ else
                     or InvalidOperationException
             )
         {
-            Toast.Error(ex.Message, Localizer["App.CsvJobs.JobActionFailedTitle"].Value);
+            Toast.Error(ex.Message, Localizer["App.Batches.BatchActionFailedTitle"].Value);
         }
     }
 
@@ -1455,14 +1467,14 @@ else
         RunJobActionAsync(async () =>
         {
             var user = await GetUserAsync();
-            var url = await _jobAppService!.GetDownloadUrlAsync(
+            var download = await _jobAppService!.GetDownloadUrlAsync(
                 jobId,
                 user,
                 CancellationToken.None
             );
             try
             {
-                await JS.InvokeVoidAsync("open", url, "_blank");
+                await JS.InvokeVoidAsync("open", download.Url, "_blank");
             }
             catch (Microsoft.JSInterop.JSException ex)
             {
@@ -1470,8 +1482,8 @@ else
                 // browser-side one would otherwise end the circuit for want of a download.
                 Logger.LogWarning(ex, "Failed to open the download for job {JobId}", jobId);
                 Toast.Error(
-                    Localizer["App.CsvJobs.DownloadFailed"].Value,
-                    Localizer["App.CsvJobs.JobActionFailedTitle"].Value
+                    Localizer["App.Batches.DownloadFailed"].Value,
+                    Localizer["App.Batches.BatchActionFailedTitle"].Value
                 );
             }
         });

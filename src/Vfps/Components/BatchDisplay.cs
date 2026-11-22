@@ -5,10 +5,10 @@ namespace Vfps.Components;
 
 /// <summary>
 /// How a CSV job is described in the UI. Shared by the CSV Jobs page's grid and the home page's
-/// recent-jobs list so the two can't drift apart - see <see cref="CsvJobStatusBadge"/> for the
+/// recent-jobs list so the two can't drift apart - see <see cref="BatchStatusBadge"/> for the
 /// status half.
 /// </summary>
-public static class CsvJobDisplay
+public static class BatchDisplay
 {
     /// <summary>
     /// What identifies the job to a person: the uploaded file's name. An export has no uploaded
@@ -38,10 +38,10 @@ public static class CsvJobDisplay
         direction switch
         {
             PseudonymizationJobDirection.Depseudonymize => localizer[
-                "App.CsvJobs.DirectionDepseudonymize"
+                "App.Batches.DirectionDepseudonymize"
             ],
-            PseudonymizationJobDirection.Import => localizer["App.CsvJobs.DirectionImport"],
-            PseudonymizationJobDirection.Export => localizer["App.CsvJobs.DirectionExport"],
-            _ => localizer["App.CsvJobs.DirectionPseudonymize"],
+            PseudonymizationJobDirection.Import => localizer["App.Batches.DirectionImport"],
+            PseudonymizationJobDirection.Export => localizer["App.Batches.DirectionExport"],
+            _ => localizer["App.Batches.DirectionPseudonymize"],
         };
 }

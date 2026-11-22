@@ -25,6 +25,19 @@ public interface IPseudonymizationJobRepository
     );
 
     /// <summary>
+    /// One page of <see cref="ListAsync"/>'s ordering (newest first, ties broken by id, descending):
+    /// up to <paramref name="take"/> jobs that come strictly after <paramref name="after"/>, or from
+    /// the start when it is null. Keyset rather than offset, so a job created while a client pages
+    /// through neither shifts a later page nor repeats an earlier one.
+    /// </summary>
+    Task<IReadOnlyList<PseudonymizationJob>> ListPageAsync(
+        string? createdBy,
+        PseudonymizationJobPageCursor? after,
+        int take,
+        CancellationToken cancellationToken
+    );
+
+    /// <summary>
     /// IDs of jobs stuck in <see cref="PseudonymizationJobStatus.Running"/> with no progress
     /// update in over <paramref name="staleAfter"/> - see
     /// <see cref="CsvProcessing.StalledPseudonymizationJobWatchdogService"/>, the only caller.
@@ -158,4 +171,23 @@ public interface IPseudonymizationJobRepository
     /// number of jobs deleted.
     /// </summary>
     Task<int> DeleteFinishedAsync(string? createdBy, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Deletes the job <paramref name="id"/> if, and only if, it is in a terminal state - the
+    /// single-job counterpart of <see cref="DeleteFinishedAsync"/>, conditional inside the DELETE
+    /// itself for the same reason the Mark* transitions are. Returns whether a row was deleted.
+    /// </summary>
+    Task<bool> DeleteIfFinishedAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// How many jobs are in each status, and since when the longest-queued one has been waiting -
+    /// what <see cref="Metrics.BatchMetrics"/> reports.
+    /// </summary>
+    Task<Metrics.BatchMetricsSnapshot> GetMetricsSnapshotAsync(CancellationToken cancellationToken);
 }
+
+/// <summary>
+/// The position of the last job of a <see cref="IPseudonymizationJobRepository.ListPageAsync"/>
+/// page.
+/// </summary>
+public record PseudonymizationJobPageCursor(DateTimeOffset CreatedAt, Guid Id);

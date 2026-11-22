@@ -45,6 +45,9 @@ if (args is ["migrate", ..])
     return await DatabaseMigrator.RunAsync(args[1..]);
 }
 
+// Before anything decodes a batch's file: the worker resolves the job's stored encoding name directly.
+CsvFileEncodings.RegisterCodePageEncodings();
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Read up front rather than where the authentication handlers are wired below, because three
@@ -658,6 +661,16 @@ builder.Services.Configure<CsvProcessingConfig>(builder.Configuration.GetSection
 var csvProcessingConfig = new CsvProcessingConfig();
 builder.Configuration.GetSection("CsvProcessing").Bind(csvProcessingConfig);
 
+// Renamed without a fallback. Binding ignores keys it doesn't know, so a deployment still setting
+// the old name would silently run with the default instead - refused here so the rename is noticed.
+if (builder.Configuration["CsvProcessing:PseudonymizeBatchSize"] is not null)
+{
+    throw new InvalidOperationException(
+        "CsvProcessing:PseudonymizeBatchSize has been renamed to CsvProcessing:ChunkSize "
+            + "(env var CsvProcessing__ChunkSize). Rename the setting to keep its value."
+    );
+}
+
 if (s3Config.IsEnabled)
 {
     builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
@@ -705,6 +718,7 @@ if (s3Config.IsEnabled)
     builder.Services.AddScoped<ICsvNamespaceExporter, CsvNamespaceExporter>();
     builder.Services.AddHostedService<S3BucketConfigurationBackgroundService>();
     builder.Services.AddHostedService<StalledPseudonymizationJobWatchdogService>();
+    builder.Services.AddHostedService<BatchMetricsBackgroundService>();
 
     // Hangfire itself is registered further down for every deployment, not just this one - but CSV
     // jobs are the only feature that *cannot* work without it, so the missing-connection-string
@@ -877,8 +891,8 @@ if (s3Config.IsEnabled && !csvProcessingConfig.ProcessJobs)
     // setup for API pods alongside a dedicated worker Deployment) from a deployment where nothing
     // processes them at all.
     app.Logger.LogInformation(
-        "CsvProcessing:ProcessJobs is false - this instance accepts CSV jobs but does not process "
-            + "them. At least one instance must have it enabled, or jobs will queue forever."
+        "CsvProcessing:ProcessJobs is false - this instance accepts batches but does not process "
+            + "them. At least one instance must have it enabled, or batches will queue forever."
     );
 }
 
@@ -938,10 +952,20 @@ app.UseWhen(
 
 app.UseRouting();
 
+// Before the gRPC endpoints, so it wraps them: a failed gRPC call answers HTTP 200, and this is what
+// puts its real status on the HTTP request metric - see the middleware for why.
+app.UseMiddleware<GrpcStatusMetricsMiddleware>();
+
 // Configure the HTTP request pipeline.
 var pseudonymEndpoints = app.MapGrpcService<PseudonymService>();
 var namespaceEndpoints = app.MapGrpcService<NamespaceService>();
 var projectEndpoints = app.MapGrpcService<ProjectService>();
+
+// Only with object storage configured: the service is a front for IPseudonymizationJobAppService,
+// which is registered under that same condition. Left unmapped otherwise, so a call answers
+// UNIMPLEMENTED (and its /v1/batches routes 404) rather than failing to resolve its dependency on
+// every request - and reflection and /swagger don't advertise an API this deployment can't serve.
+var batchEndpoints = s3Config.IsEnabled ? app.MapGrpcService<BatchService>() : null;
 
 // Served in every environment, not just Development: it lets grpcurl, ghz and GUI clients find the
 // API without a copy of the .proto files - and always the API this server actually runs, rather
@@ -961,6 +985,7 @@ if (authConfig.IsEnabled)
     pseudonymEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
     namespaceEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
     projectEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
+    batchEndpoints?.RequireAuthorization(ApiAuthorizationPolicy);
     reflectionEndpoints.RequireAuthorization(ApiAuthorizationPolicy);
 }
 
@@ -1045,7 +1070,7 @@ app.MapGet(
 
 // Confirms a browser-to-S3 CSV upload landed and queues the job - called directly by
 // csvUpload.js (vfpsCsvUpload.uploadFile) right after its own PUT to the presigned URL succeeds,
-// not routed back through the Blazor circuit. CsvJobs.razor used to make this same
+// not routed back through the Blazor circuit. Batches.razor used to make this same
 // MarkUploadCompleteAsync call itself once its own awaited JS interop call for the upload
 // returned, but that ties every large upload's fate to the circuit surviving for the whole
 // transfer: a multi-hundred-MB file over a slow connection routinely takes minutes, and if the
@@ -1053,7 +1078,7 @@ app.MapGet(
 // that slept), the job was left stuck showing AwaitingUpload forever even though the file was
 // already sitting in S3. A plain HTTP endpoint the browser calls directly has no such dependency.
 app.MapPost(
-    "/csv-jobs/{jobId:guid}/upload-complete",
+    "/batches/{jobId:guid}/upload-complete",
     async (
         Guid jobId,
         HttpContext httpContext,

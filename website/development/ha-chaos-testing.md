@@ -134,14 +134,14 @@ Run sequentially under continuous load. Durations are `DURATION_*` variables in 
 window is computed as their sum plus `LOAD_MARGIN_SECONDS`, so the two halves can never disagree
 about how long the run is.
 
-| #   | Scenario               | Mechanism                                                                                | What it proves                                                                                                                                                                              |
-| --- | ---------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0   | `baseline`             | nothing injected                                                                         | The ambient error floor. Without it you cannot tell a chaos-induced failure from a flaky runner.                                                                                            |
-| 1   | `vfps-pod-kill`        | `PodChaos/pod-kill`, `mode: one`, Schedule @45s                                          | Replicas, PDB, Service endpoint churn.                                                                                                                                                      |
-| 2   | `cnpg-primary-kill`    | one-shot `PodChaos`, selector `cnpg.io/instanceRole: primary`, repeated as health allows | **The headline.** A real failover: promotion, `-rw` repointing, `EnableRetryOnFailure` riding it out. P2 and P3 are decided here.                                                           |
-| 3   | `db-network-partition` | `NetworkChaos/partition`, 20s bursts                                                     | A distinct failure mode from 2: the database is _up_ but unreachable, so Npgsql sees timeouts rather than resets. Tests `Timeout=60` and the retry policy, not failover.                    |
-| 4   | `rollout`              | `kubectl rollout restart`                                                                | Zero-downtime rolling upgrades: `preStop`, `terminationGracePeriodSeconds`, `minReadySeconds`.                                                                                              |
-| 5   | `drain`                | `kubectl drain --timeout=120s`                                                           | That the PodDisruptionBudget lets a node drain at all. **A drain that times out is the failure.** `run.sh` uncordons either way so the cluster is healthy before verification.              |
+| #   | Scenario               | Mechanism                                                                                | What it proves                                                                                                                                                                 |
+| --- | ---------------------- | ---------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 0   | `baseline`             | nothing injected                                                                         | The ambient error floor. Without it you cannot tell a chaos-induced failure from a flaky runner.                                                                               |
+| 1   | `vfps-pod-kill`        | `PodChaos/pod-kill`, `mode: one`, Schedule @45s                                          | Replicas, PDB, Service endpoint churn.                                                                                                                                         |
+| 2   | `cnpg-primary-kill`    | one-shot `PodChaos`, selector `cnpg.io/instanceRole: primary`, repeated as health allows | **The headline.** A real failover: promotion, `-rw` repointing, `EnableRetryOnFailure` riding it out. P2 and P3 are decided here.                                              |
+| 3   | `db-network-partition` | `NetworkChaos/partition`, 20s bursts                                                     | A distinct failure mode from 2: the database is _up_ but unreachable, so Npgsql sees timeouts rather than resets. Tests `Timeout=60` and the retry policy, not failover.       |
+| 4   | `rollout`              | `kubectl rollout restart`                                                                | Zero-downtime rolling upgrades: `preStop`, `terminationGracePeriodSeconds`, `minReadySeconds`.                                                                                 |
+| 5   | `drain`                | `kubectl drain --timeout=120s`                                                           | That the PodDisruptionBudget lets a node drain at all. **A drain that times out is the failure.** `run.sh` uncordons either way so the cluster is healthy before verification. |
 
 ## 6. Load generator
 
@@ -341,10 +341,10 @@ P1, P2 or P3 - which is the run you actually want it for.
 
 ## 10. Deliberately out of scope
 
-- **CSV job resilience.** On master a job killed mid-processing restarts from row 0 _by design_ -
-  resumable CSV jobs exist only on the unmerged `resumable-csv` branch - so a test asserting
+- **Batch resilience.** On master a batch killed mid-processing restarts from row 0 _by design_ -
+  resumable batches exist only on the unmerged `resumable-csv` branch - so a test asserting
   otherwise would fail correctly and tell us nothing. Revisit if that lands.
-- **S3 / object storage**, which CSV jobs need and nothing else does.
+- **S3 / object storage**, which batches need and nothing else does.
 - **NetworkPolicy.** The chart can render one; enabling it here would require allowing the
   cross-namespace loadgen traffic. A follow-up scenario of its own.
 - **The admin UI.** Blazor Server circuits under failover are a Playwright problem, not a

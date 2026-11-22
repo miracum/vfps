@@ -59,7 +59,7 @@ grpcurl \
   namespaces, and multiple pseudonyms per original value
 - Deterministic, oblivious [VOPRF pseudonyms](https://miracum.github.io/vfps/voprf/) (RFC 9497) from a separate key holder
 - gRPC, JSON-transcoded REST, and [FHIR operations](https://miracum.github.io/vfps/fhir/)
-- An [admin UI](https://miracum.github.io/vfps/admin-ui/) with [CSV pseudonymization jobs](https://miracum.github.io/vfps/csv-jobs/)
+- An [admin UI](https://miracum.github.io/vfps/admin-ui/) with [CSV processing](https://miracum.github.io/vfps/batches/)
 - OIDC sign-in, [namespace-scoped access control](https://miracum.github.io/vfps/access-control/), and vfps-issued access
   tokens
 - A Helm chart for [production deployments](https://miracum.github.io/vfps/deployment/production/), with

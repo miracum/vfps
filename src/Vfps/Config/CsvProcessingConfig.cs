@@ -10,11 +10,13 @@ public class CsvProcessingConfig
     /// CsvColumnTransformer.FlushChunkAsync: an upsert when pseudonymizing
     /// (IPseudonymRepository.CreateIfNotExistBatchAsync), a plain lookup when pseudonymizing in one
     /// of the lookup-only PseudonymizeModes (FindAllByOriginalValuesAsync), a reverse lookup when
-    /// de-pseudonymizing (FindAllByPseudonymValuesAsync), and an import batch for the
-    /// namespace-import direction. Named for the pseudonymize path it
-    /// was introduced for, but it now sizes every direction's chunk: de-pseudonymization used to
-    /// resolve a chunk via concurrent single-value lookups and needed its own much smaller bound
-    /// to protect the connection pool, and no longer does.
+    /// de-pseudonymizing (FindAllByPseudonymValuesAsync), and a batched import for the
+    /// namespace-import direction. Every direction's chunk takes the same size: de-pseudonymization
+    /// used to resolve a chunk via concurrent single-value lookups and needed its own much smaller
+    /// bound to protect the connection pool, and no longer does. Formerly
+    /// <c>PseudonymizeBatchSize</c>, renamed once "batch" became the user-facing name of a whole
+    /// CSV job and the old name, which also no longer matched what it sizes, read as a count of
+    /// those.
     ///
     /// Benchmarked locally against Postgres, fresh (non-conflicting) rows, 5 reps per size:
     /// throughput is ~30-35us/row from 100 rows upward with no cliff through 5000 (100 rows:
@@ -28,7 +30,7 @@ public class CsvProcessingConfig
     /// rather than trading it away for the comparatively small further reduction in round trips a
     /// much larger batch (e.g. 5000) would buy.
     /// </summary>
-    public int PseudonymizeBatchSize { get; set; } = 1000;
+    public int ChunkSize { get; set; } = 1000;
 
     /// <summary>
     /// Minimum wall time between a running job's progress check-ins. Each one is a committing

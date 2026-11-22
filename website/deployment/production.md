@@ -12,7 +12,7 @@ The [VOPRF](../voprf.md) key holder has a chart of its own,
 
 ## Architecture
 
-A highly available deployment, with the admin UI, the API and CSV jobs separated, and the database
+A highly available deployment, with the admin UI, the API and batches separated, and the database
 run by [CloudNativePG](https://cloudnative-pg.io/) instead of the chart's bundled single-instance
 PostgreSQL:
 
@@ -32,7 +32,7 @@ flowchart TB
         api1["pod"] ~~~ api2["pod"] ~~~ api3["pod"]
     end
 
-    subgraph workers["Deployment vfps-worker · CSV jobs"]
+    subgraph workers["Deployment vfps-worker · batches"]
         direction LR
         worker1["pod"] ~~~ worker2["pod"]
     end
@@ -65,13 +65,13 @@ flowchart TB
 | Three API replicas spread across zones, at most one down at a time                           | `replicaCount`, `topologySpreadConstraints`, `podDisruptionBudget` |
 | `/` to a separate UI Service holding the session affinity, `/v1` to the main one             | `ingress.hosts[].paths[].serviceName`, `service.ui`                |
 | gRPC clients balancing per request across all API pods                                       | the `-headless` Service, always created                            |
-| CSV jobs in their own Deployment, with its own shutdown window and resource budget           | `worker.enabled`, `worker.replicaCount`                            |
+| Batches in their own Deployment, with its own shutdown window and resource budget            | `worker.enabled`, `worker.replicaCount`                            |
 | Schema migrations run once per release rather than by every replica                          | `migrationsJob.enabled`                                            |
 | An external, replicated PostgreSQL reached through its read-write Service, over verified TLS | `postgres.enabled: false`, `database.host`, `database.tls`         |
 
 The reasons behind each of these are explained below. Encrypting the database connection is
-covered in [PostgreSQL TLS](postgresql-tls.md), and CSV jobs and object storage in
-[CSV jobs](../csv-jobs.md). Configure the CloudNativePG cluster with synchronous replication
+covered in [PostgreSQL TLS](postgresql-tls.md), and batches and object storage in
+[CSV processing](../batches.md). Configure the CloudNativePG cluster with synchronous replication
 (`spec.postgresql.synchronous`), so that a failover can't lose a pseudonym vfps has already
 returned to a caller.
 
@@ -125,8 +125,8 @@ application's, and are easy to miss:
   `Vfps.dll migrate` subcommand as a separate Job. Because that Job runs while
   the previous version's pods are still serving, migrations have to be backwards-compatible with the
   running version (expand/contract) for the upgrade to be non-disruptive.
-- **CSV jobs can run in dedicated worker pods.** By default every replica processes jobs, which is
-  fine until job load starts competing with API latency, or until you want jobs to drain slowly on
+- **Batches can run in dedicated worker pods.** By default every replica processes batches, which is
+  fine until batch load starts competing with API latency, or until you want batches to drain slowly on
   shutdown while API pods roll quickly - a single deployment can only have one shutdown window and
   one resource budget. Setting `CsvProcessing__ProcessJobs=false` on the API pods and running a
   second deployment of the same image with it set to `true` separates the two. The Helm chart wires

@@ -88,7 +88,7 @@ services:
       AWS_ACCESS_KEY_ID: "vfps"
       # kics-scan ignore-line
       AWS_SECRET_ACCESS_KEY: "vfps-minio-secret"
-      # the bucket vfps uploads/downloads CSV job files to/from, created on startup if it
+      # the bucket vfps uploads/downloads batch files to/from, created on startup if it
       # doesn't exist yet
       S3_BUCKET: "vfps-csv-jobs"
     healthcheck:

@@ -68,7 +68,7 @@ internal sealed class CsvJobOutputUploader(IAmazonS3 s3, IOptions<S3Config> s3Co
         var pipeOutStream = pipeWriter.AsStream();
         try
         {
-            await using var writer = new StreamWriter(pipeOutStream, encoding, leaveOpen: true);
+            await using var writer = CsvJobFormat.CreateWriter(pipeOutStream, encoding);
             await using var csvWriter = CsvWriter.Create(writer, writerOptions, leaveOpen: true);
 
             return await writeRows(csvWriter);

@@ -8,6 +8,7 @@ using Vfps.AppServices;
 using Vfps.Config;
 using Vfps.Data;
 using Vfps.Data.Models;
+using Vfps.Metrics;
 
 namespace Vfps.CsvProcessing;
 
@@ -20,6 +21,7 @@ internal sealed class CsvPseudonymizationJobRunner(
     ICsvNamespaceImporter namespaceImporter,
     ICsvNamespaceExporter namespaceExporter,
     IOptions<CsvProcessingConfig> csvProcessingConfig,
+    IOptions<S3Config> s3Config,
     ILogger<CsvPseudonymizationJobRunner> logger
 ) : ICsvPseudonymizationJobRunner
 {
@@ -197,6 +199,8 @@ internal sealed class CsvPseudonymizationJobRunner(
                 ex.Message,
                 CancellationToken.None
             );
+            // The outcome the batch was configured to produce for such a file, not a fault.
+            BatchMetrics.RecordFailed(BatchMetrics.FailureReason.UnknownValue);
             throw;
         }
         catch (Exception ex)
@@ -215,6 +219,7 @@ internal sealed class CsvPseudonymizationJobRunner(
                 "Processing failed - see server logs for details.",
                 CancellationToken.None
             );
+            BatchMetrics.RecordFailed(BatchMetrics.FailureReason.Error);
             throw;
         }
         finally
@@ -239,8 +244,7 @@ internal sealed class CsvPseudonymizationJobRunner(
         PerformContext? context
     )
     {
-        var outputObjectKey =
-            $"{PseudonymizationJobAppService.S3ObjectKeyPrefix}{job.Id}/output.csv";
+        var outputObjectKey = $"{s3Config.Value.NormalizedObjectKeyPrefix}{job.Id}/output.csv";
         // Set as soon as the (deterministic, jobId-derived) path is known, not only on success -
         // this is the path the runner is writing to/intends to write to, not a "job is done"
         // signal (that's what the job's own Status is for).

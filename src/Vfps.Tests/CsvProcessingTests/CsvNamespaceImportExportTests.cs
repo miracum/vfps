@@ -119,6 +119,7 @@ public class CsvNamespaceImportExportTests
             ),
             new CsvNamespaceExporter(pseudonymRepository, namespaceRepository, outputUploader),
             csvProcessingConfig,
+            s3Config,
             NullLogger<CsvPseudonymizationJobRunner>.Instance
         );
     }

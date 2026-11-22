@@ -57,7 +57,7 @@ internal sealed class CsvNamespaceImporter(
             s3Config.Value.Bucket,
             context.Job.InputObjectKey
                 ?? throw new InvalidOperationException(
-                    $"CSV job '{context.Job.Id}' has no input object to read."
+                    $"Batch '{context.Job.Id}' has no input object to read."
                 ),
             logger,
             cancellationToken.ShutdownToken
@@ -149,7 +149,7 @@ internal sealed class CsvNamespaceImporter(
         // The same batch size as pseudonymization, and for the same reason: one round trip's
         // worth of rows. ImportTrustedBatchAsync costs three round trips per chunk rather than
         // one, so if anything a chunk is worth more here than there.
-        var chunkSize = Math.Max(1, csvProcessingConfig.Value.PseudonymizeBatchSize);
+        var chunkSize = Math.Max(1, csvProcessingConfig.Value.ChunkSize);
         var phases = context.Phases;
 
         // The read/chunk/flush/cancellation/progress loop itself is shared with

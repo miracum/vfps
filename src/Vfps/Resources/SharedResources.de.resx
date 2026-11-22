@@ -244,29 +244,29 @@
   <data name="App.Common.Close" xml:space="preserve">
     <value>Schließen</value>
   </data>
-  <data name="App.CsvJobs.PseudonymizeMode" xml:space="preserve">
+  <data name="App.Batches.PseudonymizeMode" xml:space="preserve">
     <value>Unbekannte Werte</value>
   </data>
-  <data name="App.CsvJobs.PseudonymizeModeKeepIfMissingHint" xml:space="preserve">
+  <data name="App.Batches.PseudonymizeModeKeepIfMissingHint" xml:space="preserve">
     <value>Unbekannte Werte bleiben als ursprüngliche, identifizierende Werte in der Ausgabe.</value>
   </data>
-  <data name="App.CsvJobs.PseudonymizeModeKeepIfMissingOption" xml:space="preserve">
+  <data name="App.Batches.PseudonymizeModeKeepIfMissingOption" xml:space="preserve">
     <value>Originalwert beibehalten</value>
   </data>
-  <data name="App.CsvJobs.PseudonymizeModeCreateIfMissingOption" xml:space="preserve">
+  <data name="App.Batches.PseudonymizeModeCreateIfMissingOption" xml:space="preserve">
     <value>Pseudonym erzeugen</value>
   </data>
-  <data name="App.CsvJobs.PseudonymizeModeFailIfMissingOption" xml:space="preserve">
-    <value>Job abbrechen</value>
+  <data name="App.Batches.PseudonymizeModeFailIfMissingOption" xml:space="preserve">
+    <value>Batch abbrechen</value>
   </data>
-  <data name="App.CsvJobs.UnresolvedValueCountPlural" xml:space="preserve">
+  <data name="App.Batches.UnresolvedValueCountPlural" xml:space="preserve">
     <value>{0} Originalwerte beibehalten</value>
   </data>
-  <data name="App.CsvJobs.UnresolvedValueCountSingular" xml:space="preserve">
+  <data name="App.Batches.UnresolvedValueCountSingular" xml:space="preserve">
     <value>{0} Originalwert beibehalten</value>
   </data>
-  <data name="App.CsvJobs.UnresolvedValueTitle" xml:space="preserve">
-    <value>Für diese Werte gab es kein Pseudonym, und der Job sollte keines erzeugen. Sie blieben daher Originalwerte.</value>
+  <data name="App.Batches.UnresolvedValueTitle" xml:space="preserve">
+    <value>Für diese Werte gab es kein Pseudonym, und der Batch sollte keines erzeugen. Sie blieben daher Originalwerte.</value>
   </data>
   <data name="App.Namespaces.ConfigureAccessAction" xml:space="preserve">
     <value>Zugriff konfigurieren</value>
@@ -325,278 +325,278 @@
   <data name="App.Common.Search" xml:space="preserve">
     <value>Suchen</value>
   </data>
-  <data name="App.CsvJobs.AddColumnMapping" xml:space="preserve">
+  <data name="App.Batches.AddColumnMapping" xml:space="preserve">
     <value>Spaltenzuordnung hinzufügen</value>
   </data>
-  <data name="App.CsvJobs.BadDataRowTitle" xml:space="preserve">
+  <data name="App.Batches.BadDataRowTitle" xml:space="preserve">
     <value>Fehlerhaftes CSV, etwa ein nicht maskiertes Anführungszeichen. Die betroffenen Werte blieben unverändert.</value>
   </data>
-  <data name="App.CsvJobs.ClearFinishedJobs" xml:space="preserve">
-    <value>Abgeschlossene Jobs löschen</value>
+  <data name="App.Batches.ClearFinishedBatches" xml:space="preserve">
+    <value>Abgeschlossene Batches löschen</value>
   </data>
-  <data name="App.CsvJobs.ClearFinishedJobsConfirmBody" xml:space="preserve">
-    <value>Entfernt alle unten angezeigten abgeschlossenen, fehlgeschlagenen und abgebrochenen Jobs aus der Liste. Dies kann nicht rückgängig gemacht werden. Ihre Dateien werden nach der üblichen Aufbewahrungsfrist gelöscht.</value>
+  <data name="App.Batches.ClearFinishedBatchesConfirmBody" xml:space="preserve">
+    <value>Entfernt alle unten angezeigten abgeschlossenen, fehlgeschlagenen und abgebrochenen Batches aus der Liste. Dies kann nicht rückgängig gemacht werden. Ihre Dateien werden nach der üblichen Aufbewahrungsfrist gelöscht.</value>
   </data>
-  <data name="App.CsvJobs.ClearFinishedJobsConfirmTitle" xml:space="preserve">
-    <value>Abgeschlossene Jobs löschen?</value>
+  <data name="App.Batches.ClearFinishedBatchesConfirmTitle" xml:space="preserve">
+    <value>Abgeschlossene Batches löschen?</value>
   </data>
-  <data name="App.CsvJobs.ColumnMappings" xml:space="preserve">
+  <data name="App.Batches.ColumnMappings" xml:space="preserve">
     <value>Spaltenzuordnungen</value>
   </data>
-  <data name="App.CsvJobs.ColumnMappingsHintDepseudonymize" xml:space="preserve">
+  <data name="App.Batches.ColumnMappingsHintDepseudonymize" xml:space="preserve">
     <value>Jede Zeile wandelt die Pseudonyme einer Spalte in Originalwerte zurück. Lassen Sie die Zielspalte leer, um die Werte direkt zu ersetzen, oder geben Sie eine neue Spalte an. Nicht gefundene Pseudonyme bleiben unverändert.</value>
   </data>
-  <data name="App.CsvJobs.ColumnMappingsHintPseudonymize" xml:space="preserve">
+  <data name="App.Batches.ColumnMappingsHintPseudonymize" xml:space="preserve">
     <value>Jede Zeile pseudonymisiert eine Spalte. Lassen Sie die Zielspalte leer, um die Werte direkt zu ersetzen, oder geben Sie eine neue Spalte an.</value>
   </data>
-  <data name="App.CsvJobs.ColumnMappingsHintSuffix" xml:space="preserve">
+  <data name="App.Batches.ColumnMappingsHintSuffix" xml:space="preserve">
     <value>Mit Kopfzeile lassen sich Spalten nach Namen auswählen.</value>
   </data>
-  <data name="App.CsvJobs.ColumnNotInFile" xml:space="preserve">
+  <data name="App.Batches.ColumnNotInFile" xml:space="preserve">
     <value>{0} (nicht in dieser Datei)</value>
   </data>
-  <data name="App.CsvJobs.CreateErrorTitle" xml:space="preserve">
-    <value>Job konnte nicht erstellt werden</value>
+  <data name="App.Batches.CreateErrorTitle" xml:space="preserve">
+    <value>Batch konnte nicht erstellt werden</value>
   </data>
-  <data name="App.CsvJobs.CreatedAt" xml:space="preserve">
+  <data name="App.Batches.CreatedAt" xml:space="preserve">
     <value>Erstellt am</value>
   </data>
-  <data name="App.CsvJobs.CsvFile" xml:space="preserve">
+  <data name="App.Batches.CsvFile" xml:space="preserve">
     <value>CSV-Datei</value>
   </data>
-  <data name="App.CsvJobs.Delimiter" xml:space="preserve">
+  <data name="App.Batches.Delimiter" xml:space="preserve">
     <value>Trennzeichen</value>
   </data>
-  <data name="App.CsvJobs.DepseudonymizeWarning" xml:space="preserve">
+  <data name="App.Batches.DepseudonymizeWarning" xml:space="preserve">
     <value>Die Ausgabe enthält ursprüngliche, identifizierende Werte. Erfordert Reverse-Lookup-Zugriff auf jeden unten verwendeten Namespace.</value>
   </data>
-  <data name="App.CsvJobs.Direction" xml:space="preserve">
+  <data name="App.Batches.Direction" xml:space="preserve">
     <value>Richtung</value>
   </data>
-  <data name="App.CsvJobs.DirectionDepseudonymize" xml:space="preserve">
+  <data name="App.Batches.DirectionDepseudonymize" xml:space="preserve">
     <value>De-pseudonymisieren</value>
   </data>
-  <data name="App.CsvJobs.DirectionDepseudonymizeOption" xml:space="preserve">
+  <data name="App.Batches.DirectionDepseudonymizeOption" xml:space="preserve">
     <value>De-pseudonymisieren</value>
   </data>
-  <data name="App.CsvJobs.DirectionExport" xml:space="preserve">
+  <data name="App.Batches.DirectionExport" xml:space="preserve">
     <value>Export</value>
   </data>
-  <data name="App.CsvJobs.DirectionExportOption" xml:space="preserve">
+  <data name="App.Batches.DirectionExportOption" xml:space="preserve">
     <value>Paare exportieren</value>
   </data>
-  <data name="App.CsvJobs.DirectionImport" xml:space="preserve">
+  <data name="App.Batches.DirectionImport" xml:space="preserve">
     <value>Import</value>
   </data>
-  <data name="App.CsvJobs.DirectionImportOption" xml:space="preserve">
+  <data name="App.Batches.DirectionImportOption" xml:space="preserve">
     <value>Paare importieren</value>
   </data>
-  <data name="App.CsvJobs.DirectionPseudonymize" xml:space="preserve">
+  <data name="App.Batches.DirectionPseudonymize" xml:space="preserve">
     <value>Pseudonymisieren</value>
   </data>
-  <data name="App.CsvJobs.DirectionPseudonymizeOption" xml:space="preserve">
+  <data name="App.Batches.DirectionPseudonymizeOption" xml:space="preserve">
     <value>Pseudonymisieren</value>
   </data>
-  <data name="App.CsvJobs.DisabledDescription" xml:space="preserve">
+  <data name="App.Batches.DisabledDescription" xml:space="preserve">
     <value>Setzen Sie {0} (und die übrigen {1}-Einstellungen), um diese Funktion zu aktivieren - sie erfordert S3-kompatiblen Objektspeicher.</value>
   </data>
-  <data name="App.CsvJobs.DisabledTitle" xml:space="preserve">
+  <data name="App.Batches.DisabledTitle" xml:space="preserve">
     <value>CSV-Pseudonymisierung ist deaktiviert</value>
   </data>
-  <data name="App.CsvJobs.Download" xml:space="preserve">
+  <data name="App.Batches.Download" xml:space="preserve">
     <value>Herunterladen</value>
   </data>
-  <data name="App.CsvJobs.Encoding" xml:space="preserve">
+  <data name="App.Batches.Encoding" xml:space="preserve">
     <value>Zeichenkodierung</value>
   </data>
-  <data name="App.CsvJobs.ExportHint" xml:space="preserve">
+  <data name="App.Batches.ExportHint" xml:space="preserve">
     <value>Schreibt jeden Originalwert und sein Pseudonym in eine zweispaltige CSV-Datei, bereit für den Import an anderer Stelle.</value>
   </data>
-  <data name="App.CsvJobs.ExportStarted" xml:space="preserve">
+  <data name="App.Batches.ExportStarted" xml:space="preserve">
     <value>Namespace {0} wird exportiert.</value>
   </data>
-  <data name="App.CsvJobs.ExportTitle" xml:space="preserve">
+  <data name="App.Batches.ExportTitle" xml:space="preserve">
     <value>Zu exportierender Namespace</value>
   </data>
-  <data name="App.CsvJobs.ExportWarning" xml:space="preserve">
+  <data name="App.Batches.ExportWarning" xml:space="preserve">
     <value>Die Ausgabe enthält jeden Originalwert des Namespace. Erfordert Reverse-Lookup-Zugriff darauf.</value>
   </data>
-  <data name="App.CsvJobs.File" xml:space="preserve">
+  <data name="App.Batches.File" xml:space="preserve">
     <value>Datei</value>
   </data>
-  <data name="App.CsvJobs.FileFormat" xml:space="preserve">
+  <data name="App.Batches.FileFormat" xml:space="preserve">
     <value>Dateiformat</value>
   </data>
-  <data name="App.CsvJobs.FileFormatDelimiter" xml:space="preserve">
+  <data name="App.Batches.FileFormatDelimiter" xml:space="preserve">
     <value>Trennzeichen "{0}"</value>
   </data>
-  <data name="App.CsvJobs.FileFormatHasHeader" xml:space="preserve">
+  <data name="App.Batches.FileFormatHasHeader" xml:space="preserve">
     <value>Kopfzeile</value>
   </data>
-  <data name="App.CsvJobs.FileFormatNoHeader" xml:space="preserve">
+  <data name="App.Batches.FileFormatNoHeader" xml:space="preserve">
     <value>keine Kopfzeile</value>
   </data>
-  <data name="App.CsvJobs.HasHeaderRow" xml:space="preserve">
+  <data name="App.Batches.HasHeaderRow" xml:space="preserve">
     <value>Datei hat eine Kopfzeile</value>
   </data>
-  <data name="App.CsvJobs.HeaderRow" xml:space="preserve">
+  <data name="App.Batches.HeaderRow" xml:space="preserve">
     <value>Kopfzeile</value>
   </data>
-  <data name="App.CsvJobs.ImportHint" xml:space="preserve">
+  <data name="App.Batches.ImportHint" xml:space="preserve">
     <value>Speichert die Paare unverändert. Zeilen, deren Originalwert oder Pseudonym bereits vergeben ist, werden übersprungen und in der Ergebnisdatei aufgeführt.</value>
   </data>
-  <data name="App.CsvJobs.ImportTitle" xml:space="preserve">
+  <data name="App.Batches.ImportTitle" xml:space="preserve">
     <value>Ziel-Namespace für den Import</value>
   </data>
-  <data name="App.CsvJobs.ImportTitleNamespaceColumn" xml:space="preserve">
+  <data name="App.Batches.ImportTitleNamespaceColumn" xml:space="preserve">
     <value>Zu importierende Spalten</value>
   </data>
-  <data name="App.CsvJobs.JobActionFailedTitle" xml:space="preserve">
+  <data name="App.Batches.BatchActionFailedTitle" xml:space="preserve">
     <value>Aktion fehlgeschlagen</value>
   </data>
-  <data name="App.CsvJobs.JobCreated" xml:space="preserve">
-    <value>Job erstellt</value>
+  <data name="App.Batches.BatchCreated" xml:space="preserve">
+    <value>Batch erstellt</value>
   </data>
-  <data name="App.CsvJobs.JobsTitle" xml:space="preserve">
-    <value>Jobs</value>
+  <data name="App.Batches.BatchesTitle" xml:space="preserve">
+    <value>Batches</value>
   </data>
-  <data name="App.CsvJobs.MissingValueCountPlural" xml:space="preserve">
+  <data name="App.Batches.MissingValueCountPlural" xml:space="preserve">
     <value>{0} fehlende Werte</value>
   </data>
-  <data name="App.CsvJobs.MissingValueCountSingular" xml:space="preserve">
+  <data name="App.Batches.MissingValueCountSingular" xml:space="preserve">
     <value>{0} fehlender Wert</value>
   </data>
-  <data name="App.CsvJobs.MissingValueTitle" xml:space="preserve">
+  <data name="App.Batches.MissingValueTitle" xml:space="preserve">
     <value>Leer oder ein Platzhalter für fehlende Daten wie NA oder NULL. Unverändert belassen.</value>
   </data>
-  <data name="App.CsvJobs.NamespaceColumn" xml:space="preserve">
+  <data name="App.Batches.NamespaceColumn" xml:space="preserve">
     <value>Namespace-Spalte</value>
   </data>
-  <data name="App.CsvJobs.NamespaceColumnHint" xml:space="preserve">
+  <data name="App.Batches.NamespaceColumnHint" xml:space="preserve">
     <value>Ist sie leer, gehen alle Zeilen in den oben ausgewählten Namespace.</value>
   </data>
-  <data name="App.CsvJobs.NamespaceColumnPlaceholder" xml:space="preserve">
+  <data name="App.Batches.NamespaceColumnPlaceholder" xml:space="preserve">
     <value>Optional</value>
   </data>
-  <data name="App.CsvJobs.NamespaceColumnSetHint" xml:space="preserve">
+  <data name="App.Batches.NamespaceColumnSetHint" xml:space="preserve">
     <value>Jede Zeile geht in den Namespace, der in dieser Spalte steht. Zeilen mit unbekanntem oder leerem Namespace werden übersprungen und in der Ergebnisdatei aufgeführt. Erfordert Schreibzugriff auf jeden Namespace.</value>
   </data>
-  <data name="App.CsvJobs.NewJobDescription" xml:space="preserve">
-    <value>Sobald der Job abgeschlossen ist, steht die Ausgabe zum Download bereit.</value>
+  <data name="App.Batches.NewBatchDescription" xml:space="preserve">
+    <value>Sobald der Batch abgeschlossen ist, steht die Ausgabe zum Download bereit.</value>
   </data>
-  <data name="App.CsvJobs.NewJobTitle" xml:space="preserve">
-    <value>Neuer Job</value>
+  <data name="App.Batches.NewBatchTitle" xml:space="preserve">
+    <value>Neuer Batch</value>
   </data>
-  <data name="App.CsvJobs.NoImportColumnsError" xml:space="preserve">
+  <data name="App.Batches.NoImportColumnsError" xml:space="preserve">
     <value>Sowohl die Spalte mit dem Originalwert als auch die Spalte mit dem Pseudonym sind erforderlich.</value>
   </data>
-  <data name="App.CsvJobs.NoMappingsError" xml:space="preserve">
+  <data name="App.Batches.NoMappingsError" xml:space="preserve">
     <value>Mindestens eine Spaltenzuordnung mit Quellspalte und Namespace ist erforderlich.</value>
   </data>
-  <data name="App.CsvJobs.NoNamespaceError" xml:space="preserve">
+  <data name="App.Batches.NoNamespaceError" xml:space="preserve">
     <value>Ein Namespace ist erforderlich.</value>
   </data>
-  <data name="App.CsvJobs.OriginalValueColumn" xml:space="preserve">
+  <data name="App.Batches.OriginalValueColumn" xml:space="preserve">
     <value>Spalte mit Originalwert</value>
   </data>
-  <data name="App.CsvJobs.PageTitle" xml:space="preserve">
-    <value>CSV-Jobs</value>
+  <data name="App.Batches.PageTitle" xml:space="preserve">
+    <value>CSV-Verarbeitung</value>
   </data>
-  <data name="App.CsvJobs.Progress" xml:space="preserve">
+  <data name="App.Batches.Progress" xml:space="preserve">
     <value>Fortschritt</value>
   </data>
-  <data name="App.CsvJobs.PseudonymValueColumn" xml:space="preserve">
+  <data name="App.Batches.PseudonymValueColumn" xml:space="preserve">
     <value>Spalte mit Pseudonym</value>
   </data>
-  <data name="App.CsvJobs.RemoveMapping" xml:space="preserve">
+  <data name="App.Batches.RemoveMapping" xml:space="preserve">
     <value>Zuordnung entfernen</value>
   </data>
-  <data name="App.CsvJobs.RetentionNoticePlural" xml:space="preserve">
+  <data name="App.Batches.RetentionNoticePlural" xml:space="preserve">
     <value>Hochgeladene Dateien und ihre Ausgabe werden {0} Tage nach dem Upload gelöscht. Laden Sie Benötigtes vorher herunter.</value>
   </data>
-  <data name="App.CsvJobs.RetentionNoticeSingular" xml:space="preserve">
+  <data name="App.Batches.RetentionNoticeSingular" xml:space="preserve">
     <value>Hochgeladene Dateien und ihre Ausgabe werden 1 Tag nach dem Upload gelöscht. Laden Sie Benötigtes vorher herunter.</value>
   </data>
-  <data name="App.CsvJobs.RowsCount" xml:space="preserve">
+  <data name="App.Batches.RowsCount" xml:space="preserve">
     <value>{0} Zeilen</value>
   </data>
-  <data name="App.CsvJobs.SelectColumn" xml:space="preserve">
+  <data name="App.Batches.SelectColumn" xml:space="preserve">
     <value>Spalte auswählen</value>
   </data>
-  <data name="App.CsvJobs.SelectNamespace" xml:space="preserve">
+  <data name="App.Batches.SelectNamespace" xml:space="preserve">
     <value>Namespace auswählen</value>
   </data>
-  <data name="App.CsvJobs.ShowJobDashboard" xml:space="preserve">
+  <data name="App.Batches.ShowJobDashboard" xml:space="preserve">
     <value>Im Job-Dashboard öffnen</value>
   </data>
-  <data name="App.CsvJobs.SourceColumn" xml:space="preserve">
+  <data name="App.Batches.SourceColumn" xml:space="preserve">
     <value>Quellspalte</value>
   </data>
-  <data name="App.CsvJobs.SourceColumnPlaceholder" xml:space="preserve">
+  <data name="App.Batches.SourceColumnPlaceholder" xml:space="preserve">
     <value>Name oder nullbasierter Index</value>
   </data>
-  <data name="App.CsvJobs.StartExport" xml:space="preserve">
+  <data name="App.Batches.StartExport" xml:space="preserve">
     <value>Export starten</value>
   </data>
-  <data name="App.CsvJobs.Status" xml:space="preserve">
+  <data name="App.Batches.Status" xml:space="preserve">
     <value>Status</value>
   </data>
-  <data name="App.CsvJobs.StatusAwaitingUpload" xml:space="preserve">
+  <data name="App.Batches.StatusAwaitingUpload" xml:space="preserve">
     <value>Warten auf Upload</value>
   </data>
-  <data name="App.CsvJobs.StatusCancelled" xml:space="preserve">
+  <data name="App.Batches.StatusCancelled" xml:space="preserve">
     <value>Abgebrochen</value>
   </data>
-  <data name="App.CsvJobs.StatusCompleted" xml:space="preserve">
+  <data name="App.Batches.StatusCompleted" xml:space="preserve">
     <value>Abgeschlossen</value>
   </data>
-  <data name="App.CsvJobs.StatusFailed" xml:space="preserve">
+  <data name="App.Batches.StatusFailed" xml:space="preserve">
     <value>Fehlgeschlagen</value>
   </data>
-  <data name="App.CsvJobs.StatusQueued" xml:space="preserve">
+  <data name="App.Batches.StatusQueued" xml:space="preserve">
     <value>In Warteschlange</value>
   </data>
-  <data name="App.CsvJobs.StatusRunning" xml:space="preserve">
+  <data name="App.Batches.StatusRunning" xml:space="preserve">
     <value>Wird ausgeführt</value>
   </data>
-  <data name="App.CsvJobs.StatusStalled" xml:space="preserve">
+  <data name="App.Batches.StatusStalled" xml:space="preserve">
     <value>Stockt</value>
   </data>
-  <data name="App.CsvJobs.TargetColumn" xml:space="preserve">
+  <data name="App.Batches.TargetColumn" xml:space="preserve">
     <value>Zielspalte</value>
   </data>
-  <data name="App.CsvJobs.TargetColumnPlaceholder" xml:space="preserve">
+  <data name="App.Batches.TargetColumnPlaceholder" xml:space="preserve">
     <value>leer = direkt ersetzen</value>
   </data>
-  <data name="App.CsvJobs.ThroughputRowsPerSecond" xml:space="preserve">
+  <data name="App.Batches.ThroughputRowsPerSecond" xml:space="preserve">
     <value>{0} Zeilen/s</value>
   </data>
-  <data name="App.CsvJobs.UploadAndProcess" xml:space="preserve">
+  <data name="App.Batches.UploadAndProcess" xml:space="preserve">
     <value>Hochladen und verarbeiten</value>
   </data>
-  <data name="App.CsvJobs.Uploading" xml:space="preserve">
+  <data name="App.Batches.Uploading" xml:space="preserve">
     <value>Wird hochgeladen…</value>
   </data>
-  <data name="App.CsvJobs.UploadFailed" xml:space="preserve">
+  <data name="App.Batches.UploadFailed" xml:space="preserve">
     <value>Upload fehlgeschlagen: {0}</value>
   </data>
-  <data name="App.CsvJobs.UploadedNoFileName" xml:space="preserve">
+  <data name="App.Batches.UploadedNoFileName" xml:space="preserve">
     <value>Hochgeladen und zur Verarbeitung eingereiht.</value>
   </data>
-  <data name="App.CsvJobs.UploadedWithFileName" xml:space="preserve">
+  <data name="App.Batches.UploadedWithFileName" xml:space="preserve">
     <value>"{0}" wurde hochgeladen und zur Verarbeitung eingereiht.</value>
   </data>
-  <data name="App.CsvJobs.WarningCountPlural" xml:space="preserve">
+  <data name="App.Batches.WarningCountPlural" xml:space="preserve">
     <value>{0} Warnungen</value>
   </data>
-  <data name="App.CsvJobs.WarningCountSingular" xml:space="preserve">
+  <data name="App.Batches.WarningCountSingular" xml:space="preserve">
     <value>{0} Warnung</value>
   </data>
-  <data name="App.Home.ActiveJobsCaption" xml:space="preserve">
+  <data name="App.Home.ActiveBatchesCaption" xml:space="preserve">
     <value>In der Warteschlange oder laufend</value>
   </data>
-  <data name="App.Home.ActiveJobsStat" xml:space="preserve">
-    <value>Aktive CSV-Jobs</value>
+  <data name="App.Home.ActiveBatchesStat" xml:space="preserve">
+    <value>Aktive Batches</value>
   </data>
   <data name="App.Home.ActiveTokensCaption" xml:space="preserve">
     <value>Ihre persönlichen Token</value>
@@ -604,11 +604,11 @@
   <data name="App.Home.ActiveTokensStat" xml:space="preserve">
     <value>Aktive Zugriffstoken</value>
   </data>
-  <data name="App.Home.AttentionJobFailed" xml:space="preserve">
-    <value>CSV-Job "{0}" ist {1} fehlgeschlagen.</value>
+  <data name="App.Home.AttentionBatchFailed" xml:space="preserve">
+    <value>Batch "{0}" ist {1} fehlgeschlagen.</value>
   </data>
-  <data name="App.Home.AttentionJobStalled" xml:space="preserve">
-    <value>CSV-Job "{0}" ist {1} ins Stocken geraten.</value>
+  <data name="App.Home.AttentionBatchStalled" xml:space="preserve">
+    <value>Batch "{0}" ist {1} ins Stocken geraten.</value>
   </data>
   <data name="App.Home.AttentionPersonalTokenExpiring" xml:space="preserve">
     <value>Ihr Zugriffstoken "{0}" läuft {1} ab.</value>
@@ -628,8 +628,8 @@
   <data name="App.Home.NamespacesDescription" xml:space="preserve">
     <value>Ihre 5 größten Namespaces, nach Anzahl der Pseudonyme.</value>
   </data>
-  <data name="App.Home.NoJobsTitle" xml:space="preserve">
-    <value>Noch keine CSV-Jobs</value>
+  <data name="App.Home.NoBatchesTitle" xml:space="preserve">
+    <value>Noch keine Batches</value>
   </data>
   <data name="App.Home.NoNamespacesAdminDescription" xml:space="preserve">
     <value>Legen Sie den ersten auf der Seite Namespaces an.</value>
@@ -646,14 +646,14 @@
   <data name="App.Home.PseudonymsNotCountedYet" xml:space="preserve">
     <value>Noch nicht gezählt - wird alle {0} Minuten neu gezählt</value>
   </data>
-  <data name="App.Home.RecentJobsAllUsersDescription" xml:space="preserve">
-    <value>Die zuletzt erstellten CSV-Jobs aller Benutzer.</value>
+  <data name="App.Home.RecentBatchesAllUsersDescription" xml:space="preserve">
+    <value>Die zuletzt erstellten Batches aller Benutzer.</value>
   </data>
-  <data name="App.Home.RecentJobsDescription" xml:space="preserve">
-    <value>Ihre zuletzt erstellten CSV-Jobs.</value>
+  <data name="App.Home.RecentBatchesDescription" xml:space="preserve">
+    <value>Ihre zuletzt erstellten Batches.</value>
   </data>
-  <data name="App.Home.RecentJobsTitle" xml:space="preserve">
-    <value>Letzte CSV-Jobs</value>
+  <data name="App.Home.RecentBatchesTitle" xml:space="preserve">
+    <value>Letzte Batches</value>
   </data>
   <data name="App.Home.ViewAll" xml:space="preserve">
     <value>Alle anzeigen</value>
@@ -820,8 +820,8 @@
   <data name="App.Nav.ApiDocs" xml:space="preserve">
     <value>API-Dokumentation</value>
   </data>
-  <data name="App.Nav.CsvJobs" xml:space="preserve">
-    <value>CSV-Jobs</value>
+  <data name="App.Nav.Batches" xml:space="preserve">
+    <value>CSV-Verarbeitung</value>
   </data>
   <data name="App.Nav.Namespaces" xml:space="preserve">
     <value>Namespaces</value>
@@ -1150,44 +1150,44 @@
   <data name="App.Namespaces.DeleteBlockedByChildren" xml:space="preserve">
     <value>Er kann nicht gelöscht werden, solange er untergeordnete Namespaces hat. Löschen Sie zuerst: {0}</value>
   </data>
-  <data name="App.CsvJobs.ReviewTitle" xml:space="preserve">
+  <data name="App.Batches.ReviewTitle" xml:space="preserve">
     <value>Vor dem Offenlegen der Originalwerte prüfen</value>
   </data>
-  <data name="App.CsvJobs.ReviewDepseudonymizeBody" xml:space="preserve">
+  <data name="App.Batches.ReviewDepseudonymizeBody" xml:space="preserve">
     <value>Die Ausgabedatei enthält die ursprünglichen, identifizierenden Werte hinter diesen Pseudonymen. Wer sie herunterladen kann, kann sie lesen.</value>
   </data>
-  <data name="App.CsvJobs.ReviewExportBody" xml:space="preserve">
+  <data name="App.Batches.ReviewExportBody" xml:space="preserve">
     <value>Jeder Originalwert dieses Namespace wird mit seinem Pseudonym in die Ausgabedatei geschrieben. Wer sie herunterladen kann, kann sie lesen.</value>
   </data>
-  <data name="App.CsvJobs.ReviewFile" xml:space="preserve">
+  <data name="App.Batches.ReviewFile" xml:space="preserve">
     <value>Datei</value>
   </data>
-  <data name="App.CsvJobs.ReviewNamespace" xml:space="preserve">
+  <data name="App.Batches.ReviewNamespace" xml:space="preserve">
     <value>Namespace</value>
   </data>
-  <data name="App.CsvJobs.ReviewInPlace" xml:space="preserve">
+  <data name="App.Batches.ReviewInPlace" xml:space="preserve">
     <value>an Ort und Stelle</value>
   </data>
-  <data name="App.CsvJobs.ReviewConfirmDepseudonymize" xml:space="preserve">
+  <data name="App.Batches.ReviewConfirmDepseudonymize" xml:space="preserve">
     <value>Originalwerte offenlegen</value>
   </data>
-  <data name="App.CsvJobs.ReviewConfirmExport" xml:space="preserve">
+  <data name="App.Batches.ReviewConfirmExport" xml:space="preserve">
     <value>Originalwerte exportieren</value>
   </data>
-  <data name="App.CsvJobs.NoFileError" xml:space="preserve">
+  <data name="App.Batches.NoFileError" xml:space="preserve">
     <value>Wählen Sie eine CSV-Datei zum Hochladen aus.</value>
   </data>
-  <data name="App.CsvJobs.DirectionHintPseudonymize" xml:space="preserve">
+  <data name="App.Batches.DirectionHintPseudonymize" xml:space="preserve">
     <value>Ersetzt Originalwerte in der Datei durch ihre Pseudonyme.</value>
   </data>
-  <data name="App.CsvJobs.DirectionHintImport" xml:space="preserve">
+  <data name="App.Batches.DirectionHintImport" xml:space="preserve">
     <value>Lädt vorhandene Paare aus Originalwert und Pseudonym in einen Namespace.</value>
   </data>
-  <data name="App.CsvJobs.NamespaceLabel" xml:space="preserve">
+  <data name="App.Batches.NamespaceLabel" xml:space="preserve">
     <value>Namespace</value>
   </data>
-  <data name="App.CsvJobs.EmptyDescription" xml:space="preserve">
-    <value>Starten Sie oben einen mit „Neuer Job“.</value>
+  <data name="App.Batches.EmptyDescription" xml:space="preserve">
+    <value>Starten Sie oben einen mit „Neuer Batch“.</value>
   </data>
   <data name="App.ServiceAccounts.NamePlaceholder" xml:space="preserve">
     <value>z. B. etl-pipeline</value>
@@ -1199,7 +1199,7 @@
     <value>Noch keine Pseudonyme</value>
   </data>
   <data name="App.Pseudonyms.EmptyDescription" xml:space="preserve">
-    <value>Erstellen Sie hier eines oder pseudonymisieren Sie eine ganze CSV-Datei auf der Seite CSV-Jobs.</value>
+    <value>Erstellen Sie hier eines oder pseudonymisieren Sie eine ganze CSV-Datei auf der Seite CSV-Verarbeitung.</value>
   </data>
   <data name="App.Pseudonyms.NoMatchesTitle" xml:space="preserve">
     <value>Nichts passt zu '{0}'</value>
@@ -1207,11 +1207,11 @@
   <data name="App.Pseudonyms.NoMatchesDescription" xml:space="preserve">
     <value>Prüfen Sie die Schreibweise oder leeren Sie die Suche, um alle Pseudonyme zu sehen.</value>
   </data>
-  <data name="App.CsvJobs.PseudonymizeModeCreateIfMissingHint" xml:space="preserve">
+  <data name="App.Batches.PseudonymizeModeCreateIfMissingHint" xml:space="preserve">
     <value>Ein Wert, den der Namespace noch nicht kennt, erhält ein neues Pseudonym.</value>
   </data>
-  <data name="App.CsvJobs.PseudonymizeModeFailIfMissingHint" xml:space="preserve">
-    <value>Der Job stoppt beim ersten unbekannten Wert und erzeugt keine Ausgabe.</value>
+  <data name="App.Batches.PseudonymizeModeFailIfMissingHint" xml:space="preserve">
+    <value>Der Batch stoppt beim ersten unbekannten Wert und erzeugt keine Ausgabe.</value>
   </data>
   <data name="App.MainLayout.SkipToContent" xml:space="preserve">
     <value>Zum Inhalt springen</value>
@@ -1231,7 +1231,7 @@
   <data name="App.Common.MoreAbout" xml:space="preserve">
     <value>Mehr zu {0}</value>
   </data>
-  <data name="App.CsvJobs.DownloadFailed" xml:space="preserve">
+  <data name="App.Batches.DownloadFailed" xml:space="preserve">
     <value>Der Download konnte nicht geöffnet werden. Versuchen Sie es erneut.</value>
   </data>
 </root>
