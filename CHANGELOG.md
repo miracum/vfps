@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.30.0](https://github.com/miracum/vfps/compare/v1.29.2...v1.30.0) (2026-11-22)
+
+
+### Features
+
+* added batch (csv) processing api and alerting ([#450](https://github.com/miracum/vfps/issues/450)) ([5311f2e](https://github.com/miracum/vfps/commit/5311f2ef494959104a2fe9673e341302c133e805))
+
 ## [1.29.2](https://github.com/miracum/vfps/compare/v1.29.1...v1.29.2) (2026-11-20)
 
 
