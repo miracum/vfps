@@ -4,13 +4,17 @@ using System.Net.Mime;
 using System.Security.Claims;
 using Amazon.S3;
 using Amazon.S3.Model;
+using Google.Protobuf;
+using Google.Protobuf.WellKnownTypes;
 using Hangfire;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Options;
 using Vfps.Authorization;
 using Vfps.Config;
 using Vfps.CsvProcessing;
 using Vfps.Data;
 using Vfps.Data.Models;
+using Vfps.Protos;
 
 namespace Vfps.AppServices;
 
@@ -24,11 +28,13 @@ public class PseudonymizationJobAppService(
 ) : IPseudonymizationJobAppService
 {
     /// <summary>
-    /// Shared by <see cref="CsvPseudonymizationJobRunner"/> (which writes the output object
-    /// under this prefix) and <see cref="S3BucketConfigurationBackgroundService"/> (which scopes
-    /// the bucket's expiration rule to it), so all three stay in sync on a single literal.
+    /// The Content-Type every input upload is signed with - and so the one a client's PUT has to
+    /// send, see <see cref="PresignedUrl.Headers"/>.
     /// </summary>
-    public const string S3ObjectKeyPrefix = "csv-jobs/";
+    public const string InputContentType = "text/csv";
+
+    private const int DefaultPageSize = 25;
+    private const int MaxPageSize = 1000;
 
     private S3Config Config => s3Config.Value;
 
@@ -41,7 +47,7 @@ public class PseudonymizationJobAppService(
             : Protocol.HTTPS;
 
     /// <inheritdoc/>
-    public async Task<(PseudonymizationJob Job, string UploadUrl)> CreateJobAsync(
+    public async Task<(PseudonymizationJob Job, PresignedUrl Upload)> CreateJobAsync(
         CreateCsvJobRequest request,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
@@ -55,9 +61,9 @@ public class PseudonymizationJobAppService(
         )
         {
             throw new ArgumentException(
-                $"A {request.Direction} job has no pseudonymize mode - "
+                $"A {request.Direction} batch has no pseudonymize mode - "
                     + $"{nameof(request.PseudonymizeMode)} is only valid on a "
-                    + $"{PseudonymizationJobDirection.Pseudonymize} job.",
+                    + $"{PseudonymizationJobDirection.Pseudonymize} batch.",
                 nameof(request)
             );
         }
@@ -77,9 +83,9 @@ public class PseudonymizationJobAppService(
             Direction = request.Direction,
             PseudonymizeMode = request.PseudonymizeMode,
             CreatedBy = user.GetSubject(),
-            InputObjectKey = $"{S3ObjectKeyPrefix}{jobId}/input.csv",
+            InputObjectKey = $"{Config.NormalizedObjectKeyPrefix}{jobId}/input.csv",
             OriginalFileName = request.OriginalFileName,
-            Encoding = request.Encoding,
+            Encoding = CsvFileEncodings.ToName(request.Encoding),
             Delimiter = request.Delimiter,
             HasHeaderRow = request.HasHeaderRow,
             ColumnMappings = [.. request.ColumnMappings],
@@ -89,6 +95,7 @@ public class PseudonymizationJobAppService(
 
         await jobRepository.CreateAsync(job, cancellationToken);
 
+        var expiresAt = DateTimeOffset.UtcNow.Add(Config.PresignedUrlExpiry);
         var uploadUrl = await s3.GetPreSignedURLAsync(
             new GetPreSignedUrlRequest
             {
@@ -96,12 +103,20 @@ public class PseudonymizationJobAppService(
                 Key = job.InputObjectKey,
                 Verb = HttpVerb.PUT,
                 Protocol = PresignedUrlProtocol,
-                Expires = DateTime.UtcNow.Add(Config.PresignedUrlExpiry),
-                ContentType = "text/csv",
+                Expires = expiresAt.UtcDateTime,
+                ContentType = InputContentType,
             }
         );
 
-        return (job, uploadUrl);
+        return (
+            job,
+            new PresignedUrl(
+                "PUT",
+                uploadUrl,
+                new Dictionary<string, string> { ["Content-Type"] = InputContentType },
+                expiresAt
+            )
+        );
     }
 
     /// <inheritdoc/>
@@ -140,7 +155,7 @@ public class PseudonymizationJobAppService(
             // for the same reason, which is what makes the UI show rows rather than a percentage.
             InputObjectKey = null,
             Status = PseudonymizationJobStatus.Queued,
-            Encoding = request.Encoding,
+            Encoding = CsvFileEncodings.ToName(request.Encoding),
             Delimiter = request.Delimiter,
             // Always written, so an exported file can be imported straight back without the
             // operator having to restate which column is which.
@@ -179,8 +194,8 @@ public class PseudonymizationJobAppService(
         await EnsureCurrentNamespaceAccessAsync(job, user, cancellationToken);
 
         // Idempotent no-op past this point, not just on trust: this is now reachable directly
-        // over HTTP from the browser (see the /csv-jobs/{id}/upload-complete endpoint) rather
-        // than only from one awaited call in CsvJobs.razor, so a retried request (a flaky network
+        // over HTTP from the browser (see the /batches/{id}/upload-complete endpoint) rather
+        // than only from one awaited call in Batches.razor, so a retried request (a flaky network
         // between browser and server, a duplicate fetch) is a real possibility, not a hypothetical
         // one. EnqueueAsync below has no such guard of its own - it would otherwise enqueue a
         // second Hangfire job that reprocesses the same input from scratch.
@@ -189,6 +204,47 @@ public class PseudonymizationJobAppService(
             return;
         }
 
+        if (!await TryQueueUploadedJobAsync(job, cancellationToken))
+        {
+            // The client only *claims* its PUT succeeded - never trust that without checking.
+            throw new InvalidOperationException(
+                "The uploaded input file could not be found in object storage."
+            );
+        }
+    }
+
+    /// <inheritdoc/>
+    public async Task<PseudonymizationJob> PollAsync(
+        Guid jobId,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        var job = await GetAsync(jobId, user, cancellationToken);
+        if (job.Status != PseudonymizationJobStatus.AwaitingUpload)
+        {
+            return job;
+        }
+
+        // Re-read whether or not this call was the one to queue it: a concurrent poll (or the
+        // UI's upload-complete endpoint) may have won the transition, and either way the caller
+        // should see the job as it is now rather than the AwaitingUpload it was a moment ago.
+        return await TryQueueUploadedJobAsync(job, cancellationToken)
+            ? await ReloadAsync(jobId, cancellationToken)
+            : job;
+    }
+
+    /// <summary>
+    /// Queues an <see cref="PseudonymizationJobStatus.AwaitingUpload"/> job if its input object
+    /// exists, returning false - and leaving the job alone - if it doesn't. Returns true as well
+    /// when the object exists but another request won the transition: either way the job is no
+    /// longer waiting for its upload.
+    /// </summary>
+    private async Task<bool> TryQueueUploadedJobAsync(
+        PseudonymizationJob job,
+        CancellationToken cancellationToken
+    )
+    {
         long totalBytes;
         try
         {
@@ -201,22 +257,19 @@ public class PseudonymizationJobAppService(
         }
         catch (AmazonS3Exception ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
-            // The client only *claims* its PUT succeeded - never trust that without checking.
-            throw new InvalidOperationException(
-                "The uploaded input file could not be found in object storage."
-            );
+            return false;
         }
 
-        // The status check above only spares a repeat request the S3 round trip. Two requests
-        // that arrive together - possibly on different replicas - can both pass it, so this is
+        // The callers' status checks only spare a repeat request the S3 round trip. Two requests
+        // that arrive together - possibly on different replicas - can both pass them, so this is
         // what actually decides which one gets to enqueue: only the request whose transition out
         // of AwaitingUpload matched does.
-        if (!await jobRepository.MarkQueuedAsync(jobId, totalBytes, cancellationToken))
+        if (await jobRepository.MarkQueuedAsync(job.Id, totalBytes, cancellationToken))
         {
-            return;
+            await EnqueueAsync(job, cancellationToken);
         }
 
-        await EnqueueAsync(job, cancellationToken);
+        return true;
     }
 
     private async Task EnqueueAsync(PseudonymizationJob job, CancellationToken cancellationToken)
@@ -227,7 +280,7 @@ public class PseudonymizationJobAppService(
         await jobRepository.SetHangfireJobIdAsync(job.Id, hangfireJobId, cancellationToken);
     }
 
-    // Matches the wording of CsvJobs.razor's own Direction column, so the same job reads
+    // Matches the wording of Batches.razor's own Direction column, so the same job reads
     // consistently whether you're looking at it in vfps's UI or in the Hangfire dashboard.
     private static string BuildJobLabel(PseudonymizationJob job)
     {
@@ -290,7 +343,66 @@ public class PseudonymizationJobAppService(
     }
 
     /// <inheritdoc/>
-    public async Task CancelAsync(
+    public async Task<PseudonymizationJobPage> ListPageAsync(
+        ClaimsPrincipal user,
+        int pageSize,
+        string? pageToken,
+        CancellationToken cancellationToken
+    )
+    {
+        var take = pageSize <= 0 ? DefaultPageSize : Math.Min(pageSize, MaxPageSize);
+        var after = DecodeCursor(pageToken);
+        var createdBy = permissionChecker.IsAdmin(user) ? null : user.GetSubject();
+
+        var jobs = await jobRepository.ListPageAsync(createdBy, after, take, cancellationToken);
+
+        // A full page may be followed by an empty one - the price of not counting, which costs a
+        // client at most one extra request.
+        var nextPageToken =
+            jobs.Count == take
+                ? EncodeCursor(new PseudonymizationJobPageCursor(jobs[^1].CreatedAt, jobs[^1].Id))
+                : null;
+
+        return new PseudonymizationJobPage(jobs, nextPageToken);
+    }
+
+    private static PseudonymizationJobPageCursor? DecodeCursor(string? pageToken)
+    {
+        if (string.IsNullOrEmpty(pageToken))
+        {
+            return null;
+        }
+
+        try
+        {
+            var token = BatchListPaginationToken.Parser.ParseFrom(
+                WebEncoders.Base64UrlDecode(pageToken)
+            );
+            return new PseudonymizationJobPageCursor(
+                token.CreatedAt.ToDateTimeOffset(),
+                Guid.Parse(token.Id)
+            );
+        }
+        catch (Exception ex)
+            when (ex is FormatException or InvalidProtocolBufferException or NullReferenceException)
+        {
+            throw new ArgumentException("The page token is not valid.", nameof(pageToken), ex);
+        }
+    }
+
+    private static string EncodeCursor(PseudonymizationJobPageCursor cursor)
+    {
+        var token = new BatchListPaginationToken
+        {
+            CreatedAt = Timestamp.FromDateTimeOffset(cursor.CreatedAt),
+            Id = cursor.Id.ToString(),
+        };
+
+        return WebEncoders.Base64UrlEncode(token.ToByteArray());
+    }
+
+    /// <inheritdoc/>
+    public async Task<PseudonymizationJob> CancelAsync(
         Guid jobId,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
@@ -306,7 +418,7 @@ public class PseudonymizationJobAppService(
                 or PseudonymizationJobStatus.Stalled
         )
         {
-            return;
+            return job;
         }
 
         // Conditional, so a job that finished between the check above and this write keeps its
@@ -314,7 +426,7 @@ public class PseudonymizationJobAppService(
         // alone below.
         if (!await jobRepository.MarkCancelledAsync(jobId, cancellationToken))
         {
-            return;
+            return await ReloadAsync(jobId, cancellationToken);
         }
 
         // Removes it from Hangfire's queue if it hasn't started running yet. If it's already
@@ -325,10 +437,19 @@ public class PseudonymizationJobAppService(
         {
             backgroundJobClient.Delete(job.HangfireJobId);
         }
+
+        return await ReloadAsync(jobId, cancellationToken);
     }
 
+    private async Task<PseudonymizationJob> ReloadAsync(
+        Guid jobId,
+        CancellationToken cancellationToken
+    ) =>
+        await jobRepository.FindAsync(jobId, cancellationToken)
+        ?? throw new PseudonymizationJobNotFoundException(jobId);
+
     /// <inheritdoc/>
-    public async Task<string> GetDownloadUrlAsync(
+    public async Task<PresignedUrl> GetDownloadUrlAsync(
         Guid jobId,
         ClaimsPrincipal user,
         CancellationToken cancellationToken
@@ -346,20 +467,21 @@ public class PseudonymizationJobAppService(
         if (job.Status != PseudonymizationJobStatus.Completed || job.OutputObjectKey is null)
         {
             throw new InvalidOperationException(
-                "The job has not completed yet - no output file is available."
+                "The batch has not completed yet - no output file is available."
             );
         }
 
-        return await s3.GetPreSignedURLAsync(
+        var expiresAt = DateTimeOffset.UtcNow.Add(Config.PresignedUrlExpiry);
+        var downloadUrl = await s3.GetPreSignedURLAsync(
             new GetPreSignedUrlRequest
             {
                 BucketName = Config.Bucket,
                 Key = job.OutputObjectKey,
                 Verb = HttpVerb.GET,
                 Protocol = PresignedUrlProtocol,
-                Expires = DateTime.UtcNow.Add(Config.PresignedUrlExpiry),
+                Expires = expiresAt.UtcDateTime,
                 // The object itself always lives at the fixed, deterministic
-                // "csv-jobs/{jobId}/output.csv" key (see CsvPseudonymizationJobRunner) regardless
+                // "{S3:ObjectKeyPrefix}{jobId}/output.csv" key (see CsvPseudonymizationJobRunner) regardless
                 // of the input's name - this only controls what the browser offers to save the
                 // download as, via a signed "response-content-disposition" query parameter S3
                 // honors for presigned GET URLs.
@@ -372,6 +494,8 @@ public class PseudonymizationJobAppService(
                 },
             }
         );
+
+        return new PresignedUrl("GET", downloadUrl, new Dictionary<string, string>(), expiresAt);
     }
 
     // The original upload's own extension is discarded, not preserved - the output is always a
@@ -407,6 +531,27 @@ public class PseudonymizationJobAppService(
     {
         var createdBy = permissionChecker.IsAdmin(user) ? null : user.GetSubject();
         return await jobRepository.DeleteFinishedAsync(createdBy, cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task DeleteAsync(
+        Guid jobId,
+        ClaimsPrincipal user,
+        CancellationToken cancellationToken
+    )
+    {
+        // Ownership only, no namespace re-check - the same as CancelAsync and ClearFinishedAsync:
+        // removing your own job's row reveals and grants nothing.
+        await GetOwnedJobAsync(jobId, user, cancellationToken);
+
+        // Decided by the DELETE's own predicate, not by the status just read: the job may have
+        // been queued or finished in between.
+        if (!await jobRepository.DeleteIfFinishedAsync(jobId, cancellationToken))
+        {
+            throw new InvalidOperationException(
+                "Only a finished batch can be deleted - cancel it first."
+            );
+        }
     }
 
     /// <summary>
@@ -501,7 +646,7 @@ public class PseudonymizationJobAppService(
         if (job.CreatedBy != user.GetSubject() && !permissionChecker.IsAdmin(user))
         {
             throw new ForbiddenException(
-                "Only the job's creator, or an admin, can access this job."
+                "Only the batch's creator, or an admin, can access this batch."
             );
         }
 

@@ -1,6 +1,6 @@
 namespace Vfps.PlaywrightTests;
 
-public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
+public class BatchesTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
 {
     [Fact]
     public async Task S3Disabled_ShowsWarningBanner()
@@ -9,7 +9,7 @@ public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
         // since CSV pseudonymization needs a reachable S3-compatible object store (the "s3"
         // profile's SeaweedFS service). This just confirms the page degrades to a clear warning
         // rather than a broken/half-rendered form when that's the case.
-        await GotoAsync("/ui/csv-jobs");
+        await GotoAsync("/ui/batches");
 
         await Expect(Page.Locator("body")).ToContainTextAsync("CSV pseudonymization is disabled");
     }
@@ -30,7 +30,7 @@ public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
         );
         try
         {
-            await GotoAsync("/ui/csv-jobs?new=1");
+            await GotoAsync("/ui/batches?new=1");
 
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
             await Page.Locator(".file-format summary").ClickAsync();
@@ -52,7 +52,7 @@ public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
     [Trait("Category", "RequiresS3")]
     public async Task FileFormat_IsFoldedAway_WithWhatItIsSetToInPlainView()
     {
-        await GotoAsync("/ui/csv-jobs?new=1");
+        await GotoAsync("/ui/batches?new=1");
 
         var summary = Page.Locator("#fileFormatSummary");
         await Expect(Page.Locator("#delimiter")).ToBeHiddenAsync();
@@ -80,7 +80,7 @@ public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
         {
             await CreateNamespaceAsync(namespaceName);
 
-            await GotoAsync("/ui/csv-jobs?new=1");
+            await GotoAsync("/ui/batches?new=1");
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
             await Page.Locator(".file-format summary").ClickAsync();
             await FillInputAsync("#delimiter", "||");
@@ -89,7 +89,7 @@ public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
             await Page.Locator("select[id^=sourceColumn-]")
                 .SelectOptionAsync(new SelectOptionValue { Index = 1 });
             await Page.Locator("[id^=namespace-]").SelectOptionAsync(namespaceName);
-            await Page.ClickAsync("#submitJobButton");
+            await Page.ClickAsync("#submitBatchButton");
 
             await Expect(Page.GetByRole(AriaRole.Dialog).GetByRole(AriaRole.Alert))
                 .ToContainTextAsync("single ASCII character");
@@ -117,13 +117,13 @@ public class CsvJobsTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
         {
             await CreateNamespaceAsync(namespaceName);
 
-            await GotoAsync("/ui/csv-jobs?new=1");
+            await GotoAsync("/ui/batches?new=1");
             await Page.SelectOptionAsync("#pseudonymizeMode", "FailIfMissing");
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
             // A text box until the file's header row has been read, and only then a dropdown.
             await Page.Locator("select[id^=sourceColumn-]").SelectOptionAsync("patient_id");
             await Page.Locator("[id^=namespace-]").SelectOptionAsync(namespaceName);
-            await Page.ClickAsync("#submitJobButton");
+            await Page.ClickAsync("#submitBatchButton");
 
             var row = Page.Locator("tr")
                 .Filter(new LocatorFilterOptions { HasText = Path.GetFileName(csvPath) })

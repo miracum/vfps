@@ -1,6 +1,6 @@
 # Admin UI
 
-vfps ships with a web-based admin UI, served at `/ui`, for creating and browsing namespaces and running CSV pseudonymization jobs.
+vfps ships with a web-based admin UI, served at `/ui`, for creating and browsing namespaces and running batches.
 
 ![vfps admin UI home page](img/ui/ui-home-light.png#only-light)
 ![vfps admin UI home page](img/ui/ui-home-dark.png#only-dark)
@@ -41,7 +41,7 @@ namespaces - it doesn't change who has access to them. See [Projects](namespaces
 With authorization enabled, admins manage per-namespace grants and service accounts from the UI,
 and every signed-in user can create personal access tokens. See [Access control](access-control.md).
 
-## CSV jobs
+## CSV processing
 
-The **Jobs** page pseudonymizes, de-pseudonymizes, imports and exports whole CSV files as
-background jobs. See [CSV jobs](csv-jobs.md).
+The **CSV processing** page pseudonymizes, de-pseudonymizes, imports and exports whole CSV files in
+the background, as batches. See [CSV processing](batches.md).

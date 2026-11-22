@@ -99,7 +99,7 @@ internal sealed class CsvJobProgressReporter(
     /// <summary>
     /// Called on every row read - cheap to skip via the interval/elapsed-time gate below - rather
     /// than only on flush boundaries, which for a pseudonymize job can be up to
-    /// <see cref="Config.CsvProcessingConfig.PseudonymizeBatchSize"/> rows apart. Tying this to
+    /// <see cref="Config.CsvProcessingConfig.ChunkSize"/> rows apart. Tying this to
     /// that boundary would mean a cancel click, or the UI's progress bar, could lag by that many
     /// rows instead of the <see cref="Config.CsvProcessingConfig.ProgressUpdateInterval"/>
     /// cadence this aims for.

@@ -57,18 +57,18 @@ WARNING: `gracefulShutdown.preStopSleepSeconds` is set but this cluster runs Kub
 
 WARNING: worker.enabled is set but worker.replicaCount is {{ .Values.worker.replicaCount }}. The
          API pods have been switched to accept-only, so with no worker replicas running, nothing
-         processes CSV jobs at all - they will queue indefinitely with no error.
+         processes batches at all - they will queue indefinitely with no error.
 {{- else }}
 
-NOTE: CSV pseudonymization jobs run in the separate "{{ include "vfps.fullname" . }}-worker"
-      Deployment; the API pods accept and display jobs but no longer process them. Watch the
+NOTE: Batches run in the separate "{{ include "vfps.fullname" . }}-worker"
+      Deployment; the API pods accept and display batches but no longer process them. Watch the
       Hangfire dashboard's Servers page to confirm the workers have registered.
 {{- end }}
 {{- end }}
 
 {{- if and .Values.worker.enabled (not .Values.s3.enabled) }}
 
-WARNING: worker.enabled is set but s3.enabled is not, so the CSV jobs feature is off and the
+WARNING: worker.enabled is set but s3.enabled is not, so the batches feature is off and the
          workers have nothing to do. If you are still configuring S3 through extraEnv, this is
          expected - otherwise set s3.enabled and its serviceUrl/bucket/credentials.
 {{- end }}

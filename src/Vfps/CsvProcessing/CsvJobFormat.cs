@@ -127,6 +127,40 @@ internal static class CsvJobFormat
         );
 
     /// <summary>
+    /// Opens the writer a job produces its output through: the job's encoding, but never with a
+    /// byte-order mark. <see cref="Encoding.GetEncoding(string)"/> hands back UTF-8/16/32 instances
+    /// that emit one, and a <see cref="StreamWriter"/> on a non-seekable stream (the upload pipe)
+    /// writes it unconditionally - which then arrives as part of the first header cell in any
+    /// consumer that doesn't strip it, e.g. most command-line tools and many CSV parsers.
+    /// </summary>
+    /// <param name="output">The stream the output is uploaded from.</param>
+    /// <param name="encoding">The job's configured encoding.</param>
+    public static StreamWriter CreateWriter(Stream output, Encoding encoding) =>
+        new(output, WithoutByteOrderMark(encoding), leaveOpen: true);
+
+    /// <summary>
+    /// <paramref name="encoding"/> with an empty preamble. Only the Unicode encodings have one,
+    /// so every other encoding is returned as it is.
+    /// </summary>
+    public static Encoding WithoutByteOrderMark(Encoding encoding) =>
+        encoding switch
+        {
+            _ when encoding.Preamble.Length == 0 => encoding,
+            UTF8Encoding => new UTF8Encoding(encoderShouldEmitUTF8Identifier: false),
+            UnicodeEncoding => new UnicodeEncoding(
+                bigEndian: encoding.CodePage == Encoding.BigEndianUnicode.CodePage,
+                byteOrderMark: false
+            ),
+            UTF32Encoding => new UTF32Encoding(
+                bigEndian: encoding.CodePage != Encoding.UTF32.CodePage,
+                byteOrderMark: false
+            ),
+            _ => throw new NotSupportedException(
+                $"Encoding '{encoding.WebName}' writes a byte-order mark vfps can't turn off."
+            ),
+        };
+
+    /// <summary>
     /// Turns one <see cref="ColumnMapping"/> column reference into the field index to read it
     /// from: a header name when the file has a header row (<paramref name="header"/> non-null),
     /// or a 0-based column index when it doesn't. Throws rather than silently reading the wrong

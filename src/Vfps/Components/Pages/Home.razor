@@ -43,12 +43,12 @@
             @if (summary.RecentJobs is not null)
             {
                 <HomeStatTile
-                    Label="@Localizer["App.Home.ActiveJobsStat"]"
+                    Label="@Localizer["App.Home.ActiveBatchesStat"]"
                     Value="@summary.ActiveJobCount.ToString("N0")"
                     Icon="file-spreadsheet"
-                    Href="/ui/csv-jobs"
-                    Caption="@Localizer["App.Home.ActiveJobsCaption"]"
-                    TestId="stat-csv-jobs"
+                    Href="/ui/batches"
+                    Caption="@Localizer["App.Home.ActiveBatchesCaption"]"
+                    TestId="stat-batches"
                 />
             }
             @if (summary.ActiveTokenCount is { } activeTokenCount)
@@ -166,18 +166,18 @@
 
             @if (summary.RecentJobs is { } recentJobs)
             {
-                <BbCard data-testid="home-csv-jobs">
+                <BbCard data-testid="home-batches">
                     <BbCardHeader>
                         <div class="bb:flex bb:items-start bb:justify-between bb:gap-4">
                             <div class="bb:space-y-1.5">
-                                <SectionTitle>@Localizer["App.Home.RecentJobsTitle"]</SectionTitle>
+                                <SectionTitle>@Localizer["App.Home.RecentBatchesTitle"]</SectionTitle>
                                 <BbCardDescription>
                                     @(summary.SeesEveryonesJobs
-                                        ? Localizer["App.Home.RecentJobsAllUsersDescription"]
-                                        : Localizer["App.Home.RecentJobsDescription"])
+                                        ? Localizer["App.Home.RecentBatchesAllUsersDescription"]
+                                        : Localizer["App.Home.RecentBatchesDescription"])
                                 </BbCardDescription>
                             </div>
-                            <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Small" Class="bb:shrink-0" Href="/ui/csv-jobs">
+                            <BbButton Variant="ButtonVariant.Ghost" Size="ButtonSize.Small" Class="bb:shrink-0" Href="/ui/batches">
                                 @Localizer["App.Home.ViewAll"]
                                 <LucideIcon aria-hidden="true" Name="arrow-right" Size="14" />
                             </BbButton>
@@ -188,7 +188,7 @@
                         {
                             <BbEmpty
                                 Size="EmptySize.Small"
-                                Title="@Localizer["App.Home.NoJobsTitle"]"
+                                Title="@Localizer["App.Home.NoBatchesTitle"]"
                                 Description="@Localizer["App.Home.CsvProcessingDescription"]"
                             >
                                 <Icon>
@@ -196,8 +196,8 @@
                                 </Icon>
                                 <ChildContent>
                                     @* ?new=1 opens the CSV page's new-job dialog straight away. *@
-                                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" Href="/ui/csv-jobs?new=1">
-                                        @Localizer["App.CsvJobs.NewJobTitle"]
+                                    <BbButton Variant="ButtonVariant.Outline" Size="ButtonSize.Small" Href="/ui/batches?new=1">
+                                        @Localizer["App.Batches.NewBatchTitle"]
                                     </BbButton>
                                 </ChildContent>
                             </BbEmpty>
@@ -208,22 +208,22 @@
                                 @foreach (var job in recentJobs)
                                 {
                                     <div role="listitem">
-                                    <BbItem AsChild="a" Href="/ui/csv-jobs" Size="ItemSize.Sm" Class="recent-job">
+                                    <BbItem AsChild="a" Href="/ui/batches" Size="ItemSize.Sm" Class="recent-batch">
                                         <BbItemMedia Variant="ItemMediaVariant.Icon">
                                             <LucideIcon aria-hidden="true" Name="file-spreadsheet" Size="16" />
                                         </BbItemMedia>
-                                        <BbItemContent Class="recent-job-text bb:min-w-0">
+                                        <BbItemContent Class="recent-batch-text bb:min-w-0">
                                             <BbItemTitle Class="bb:truncate">@(job.Subject ?? "—")</BbItemTitle>
                                             <BbItemDescription>
-                                                @CsvJobDisplay.DirectionLabel(job.Direction, Localizer) · @job.CreatedAt.Humanize(now)
+                                                @BatchDisplay.DirectionLabel(job.Direction, Localizer) · @job.CreatedAt.Humanize(now)
                                             </BbItemDescription>
                                         </BbItemContent>
-                                        <BbItemActions Class="recent-job-status">
+                                        <BbItemActions Class="recent-batch-status">
                                             @if (job.Status == PseudonymizationJobStatus.Running && job.ProgressPercent is { } progress)
                                             {
-                                                <BbProgress Value="@CsvJobDisplay.ProgressValue(progress)" Class="bb:w-16" aria-label="@Localizer["App.CsvJobs.Progress"]" />
+                                                <BbProgress Value="@BatchDisplay.ProgressValue(progress)" Class="bb:w-16" aria-label="@Localizer["App.Batches.Progress"]" />
                                             }
-                                            <CsvJobStatusBadge Status="job.Status" />
+                                            <BatchStatusBadge Status="job.Status" />
                                         </BbItemActions>
                                     </BbItem>
                                     </div>
@@ -328,7 +328,7 @@
             [
                 .. jobs.Take(ListLength)
                     .Select(j => new JobSummary(
-                        CsvJobDisplay.Subject(j),
+                        BatchDisplay.Subject(j),
                         j.Direction,
                         j.Status,
                         j.TotalBytes > 0 ? 100.0 * j.BytesProcessed / j.TotalBytes : null,
@@ -352,7 +352,7 @@
                         j.Status == PseudonymizationJobStatus.Stalled
                             ? AttentionKind.JobStalled
                             : AttentionKind.JobFailed,
-                        CsvJobDisplay.Subject(j) ?? j.Id.ToString()[..8],
+                        BatchDisplay.Subject(j) ?? j.Id.ToString()[..8],
                         j.LastUpdatedAt
                     )
                     {
@@ -444,8 +444,8 @@
                     item.ServiceAccountName ?? "—",
                     when
                 ],
-            AttentionKind.JobStalled => Localizer["App.Home.AttentionJobStalled", item.Subject, when],
-            _ => Localizer["App.Home.AttentionJobFailed", item.Subject, when],
+            AttentionKind.JobStalled => Localizer["App.Home.AttentionBatchStalled", item.Subject, when],
+            _ => Localizer["App.Home.AttentionBatchFailed", item.Subject, when],
         };
     }
 
@@ -454,7 +454,7 @@
         {
             AttentionKind.PersonalTokenExpiring => "/ui/access-tokens",
             AttentionKind.ServiceAccountTokenExpiring => AccessTokens.ServiceAccountsHref,
-            _ => "/ui/csv-jobs",
+            _ => "/ui/batches",
         };
 
     public sealed class HomeSummary

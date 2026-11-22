@@ -22,7 +22,7 @@ internal sealed class CsvNamespaceExporter(
     CsvJobOutputUploader outputUploader
 ) : ICsvNamespaceExporter
 {
-    // Rows fetched per round trip. Not tied to CsvProcessingConfig.PseudonymizeBatchSize: that one
+    // Rows fetched per round trip. Not tied to CsvProcessingConfig.ChunkSize: that one
     // sizes a *write* batch against the upsert's own cost curve, while this is a plain indexed
     // read whose rows are handed straight to the CSV writer and dropped. Fixed at a value that
     // keeps a page's worth of rows comfortably small in memory while making the per-round-trip

@@ -270,6 +270,8 @@ deployment still configuring S3 through extraEnv keeps working unchanged.
   value: {{ .Values.s3.presignedUrlExpiry | quote }}
 - name: S3__ObjectRetentionDays
   value: {{ .Values.s3.objectRetentionDays | quote }}
+- name: S3__ObjectKeyPrefix
+  value: {{ .Values.s3.objectKeyPrefix | quote }}
 {{- range $index, $origin := .Values.s3.allowedOrigins }}
 - name: S3__AllowedOrigins__{{ $index }}
   value: {{ $origin | quote }}

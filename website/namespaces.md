@@ -22,7 +22,7 @@ creating it again returns the stored pseudonym, even if the value no longer matc
 | `PSEUDONYM_GENERATION_METHOD_UUID4`                           | A version 4 UUID ([RFC 4122](https://datatracker.ietf.org/doc/html/rfc4122#section-4.4)).                                                                                                                                                |
 | `PSEUDONYM_GENERATION_METHOD_UUID7`                           | A version 7 UUID ([RFC 9562](https://datatracker.ietf.org/doc/html/rfc9562)).                                                                                                                                                            |
 | `PSEUDONYM_GENERATION_METHOD_VOPRF`                           | Derived deterministically from the original value by a separate key-holding service that never sees it. See [VOPRF pseudonyms](voprf.md).                                                                                                |
-| `PSEUDONYM_GENERATION_METHOD_EXTERNAL` | Generates nothing: the pseudonyms are created by a third party and stored as given. See [External pseudonyms](#external-pseudonyms). |
+| `PSEUDONYM_GENERATION_METHOD_EXTERNAL`                        | Generates nothing: the pseudonyms are created by a third party and stored as given. See [External pseudonyms](#external-pseudonyms).                                                                                                     |
 
 Every method except VOPRF and EXTERNAL is random: the same original value only maps to the same pseudonym
 because vfps stores the pair. The full set of request fields is documented in
@@ -56,7 +56,7 @@ to a different original value. The error doesn't say which original value holds 
 value that doesn't match the namespace's validation regex fails with `INVALID_ARGUMENT`, and one
 missing from a validating parent namespace with `FAILED_PRECONDITION`.
 
-To load many pairs at once, use a [CSV import job](csv-jobs.md) instead.
+To load many pairs at once, use an [import batch](batches.md#import-and-export) instead.
 
 ## Multiple pseudonyms per original value
 
@@ -82,7 +82,7 @@ The response's `pseudonyms` array holds the full set (`pseudonym` is kept, popul
 first one, for callers that only read a single value). The stored set for a given original value
 only ever grows: calling `Create` again with a `count` at or below what's already stored returns
 the existing set unchanged, while a larger `count` adds exactly the missing pseudonyms, up to a
-maximum `count` of 10,000. CSV pseudonymization jobs and the `/v1/fhir` `$create-pseudonym`
+maximum `count` of 10,000. Batches and the `/v1/fhir` `$create-pseudonym`
 operation don't support requesting more than one pseudonym - both always operate on the first
 (`sequenceNumber: 0`) pseudonym for a multi-psn namespace. The
 [MII FHIR API](fhir.md#operations) has `$pseudonymize-multiple` for multi-psn namespaces instead.

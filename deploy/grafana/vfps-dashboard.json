@@ -1,7 +1,7 @@
 {
   "title": "vfps",
   "uid": "vfps-overview",
-  "description": "Operational overview of vfps: API traffic and latency, database and connection pool, pseudonym counts, cache, CSV jobs, outbound HTTP and .NET runtime health.",
+  "description": "Operational overview of vfps: API traffic and latency, database and connection pool, pseudonym counts, cache, batches, outbound HTTP and .NET runtime health.",
   "tags": ["vfps", "pseudonymization", "dotnet"],
   "editable": true,
   "graphTooltip": 1,
@@ -2185,7 +2185,7 @@
     {
       "type": "timeseries",
       "title": "Pseudonym upsert latency",
-      "description": "Duration of the batched upsert round trip that every pseudonym write (Create, Append, CSV jobs) goes through. The single-row fallback rate on the right axis counts keys a concurrent writer inserted mid-batch, which are retried one by one - a sustained rate means clients are racing to create the same pseudonyms.",
+      "description": "Duration of the batched upsert round trip that every pseudonym write (Create, Append and batches) goes through. The single-row fallback rate on the right axis counts keys a concurrent writer inserted mid-batch, which are retried one by one - a sustained rate means clients are racing to create the same pseudonyms.",
       "datasource": {
         "type": "prometheus",
         "uid": "${datasource}"
@@ -3229,7 +3229,7 @@
     },
     {
       "type": "row",
-      "title": "CSV jobs & outbound HTTP",
+      "title": "Batches & outbound HTTP",
       "collapsed": true,
       "id": 44,
       "gridPos": {
@@ -3241,8 +3241,8 @@
       "panels": [
         {
           "type": "timeseries",
-          "title": "CSV job time by phase",
-          "description": "Seconds CSV jobs spent per phase, booked when each job finishes. `fetch_input` and `write_output` are object-storage bound (a slow upload shows up as write time), `resolve_database` is database bound, and a growing `report_progress` share points at database round-trip latency.",
+          "title": "Batch time by phase",
+          "description": "Seconds batches spent per phase, booked when each batch finishes. `fetch_input` and `write_output` are object-storage bound (a slow upload shows up as write time), `resolve_database` is database bound, and a growing `report_progress` share points at database round-trip latency.",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
@@ -3319,7 +3319,7 @@
         {
           "type": "bargauge",
           "title": "Phase share by direction (over range)",
-          "description": "Each phase's share of total CSV job time per direction over the selected range.",
+          "description": "Each phase's share of total batch time per direction over the selected range.",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"
@@ -3387,7 +3387,7 @@
         {
           "type": "timeseries",
           "title": "Outbound HTTP latency (p95)",
-          "description": "95th percentile duration of outgoing HTTP requests per destination - object storage (CSV jobs), the OIDC provider, a VOPRF key server.",
+          "description": "95th percentile duration of outgoing HTTP requests per destination - object storage (batches), the OIDC provider, a VOPRF key server.",
           "datasource": {
             "type": "prometheus",
             "uid": "${datasource}"

@@ -34,17 +34,20 @@ neither read nor write access grants it.
 Whether a call can be retried after a timeout or a dropped connection - when the caller can't tell
 whether it went through - depends on the operation:
 
-| RPC                                              | REST                                                     | Safe to retry                    | When it already exists                                  |
-| ------------------------------------------------ | -------------------------------------------------------- | -------------------------------- | ------------------------------------------------------- |
-| `NamespaceService.Create`, `ProjectService.Create` | `POST /v1/namespaces`, `POST /v1/projects`               | No                               | `ALREADY_EXISTS`                                        |
-| `NamespaceService.Update`, `ProjectService.Update` | `PATCH /v1/namespaces/{name}`, `PATCH /v1/projects/{name}` | Yes                              | -                                                       |
-| `NamespaceService.Delete`, `ProjectService.Delete` | `DELETE /v1/namespaces/{name}`, `DELETE /v1/projects/{name}` | Yes - a repeat is `NOT_FOUND`    | -                                                       |
-| `ProjectService.AddNamespace`, `RemoveNamespace` | `PUT`, `DELETE /v1/projects/{name}/namespaces/{namespace}` | Yes                              | Succeeds without changes                                |
-| `PseudonymService.Create`                        | `POST /v1/namespaces/{namespace}/pseudonyms`             | Yes - get-or-create              | Returns the stored pseudonym(s)                         |
-| `PseudonymService.Append`                        | `POST …/pseudonyms:append`                               | **Only with a `requestId`**      | Without one, stores another pseudonym on every call     |
-| `PseudonymService.Import`                        | `POST …/pseudonyms:import`                               | Yes, for the same pair           | `ALREADY_EXISTS` if the pair conflicts with what's stored |
-| `PseudonymService.Resolve`                       | `POST …/pseudonyms:resolve`                              | Yes (read-only)                  | `NOT_FOUND` if none is stored                           |
-| `Get`, `List`, `ListChildren`                    | `GET`                                                    | Yes (read-only)                  | -                                                       |
+| RPC                                                | REST                                                         | Safe to retry                 | When it already exists                                    |
+| -------------------------------------------------- | ------------------------------------------------------------ | ----------------------------- | --------------------------------------------------------- |
+| `NamespaceService.Create`, `ProjectService.Create` | `POST /v1/namespaces`, `POST /v1/projects`                   | No                            | `ALREADY_EXISTS`                                          |
+| `NamespaceService.Update`, `ProjectService.Update` | `PATCH /v1/namespaces/{name}`, `PATCH /v1/projects/{name}`   | Yes                           | -                                                         |
+| `NamespaceService.Delete`, `ProjectService.Delete` | `DELETE /v1/namespaces/{name}`, `DELETE /v1/projects/{name}` | Yes - a repeat is `NOT_FOUND` | -                                                         |
+| `ProjectService.AddNamespace`, `RemoveNamespace`   | `PUT`, `DELETE /v1/projects/{name}/namespaces/{namespace}`   | Yes                           | Succeeds without changes                                  |
+| `PseudonymService.Create`                          | `POST /v1/namespaces/{namespace}/pseudonyms`                 | Yes - get-or-create           | Returns the stored pseudonym(s)                           |
+| `PseudonymService.Append`                          | `POST …/pseudonyms:append`                                   | **Only with a `requestId`**   | Without one, stores another pseudonym on every call       |
+| `PseudonymService.Import`                          | `POST …/pseudonyms:import`                                   | Yes, for the same pair        | `ALREADY_EXISTS` if the pair conflicts with what's stored |
+| `PseudonymService.Resolve`                         | `POST …/pseudonyms:resolve`                                  | Yes (read-only)               | `NOT_FOUND` if none is stored                             |
+| `BatchService.Create`                              | `POST /v1/batches`                                           | No                            | Creates another batch on every call                       |
+| `BatchService.Cancel`                              | `POST /v1/batches/{batchId}:cancel`                          | Yes                           | Returns the batch unchanged once it has finished          |
+| `BatchService.Delete`                              | `DELETE /v1/batches/{batchId}`                               | Yes - a repeat is `NOT_FOUND` | -                                                         |
+| `Get`, `List`, `ListChildren`                      | `GET`                                                        | Yes (read-only)               | -                                                         |
 
 Pseudonym writes are keyed by the original value, and are idempotent - writing
 the same thing twice returns what the first call stored. `Append` is the one exception, since

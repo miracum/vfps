@@ -8,7 +8,7 @@ public class HomeTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
     public async Task StatTiles_ShowOnlyWhatThisDeploymentHasEnabled()
     {
         // The default "test" compose profile runs with authorization and S3 both off (see
-        // CsvJobsTests.S3Disabled_ShowsWarningBanner), so there are no access tokens and no CSV
+        // BatchesTests.S3Disabled_ShowsWarningBanner), so there are no access tokens and no CSV
         // jobs to report on - their tiles and list must be missing rather than showing zeros.
         await GotoAsync("/ui");
 
@@ -16,8 +16,8 @@ public class HomeTests(PlaywrightFixture fixture) : VfpsPageTestBase(fixture)
         await Expect(Page.GetByTestId("stat-pseudonyms")).ToBeVisibleAsync();
         await Expect(Page.GetByTestId("home-namespaces")).ToBeVisibleAsync();
 
-        await Expect(Page.GetByTestId("stat-csv-jobs")).ToHaveCountAsync(0);
-        await Expect(Page.GetByTestId("home-csv-jobs")).ToHaveCountAsync(0);
+        await Expect(Page.GetByTestId("stat-batches")).ToHaveCountAsync(0);
+        await Expect(Page.GetByTestId("home-batches")).ToHaveCountAsync(0);
         await Expect(Page.GetByTestId("stat-access-tokens")).ToHaveCountAsync(0);
         await Expect(Page.GetByTestId("attention")).ToHaveCountAsync(0);
     }

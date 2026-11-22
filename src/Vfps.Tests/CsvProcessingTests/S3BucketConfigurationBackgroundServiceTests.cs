@@ -16,7 +16,8 @@ public class S3BucketConfigurationBackgroundServiceTests
     private static S3BucketConfigurationBackgroundService CreateSut(
         IAmazonS3 s3,
         int objectRetentionDays = 0,
-        List<string>? allowedOrigins = null
+        List<string>? allowedOrigins = null,
+        string? objectKeyPrefix = null
     ) =>
         new(
             s3,
@@ -26,13 +27,38 @@ public class S3BucketConfigurationBackgroundServiceTests
                     Bucket = Bucket,
                     ObjectRetentionDays = objectRetentionDays,
                     AllowedOrigins = allowedOrigins ?? [],
+                    ObjectKeyPrefix = objectKeyPrefix ?? new S3Config().ObjectKeyPrefix,
                 }
             ),
             NullLogger<S3BucketConfigurationBackgroundService>.Instance
         );
 
     [Fact]
-    public async Task ExecuteAsync_WithPositiveRetentionDays_ShouldApplyLifecycleRuleForCsvJobsPrefix()
+    public async Task ExecuteAsync_WithAConfiguredObjectKeyPrefix_ShouldScopeTheLifecycleRuleToIt()
+    {
+        var s3 = A.Fake<IAmazonS3>();
+        var sut = CreateSut(s3, objectRetentionDays: 30, objectKeyPrefix: "vfps/batches");
+
+        await sut.StartAsync(CancellationToken.None);
+        await sut.ExecuteTask!;
+        await sut.StopAsync(CancellationToken.None);
+
+        A.CallTo(() =>
+                s3.PutLifecycleConfigurationAsync(
+                    A<PutLifecycleConfigurationRequest>.That.Matches(r =>
+                        (
+                            (LifecyclePrefixPredicate)
+                                r.Configuration.Rules[0].Filter.LifecycleFilterPredicate
+                        ).Prefix == "vfps/batches/"
+                    ),
+                    A<CancellationToken>._
+                )
+            )
+            .MustHaveHappenedOnceExactly();
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_WithPositiveRetentionDays_ShouldApplyLifecycleRuleForTheDefaultPrefix()
     {
         var s3 = A.Fake<IAmazonS3>();
         var sut = CreateSut(s3, objectRetentionDays: 30);
@@ -51,7 +77,7 @@ public class S3BucketConfigurationBackgroundServiceTests
                         && (
                             (LifecyclePrefixPredicate)
                                 r.Configuration.Rules[0].Filter.LifecycleFilterPredicate
-                        ).Prefix == PseudonymizationJobAppService.S3ObjectKeyPrefix
+                        ).Prefix == "csv-jobs/"
                     ),
                     A<CancellationToken>._
                 )

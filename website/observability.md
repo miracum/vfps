@@ -18,7 +18,7 @@ It covers:
 - **Database** - connection pool usage and waits, command and upsert latency, connection churn, and network I/O
 - **Pseudonyms, cache & access tokens** - pseudonyms and growth per namespace, cache hit ratio, and every
   service-account token's remaining lifetime
-- **CSV jobs & outbound HTTP** - job time per phase, and latency, errors and connections towards object storage and
+- **Batches & outbound HTTP** - batch time per phase, and latency, errors and connections towards object storage and
   the OIDC provider
 - **.NET runtime** - CPU, memory, GC, allocation rate, thread pool and lock contention
 
@@ -27,21 +27,21 @@ the worker Deployment's metrics as well when `worker.enabled` is set. Native gRP
 whatever their gRPC status, so their failures don't show up in the status-code panels - only under _Exceptions
 thrown by type_.
 
-## Diagnosing a slow CSV job
+## Diagnosing a slow batch
 
-A CSV job runs as a Hangfire background job rather than inside a request, so the AspNetCore
+A batch runs as a Hangfire background job rather than inside a request, so the AspNetCore
 instrumentation says nothing about it. Two things cover it instead:
 
-- **One span per job**, `CsvPseudonymizationJob`, tagged with the job's id, direction and row
-  count. Every database command span the job produces nests under it, so a job's whole timeline is
+- **One span per batch**, `CsvPseudonymizationJob`, tagged with the batch's id, direction and row
+  count. Every database command span the batch produces nests under it, so a batch's whole timeline is
   one trace. Enable `Tracing:IsEnabled` and point `Tracing:Otlp:Endpoint` at a collector - see the
   `jaeger` compose profile for a local one.
 - **`vfps_csv_job_phase_duration_seconds_total`**, a counter of seconds broken down by `phase`
   (`fetch_input`, `parse_input`, `resolve_database`, `write_output`, `report_progress`) and
-  `direction`. The same numbers are also set as tags on each job's span, so a single trace carries
+  `direction`. The same numbers are also set as tags on each batch's span, so a single trace carries
   its own breakdown without the metrics backend alongside it.
 
-The phase split is what separates a job bound by object storage from one bound by the database,
+The phase split is what separates a batch bound by object storage from one bound by the database,
 which is otherwise indistinguishable from outside - the output is written into a pipe that is
 uploaded concurrently, so a slow upload shows up as time spent writing rather than as any error:
 
@@ -49,7 +49,7 @@ uploaded concurrently, so a slow upload shows up as time spent writing rather th
 sum by (phase) (rate(vfps_csv_job_phase_duration_seconds_total[5m]))
 ```
 
-`report_progress` is worth watching on its own. It is bookkeeping rather than the job's actual
+`report_progress` is worth watching on its own. It is bookkeeping rather than the batch's actual
 work, and its cost scales with database round-trip latency and the check-in cadence rather than
 with rows, so a deployment where it grows into a visible share of the total is one whose cadence
 (or database proximity) wants revisiting.

@@ -10,9 +10,9 @@ web
 
 - **Data integration staff**: data stewards and trust-center staff at a hospital's data integration
   center. In the admin UI they create and maintain namespaces and projects, manage access grants and
-  service accounts, and run CSV pseudonymization jobs.
+  service accounts, and run batches that process CSV files.
 - **Researchers and study staff**: people who need pseudonyms for a specific study. They work only on
-  the namespaces they've been granted: lookups, and CSV jobs that pseudonymize, de-pseudonymize,
+  the namespaces they've been granted: lookups, and batches that pseudonymize, de-pseudonymize,
   import or export study data.
 
 Other audiences, inferred from the repository rather than confirmed in the interview:
@@ -49,13 +49,13 @@ No comparative claims against gPAS or E-PIX are on record. Don't invent any.
 ## Operating Context
 
 - Runs inside hospital and research-network infrastructure, typically on Kubernetes, backed by
-  PostgreSQL, with OIDC sign-in (e.g. Keycloak) and S3-compatible object storage for CSV job files.
+  PostgreSQL, with OIDC sign-in (e.g. Keycloak) and S3-compatible object storage for batch files.
 - The admin UI is served at `/ui` by the same service. It is available in English and German, with
   light and dark themes.
 - Core workflows: set up a namespace (pseudonym generation method, length, prefix/suffix, optional
   original value validation regex, optional parent namespace, optionally several pseudonyms per
   value); group namespaces into projects; grant users, roles or service accounts per-namespace
-  access; run CSV jobs; issue personal and service-account access tokens for API clients.
+  access; run batches over CSV files, from the UI or the API; issue personal and service-account access tokens for API clients.
 - The data is identifying health data. De-pseudonymization and reverse lookup reveal original
   values, so they need their own grant.
 
@@ -64,7 +64,8 @@ No comparative claims against gPAS or E-PIX are on record. Don't invent any.
 - **Terminology**: namespace, original value, pseudonym, pseudonym generation method,
   parent/child (multi-level) namespace, multiple pseudonyms per original value, project, grant,
   admin, service account, access token (`vfps_pat_...` personal, `vfps_sat_...` service account),
-  CSV job (pseudonymize, de-pseudonymize, import, export).
+  batch (a CSV file processed in the background: pseudonymize, de-pseudonymize, import, export;
+  formerly "CSV job").
 - A namespace's generation method, length, prefix and suffix are fixed at creation. Only its
   description, validation regex and projects can be edited later.
 - Admins manage namespaces, projects, grants and service accounts. A service account is never an

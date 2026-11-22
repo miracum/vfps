@@ -42,7 +42,7 @@ internal sealed class CsvColumnTransformer(
             s3Config.Value.Bucket,
             context.Job.InputObjectKey
                 ?? throw new InvalidOperationException(
-                    $"CSV job '{context.Job.Id}' has no input object to read."
+                    $"Batch '{context.Job.Id}' has no input object to read."
                 ),
             logger,
             cancellationToken.ShutdownToken
@@ -146,7 +146,7 @@ internal sealed class CsvColumnTransformer(
         // row and no longer needs its own, much smaller, pool-protecting bound.
         // Clamped rather than trusted as-is: a misconfigured 0 or negative value would otherwise
         // throw out of the List<BufferedRow> capacity below or flush on every single row.
-        var chunkSize = Math.Max(1, csvProcessingConfig.Value.PseudonymizeBatchSize);
+        var chunkSize = Math.Max(1, csvProcessingConfig.Value.ChunkSize);
         var phases = context.Phases;
 
         // The read/chunk/flush/cancellation/progress loop itself is shared with

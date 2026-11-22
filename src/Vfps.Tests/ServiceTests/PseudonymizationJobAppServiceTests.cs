@@ -64,7 +64,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, repository, _, _) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
@@ -89,7 +89,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, repository, _, _) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -118,7 +118,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, _, _, _) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [
@@ -150,7 +150,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, repository, _, _) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             delimiter,
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
@@ -189,7 +189,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, _, _, _) = CreateSut(new AuthorizationConfig { IsEnabled = true });
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -201,6 +201,31 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
     }
 
     [Fact]
+    public async Task CreateJobAsync_WithAConfiguredObjectKeyPrefix_ShouldStoreTheInputUnderIt()
+    {
+        var sut = new PseudonymizationJobAppService(
+            new PseudonymizationJobRepository(ContextFactory),
+            CreatePermissionChecker(),
+            A.Fake<IAmazonS3>(),
+            A.Fake<IBackgroundJobClient>(),
+            Options.Create(new S3Config { Bucket = Bucket, ObjectKeyPrefix = "/vfps/batches" })
+        );
+
+        var (job, _) = await sut.CreateJobAsync(
+            new CreateCsvJobRequest(
+                CsvFileEncoding.Utf8,
+                ",",
+                true,
+                [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
+            ),
+            UserWithSubject("creator"),
+            CancellationToken.None
+        );
+
+        job.InputObjectKey.Should().Be($"vfps/batches/{job.Id}/input.csv");
+    }
+
+    [Fact]
     public async Task CreateJobAsync_WithWriteAccess_ShouldCreateJobAndReturnPresignedUrl()
     {
         var (sut, _, _, _) = CreateSut(
@@ -209,7 +234,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         );
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -224,7 +249,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         job.Status.Should().Be(PseudonymizationJobStatus.AwaitingUpload);
         job.Direction.Should().Be(PseudonymizationJobDirection.Pseudonymize);
         job.InputObjectKey.Should().Contain(job.Id.ToString());
-        uploadUrl.Should().Be("https://example.invalid/presigned");
+        uploadUrl.Url.Should().Be("https://example.invalid/presigned");
     }
 
     [Fact]
@@ -233,7 +258,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, _, _, _) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
@@ -255,7 +280,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, _, _, _) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -281,7 +306,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         );
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
@@ -303,7 +328,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         );
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
@@ -328,7 +353,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         );
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -354,7 +379,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         );
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -385,7 +410,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, repository, _, _) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -411,7 +436,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         );
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -456,7 +481,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         );
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -498,7 +523,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, repository, _, _) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -524,7 +549,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, _, _, _) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -547,7 +572,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, _, _, backgroundJobClient) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
@@ -576,7 +601,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, _, _, backgroundJobClient) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -598,8 +623,8 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         enqueuedJob!.Args[1].Should().Be("Pseudonymize");
     }
 
-    // Now reachable directly over HTTP from the browser (the /csv-jobs/{id}/upload-complete
-    // endpoint) rather than only from one awaited call in CsvJobs.razor, so a retried request
+    // Now reachable directly over HTTP from the browser (the /batches/{id}/upload-complete
+    // endpoint) rather than only from one awaited call in Batches.razor, so a retried request
     // (a flaky network between browser and server, a duplicate fetch) is a real possibility -
     // without this guard, it would enqueue the same input for processing a second time.
     [Fact]
@@ -608,7 +633,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, _, _, backgroundJobClient) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -636,7 +661,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, _, s3, backgroundJobClient) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -727,7 +752,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, repository, s3, _) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
@@ -763,7 +788,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         );
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }],
@@ -801,7 +826,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, repository, s3, _) = CreateSut();
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = "existingNamespace" }]
@@ -834,7 +859,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         PseudonymizationJobDirection direction = PseudonymizationJobDirection.Pseudonymize
     ) =>
         new(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [new ColumnMapping { SourceColumn = "col1", Namespace = namespaceName }],
@@ -888,7 +913,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
 
         var url = await sut.GetDownloadUrlAsync(job.Id, alice, CancellationToken.None);
 
-        url.Should().Be("https://example.invalid/presigned");
+        url.Url.Should().Be("https://example.invalid/presigned");
     }
 
     // De-pseudonymization output is the original values, so losing reverse-lookup access has to
@@ -985,7 +1010,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         );
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [
@@ -1008,7 +1033,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         job.Direction.Should().Be(PseudonymizationJobDirection.Import);
         job.Status.Should().Be(PseudonymizationJobStatus.AwaitingUpload);
         job.InputObjectKey.Should().Contain(job.Id.ToString());
-        uploadUrl.Should().Be("https://example.invalid/presigned");
+        uploadUrl.Url.Should().Be("https://example.invalid/presigned");
     }
 
     [Fact]
@@ -1017,7 +1042,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
         var (sut, _, _, _) = CreateSut(new AuthorizationConfig { IsEnabled = true });
 
         var request = new CreateCsvJobRequest(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [
@@ -1138,7 +1163,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
 
         var (job, _) = await sut.CreateJobAsync(
             new CreateCsvJobRequest(
-                "utf-8",
+                CsvFileEncoding.Utf8,
                 ",",
                 true,
                 [
@@ -1175,7 +1200,7 @@ public class PseudonymizationJobAppServiceTests : ServiceTestBase
 
     private static CreateCsvJobRequest NamespaceColumnImportRequest() =>
         new(
-            "utf-8",
+            CsvFileEncoding.Utf8,
             ",",
             true,
             [

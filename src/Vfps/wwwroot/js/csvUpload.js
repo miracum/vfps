@@ -109,7 +109,7 @@ window.vfpsCsvUpload = {
         // Reported directly over a plain HTTP request rather than by returning control back to
         // the .NET side of this same call: this has to keep working even if the Blazor circuit
         // itself has dropped during the transfer (a proxy's idle timeout, a backgrounded tab, a
-        // laptop that slept) - see the /csv-jobs/{id}/upload-complete endpoint this calls.
+        // laptop that slept) - see the /batches/{id}/upload-complete endpoint this calls.
         fetch(completeUrl, { method: "POST" })
           .then((response) => {
             if (response.ok) {

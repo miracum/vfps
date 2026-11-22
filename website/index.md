@@ -63,13 +63,13 @@ with gRPC, REST and FHIR APIs, an admin UI, and highly available deployments.</p
 
     [:octicons-arrow-right-24: MII FHIR pseudonymization operations](fhir.md)
 
-- :lucide-layout-dashboard:{ .lg .middle } **Admin UI and CSV jobs**
+- :lucide-layout-dashboard:{ .lg .middle } **Admin UI and CSV processing**
 
     ---
 
     Browse and create namespaces, then pseudonymize, de-pseudonymize, import or
-    export larger-than-memory CSV files as background jobs that stream straight
-    to and from S3-compatible storage.
+    export larger-than-memory CSV files as background batches that stream straight
+    to and from S3-compatible storage - from the UI or the API.
 
     [:octicons-arrow-right-24: Admin UI](admin-ui.md)
 

@@ -106,7 +106,7 @@ public class CsvPseudonymizationJobRunnerTests
 
     // Defaults to 20 (not CsvProcessingConfig's own production default of 1000) so existing tests
     // exercising "a full chunk plus a trailing partial one" stay meaningful without needing
-    // hundreds of rows - pass an explicit value to test PseudonymizeBatchSize-specific behavior.
+    // hundreds of rows - pass an explicit value to test ChunkSize-specific behavior.
     // missingValuePlaceholders defaults to CsvProcessingConfig's own production default ("NA"/
     // "NULL") rather than null/empty, so existing tests that don't care about this setting still
     // exercise the same behavior a real deployment would see out of the box.
@@ -114,7 +114,7 @@ public class CsvPseudonymizationJobRunnerTests
     // under test here (the runner itself only dispatches to them), and they take the same faked
     // S3/repository/app-service dependencies this class already sets up.
     private CsvPseudonymizationJobRunner CreateSut(
-        int pseudonymizeBatchSize = 20,
+        int chunkSize = 20,
         List<string>? missingValuePlaceholders = null
     )
     {
@@ -122,7 +122,7 @@ public class CsvPseudonymizationJobRunnerTests
         var csvProcessingConfig = Options.Create(
             new CsvProcessingConfig
             {
-                PseudonymizeBatchSize = pseudonymizeBatchSize,
+                ChunkSize = chunkSize,
                 MissingValuePlaceholders = missingValuePlaceholders ?? ["NA", "NULL"],
                 // Zero, so the progress/cancellation gate below falls back to its row interval
                 // alone: these tests process a handful of rows in milliseconds, and the production
@@ -155,6 +155,7 @@ public class CsvPseudonymizationJobRunnerTests
             ),
             new CsvNamespaceExporter(pseudonymRepository, namespaceRepository, outputUploader),
             csvProcessingConfig,
+            s3Config,
             NullLogger<CsvPseudonymizationJobRunner>.Instance
         );
     }
@@ -1048,7 +1049,7 @@ public class CsvPseudonymizationJobRunnerTests
     [Fact]
     public async Task RunAsync_WithRowCountNotMultipleOfChunkSize_ShouldStillProcessTrailingPartialChunk()
     {
-        // CreateSut's default PseudonymizeBatchSize is 20 - 25 rows exercises one full batch plus
+        // CreateSut's default ChunkSize is 20 - 25 rows exercises one full batch plus
         // a trailing partial one.
         const int rowCount = 25;
         var job = CreateJob(
@@ -1518,7 +1519,7 @@ public class CsvPseudonymizationJobRunnerTests
     [Fact]
     public async Task RunAsync_WithBatchSizeLargerThanProgressInterval_ShouldStillNoticeCancellationBeforeEndOfFile()
     {
-        // PseudonymizeBatchSize (1000 in production) can be much larger than
+        // ChunkSize (1000 in production) can be much larger than
         // ProgressUpdateRowInterval (200) - this proves the cancellation check isn't tied to the
         // batch/flush boundary. With a 400-row file and a batch size of 1000, nothing would ever
         // flush before EOF if the check only fired on flush - here it must fire independently,
@@ -1556,7 +1557,7 @@ public class CsvPseudonymizationJobRunnerTests
         }
         FakeInputObject(job, csv.ToString());
 
-        var sut = CreateSut(pseudonymizeBatchSize: 1000);
+        var sut = CreateSut(chunkSize: 1000);
         await sut.RunAsync(job.Id, "test-label", CreateCancellationToken());
 
         A.CallTo(() =>

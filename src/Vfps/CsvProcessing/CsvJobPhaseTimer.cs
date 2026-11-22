@@ -75,7 +75,7 @@ internal sealed class CsvJobPhaseTimer(PseudonymizationJobDirection direction)
     private static readonly Counter<double> PhaseDuration = Program.Meter.CreateCounter<double>(
         "vfps.csv.job.phase.duration.seconds",
         unit: "s",
-        description: "Total time CSV pseudonymization jobs spent in each phase of processing, by job direction."
+        description: "Total time batches spent in each phase of processing, by batch direction."
     );
 
     // The fetch half of the input reads, measured inside ResumingS3ObjectStream and deducted from

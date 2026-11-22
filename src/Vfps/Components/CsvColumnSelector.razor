@@ -18,14 +18,14 @@
         id="@Id"
         class="bb:flex bb:h-10 bb:w-full bb:rounded-md bb:border bb:border-input bb:bg-background bb:px-3 bb:py-2 bb:text-sm bb:focus-visible:outline-none bb:disabled:cursor-not-allowed bb:disabled:opacity-50"
     >
-        <option value="">@Localizer["App.CsvJobs.SelectColumn"]</option>
+        <option value="">@Localizer["App.Batches.SelectColumn"]</option>
         @* A column the file does not have - carried over from a previous file, or typed while
            there was no header to choose from - would otherwise silently select nothing, leaving
            the form showing a blank field that still submits the old value. Kept as an option so
            it stays visible and correctable. *@
         @if (!string.IsNullOrEmpty(Value) && !Columns.Contains(Value))
         {
-            <option value="@Value">@Localizer["App.CsvJobs.ColumnNotInFile", Value]</option>
+            <option value="@Value">@Localizer["App.Batches.ColumnNotInFile", Value]</option>
         }
         @foreach (var column in Columns)
         {

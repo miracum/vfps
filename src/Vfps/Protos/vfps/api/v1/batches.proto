@@ -1,0 +1,362 @@
+syntax = "proto3";
+
+package vfps.api.v1;
+
+import "google/api/annotations.proto";
+import "google/protobuf/timestamp.proto";
+import "vfps/api/v1/meta.proto";
+
+option csharp_namespace = "Vfps.Protos";
+
+// service to process whole CSV files in the background: pseudonymize or de-pseudonymize columns,
+// import pseudonyms into namespaces, or export a namespace. Only available when vfps is
+// configured with object storage (S3:IsEnabled) - UNIMPLEMENTED otherwise.
+//
+// File contents never travel through this API. Create returns a presigned URL the client PUTs the
+// input file to, directly into object storage, and Get returns a presigned URL to download the
+// output from once the batch is done. This keeps multi-GB files off the API server, and it is the
+// only option over the JSON-transcoded REST surface anyway, which supports neither client
+// streaming nor request bodies larger than one message.
+//
+// The whole flow is two calls plus two plain HTTP transfers:
+//
+//   1. Create                    -> batch in BATCH_STATE_AWAITING_UPLOAD, plus an upload target
+//   2. PUT <upload.uri>          plain HTTP, sending upload.headers. Skipped for an export.
+//   3. Get, repeatedly           -> BATCH_STATE_QUEUED -> RUNNING -> COMPLETED, with progress
+//   4. GET <download.uri>        plain HTTP, once the batch is BATCH_STATE_COMPLETED
+//
+// There is no separate "upload finished" call: while a batch is awaiting its upload, Get checks
+// whether the input file has arrived and, once it has, queues the batch. Object storage only makes
+// a file visible once its upload has completed, so its presence is proof the upload is whole.
+service BatchService {
+  // create a batch. For every kind but an export the response carries the upload target, and the
+  // batch waits in BATCH_STATE_AWAITING_UPLOAD until the input file is there. An export has no
+  // input, so it is queued right away and the response carries no upload target.
+  //
+  // Requires, for every namespace the batch references: write access to pseudonymize or import,
+  // reverse-lookup access to de-pseudonymize or export. An import reading its namespaces from a
+  // column requires write access to every namespace, since which ones the file names is only known
+  // once it is processed.
+  rpc Create(BatchServiceCreateRequest) returns (BatchServiceCreateResponse) {
+    option (google.api.http) = {
+      post: "/v1/batches"
+      body: "*"
+    };
+  }
+
+  // get a batch's current state and progress - poll this after uploading. Once the batch is
+  // BATCH_STATE_COMPLETED the response carries a freshly signed download target: call Get again
+  // for a new one if it expired before the download started.
+  //
+  // Requires the caller to be the batch's creator, or an admin, and to still hold the access the
+  // batch's namespaces demand: it is re-checked on every call, since a grant can be revoked while a
+  // batch runs.
+  rpc Get(BatchServiceGetRequest) returns (BatchServiceGetResponse) {
+    option (google.api.http) = {get: "/v1/batches/{batch_id}"};
+  }
+
+  // list the caller's own batches, newest first, or every batch for admins. Never carries upload
+  // or download targets - Get a single batch for those.
+  rpc List(BatchServiceListRequest) returns (BatchServiceListResponse) {
+    option (google.api.http) = {get: "/v1/batches"};
+  }
+
+  // cancel a batch that hasn't finished. Best-effort: a running batch stops at its next
+  // checkpoint. Cancelling a batch that has already finished is a no-op that returns it unchanged.
+  // Requires the caller to be the batch's creator, or an admin.
+  rpc Cancel(BatchServiceCancelRequest) returns (BatchServiceCancelResponse) {
+    option (google.api.http) = {
+      post: "/v1/batches/{batch_id}:cancel"
+      body: "*"
+    };
+  }
+
+  // delete a batch that has finished - completed, failed, cancelled or stalled. FAILED_PRECONDITION
+  // while it is still awaiting its upload, queued or running: cancel it first. Its input and output
+  // files are not deleted with it, they expire with the bucket's retention period
+  // (S3:ObjectRetentionDays). Requires the caller to be the batch's creator, or an admin.
+  rpc Delete(BatchServiceDeleteRequest) returns (BatchServiceDeleteResponse) {
+    option (google.api.http) = {delete: "/v1/batches/{batch_id}"};
+  }
+}
+
+// request to create a batch
+message BatchServiceCreateRequest {
+  // what the batch does. Exactly one must be set.
+  oneof kind {
+    // map the values of selected columns of an uploaded file through namespaces
+    BatchTransformSpec transform = 1;
+    // store the (original value, pseudonym) pairs of an uploaded file in namespaces
+    BatchImportSpec import = 2;
+    // write every (original value, pseudonym) pair of a namespace to a file. No upload.
+    BatchExportSpec export = 3;
+  }
+  // the name of the file being uploaded, kept for display and to name the output file. Optional,
+  // and never used to locate anything.
+  string original_file_name = 4;
+}
+
+// response for creating a batch
+message BatchServiceCreateResponse {
+  // the created batch
+  Batch batch = 1;
+  // where to PUT the input file. Unset for an export.
+  PresignedRequest upload = 2;
+}
+
+// request to get a batch
+message BatchServiceGetRequest {
+  // the batch's id, as returned by Create
+  string batch_id = 1;
+}
+
+// response for getting a batch
+message BatchServiceGetResponse {
+  // the batch
+  Batch batch = 1;
+  // where to GET the output file from. Set only once the batch is BATCH_STATE_COMPLETED.
+  PresignedRequest download = 2;
+}
+
+// request to list batches
+message BatchServiceListRequest {
+  // specify the maximum number of results to be returned by the server.
+  // If the page_size is 0, the server will decide the number of results to be returned.
+  int32 page_size = 1;
+  // an opaque pagination token. Use this field to request a specific page of the list results.
+  string page_token = 2;
+}
+
+// response listing batches
+message BatchServiceListResponse {
+  // the batches, newest first
+  repeated Batch batches = 1;
+  // an opaque pagination token. Use this field to request the next
+  // page of results by setting the request's `page_token` to this value.
+  // Empty on the last page.
+  string next_page_token = 2;
+}
+
+// contents of the BatchServiceList pagination token: the position of the last-seen batch in the
+// (created_at desc, id desc) ordering
+message BatchListPaginationToken {
+  // created_at of the last-seen batch in the previous page
+  google.protobuf.Timestamp created_at = 1;
+  // id of the last-seen batch in the previous page - tie-breaker for batches sharing the same
+  // created_at
+  string id = 2;
+}
+
+// request to cancel a batch
+message BatchServiceCancelRequest {
+  // the batch's id
+  string batch_id = 1;
+}
+
+// response for cancelling a batch
+message BatchServiceCancelResponse {
+  // the batch after the cancellation request
+  Batch batch = 1;
+}
+
+// request to delete a batch
+message BatchServiceDeleteRequest {
+  // the batch's id
+  string batch_id = 1;
+}
+
+// response for deleting a batch
+message BatchServiceDeleteResponse {}
+
+// a batch: one CSV file processed in the background
+message Batch {
+  // metadata about the batch
+  Meta meta = 1;
+  // the batch's id
+  string id = 2;
+  // the batch's current state
+  BatchState state = 3;
+  // what the batch does, as it was created
+  oneof kind {
+    // see BatchServiceCreateRequest.transform
+    BatchTransformSpec transform = 4;
+    // see BatchServiceCreateRequest.import
+    BatchImportSpec import = 5;
+    // see BatchServiceCreateRequest.export
+    BatchExportSpec export = 6;
+  }
+  // the name the input file was uploaded under, if the client gave one
+  string original_file_name = 7;
+  // how far the batch has got
+  BatchProgress progress = 8;
+  // why the batch failed. Set only in BATCH_STATE_FAILED and BATCH_STATE_STALLED.
+  string error_message = 9;
+  // the subject of the user or service account that created the batch
+  string created_by = 10;
+}
+
+// the lifecycle of a batch: AWAITING_UPLOAD -> QUEUED -> RUNNING, then one of the final states
+// COMPLETED, FAILED or CANCELLED. An export starts at QUEUED.
+enum BatchState {
+  // never set by the server
+  BATCH_STATE_UNSPECIFIED = 0;
+  // created, waiting for the input file to be uploaded
+  BATCH_STATE_AWAITING_UPLOAD = 1;
+  // the input file is there, and the batch is waiting for a worker
+  BATCH_STATE_QUEUED = 2;
+  // a worker is processing the file
+  BATCH_STATE_RUNNING = 3;
+  // done. The output file is ready to download.
+  BATCH_STATE_COMPLETED = 4;
+  // stopped on an error, see Batch.error_message
+  BATCH_STATE_FAILED = 5;
+  // cancelled on request
+  BATCH_STATE_CANCELLED = 6;
+  // the worker stopped reporting progress for a while. Not necessarily final: a worker that was
+  // only slow can still complete the batch.
+  BATCH_STATE_STALLED = 7;
+}
+
+// how far a batch has got. The byte counts are 0 for an export, which has no input file - use
+// rows_processed to show its progress instead.
+message BatchProgress {
+  // size of the input file
+  int64 total_bytes = 1;
+  // how much of the input file has been read
+  int64 bytes_processed = 2;
+  // how many rows have been processed
+  int64 rows_processed = 3;
+  // rows that were malformed CSV, e.g. with a stray unescaped quote, but could be recovered from.
+  // Their fields are passed through as they were.
+  int32 bad_data_row_count = 4;
+  // fields left as they were because they were blank or a "missing data" placeholder such as
+  // "NA" or "NULL"
+  int32 missing_value_count = 5;
+  // fields left as their original value because the namespace held no pseudonym for it - see
+  // BATCH_PSEUDONYMIZE_MODE_KEEP_IF_MISSING. Always 0 for every other mode.
+  int32 unresolved_value_count = 6;
+}
+
+// how a CSV file is laid out
+message CsvFormat {
+  // the character encoding. Defaults to CSV_ENCODING_UTF_8. Output is written in the same encoding,
+  // without a byte-order mark.
+  CsvEncoding encoding = 1;
+  // the field delimiter: a single character, or "\t" for tabs. Defaults to ",".
+  string delimiter = 2;
+  // whether the first row holds column names. Defaults to true. Without one, columns are named by
+  // their zero-based index instead, e.g. "0".
+  optional bool has_header_row = 3;
+}
+
+// the character encoding of a CSV file
+enum CsvEncoding {
+  // the default: CSV_ENCODING_UTF_8. Also what a batch created before encodings were an enum
+  // reports if its encoding isn't one of the values below.
+  CSV_ENCODING_UNSPECIFIED = 0;
+  // UTF-8, with or without a byte-order mark
+  CSV_ENCODING_UTF_8 = 1;
+  // UTF-16, little-endian
+  CSV_ENCODING_UTF_16_LE = 2;
+  // UTF-16, big-endian
+  CSV_ENCODING_UTF_16_BE = 3;
+  // ISO-8859-1 (Latin-1)
+  CSV_ENCODING_ISO_8859_1 = 4;
+  // 7-bit US-ASCII
+  CSV_ENCODING_US_ASCII = 5;
+  // Windows-1252, the code page Excel on Windows exports CSV files in. Like ISO-8859-1, but with
+  // printable characters such as "€" and typographic quotes where ISO-8859-1 has control codes.
+  CSV_ENCODING_WINDOWS_1252 = 6;
+}
+
+// which way a transform batch maps values
+enum BatchTransformDirection {
+  // never valid
+  BATCH_TRANSFORM_DIRECTION_UNSPECIFIED = 0;
+  // replace original values with their pseudonyms
+  BATCH_TRANSFORM_DIRECTION_PSEUDONYMIZE = 1;
+  // replace pseudonyms with their original values
+  BATCH_TRANSFORM_DIRECTION_DEPSEUDONYMIZE = 2;
+}
+
+// what a pseudonymizing batch does with an original value the namespace holds no pseudonym for
+enum BatchPseudonymizeMode {
+  // the default: BATCH_PSEUDONYMIZE_MODE_CREATE_IF_MISSING
+  BATCH_PSEUDONYMIZE_MODE_UNSPECIFIED = 0;
+  // generate and store a new pseudonym for it
+  BATCH_PSEUDONYMIZE_MODE_CREATE_IF_MISSING = 1;
+  // fail the whole batch
+  BATCH_PSEUDONYMIZE_MODE_FAIL_IF_MISSING = 2;
+  // leave the value as it is and count it in BatchProgress.unresolved_value_count
+  BATCH_PSEUDONYMIZE_MODE_KEEP_IF_MISSING = 3;
+}
+
+// one column a transform batch maps through a namespace
+message BatchColumnMapping {
+  // the input column to read values from: its name, or its zero-based index without a header row
+  string source_column = 1;
+  // the output column to write the mapped values to. Defaults to replacing source_column in place.
+  string target_column = 2;
+  // the namespace to map the column's values through
+  string namespace = 3;
+}
+
+// a batch mapping selected columns of an uploaded file through namespaces. Every other column is
+// copied to the output unchanged.
+message BatchTransformSpec {
+  // pseudonymize or de-pseudonymize. Required.
+  BatchTransformDirection direction = 1;
+  // the input file's layout. The output keeps the same layout.
+  CsvFormat format = 2;
+  // the columns to map. At least one.
+  repeated BatchColumnMapping column_mappings = 3;
+  // only valid when pseudonymizing - INVALID_ARGUMENT if set when de-pseudonymizing, rather than
+  // silently ignored.
+  BatchPseudonymizeMode pseudonymize_mode = 4;
+}
+
+// a batch storing the (original value, pseudonym) pairs of an uploaded file, as if by
+// PseudonymService.Import for each row. The output file is a per-row report: every input row
+// echoed back unchanged and in order, with a "status" column appended holding that row's outcome.
+message BatchImportSpec {
+  // the namespace to store every pair in. Exactly one of namespace and namespace_column must be
+  // set. The namespaces stored into must use PSEUDONYM_GENERATION_METHOD_EXTERNAL.
+  string namespace = 1;
+  // the input file's layout
+  CsvFormat format = 2;
+  // the column holding the original values. Defaults to "original".
+  string original_value_column = 3;
+  // the column holding the pseudonyms. Defaults to "pseudonym".
+  string pseudonym_value_column = 4;
+  // the column naming each row's own target namespace, so one file - e.g. several namespaces'
+  // exports concatenated - can populate many namespaces at once
+  string namespace_column = 5;
+}
+
+// a batch writing every (original value, pseudonym) pair of a namespace to a file that a
+// BatchImportSpec with the same column names reads back in
+message BatchExportSpec {
+  // the namespace to export
+  string namespace = 1;
+  // the output file's layout. has_header_row is ignored: an export always writes a header row.
+  CsvFormat format = 2;
+  // the column to write the original values to. Defaults to "original".
+  string original_value_column = 3;
+  // the column to write the pseudonyms to. Defaults to "pseudonym".
+  string pseudonym_value_column = 4;
+}
+
+// a presigned plain-HTTP request to object storage. Anyone holding it can use it until it expires,
+// so treat it like a short-lived credential and don't log it.
+message PresignedRequest {
+  // the HTTP method to use: "PUT" for an upload, "GET" for a download
+  string method = 1;
+  // the URL to send the request to
+  string uri = 2;
+  // headers the request must carry exactly as given, because they are part of the signature -
+  // e.g. "Content-Type: text/csv" for an upload. Leaving one out or changing it makes object
+  // storage reject the request.
+  map<string, string> headers = 3;
+  // when the URL stops working
+  google.protobuf.Timestamp expires_at = 4;
+}

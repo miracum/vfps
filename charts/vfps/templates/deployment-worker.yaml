@@ -48,7 +48,7 @@ spec:
       priorityClassName: {{ . }}
       {{- end }}
       # Much longer than the API pods' equivalent, and the reason the workers are a separate
-      # Deployment at all: a CSV job that is killed has to be re-dispatched and reprocessed, so it
+      # Deployment at all: a batch that is killed has to be re-dispatched and reprocessed, so it
       # is worth waiting for one to finish - which is not a wait you want on every API pod rollout.
       terminationGracePeriodSeconds: {{ .Values.worker.terminationGracePeriodSeconds }}
       securityContext:

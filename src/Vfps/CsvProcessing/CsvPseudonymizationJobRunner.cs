@@ -20,6 +20,7 @@ internal sealed class CsvPseudonymizationJobRunner(
     ICsvNamespaceImporter namespaceImporter,
     ICsvNamespaceExporter namespaceExporter,
     IOptions<CsvProcessingConfig> csvProcessingConfig,
+    IOptions<S3Config> s3Config,
     ILogger<CsvPseudonymizationJobRunner> logger
 ) : ICsvPseudonymizationJobRunner
 {
@@ -239,8 +240,7 @@ internal sealed class CsvPseudonymizationJobRunner(
         PerformContext? context
     )
     {
-        var outputObjectKey =
-            $"{PseudonymizationJobAppService.S3ObjectKeyPrefix}{job.Id}/output.csv";
+        var outputObjectKey = $"{s3Config.Value.NormalizedObjectKeyPrefix}{job.Id}/output.csv";
         // Set as soon as the (deterministic, jobId-derived) path is known, not only on success -
         // this is the path the runner is writing to/intends to write to, not a "job is done"
         // signal (that's what the job's own Status is for).

@@ -18,8 +18,8 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
     private const float JobTimeoutMs = 60_000;
 
     // The CSV jobs page with its new-job dialog already open - the form is a dialog now, and this
-    // is the same link the home page's "New job" button follows.
-    private const string NewJobPath = "/ui/csv-jobs?new=1";
+    // is the same link the home page's "New batch" button follows.
+    private const string NewJobPath = "/ui/batches?new=1";
 
     [Fact]
     public async Task ExportDirection_ReplacesTheFileFormWithANamespacePicker()
@@ -34,8 +34,8 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
         // read, plus the output's own encoding/delimiter.
         await Expect(Page.Locator("#csvFileInput")).ToHaveCountAsync(0);
         await Expect(Page.Locator("#hasHeaderRow")).ToHaveCountAsync(0);
-        await Expect(Page.Locator("#jobNamespace")).ToBeVisibleAsync();
-        await Expect(Page.Locator("#submitJobButton")).ToContainTextAsync("Start export");
+        await Expect(Page.Locator("#batchNamespace")).ToBeVisibleAsync();
+        await Expect(Page.Locator("#submitBatchButton")).ToContainTextAsync("Start export");
     }
 
     [Fact]
@@ -69,8 +69,8 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
             await GotoAsync(NewJobPath);
             await Page.SelectOptionAsync("#direction", "Import");
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
-            await Page.SelectOptionAsync("#jobNamespace", namespaceName);
-            await Page.ClickAsync("#submitJobButton");
+            await Page.SelectOptionAsync("#batchNamespace", namespaceName);
+            await Page.ClickAsync("#submitBatchButton");
 
             var importRow = JobRow(Path.GetFileName(csvPath));
             await Expect(importRow).ToContainTextAsync("Completed", RowTimeout());
@@ -86,13 +86,13 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
 
             await GotoAsync(NewJobPath);
             await Page.SelectOptionAsync("#direction", "Export");
-            await Page.SelectOptionAsync("#jobNamespace", namespaceName);
-            await Page.ClickAsync("#submitJobButton");
+            await Page.SelectOptionAsync("#batchNamespace", namespaceName);
+            await Page.ClickAsync("#submitBatchButton");
 
             // An export hands back every original value, so the submit shows what it is about
             // to reveal and waits for an explicit confirmation before the job starts.
             await Expect(Page.Locator("#revealReview")).ToContainTextAsync(namespaceName);
-            await Page.ClickAsync("#confirmRevealJobButton");
+            await Page.ClickAsync("#confirmRevealBatchButton");
 
             var exportRow = JobRow(namespaceName);
             await Expect(exportRow).ToContainTextAsync("Completed", RowTimeout());
@@ -126,8 +126,8 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
                 await GotoAsync(NewJobPath);
                 await Page.SelectOptionAsync("#direction", "Import");
                 await Page.SetInputFilesAsync("#csvFileInput", exportedPath);
-                await Page.SelectOptionAsync("#jobNamespace", secondNamespace);
-                await Page.ClickAsync("#submitJobButton");
+                await Page.SelectOptionAsync("#batchNamespace", secondNamespace);
+                await Page.ClickAsync("#submitBatchButton");
 
                 var reimportRow = JobRow(Path.GetFileName(exportedPath));
                 await Expect(reimportRow).ToContainTextAsync("Completed", RowTimeout());
@@ -169,8 +169,8 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
             await GotoAsync(NewJobPath);
             await Page.SelectOptionAsync("#direction", "Import");
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
-            await Page.SelectOptionAsync("#jobNamespace", namespaceName);
-            await Page.ClickAsync("#submitJobButton");
+            await Page.SelectOptionAsync("#batchNamespace", namespaceName);
+            await Page.ClickAsync("#submitBatchButton");
 
             var importRow = JobRow(Path.GetFileName(csvPath));
             await Expect(importRow).ToContainTextAsync("Completed", RowTimeout());
@@ -284,15 +284,15 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
 
             // With no namespace column, one namespace is picked for the whole file.
-            await Expect(Page.Locator("#jobNamespace")).ToBeVisibleAsync();
+            await Expect(Page.Locator("#batchNamespace")).ToBeVisibleAsync();
 
             await SelectDetectedColumnAsync("#namespaceColumn", "namespace");
 
             // With one, there is no single namespace to pick any more.
-            await Expect(Page.Locator("#jobNamespace")).ToHaveCountAsync(0);
+            await Expect(Page.Locator("#batchNamespace")).ToHaveCountAsync(0);
 
             await Page.SelectOptionAsync("#namespaceColumn", string.Empty);
-            await Expect(Page.Locator("#jobNamespace")).ToBeVisibleAsync();
+            await Expect(Page.Locator("#batchNamespace")).ToBeVisibleAsync();
         }
         finally
         {
@@ -325,7 +325,7 @@ public class CsvNamespaceImportExportTests(PlaywrightFixture fixture) : VfpsPage
             await Page.SelectOptionAsync("#direction", "Import");
             await Page.SetInputFilesAsync("#csvFileInput", csvPath);
             await SelectDetectedColumnAsync("#namespaceColumn", "namespace");
-            await Page.ClickAsync("#submitJobButton");
+            await Page.ClickAsync("#submitBatchButton");
 
             var jobRow = JobRow(Path.GetFileName(csvPath));
             await Expect(jobRow).ToContainTextAsync("Completed", RowTimeout());

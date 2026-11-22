@@ -45,6 +45,54 @@ public class PseudonymizationJobRepository(IDbContextFactory<PseudonymContext> c
     }
 
     /// <inheritdoc/>
+    public async Task<IReadOnlyList<PseudonymizationJob>> ListPageAsync(
+        string? createdBy,
+        PseudonymizationJobPageCursor? after,
+        int take,
+        CancellationToken cancellationToken
+    )
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var query = context.PseudonymizationJobs.AsNoTracking();
+        if (createdBy is not null)
+        {
+            query = query.Where(j => j.CreatedBy == createdBy);
+        }
+
+        if (!context.Database.IsSqlite())
+        {
+            if (after is not null)
+            {
+                query = query.Where(j =>
+                    j.CreatedAt < after.CreatedAt
+                    || (j.CreatedAt == after.CreatedAt && j.Id < after.Id)
+                );
+            }
+
+            return await query
+                .OrderByDescending(j => j.CreatedAt)
+                .ThenByDescending(j => j.Id)
+                .Take(take)
+                .ToListAsync(cancellationToken);
+        }
+
+        // SQLite (unit tests only): its DateTimeOffset columns are stored through a string
+        // converter (see PseudonymContext), so the comparison above isn't one it can be trusted to
+        // translate faithfully - page in memory instead, the same as PseudonymRepository does.
+        var all = await query.ToListAsync(cancellationToken);
+        IEnumerable<PseudonymizationJob> ordered = all.OrderByDescending(j => j.CreatedAt)
+            .ThenByDescending(j => j.Id);
+        if (after is not null)
+        {
+            ordered = ordered.Where(j =>
+                j.CreatedAt < after.CreatedAt || (j.CreatedAt == after.CreatedAt && j.Id < after.Id)
+            );
+        }
+
+        return [.. ordered.Take(take)];
+    }
+
+    /// <inheritdoc/>
     public async Task<IReadOnlyList<Guid>> FindStalledRunningJobIdsAsync(
         TimeSpan staleAfter,
         CancellationToken cancellationToken
@@ -308,5 +356,24 @@ public class PseudonymizationJobRepository(IDbContextFactory<PseudonymContext> c
         }
 
         return await query.ExecuteDeleteAsync(cancellationToken);
+    }
+
+    /// <inheritdoc/>
+    public async Task<bool> DeleteIfFinishedAsync(Guid id, CancellationToken cancellationToken)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var deleted = await context
+            .PseudonymizationJobs.Where(j =>
+                j.Id == id
+                && (
+                    j.Status == PseudonymizationJobStatus.Completed
+                    || j.Status == PseudonymizationJobStatus.Failed
+                    || j.Status == PseudonymizationJobStatus.Cancelled
+                    || j.Status == PseudonymizationJobStatus.Stalled
+                )
+            )
+            .ExecuteDeleteAsync(cancellationToken);
+
+        return deleted > 0;
     }
 }

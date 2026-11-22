@@ -16,7 +16,7 @@ body {
 
 /*
  * Plain, global CSS (not Tailwind utility classes) for a couple of specific badge/text colors
- * used on the CSV Jobs page (see Components/Pages/CsvJobs.razor's BadgeClassFor). Tailwind
+ * used on the CSV Jobs page (see Components/Pages/Batches.razor's BadgeClassFor). Tailwind
  * classes don't work here: blazorblueprint.css (linked above) is a pre-built Tailwind bundle
  * shipped by the BlazorBlueprint.Components NuGet package that only contains the utility classes
  * *that library's own components* reference internally - confirmed upstream by the maintainer,
@@ -492,7 +492,7 @@ h1:focus {
 
 /*
  * The column mappings a de-pseudonymization is about to run, in the CSV job dialog's review
- * step (CsvJobs.razor). A plain table rather than the jobs grid's BbDataGrid: three columns, a
+ * step (Batches.razor). A plain table rather than the jobs grid's BbDataGrid: three columns, a
  * handful of rows, nothing to sort or page.
  */
 .review-table {
@@ -677,7 +677,7 @@ h1:focus {
 }
 
 /*
- * The CSV jobs grid (CsvJobs.razor). The first column holds what tells the jobs apart and takes all
+ * The CSV jobs grid (Batches.razor). The first column holds what tells the jobs apart and takes all
  * the width that's left; the others stay on one line at their own width.
  */
 .jobs-grid :is(th, td):first-child {
@@ -688,19 +688,19 @@ h1:focus {
   white-space: nowrap;
 }
 
-.job-subject {
+.batch-subject {
   min-width: 14rem;
   overflow-wrap: anywhere;
 }
 
-.job-progress {
+.batch-progress {
   display: flex;
   align-items: center;
   gap: 0.5rem;
   white-space: nowrap;
 }
 
-.job-badges {
+.batch-badges {
   display: flex;
   flex-wrap: wrap;
   gap: 0.25rem;
@@ -708,11 +708,11 @@ h1:focus {
   white-space: nowrap;
 }
 
-.job-created {
+.batch-created {
   white-space: nowrap;
 }
 
-.job-actions {
+.batch-actions {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -757,16 +757,16 @@ h1:focus {
     grid-column: 1 / -1;
   }
 
-  .job-subject {
+  .batch-subject {
     min-width: 0;
   }
 
-  .job-created {
+  .batch-created {
     color: var(--muted-foreground);
     font-size: var(--bb-text-xs);
   }
 
-  .job-actions {
+  .batch-actions {
     flex-wrap: wrap;
   }
 }
@@ -858,15 +858,15 @@ h1:focus {
  * too little of the file name to recognize - in a two-column page that happens well above phone
  * widths, which is why this goes by the room there is rather than by a breakpoint.
  */
-.recent-job {
+.recent-batch {
   flex-wrap: wrap;
 }
 
-.recent-job-text {
+.recent-batch-text {
   flex: 1 1 12rem;
 }
 
-.recent-job-status {
+.recent-batch-status {
   margin-inline-start: auto;
 }
 

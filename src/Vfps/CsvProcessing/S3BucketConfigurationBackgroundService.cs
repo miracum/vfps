@@ -8,7 +8,7 @@ namespace Vfps.CsvProcessing;
 
 /// <summary>
 /// Applies the CSV job bucket's configuration on startup:
-/// - a lifecycle rule that expires (deletes) objects under the "csv-jobs/" prefix after
+/// - a lifecycle rule that expires (deletes) objects under S3:ObjectKeyPrefix after
 ///   <see cref="S3Config.ObjectRetentionDays"/> days - both the original uploaded CSV and its
 ///   pseudonymized output. Job records in Postgres are never deleted, so without this, the
 ///   objects they reference - including the original, unpseudonymized input - would otherwise
@@ -55,7 +55,7 @@ public class S3BucketConfigurationBackgroundService(
 
         logger.LogInformation(
             "Applying an S3 lifecycle rule to expire objects under {Prefix} after {Days} day(s).",
-            PseudonymizationJobAppService.S3ObjectKeyPrefix,
+            config.NormalizedObjectKeyPrefix,
             config.ObjectRetentionDays
         );
 
@@ -76,7 +76,7 @@ public class S3BucketConfigurationBackgroundService(
                                 {
                                     LifecycleFilterPredicate = new LifecyclePrefixPredicate
                                     {
-                                        Prefix = PseudonymizationJobAppService.S3ObjectKeyPrefix,
+                                        Prefix = config.NormalizedObjectKeyPrefix,
                                     },
                                 },
                                 Status = LifecycleRuleStatus.Enabled,
@@ -104,7 +104,7 @@ public class S3BucketConfigurationBackgroundService(
                 "Failed to apply the S3 lifecycle rule for {Prefix} - uploaded/processed CSV "
                     + "files will not be automatically deleted until this is resolved. "
                     + "S3 ErrorCode={ErrorCode}, HTTP StatusCode={StatusCode}, RequestId={RequestId}",
-                PseudonymizationJobAppService.S3ObjectKeyPrefix,
+                config.NormalizedObjectKeyPrefix,
                 ex.ErrorCode,
                 ex.StatusCode,
                 ex.RequestId
@@ -122,7 +122,7 @@ public class S3BucketConfigurationBackgroundService(
                 ex,
                 "Failed to apply the S3 lifecycle rule for {Prefix} - uploaded/processed CSV "
                     + "files will not be automatically deleted until this is resolved.",
-                PseudonymizationJobAppService.S3ObjectKeyPrefix
+                config.NormalizedObjectKeyPrefix
             );
         }
     }
