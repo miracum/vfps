@@ -102,9 +102,10 @@ serviceMonitor:
   # scrapeTimeout: 10s
 
 prometheusRule:
-  # -- if enabled, creates a PrometheusRule with alerts for service-account access tokens that are
-  # about to expire or already have. Needs the metrics scraped, e.g. via `serviceMonitor.enabled`,
-  # and only ever fires once `Authorization__AccessTokens__IsEnabled` is on.
+  # -- if enabled, creates a PrometheusRule with alerts for vfps' availability, API errors and
+  # latency, its database, batches, the services it calls and service-account access tokens. Needs
+  # the metrics scraped, e.g. via `serviceMonitor.enabled`. Each group below can be turned off on its
+  # own. Critical alerts are meant to page, warnings to open a ticket.
   enabled: false
   # -- additional labels to apply to the PrometheusRule object, e.g. `release: prometheus`
   additionalLabels: {}
@@ -114,6 +115,59 @@ prometheusRule:
     # starts firing. Once the token has expired, `VfpsServiceAccountTokenExpired` takes over. Both
     # stay firing until the token is revoked or deleted, which is how a rotation clears them.
     warningDays: 14
+  availability:
+    # -- `VfpsDown` (critical) when no API pod can be scraped for 5 minutes, and `VfpsWorkersDown`
+    # (critical) likewise for the worker pods when `worker.enabled` is set
+    enabled: true
+  api:
+    # -- `VfpsHighErrorRate` (critical) and `VfpsHighLatency` (warning). Errors count HTTP 5xx and
+    # gRPC calls that failed on the server's side (UNKNOWN, DEADLINE_EXCEEDED, UNIMPLEMENTED,
+    # INTERNAL, UNAVAILABLE, DATA_LOSS) - not a caller's own mistakes such as INVALID_ARGUMENT,
+    # NOT_FOUND or PERMISSION_DENIED.
+    enabled: true
+    # -- share of requests failing, over 5 minutes, above which `VfpsHighErrorRate` fires
+    errorRatio: 0.05
+    # -- fewer requests than this in 5 minutes never trigger `VfpsHighErrorRate` or
+    # `VfpsHighLatency`, so a single failed call on an idle instance doesn't page anyone
+    minRequests: 20
+    # -- 95th percentile request duration, in seconds, above which `VfpsHighLatency` fires after
+    # 15 minutes
+    latencyP95Seconds: 1
+  database:
+    # -- `VfpsDatabaseConnectionTimeouts` (critical) when requests time out waiting for a pooled
+    # connection, `VfpsDatabasePoolNearlyExhausted` and `VfpsSlowDatabase` (warnings)
+    enabled: true
+    # -- share of a connection pool in use, for 10 minutes, above which
+    # `VfpsDatabasePoolNearlyExhausted` fires
+    poolUsageRatio: 0.9
+    # -- 95th percentile database command duration, in seconds, above which `VfpsSlowDatabase`
+    # fires after 15 minutes
+    latencyP95Seconds: 0.5
+  batches:
+    # -- `VfpsBatchesNotProcessed` (critical) when batches are queued and none is running,
+    # `VfpsBatchWaitingTooLong`, `VfpsBatchesFailing` and `VfpsBatchStalled` (warnings). Silent while
+    # batches are off, since their metrics then don't exist.
+    enabled: true
+    # -- how long batches have to sit queued with none running before `VfpsBatchesNotProcessed`
+    # fires. The classic cause: no instance processes batches at all (`worker.replicaCount: 0`, or
+    # `CsvProcessing__ProcessJobs=false` everywhere), which otherwise fails silently.
+    notProcessedFor: 30m
+    # -- seconds the longest-waiting batch may stay queued before `VfpsBatchWaitingTooLong` fires -
+    # workers that run, but can't keep up
+    maxQueuedSeconds: 3600
+  dependencies:
+    # -- `VfpsDependencyErrors` (warning) when calls to a service vfps depends on - object storage,
+    # the identity provider, a VOPRF key server - fail, per destination host
+    enabled: true
+    # -- share of calls to one host failing (connection errors, timeouts, 5xx), over 5 minutes, above
+    # which `VfpsDependencyErrors` fires after 10 minutes
+    errorRatio: 0.1
+  runtime:
+    # -- `VfpsThreadPoolStarvation` (warning) when work queues up for the .NET thread pool
+    enabled: true
+    # -- thread pool queue length, sustained for 5 minutes, above which `VfpsThreadPoolStarvation`
+    # fires
+    threadPoolQueueLength: 100
 
 # -- image pull secrets used by the main deployment container
 imagePullSecrets: []

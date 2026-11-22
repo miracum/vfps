@@ -1,4 +1,16 @@
 {{- if .Values.prometheusRule.enabled }}
+{{- /*
+  Selectors scoping every rule to this release: the ServiceMonitor scrapes the API Service (job
+  "<fullname>") and, with workers enabled, the worker's metrics Service (job
+  "<fullname>-worker-metrics"). Database, batch and dependency alerts look at both, since workers
+  talk to the database and object storage too; request alerts only at the API.
+*/}}
+{{- $fullname := include "vfps.fullname" . }}
+{{- $all := printf `namespace="%s", job=~"%s(-worker-metrics)?"` .Release.Namespace $fullname }}
+{{- $api := printf `namespace="%s", job="%s"` .Release.Namespace $fullname }}
+{{- $worker := printf `namespace="%s", job="%s-worker-metrics"` .Release.Namespace $fullname }}
+{{- $routes := `http_route!~"/healthz|/readyz|/livez|/_blazor.*"` }}
+{{- $rules := .Values.prometheusRule }}
 apiVersion: monitoring.coreos.com/v1
 kind: PrometheusRule
 metadata:
@@ -43,4 +55,163 @@ spec:
           annotations:
             summary: {{`Service account {{ $labels.service_account }}'s token "{{ $labels.token_name }}" has expired.`}}
             description: {{`vfps rejects {{ $labels.token_id }} now, so whatever uses it is failing to authenticate. Issue a new token for {{ $labels.service_account }} and roll it out, then revoke the expired one - revoking it is what clears this alert.`}}
+    {{- if $rules.availability.enabled }}
+    - name: vfps-availability
+      rules:
+        - alert: VfpsDown
+          expr: |
+            sum(up{ {{- $api -}} }) == 0 or absent(up{ {{- $api -}} })
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: {{ printf "No vfps API pod in %s can be scraped." .Release.Namespace | quote }}
+            description: {{ `vfps has been unreachable for 5 minutes, so pseudonymization, reverse lookups and the admin UI are down for every client. Check the pods (kubectl get pods), their events and logs - a failing database connection or migration keeps them from becoming ready.` | quote }}
+        {{- if .Values.worker.enabled }}
+        - alert: VfpsWorkersDown
+          expr: |
+            sum(up{ {{- $worker -}} }) == 0 or absent(up{ {{- $worker -}} })
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: {{ printf "No vfps worker pod in %s can be scraped." .Release.Namespace | quote }}
+            description: {{ `The API pods only accept batches while workers are enabled, so no batch is processed until a worker is back. Check the worker Deployment's pods, events and logs.` | quote }}
+        {{- end }}
+    {{- end }}
+    {{- if $rules.api.enabled }}
+    - name: vfps-api
+      rules:
+        - alert: VfpsHighErrorRate
+          expr: |
+            (
+              (
+                (sum(rate(http_server_request_duration_seconds_count{ {{- $api }}, {{ $routes }}, http_response_status_code=~"5.."}[5m])) or vector(0))
+                +
+                (sum(rate(http_server_request_duration_seconds_count{ {{- $api }}, rpc_grpc_status_code=~"2|4|12|13|14|15"}[5m])) or vector(0))
+              )
+              / sum(rate(http_server_request_duration_seconds_count{ {{- $api }}, {{ $routes }}}[5m]))
+              > {{ $rules.api.errorRatio }}
+            )
+            and on() sum(increase(http_server_request_duration_seconds_count{ {{- $api }}, {{ $routes }}}[5m])) >= {{ $rules.api.minRequests }}
+          for: 10m
+          labels:
+            severity: critical
+          annotations:
+            summary: {{ `{{ $value | humanizePercentage }} of vfps API requests are failing.` | quote }}
+            description: {{ print `More than ` (mulf 100 $rules.api.errorRatio) `% of requests have ended in an HTTP 5xx or a server-side gRPC error for 10 minutes. The "Errors" panels of the vfps Grafana dashboard break them down by route; the pod logs carry the exceptions. Database or VOPRF key server trouble usually shows up here first - see the related alerts.` | quote }}
+        - alert: VfpsHighLatency
+          expr: |
+            (
+              histogram_quantile(0.95, sum by (le) (rate(http_server_request_duration_seconds_bucket{ {{- $api }}, {{ $routes }}}[5m])))
+              > {{ $rules.api.latencyP95Seconds }}
+            )
+            and on() sum(increase(http_server_request_duration_seconds_count{ {{- $api }}, {{ $routes }}}[5m])) >= {{ $rules.api.minRequests }}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: {{ `vfps API p95 latency is {{ printf "%.2f" $value }}s.` | quote }}
+            description: {{ print `The slowest 5% of requests have taken longer than ` $rules.api.latencyP95Seconds `s for 15 minutes. Compare with the database latency and connection pool panels of the vfps Grafana dashboard - a saturated pool or slow queries are the usual cause.` | quote }}
+    {{- end }}
+    {{- if $rules.database.enabled }}
+    - name: vfps-database
+      rules:
+        - alert: VfpsDatabaseConnectionTimeouts
+          expr: |
+            sum(rate({__name__=~"db_client_connection_npgsql_timeouts(_total)?", {{ $all }}}[5m])) > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "vfps requests are timing out waiting for a database connection."
+            description: {{ `The connection pool is exhausted and requests fail after waiting for a free connection. Check the database's health and load, long-running queries, and whether replicas x Maximum Pool Size (plus CsvProcessing__WorkerCount on worker pods) exceeds what the database allows.` | quote }}
+        - alert: VfpsDatabasePoolNearlyExhausted
+          expr: |
+            max by (instance, db_client_connection_pool_name) (db_client_connection_count{ {{- $all }}, db_client_connection_state="used"})
+            / max by (instance, db_client_connection_pool_name) (db_client_connection_max{ {{- $all -}} })
+            > {{ $rules.database.poolUsageRatio }}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: {{ `{{ $labels.instance }} uses {{ $value | humanizePercentage }} of its database connection pool.` | quote }}
+            description: {{ `A pool this full starts making requests wait, and then time out. Look for slow queries or a database under load, or raise Maximum Pool Size in step with what the database allows.` | quote }}
+        - alert: VfpsSlowDatabase
+          expr: |
+            histogram_quantile(0.95, sum by (le) (rate(db_client_operation_duration_seconds_bucket{ {{- $all -}} }[5m])))
+            > {{ $rules.database.latencyP95Seconds }}
+          for: 15m
+          labels:
+            severity: warning
+          annotations:
+            summary: {{ `vfps database commands take {{ printf "%.2f" $value }}s at p95.` | quote }}
+            description: {{ print `The slowest 5% of database commands have taken longer than ` $rules.database.latencyP95Seconds `s for 15 minutes. Check the database's load, locks and replication; with synchronous replication, a slow standby slows every write.` | quote }}
+    {{- end }}
+    {{- if $rules.batches.enabled }}
+    - name: vfps-batches
+      rules:
+        - alert: VfpsBatchesNotProcessed
+          expr: |
+            max(vfps_batches{ {{- $all }}, state="queued"}) > 0
+            and on() max(vfps_batches{ {{- $all }}, state="running"}) == 0
+          for: {{ $rules.batches.notProcessedFor }}
+          labels:
+            severity: critical
+          annotations:
+            summary: {{ `{{ printf "%.0f" $value }} batch(es) queued, none running.` | quote }}
+            description: {{ print `Batches have waited ` $rules.batches.notProcessedFor ` without any being processed. Usually no instance processes batches at all: check that worker pods are running (worker.replicaCount), or without workers that CsvProcessing__ProcessJobs isn't false on every pod. The Hangfire dashboard's Servers page lists the instances serving the batch queue.` | quote }}
+        - alert: VfpsBatchWaitingTooLong
+          expr: |
+            max(vfps_batches_oldest_queued_age_seconds{ {{- $all -}} }) > {{ $rules.batches.maxQueuedSeconds }}
+          labels:
+            severity: warning
+          annotations:
+            summary: {{ `A batch has been queued for {{ humanizeDuration $value }}.` | quote }}
+            description: {{ `Batches are being processed, but not fast enough to keep up. Add worker replicas, or raise CsvProcessing__WorkerCount along with the database connection pool.` | quote }}
+        - alert: VfpsBatchesFailing
+          expr: |
+            sum(increase(vfps_batches_finished_total{ {{- $all }}, outcome="failed", reason="error"}[1h])) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: {{ `{{ printf "%.0f" $value }} batch(es) failed in the last hour.` | quote }}
+            description: {{ `Batches failed on an error rather than by design - a batch set to fail on unknown values doesn't count. The worker logs carry the exception for each failed batch's id; object storage or database trouble is the usual cause. Clears an hour after the last failure.` | quote }}
+        - alert: VfpsBatchStalled
+          expr: |
+            sum(increase(vfps_batches_finished_total{ {{- $all }}, outcome="stalled"}[1h])) > 0
+          labels:
+            severity: warning
+          annotations:
+            summary: {{ `{{ printf "%.0f" $value }} batch(es) stalled in the last hour.` | quote }}
+            description: {{ `A running batch stopped reporting progress for longer than CsvProcessing__StalledJobThreshold - its worker most likely crashed, was OOM-killed or lost its database connection. Check worker pod restarts and memory. Clears an hour after the last stall.` | quote }}
+    {{- end }}
+    {{- if $rules.dependencies.enabled }}
+    - name: vfps-dependencies
+      rules:
+        - alert: VfpsDependencyErrors
+          expr: |
+            sum by (server_address) (rate(http_client_request_duration_seconds_count{ {{- $all }}, error_type!="", error_type!~"4[0-9][0-9]"}[5m]))
+            / sum by (server_address) (rate(http_client_request_duration_seconds_count{ {{- $all -}} }[5m]))
+            > {{ $rules.dependencies.errorRatio }}
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: {{ `{{ $value | humanizePercentage }} of vfps' calls to {{ $labels.server_address }} are failing.` | quote }}
+            description: {{ `Calls to {{ $labels.server_address }} have been failing with connection errors, timeouts or 5xx responses for 10 minutes. If it is the object storage, batches can't upload, run or download; the identity provider, sign-in and token validation degrade; a VOPRF key server, pseudonymization in its namespaces fails.` | quote }}
+    {{- end }}
+    {{- if $rules.runtime.enabled }}
+    - name: vfps-runtime
+      rules:
+        - alert: VfpsThreadPoolStarvation
+          expr: |
+            max by (instance) (dotnet_thread_pool_queue_length_total{ {{- $all -}} }) > {{ $rules.runtime.threadPoolQueueLength }}
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: {{ `{{ $labels.instance }} has {{ printf "%.0f" $value }} work items waiting for a thread.` | quote }}
+            description: {{ `Work is queuing up for the .NET thread pool, which makes every request slower. Usually CPU throttling (check the pod's CPU limit) or blocking calls; a dotnet-counters or dotnet-dump capture from the pod shows which.` | quote }}
+    {{- end }}
 {{- end }}

@@ -24,8 +24,47 @@ It covers:
 
 The _Job_ variable lists every scrape job that exposes vfps' own metrics, so it needs no relabelling and picks up
 the worker Deployment's metrics as well when `worker.enabled` is set. Native gRPC calls complete with HTTP 200
-whatever their gRPC status, so their failures don't show up in the status-code panels - only under _Exceptions
-thrown by type_.
+whatever their gRPC status, so their failures don't show up in the status-code panels. vfps adds the gRPC status to
+the same request metric instead, as the `rpc_grpc_status_code` label (`0` is OK, see the
+[gRPC status codes](https://grpc.io/docs/guides/status-codes/)), which the alerts below use.
+
+## Alerts
+
+The Helm chart ships Prometheus alerting rules for the Prometheus Operator: set `prometheusRule.enabled`, along
+with `serviceMonitor.enabled` so the metrics are scraped. Every group can be turned off on its own, and the
+thresholds are chart values - see the chart's `prometheusRule.*` values. Critical alerts are meant to page someone,
+warnings to open a ticket.
+
+| Alert                                 | Severity | Fires when                                                                                             |
+| ------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------ |
+| `VfpsDown`                            | critical | No API pod can be scraped for 5 minutes.                                                               |
+| `VfpsWorkersDown`                     | critical | No worker pod can be scraped for 5 minutes - only with `worker.enabled`.                               |
+| `VfpsHighErrorRate`                   | critical | More than 5% of requests end in HTTP 5xx or a server-side gRPC error, for 10 minutes.                  |
+| `VfpsDatabaseConnectionTimeouts`      | critical | Requests time out waiting for a pooled database connection.                                            |
+| `VfpsBatchesNotProcessed`             | critical | Batches have been queued for 30 minutes without any running - usually no instance processes batches.   |
+| `VfpsServiceAccountTokenExpired`      | critical | A service-account token has expired.                                                                   |
+| `VfpsHighLatency`                     | warning  | API p95 latency is above 1 s for 15 minutes.                                                           |
+| `VfpsDatabasePoolNearlyExhausted`     | warning  | A connection pool is more than 90% used for 10 minutes.                                                |
+| `VfpsSlowDatabase`                    | warning  | Database command p95 latency is above 500 ms for 15 minutes.                                           |
+| `VfpsBatchWaitingTooLong`             | warning  | A batch has been queued for more than an hour - workers run, but can't keep up.                        |
+| `VfpsBatchesFailing`                  | warning  | A batch failed on an error in the last hour. A batch set to fail on unknown values doesn't count.      |
+| `VfpsBatchStalled`                    | warning  | A batch stalled in the last hour - its worker most likely crashed.                                     |
+| `VfpsDependencyErrors`                | warning  | More than 10% of calls to one host - object storage, the identity provider, a VOPRF key server - fail. |
+| `VfpsThreadPoolStarvation`            | warning  | Work queues up for the .NET thread pool for 5 minutes.                                                 |
+| `VfpsServiceAccountTokenExpiringSoon` | warning  | A service-account token expires within 14 days.                                                        |
+
+Pod restarts, crash loops and memory limits aren't covered here, since kube-prometheus-stack's default rules
+already alert on them for every workload.
+
+The batch alerts rest on three metrics vfps exports while batches are enabled:
+
+- **`vfps_batches{state}`** - batches currently stored, by state (`awaiting_upload`, `queued`, `running`,
+  `completed`, `failed`, `cancelled`, `stalled`). Every replica reports the same database counts, so aggregate it
+  with `max()`, not `sum()`.
+- **`vfps_batches_oldest_queued_age_seconds`** - how long the longest-queued batch has been waiting; 0 while none is.
+- **`vfps_batches_finished_total{outcome, reason}`** - batches reaching a final state, counted by the replica that
+  wrote it. A failed one carries a `reason`: `unknown_value` for a batch set to fail on a value its namespace doesn't
+  know, `error` for everything else.
 
 ## Diagnosing a slow batch
 

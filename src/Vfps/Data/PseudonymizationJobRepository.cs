@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Vfps.Data.Models;
+using Vfps.Metrics;
 
 namespace Vfps.Data;
 
@@ -266,6 +267,11 @@ public class PseudonymizationJobRepository(IDbContextFactory<PseudonymContext> c
                 cancellationToken
             );
 
+        if (rowsAffected > 0)
+        {
+            BatchMetrics.RecordFinished(PseudonymizationJobStatus.Stalled);
+        }
+
         return rowsAffected > 0;
     }
 
@@ -289,6 +295,11 @@ public class PseudonymizationJobRepository(IDbContextFactory<PseudonymContext> c
                         .SetProperty(j => j.LastUpdatedAt, DateTimeOffset.UtcNow),
                 cancellationToken
             );
+
+        if (rowsAffected > 0)
+        {
+            BatchMetrics.RecordFinished(PseudonymizationJobStatus.Cancelled);
+        }
 
         return rowsAffected > 0;
     }
@@ -333,6 +344,11 @@ public class PseudonymizationJobRepository(IDbContextFactory<PseudonymContext> c
                 cancellationToken
             );
 
+        if (rowsAffected > 0)
+        {
+            BatchMetrics.RecordFinished(PseudonymizationJobStatus.Completed);
+        }
+
         return rowsAffected > 0;
     }
 
@@ -375,5 +391,26 @@ public class PseudonymizationJobRepository(IDbContextFactory<PseudonymContext> c
             .ExecuteDeleteAsync(cancellationToken);
 
         return deleted > 0;
+    }
+
+    /// <inheritdoc/>
+    public async Task<BatchMetricsSnapshot> GetMetricsSnapshotAsync(
+        CancellationToken cancellationToken
+    )
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var counts = await context
+            .PseudonymizationJobs.GroupBy(j => j.Status)
+            .Select(g => new { Status = g.Key, Count = g.LongCount() })
+            .ToDictionaryAsync(g => g.Status, g => g.Count, cancellationToken);
+
+        // Minimum taken in memory: queued jobs are few, and SQLite (unit tests) can't aggregate the
+        // DateTimeOffset column it stores through a string converter.
+        var queuedSince = await context
+            .PseudonymizationJobs.Where(j => j.Status == PseudonymizationJobStatus.Queued)
+            .Select(j => j.LastUpdatedAt)
+            .ToListAsync(cancellationToken);
+
+        return new BatchMetricsSnapshot(counts, queuedSince.Count == 0 ? null : queuedSince.Min());
     }
 }

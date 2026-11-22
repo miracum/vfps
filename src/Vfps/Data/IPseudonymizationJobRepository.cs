@@ -178,6 +178,12 @@ public interface IPseudonymizationJobRepository
     /// itself for the same reason the Mark* transitions are. Returns whether a row was deleted.
     /// </summary>
     Task<bool> DeleteIfFinishedAsync(Guid id, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// How many jobs are in each status, and since when the longest-queued one has been waiting -
+    /// what <see cref="Metrics.BatchMetrics"/> reports.
+    /// </summary>
+    Task<Metrics.BatchMetricsSnapshot> GetMetricsSnapshotAsync(CancellationToken cancellationToken);
 }
 
 /// <summary>

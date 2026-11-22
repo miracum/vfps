@@ -718,6 +718,7 @@ if (s3Config.IsEnabled)
     builder.Services.AddScoped<ICsvNamespaceExporter, CsvNamespaceExporter>();
     builder.Services.AddHostedService<S3BucketConfigurationBackgroundService>();
     builder.Services.AddHostedService<StalledPseudonymizationJobWatchdogService>();
+    builder.Services.AddHostedService<BatchMetricsBackgroundService>();
 
     // Hangfire itself is registered further down for every deployment, not just this one - but CSV
     // jobs are the only feature that *cannot* work without it, so the missing-connection-string
@@ -950,6 +951,10 @@ app.UseWhen(
 );
 
 app.UseRouting();
+
+// Before the gRPC endpoints, so it wraps them: a failed gRPC call answers HTTP 200, and this is what
+// puts its real status on the HTTP request metric - see the middleware for why.
+app.UseMiddleware<GrpcStatusMetricsMiddleware>();
 
 // Configure the HTTP request pipeline.
 var pseudonymEndpoints = app.MapGrpcService<PseudonymService>();

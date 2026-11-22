@@ -8,6 +8,7 @@ using Vfps.AppServices;
 using Vfps.Config;
 using Vfps.Data;
 using Vfps.Data.Models;
+using Vfps.Metrics;
 
 namespace Vfps.CsvProcessing;
 
@@ -198,6 +199,8 @@ internal sealed class CsvPseudonymizationJobRunner(
                 ex.Message,
                 CancellationToken.None
             );
+            // The outcome the batch was configured to produce for such a file, not a fault.
+            BatchMetrics.RecordFailed(BatchMetrics.FailureReason.UnknownValue);
             throw;
         }
         catch (Exception ex)
@@ -216,6 +219,7 @@ internal sealed class CsvPseudonymizationJobRunner(
                 "Processing failed - see server logs for details.",
                 CancellationToken.None
             );
+            BatchMetrics.RecordFailed(BatchMetrics.FailureReason.Error);
             throw;
         }
         finally
